@@ -120,3 +120,73 @@ do {
     expect_fail(() => r.search("x", void, 1))
     expect_fail(() => r.search("x", 1, ""))
 }
+
+do {
+    const r = re.re("ab|cd|ef")
+    assert r.search("ab")
+    assert r.search("cd")
+    assert r.search("ef")
+    assert r.search("abcdef")
+    assert r.search("xaby")
+    assert r.search("xcdy")
+    assert r.search("xefy")
+    assert r.search("bc") == void
+    assert r.search("xy") == void
+    assert r.search("xay") == void
+    assert r.search("xby") == void
+    assert r.search("xdy") == void
+    assert r.search("xey") == void
+}
+
+do {
+    const r = re.re("a||b")
+    assert r.search("")
+    assert r.search("a")
+    assert r.search("b")
+    assert r.search("c")
+    assert r.search("de")
+}
+
+do {
+    const r = re.re("^12|a(bc|d)$")
+    assert r.search("12x")
+    assert r.search("xabc")
+    assert r.search("_xx_ad")
+    assert r.search("_12x") == void
+    assert r.search("ab") == void
+    assert r.search("xabcd") == void
+    assert r.search("_xx_adb") == void
+    assert r.search("xa") == void
+}
+
+do {
+    const r = re.re("ab*?c")
+    assert r.search("xacy")
+    assert r.search("xabcy")
+    assert r.search("xabbbbcy")
+    assert r.search("xbcy") == void
+    assert r.search("xaby") == void
+}
+
+do {
+    const r = re.re("ab+?c")
+    assert r.search("xacy") == void
+    assert r.search("xabcy")
+    assert r.search("xabbbbcy")
+    assert r.search("xbcy") == void
+    assert r.search("xaby") == void
+}
+
+do {
+    const r = re.re("ab{3,5}?c")
+    assert r.search("xacy") == void
+    assert r.search("xabcy") == void
+    assert r.search("xabbcy") == void
+    assert r.search("xabbbcy")
+    assert r.search("xabbbbcy")
+    assert r.search("xabbbbbcy")
+    assert r.search("xabbbbbbcy") == void
+    assert r.search("xabbbbbbbcy") == void
+    assert r.search("xbcy") == void
+    assert r.search("xaby") == void
+}

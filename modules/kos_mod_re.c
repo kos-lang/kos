@@ -367,11 +367,13 @@ static void rotate_instr(struct RE_CTX *re_ctx, uint32_t begin, uint32_t mid)
 
 static void patch_jump_offs(struct RE_CTX *re_ctx, uint32_t instr_offs, uint32_t target_offs)
 {
-    const uint32_t delta_offs = target_offs - instr_offs;
+    const int32_t delta_offs = (int32_t)target_offs - (int32_t)instr_offs;
 
     uint16_t *const offs_ptr = (uint16_t *)(re_ctx->buf.buffer + instr_offs + 2);
 
-    *offs_ptr = (uint16_t)delta_offs;
+    assert( ! (delta_offs & 1));
+
+    *offs_ptr = (uint16_t)(int16_t)(delta_offs >> 1);
 }
 
 static int parse_alternative_match_seq(struct RE_CTX *re_ctx);
@@ -980,13 +982,13 @@ static void disassemble(struct RE *re, const char *re_cstr)
             bytes_remaining -= num_printed;
 
             if ( ! i_arg && desc->first_arg_is_offs) {
-                const unsigned target = (unsigned)offs + (int16_t)operand;
+                const unsigned target = (unsigned)offs + ((int)(int16_t)operand << 1);
 
                 assert(target <= re->bytecode_size * 2U);
                 if (target == re->bytecode_size * 2U)
                     num_printed = snprintf(mnem_buf, mnem_remaining, "END");
                 else
-                    num_printed = snprintf(mnem_buf, mnem_remaining, "%08X", (unsigned)offs + (int16_t)operand);
+                    num_printed = snprintf(mnem_buf, mnem_remaining, "%08X", target);
             }
             else
                 num_printed = snprintf(mnem_buf, mnem_remaining, "%u", operand);
@@ -1073,6 +1075,83 @@ cleanup:
     return error;
 }
 
+enum POSS_STATE {
+    STATE_INACTIVE,
+    STATE_ACTIVE
+};
+
+struct RE_POSS_STACK_ITEM {
+    uint16_t        instr_idx;
+    uint16_t        str_end_offs; /* char idx in the string, from the end of the string */
+    uint16_t        count  : 15;
+    enum POSS_STATE active : 1;
+};
+
+struct RE_POSS_STACK {
+    KOS_VECTOR                 buffer;
+    struct RE_POSS_STACK_ITEM *top;
+};
+
+static void init_possibility_stack(struct RE_POSS_STACK *poss_stack)
+{
+    kos_vector_init(&poss_stack->buffer);
+    poss_stack->top = 0;
+}
+
+static void destroy_possibility_stack(struct RE_POSS_STACK *poss_stack)
+{
+    kos_vector_destroy(&poss_stack->buffer);
+}
+
+static void set_iter(struct RE_POSS_STACK *poss_stack,
+                     KOS_STRING_ITER      *iter)
+{
+    struct RE_POSS_STACK_ITEM *const item = poss_stack->top;
+
+    item->str_end_offs = (uint16_t)((iter->end - iter->ptr) >> iter->elem_size);
+}
+
+static int push_possibility(struct RE_POSS_STACK *poss_stack,
+                            KOS_CONTEXT           ctx,
+                            struct RE            *re,
+                            const uint16_t       *target_ptr,
+                            KOS_STRING_ITER      *iter,
+                            enum POSS_STATE       state)
+{
+    const size_t               old_size = poss_stack->buffer.size;
+    struct RE_POSS_STACK_ITEM *item;
+
+    if (kos_vector_resize(&poss_stack->buffer, old_size + sizeof(struct RE_POSS_STACK_ITEM))) {
+        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+        return KOS_ERROR_EXCEPTION;
+    }
+
+    item = (struct RE_POSS_STACK_ITEM *)(poss_stack->buffer.buffer + old_size);
+
+    item->instr_idx = (uint16_t)(target_ptr - &re->bytecode[0]);
+    item->count     = 0;
+    item->active    = state;
+
+    poss_stack->top = item;
+
+    set_iter(poss_stack, iter);
+
+    return KOS_SUCCESS;
+}
+
+static void pop_possibility(struct RE_POSS_STACK *poss_stack)
+{
+    const size_t new_size = poss_stack->buffer.size - sizeof(struct RE_POSS_STACK_ITEM);
+
+    kos_vector_resize(&poss_stack->buffer, new_size);
+
+    if (new_size) {
+        poss_stack->top = (struct RE_POSS_STACK_ITEM *)(poss_stack->buffer.buffer + new_size - sizeof(struct RE_POSS_STACK_ITEM));
+    }
+    else
+        poss_stack->top = 0;
+}
+
 #define BEGIN_INSTRUCTION(instr) case INSTR_ ## instr
 #define NEXT_INSTRUCTION         break
 
@@ -1083,9 +1162,14 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT ctx,
                                uint32_t    pos,
                                uint32_t    end_pos)
 {
-    uint16_t       *bytecode     = &re->bytecode[0];
-    uint16_t *const bytecode_end = bytecode + re->bytecode_size;
-    KOS_STRING_ITER iter;
+    const uint16_t       *bytecode     = &re->bytecode[0];
+    const uint16_t *const bytecode_end = bytecode + re->bytecode_size;
+    KOS_OBJ_ID            retval       = KOS_VOID;
+    KOS_STRING_ITER       iter;
+    struct RE_POSS_STACK  poss_stack;
+    int                   error        = KOS_SUCCESS;
+
+    init_possibility_stack(&poss_stack);
 
     kos_init_string_iter(&iter, str_obj);
     iter.end = iter.ptr + ((uintptr_t)end_pos << iter.elem_size);
@@ -1101,8 +1185,10 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT ctx,
             BEGIN_INSTRUCTION(MATCH_ONE_CHAR): {
                 const uint16_t expected_code = bytecode[1];
                 const uint32_t actual_code   = peek_next_char(&iter);
+
                 if (expected_code != actual_code)
-                    return KOS_VOID;
+                    goto try_other_possibility;
+
                 kos_string_iter_advance(&iter);
                 bytecode += 2;
                 NEXT_INSTRUCTION;
@@ -1111,8 +1197,10 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT ctx,
             BEGIN_INSTRUCTION(MATCH_ONE_CHAR32): {
                 const uint32_t expected_code = ((uint32_t)bytecode[1] << 16) | bytecode[2];
                 const uint32_t actual_code   = peek_next_char(&iter);
+
                 if (expected_code != actual_code)
-                    return KOS_VOID;
+                    goto try_other_possibility;
+
                 kos_string_iter_advance(&iter);
                 bytecode += 3;
                 NEXT_INSTRUCTION;
@@ -1120,8 +1208,10 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT ctx,
 
             BEGIN_INSTRUCTION(MATCH_ANY_CHAR): {
                 const uint32_t actual_code = peek_next_char(&iter);
+
                 if (actual_code == END_OF_STR)
-                    return KOS_VOID;
+                    goto try_other_possibility;
+
                 kos_string_iter_advance(&iter);
                 bytecode += 1;
                 NEXT_INSTRUCTION;
@@ -1140,7 +1230,7 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT ctx,
                 if (iter.ptr > iter0.ptr) {
                     const uint32_t prev_code = peek_prev_char(&iter);
                     if ((prev_code != '\r') && (prev_code != '\n'))
-                        return KOS_VOID;
+                        goto try_other_possibility;
                 }
 
                 bytecode += 1;
@@ -1149,20 +1239,42 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT ctx,
 
             BEGIN_INSTRUCTION(MATCH_LINE_END): {
                 const uint32_t cur_code = peek_next_char(&iter);
+
                 if ((cur_code != END_OF_STR) && (cur_code != '\r') && (cur_code != '\n'))
-                    return KOS_VOID;
+                    goto try_other_possibility;
+
                 bytecode += 1;
                 NEXT_INSTRUCTION;
             }
 
-            /* TODO BEGIN_INSTRUCTION(BEGIN_GROUP) */
+            BEGIN_INSTRUCTION(BEGIN_GROUP): {
+                /* TODO */
+                bytecode += 2;
+                NEXT_INSTRUCTION;
+            }
 
-            /* TODO BEGIN_INSTRUCTION(END_GROUP) */
+            BEGIN_INSTRUCTION(END_GROUP): {
+                /* TODO */
+                bytecode += 2;
+                NEXT_INSTRUCTION;
+            }
 
-            /* TODO BEGIN_INSTRUCTION(FORK) */
+            BEGIN_INSTRUCTION(FORK): {
+                const int16_t delta = (int16_t)bytecode[1];
+
+                assert(delta);
+
+                TRY(push_possibility(&poss_stack, ctx, re, bytecode + delta, &iter, STATE_ACTIVE));
+
+                bytecode += 2;
+                NEXT_INSTRUCTION;
+            }
 
             BEGIN_INSTRUCTION(JUMP): {
                 const int16_t delta = (int16_t)bytecode[1];
+
+                assert(delta);
+
                 bytecode += delta;
                 assert(bytecode <= bytecode_end);
                 NEXT_INSTRUCTION;
@@ -1170,19 +1282,72 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT ctx,
 
             /* TODO BEGIN_INSTRUCTION(GREEDY_COUNT) */
 
-            /* TODO BEGIN_INSTRUCTION(LAZY_COUNT) */
+            BEGIN_INSTRUCTION(LAZY_COUNT): {
+                const int16_t         delta     = (int16_t)bytecode[1];
+                const uint16_t        min_count = bytecode[2];
+                const enum POSS_STATE active    = min_count ? STATE_INACTIVE : STATE_ACTIVE;
+
+                assert(delta);
+
+                TRY(push_possibility(&poss_stack, ctx, re, bytecode + 3, &iter, active));
+
+                bytecode += active ? delta : 3;
+                NEXT_INSTRUCTION;
+            }
 
             /* TODO BEGIN_INSTRUCTION(GREEDY_JUMP) */
 
-            /* TODO BEGIN_INSTRUCTION(LAZY_JUMP) */
+            BEGIN_INSTRUCTION(LAZY_JUMP): {
+                const int16_t  delta     = (int16_t)bytecode[1];
+                const uint16_t min_count = bytecode[2];
+                const uint16_t max_count = bytecode[3];
+                unsigned       count;
+
+                assert(delta);
+                assert(poss_stack.top);
+
+                count = ++poss_stack.top->count;
+
+                if (count < min_count)
+                    bytecode += delta;
+                else {
+                    if (count == max_count)
+                        pop_possibility(&poss_stack);
+                    else {
+                        poss_stack.top->active = STATE_ACTIVE;
+                        set_iter(&poss_stack, &iter);
+                    }
+                    bytecode += 4;
+                }
+
+                NEXT_INSTRUCTION;
+            }
 
             default:
                 KOS_raise_printf(ctx, "unknown instruction 0x%x\n", (unsigned)instr);
-                return KOS_BADPTR;
+                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+
+            try_other_possibility: {
+                while (poss_stack.top && ! poss_stack.top->active)
+                    pop_possibility(&poss_stack);
+
+                if (poss_stack.top) {
+                    poss_stack.top->active = STATE_INACTIVE;
+                    bytecode = &re->bytecode[poss_stack.top->instr_idx];
+                    iter.ptr = iter.end - ((unsigned)poss_stack.top->str_end_offs << iter.elem_size);
+                }
+                else
+                    goto cleanup;
+            }
         }
     }
 
-    return KOS_TRUE;
+    retval = KOS_TRUE; /* TODO */
+
+cleanup:
+    destroy_possibility_stack(&poss_stack);
+
+    return error ? KOS_BADPTR : retval;
 }
 
 /* @item re re()
