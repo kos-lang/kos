@@ -20,6 +20,9 @@
 #include <string.h>
 
 KOS_DECLARE_STATIC_CONST_STRING(str_err_regex_not_a_string, "regular expression is not a string");
+KOS_DECLARE_STATIC_CONST_STRING(str_begin,                  "begin");
+KOS_DECLARE_STATIC_CONST_STRING(str_end,                    "end");
+KOS_DECLARE_STATIC_CONST_STRING(str_string,                 "string");
 
 /*
  * Regular expression special characters
@@ -1196,10 +1199,12 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT ctx,
     const uint16_t       *bytecode     = &re->bytecode[0];
     const uint16_t *const bytecode_end = bytecode + re->bytecode_size;
     KOS_OBJ_ID            retval       = KOS_VOID;
+    KOS_LOCAL             ret;
     KOS_STRING_ITER       iter;
     struct RE_POSS_STACK  poss_stack;
     int                   error        = KOS_SUCCESS;
 
+    KOS_init_local(ctx, &ret);
     init_possibility_stack(&poss_stack);
 
     kos_init_string_iter(&iter, str_obj);
@@ -1410,10 +1415,19 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT ctx,
         }
     }
 
-    retval = KOS_TRUE; /* TODO */
+    end_pos -= (iter.end - iter.ptr) >> iter.elem_size;
+
+    ret.o = KOS_new_object(ctx);
+    TRY_OBJID(ret.o);
+
+    TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_begin), TO_SMALL_INT(pos)));
+    TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_end),   TO_SMALL_INT(end_pos)));
+
+    retval = ret.o;
 
 cleanup:
     destroy_possibility_stack(&poss_stack);
+    KOS_destroy_top_local(ctx, &ret);
 
     return error ? KOS_BADPTR : retval;
 }
@@ -1458,6 +1472,8 @@ static KOS_OBJ_ID re_ctor(KOS_CONTEXT ctx,
     TRY_OBJID(regex.o);
 
     TRY(parse_re(ctx, regex_str.o, regex.o));
+
+    TRY(KOS_set_property(ctx, regex.o, KOS_CONST_ID(str_string), regex_str.o));
 
 cleanup:
     regex.o = KOS_destroy_top_locals(ctx, &regex_str, &regex);

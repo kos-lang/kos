@@ -14,6 +14,7 @@ public class re
             this.regex = re_obj
             cache[regex] = re_obj
         }
+        this.string = regex
     }
     search(args...) {
         return this.regex.search(args...)

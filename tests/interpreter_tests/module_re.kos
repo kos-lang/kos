@@ -2,7 +2,21 @@
 # Copyright (c) 2014-2020 Chris Dragan
 
 import re
+import base.print
 import test_tools.expect_fail
+
+fun check(result, begin, end)
+{
+    if result.begin != begin {
+        print("Incorrect re begin: \(result.begin) - expected \(begin)")
+        return false
+    }
+    if result.end != end {
+        print("Incorrect re end: \(result.end) - expected \(end)")
+        return false
+    }
+    return true
+}
 
 do {
     expect_fail(re.re)
@@ -58,14 +72,14 @@ do {
 
 do {
     const r = re.re("^a.b$")
-    assert r.search("acb")
-    assert r.search("aab")
-    assert r.search("abb")
-    assert r.search("a.b")
-    assert r.search("a\x{80}b")
-    assert r.search("a\x{10000}b")
-    assert r.search("xyazbqm", 2, -2)
-    assert r.search("XY\nazb\nqm")
+    assert check(r.search("acb"), 0, 3)
+    assert check(r.search("aab"), 0, 3)
+    assert check(r.search("abb"), 0, 3)
+    assert check(r.search("a.b"), 0, 3)
+    assert check(r.search("a\x{80}b"), 0, 3)
+    assert check(r.search("a\x{10000}b"), 0, 3)
+    assert check(r.search("xyazbqm", 2, -2), 2, 5)
+    assert check(r.search("XY\nazb\nqm"), 3, 6)
     assert r.search("") == void
     assert r.search("aacb") == void
     assert r.search("acbb") == void
@@ -79,10 +93,10 @@ do {
 
 do {
     const r = re.re("x.\x{10000}")
-    assert r.search("xy\x{10000}")
-    assert r.search("xxxxx.\x{10000}\x{10000}\x{10000}")
-    assert r.search("\x{10000}x.\x{10000}xxxx")
-    assert r.search("ABxz\x{10000}qm", 2)
+    assert check(r.search("xy\x{10000}"), 0, 3)
+    assert check(r.search("xxxxx.\x{10000}\x{10000}\x{10000}"), 4, 7)
+    assert check(r.search("\x{10000}x.\x{10000}xxxx"), 1, 4)
+    assert check(r.search("ABxz\x{10000}qm", 2), 2, 5)
     assert r.search("ABxz\x{10000}qm", 2, void)
     assert r.search("ABxz\x{10000}qm", 2, -2)
     assert r.search("") == void
@@ -96,23 +110,23 @@ do {
 
 do {
     const r = re.re("")
-    assert r.search("")
-    assert r.search("a")
-    assert r.search("abcdefgh")
+    assert check(r.search(""), 0, 0)
+    assert check(r.search("a"), 0, 0)
+    assert check(r.search("abcdefgh"), 0, 0)
 }
 
 do {
     const r = re.re("^")
-    assert r.search("")
-    assert r.search("a")
-    assert r.search("abcdefgh")
+    assert check(r.search(""), 0, 0)
+    assert check(r.search("a"), 0, 0)
+    assert check(r.search("abcdefgh"), 0, 0)
 }
 
 do {
     const r = re.re("$")
-    assert r.search("")
-    assert r.search("a")
-    assert r.search("abcdefgh")
+    assert check(r.search(""), 0, 0)
+    assert check(r.search("a"), 1, 1)
+    assert check(r.search("abcdefgh"), 8, 8)
 }
 
 do {
@@ -128,13 +142,13 @@ do {
 
 do {
     const r = re.re("ab|cd|ef")
-    assert r.search("ab")
-    assert r.search("cd")
-    assert r.search("ef")
-    assert r.search("abcdef")
-    assert r.search("xaby")
-    assert r.search("xcdy")
-    assert r.search("xefy")
+    assert check(r.search("ab"), 0, 2)
+    assert check(r.search("cd"), 0, 2)
+    assert check(r.search("ef"), 0, 2)
+    assert check(r.search("abcdef"), 0, 2)
+    assert check(r.search("xaby"), 1, 3)
+    assert check(r.search("xcdy"), 1, 3)
+    assert check(r.search("xefy"), 1, 3)
     assert r.search("bc") == void
     assert r.search("xy") == void
     assert r.search("xay") == void
@@ -145,18 +159,18 @@ do {
 
 do {
     const r = re.re("a||b")
-    assert r.search("")
-    assert r.search("a")
-    assert r.search("b")
-    assert r.search("c")
-    assert r.search("de")
+    assert check(r.search(""), 0, 0)
+    assert check(r.search("a"), 0, 1)
+    assert check(r.search("b"), 0, 0)
+    assert check(r.search("c"), 0, 0)
+    assert check(r.search("de"), 0, 0)
 }
 
 do {
     const r = re.re("^12|a(bc|d)$")
-    assert r.search("12x")
-    assert r.search("xabc")
-    assert r.search("_xx_ad")
+    assert check(r.search("12x"), 0, 2)
+    assert check(r.search("xabc"), 1, 4)
+    assert check(r.search("_xx_ad"), 4, 6)
     assert r.search("_12x") == void
     assert r.search("ab") == void
     assert r.search("xabcd") == void
@@ -166,9 +180,10 @@ do {
 
 do {
     const r = re.re("ab*?c")
-    assert r.search("xacy")
-    assert r.search("xabcy")
-    assert r.search("xabbbbcy")
+    assert check(r.search("xacy"), 1, 3)
+    assert check(r.search("xabcy"), 1, 4)
+    assert check(r.search("xabbbbcy"), 1, 7)
+    assert check(r.search("xabbbcyabcz"), 1, 6)
     assert r.search("xbcy") == void
     assert r.search("xaby") == void
 }
@@ -176,8 +191,8 @@ do {
 do {
     const r = re.re("ab+?c")
     assert r.search("xacy") == void
-    assert r.search("xabcy")
-    assert r.search("xabbbbcy")
+    assert check(r.search("xabcy"), 1, 4)
+    assert check(r.search("xabbbbcy"), 1, 7)
     assert r.search("xbcy") == void
     assert r.search("xaby") == void
 }
@@ -187,9 +202,9 @@ do {
     assert r.search("xacy") == void
     assert r.search("xabcy") == void
     assert r.search("xabbcy") == void
-    assert r.search("xabbbcy")
-    assert r.search("xabbbbcy")
-    assert r.search("xabbbbbcy")
+    assert check(r.search("xabbbcy"), 1, 6)
+    assert check(r.search("xabbbbcy"), 1, 7)
+    assert check(r.search("xabbbbbcy"), 1, 8)
     assert r.search("xabbbbbbcy") == void
     assert r.search("xabbbbbbbcy") == void
     assert r.search("xbcy") == void
@@ -198,9 +213,9 @@ do {
 
 do {
     const r = re.re("ab*c")
-    assert r.search("xacy")
-    assert r.search("xabcy")
-    assert r.search("xabbbbcy")
+    assert check(r.search("xacy"), 1, 3)
+    assert check(r.search("xabcy"), 1, 4)
+    assert check(r.search("xabbbbcy"), 1, 7)
     assert r.search("xbcy") == void
     assert r.search("xaby") == void
 }
@@ -208,8 +223,8 @@ do {
 do {
     const r = re.re("ab+c")
     assert r.search("xacy") == void
-    assert r.search("xabcy")
-    assert r.search("xabbbbcy")
+    assert check(r.search("xabcy"), 1, 4)
+    assert check(r.search("xabbbbcy"), 1, 7)
     assert r.search("xbcy") == void
     assert r.search("xaby") == void
 }
@@ -219,9 +234,9 @@ do {
     assert r.search("xacy") == void
     assert r.search("xabcy") == void
     assert r.search("xabbcy") == void
-    assert r.search("xabbbcy")
-    assert r.search("xabbbbcy")
-    assert r.search("xabbbbbcy")
+    assert check(r.search("xabbbcy"), 1, 6)
+    assert check(r.search("xabbbbcy"), 1, 7)
+    assert check(r.search("xabbbbbcy"), 1, 8)
     assert r.search("xabbbbbbcy") == void
     assert r.search("xabbbbbbbcy") == void
     assert r.search("xbcy") == void
@@ -230,9 +245,9 @@ do {
 
 do {
     const r = re.re("a(b|cd)??e")
-    assert r.search("xaey")
-    assert r.search("xabey")
-    assert r.search("xacdey")
+    assert check(r.search("xaey"), 1, 3)
+    assert check(r.search("xabey"), 1, 4)
+    assert check(r.search("xacdey"), 1, 5)
     assert r.search("xabbey") == void
     assert r.search("xabcdey") == void
     assert r.search("xacdcdey") == void
@@ -240,10 +255,17 @@ do {
 
 do {
     const r = re.re("a(b|cd)?e")
-    assert r.search("xaey")
-    assert r.search("xabey")
-    assert r.search("xacdey")
+    assert check(r.search("xaey"), 1, 3)
+    assert check(r.search("xabey"), 1, 4)
+    assert check(r.search("xacdey"), 1, 5)
     assert r.search("xabbey") == void
     assert r.search("xabcdey") == void
     assert r.search("xacdcdey") == void
+}
+
+do {
+    const lazy   = re.re("a(b|c)+?c")
+    const greedy = re.re("a(b|c)+c")
+    #assert check(lazy.search("aaabbcccd"), 2, 6)
+    #assert check(greedy.search("aaabbcccd"), 2, 8)
 }
