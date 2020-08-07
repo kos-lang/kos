@@ -1591,9 +1591,9 @@ static int exec_function(KOS_CONTEXT ctx)
                 assert( ! IS_SMALL_INT(module_obj));
                 assert(GET_OBJ_TYPE(module_obj) == OBJ_MODULE);
 
-                glob_idx = KOS_get_property(ctx,
-                                            OBJPTR(MODULE, module_obj)->global_names,
-                                            REGISTER(rglob));
+                glob_idx = KOS_get_property_shallow(ctx,
+                                                    OBJPTR(MODULE, module_obj)->global_names,
+                                                    REGISTER(rglob));
                 TRY_OBJID(glob_idx);
 
                 assert(IS_SMALL_INT(glob_idx));
@@ -2691,7 +2691,7 @@ static int exec_function(KOS_CONTEXT ctx)
 
                 rdest = bytecode[1];
 
-                out = KOS_get_property_with_depth(ctx, REGISTER(rsrc), REGISTER(rprop), KOS_SHALLOW);
+                out = KOS_get_property_shallow(ctx, REGISTER(rsrc), REGISTER(rprop));
                 KOS_clear_exception(ctx);
 
                 out = KOS_BOOL( ! IS_BAD_PTR(out));
@@ -2715,7 +2715,7 @@ static int exec_function(KOS_CONTEXT ctx)
                 prop = KOS_array_read(ctx, OBJPTR(MODULE, module)->constants, idx);
                 TRY_OBJID(prop);
 
-                out = KOS_get_property_with_depth(ctx, REGISTER(rsrc), prop, KOS_SHALLOW);
+                out = KOS_get_property_shallow(ctx, REGISTER(rsrc), prop);
                 KOS_clear_exception(ctx);
 
                 out = KOS_BOOL( ! IS_BAD_PTR(out));

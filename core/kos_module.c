@@ -179,7 +179,7 @@ static int find_module(KOS_CONTEXT            ctx,
     components[3].o = KOS_CONST_ID(str_script_ext);
 
     /* Try to get native module init object */
-    *mod_init = KOS_get_property(ctx, ctx->inst->modules.module_inits, components[2].o);
+    *mod_init = KOS_get_property_shallow(ctx, ctx->inst->modules.module_inits, components[2].o);
     if (IS_BAD_PTR(*mod_init) ||
         ! ((struct KOS_MODULE_INIT_S *)OBJPTR(OPAQUE, *mod_init))->init) {
 
@@ -522,7 +522,7 @@ static int save_direct_modules(KOS_CONTEXT    ctx,
         name = KOS_new_string(ctx, var->token->begin, var->token->length);
         TRY_OBJID(name);
 
-        module_idx_obj = KOS_get_property(ctx, inst->modules.module_names, name);
+        module_idx_obj = KOS_get_property_shallow(ctx, inst->modules.module_names, name);
         TRY_OBJID(module_idx_obj);
 
         assert(IS_SMALL_INT(module_idx_obj));
@@ -597,6 +597,7 @@ static int alloc_constants(KOS_CONTEXT    ctx,
             case KOS_COMP_CONST_FUNCTION: {
                 KOS_COMP_FUNCTION *func_const = (KOS_COMP_FUNCTION *)constant;
                 KOS_FUNCTION      *func;
+                KOS_OBJ_ID         name;
 
                 if (func_const->flags & KOS_COMP_FUN_CLASS) {
                     obj_id = KOS_new_class(ctx, KOS_VOID);
@@ -637,10 +638,11 @@ static int alloc_constants(KOS_CONTEXT    ctx,
 
                 func->instr_offs = OBJPTR(MODULE, module.o)->bytecode_size + func_const->offset;
                 func->module     = module.o;
-                func->name       = KOS_array_read(ctx, OBJPTR(MODULE, module.o)->constants, (int)func_const->name_str_idx);
-                TRY_OBJID(func->name);
 
-                assert(GET_OBJ_TYPE(func->name) == OBJ_STRING);
+                name = KOS_array_read(ctx, OBJPTR(MODULE, module.o)->constants, (int)func_const->name_str_idx);
+                TRY_OBJID(name);
+                assert(GET_OBJ_TYPE(name) == OBJ_STRING);
+                func->name = name;
 
                 if (func_const->flags & KOS_COMP_FUN_GENERATOR)
                     func->state = KOS_GEN_INIT;
@@ -833,7 +835,7 @@ int kos_comp_get_global_idx(void       *vframe,
 
     assert(GET_OBJ_TYPE(module_obj) == OBJ_MODULE);
 
-    glob_idx_obj = KOS_get_property(ctx, OBJPTR(MODULE, module_obj)->global_names, str);
+    glob_idx_obj = KOS_get_property_shallow(ctx, OBJPTR(MODULE, module_obj)->global_names, str);
     TRY_OBJID(glob_idx_obj);
 
     assert(IS_SMALL_INT(glob_idx_obj));
@@ -1555,7 +1557,7 @@ static KOS_OBJ_ID import_and_run(KOS_CONTEXT ctx,
 
     /* Return the module object if it was already loaded */
     {
-        KOS_OBJ_ID module_idx_obj = KOS_get_property(ctx, inst->modules.module_names, actual_module_name.o);
+        KOS_OBJ_ID module_idx_obj = KOS_get_property_shallow(ctx, inst->modules.module_names, actual_module_name.o);
         if (!IS_BAD_PTR(module_idx_obj)) {
             assert(IS_SMALL_INT(module_idx_obj));
             module.o = KOS_array_read(ctx, inst->modules.modules, (int)GET_SMALL_INT(module_idx_obj));
@@ -1729,7 +1731,7 @@ KOS_OBJ_ID KOS_repl(KOS_CONTEXT ctx,
 
     /* Find module object */
     {
-        KOS_OBJ_ID module_idx_obj = KOS_get_property(ctx, inst->modules.module_names, module_name_str);
+        KOS_OBJ_ID module_idx_obj = KOS_get_property_shallow(ctx, inst->modules.module_names, module_name_str);
         if (IS_BAD_PTR(module_idx_obj)) {
             KOS_clear_exception(ctx);
             KOS_raise_printf(ctx, "module \"%s\" not found", module_name);
@@ -1819,7 +1821,7 @@ KOS_OBJ_ID KOS_repl_stdin(KOS_CONTEXT ctx,
 
     /* Find module object */
     {
-        KOS_OBJ_ID module_idx_obj = KOS_get_property(ctx, inst->modules.module_names, module_name_str);
+        KOS_OBJ_ID module_idx_obj = KOS_get_property_shallow(ctx, inst->modules.module_names, module_name_str);
         if (IS_BAD_PTR(module_idx_obj)) {
             KOS_clear_exception(ctx);
             KOS_raise_printf(ctx, "module \"%s\" not found", module_name);
@@ -1878,7 +1880,7 @@ int KOS_module_add_global(KOS_CONTEXT ctx,
     KOS_init_local_with(ctx, &name,   name_obj);
     KOS_init_local_with(ctx, &value,  value_obj);
 
-    prop = KOS_get_property(ctx, OBJPTR(MODULE, module.o)->global_names, name.o);
+    prop = KOS_get_property_shallow(ctx, OBJPTR(MODULE, module.o)->global_names, name.o);
 
     KOS_clear_exception(ctx);
 
@@ -1920,7 +1922,7 @@ int KOS_module_get_global(KOS_CONTEXT ctx,
 
     assert(module);
 
-    idx_obj = KOS_get_property(ctx, module->global_names, name);
+    idx_obj = KOS_get_property_shallow(ctx, module->global_names, name);
     TRY_OBJID(idx_obj);
 
     assert(IS_SMALL_INT(idx_obj));

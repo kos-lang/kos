@@ -118,8 +118,16 @@ static inline KOS_OBJ_ID KOS_get_property(KOS_CONTEXT ctx,
 {
     return KOS_get_property_with_depth(ctx, obj_id, prop, KOS_DEEP);
 }
+
+static inline KOS_OBJ_ID KOS_get_property_shallow(KOS_CONTEXT ctx,
+                                                  KOS_OBJ_ID  obj_id,
+                                                  KOS_OBJ_ID  prop)
+{
+    return KOS_get_property_with_depth(ctx, obj_id, prop, KOS_SHALLOW);
+}
 #else
 #define KOS_get_property(ctx, obj_id, prop) KOS_get_property_with_depth(ctx, obj_id, prop, KOS_DEEP)
+#define KOS_get_property_shallow(ctx, obj_id, prop) KOS_get_property_with_depth(ctx, obj_id, prop, KOS_SHALLOW)
 #endif
 
 #endif
