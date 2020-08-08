@@ -1415,7 +1415,7 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT ctx,
         }
     }
 
-    end_pos -= (iter.end - iter.ptr) >> iter.elem_size;
+    end_pos -= (uint32_t)((iter.end - iter.ptr) >> iter.elem_size);
 
     ret.o = KOS_new_object(ctx);
     TRY_OBJID(ret.o);
