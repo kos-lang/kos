@@ -42,7 +42,7 @@
 #   define KOS_MAX_ARRAY_SIZE   512U
 #else
 #   define KOS_MAX_CODE_SIZE    0x200000U
-#   define KOS_MAX_STACK_DEPTH  2048U
+#   define KOS_MAX_STACK_DEPTH  1024U
 #   define KOS_MAX_THREADS      32U
 #   define KOS_MAX_ARGS_IN_REGS 32U
 #   define KOS_MAX_ARRAY_SIZE   0x10000000U
