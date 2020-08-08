@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2014-2020 Chris Dragan
+
+fun go_deeper
+{
+    try {
+        async go_deeper()
+    }
+    catch const e {
+        # if we cannot spawn any more threads, ignore it
+    }
+
+    go_deeper()
+
+    # Second invocation to prevent tail recursion optimization from weakening the test
+    go_deeper()
+}
+
+go_deeper()
