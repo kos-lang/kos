@@ -1230,13 +1230,19 @@ extern KOS_ATOMIC(uint32_t) kos_fuzz_instructions;
 #if KOS_DISPATCH_TABLE
 #   define BEGIN_INSTRUCTION(instr)     OP_##instr
 #   define BEGIN_BREAKPOINT_INSTRUCTION OP_BREAKPOINT
-#   define NEXT_INSTRUCTION             FUZZ_LIMIT();                                            \
-                                        KOS_PERF_CNT(instructions);                              \
-                                        instr     = (KOS_BYTECODE_INSTR)*bytecode;               \
-                                        jump_offs = (uint8_t)(instr - INSTR_BREAKPOINT);         \
-                                        if (jump_offs >= (INSTR_LAST_OPCODE - INSTR_BREAKPOINT)) \
-                                            goto OP_BREAKPOINT;                                  \
-                                        goto *dispatch_table[jump_offs];
+#   define NEXT_INSTRUCTION                                         \
+        do {                                                        \
+            uint8_t jump_offs;                                      \
+                                                                    \
+            FUZZ_LIMIT();                                           \
+            KOS_PERF_CNT(instructions);                             \
+            instr     = (KOS_BYTECODE_INSTR)*bytecode;              \
+            jump_offs = (uint8_t)(instr - INSTR_BREAKPOINT);        \
+            if (jump_offs < (INSTR_LAST_OPCODE - INSTR_BREAKPOINT)) \
+                goto *dispatch_table[jump_offs];                    \
+            goto OP_BREAKPOINT;                                     \
+        } while (0)
+
 #else
 #   define BEGIN_INSTRUCTION(instr)     case INSTR_##instr
 #   define BEGIN_BREAKPOINT_INSTRUCTION default
@@ -1273,15 +1279,14 @@ static int exec_function(KOS_CONTEXT ctx)
     uint32_t           regs_idx = ctx->regs_idx;
     unsigned           rdest;
 #ifndef NDEBUG
-    const uint32_t     num_regs = get_num_regs(stack, regs_idx);
+    uint32_t           num_regs = get_num_regs(stack, regs_idx);
 #endif
 
     PROF_ZONE_NAME_FUN(KOS_atomic_read_relaxed_obj(
                 OBJPTR(STACK, stack)->buf[regs_idx-3]))
 
 #if KOS_DISPATCH_TABLE
-    uint8_t            jump_offs;
-    static void       *dispatch_table[] = {
+    static void *const dispatch_table[] = {
 #   define DEFINE_INSTRUCTION(name, value) &&OP_##name,
 #   include "../inc/kos_opcodes.h"
 #   undef DEFINE_INSTRUCTION
