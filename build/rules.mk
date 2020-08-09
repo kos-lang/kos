@@ -386,7 +386,7 @@ endif
 ifeq ($(UNAME), Windows)
 
 define LINK_EXE
-$(out_dir)/$1$(exe_suffix): $$(call OBJECTS_FROM_SOURCES,$2)
+$(out_dir)/$1$(exe_suffix): $$(call OBJECTS_FROM_SOURCES,$2) $3
 	@echo Link $(out_dir_rel)/$1$(exe_suffix)
 	@link -nologo $(EXE_LDFLAGS) $(LDFLAGS) -out:$$@ $$^ $3
 endef
@@ -394,7 +394,7 @@ endef
 else #------------------------------------------------------------------------
 
 define LINK_EXE
-$(out_dir)/$1$(exe_suffix): $$(call OBJECTS_FROM_SOURCES,$2)
+$(out_dir)/$1$(exe_suffix): $$(call OBJECTS_FROM_SOURCES,$2) $3
 	@echo Link $(out_dir_rel)/$1$(exe_suffix)
 	@$(CXX) $$^ -o $$@ $3 $(EXE_LDFLAGS) $(LDFLAGS)
 	@$(STRIP) $$@
