@@ -111,7 +111,6 @@ static void init_context(KOS_CONTEXT ctx, KOS_INSTANCE *inst)
     ctx->cur_page    = 0;
     ctx->thread_obj  = KOS_BADPTR;
     ctx->exception   = KOS_BADPTR;
-    ctx->retval      = KOS_BADPTR;
     ctx->stack       = KOS_BADPTR;
     ctx->regs_idx    = 0;
     ctx->stack_depth = 0;
@@ -433,8 +432,6 @@ cleanup:
         if (inst->threads.threads)
             kos_free((void *)inst->threads.threads);
     }
-
-    inst->threads.main_thread.retval = KOS_BADPTR;
 
     return error;
 }

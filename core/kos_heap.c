@@ -1580,7 +1580,6 @@ static void mark_roots_in_context(KOS_CONTEXT ctx)
     assert(KOS_atomic_read_relaxed_u32(ctx->gc_state) != GC_INACTIVE);
 
     mark_object_black(ctx->exception);
-    mark_object_black(ctx->retval);
     mark_object_black(ctx->stack);
 
     for (local = ctx->local_list; local; local = local->next)
@@ -2237,7 +2236,6 @@ static void update_after_evacuation(KOS_CONTEXT ctx)
         assert(!ctx->cur_page);
 
         update_child_ptr(&ctx->exception);
-        update_child_ptr(&ctx->retval);
         update_child_ptr(&ctx->stack);
 
         for (local = ctx->local_list; local; local = local->next)

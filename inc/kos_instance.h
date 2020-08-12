@@ -63,7 +63,8 @@ enum KOS_CATCH_STATE_E {
 enum KOS_STACK_FLAGS_E {
     KOS_NORMAL_STACK    = 0U,
     KOS_REENTRANT_STACK = 1U,   /* Stack of a generator or closure      */
-    KOS_CAN_YIELD       = 2U    /* Indicates that a generator can yield */
+    KOS_CAN_YIELD       = 2U,   /* Indicates that a generator can yield */
+    KOS_WILL_POP_STACK  = 4U    /* Indicates that frame will be popped  */ /* TODO reuse KOS_CAN_YEILD */
 };
 
 /* Stack management:
@@ -122,7 +123,6 @@ struct KOS_THREAD_CONTEXT_S {
     KOS_PAGE     *cur_page;
     KOS_OBJ_ID    thread_obj;
     KOS_OBJ_ID    exception;
-    KOS_OBJ_ID    retval;
     KOS_OBJ_ID    stack;        /* Topmost container for registers & stack frames */
     uint32_t      regs_idx;     /* Index of first register in current frame       */
     uint32_t      stack_depth;

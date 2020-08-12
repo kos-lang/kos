@@ -268,10 +268,37 @@ uint32_t kos_string_iter_peek_next_code(KOS_STRING_ITER *iter);
 /* KOS_STACK                                                                */
 /*==========================================================================*/
 
+/*
+ * Stack frame layout on the stack, indexed from register r0:
+ *     -3     function object
+ *     -2     (catch_offs << 8) | catch_reg
+ *     -1     current instr offset
+ *     0      r0
+ *     +N-1   rN-1
+ *     +N     N | (ret_reg << 8) | (gen_reg << 16)
+ *
+ * For constructors, 'this' is also pushed as the last (additional) register,
+ * i.e. one more register than the function actually uses.  The number of
+ * registers N is thus func->num_regs + 1 for non-native constructors.
+ */
+
+/* Number of entries in addition to the number of registers */
 #define KOS_STACK_EXTRA 4U
 
+struct KOS_STACK_FRAME_HDR_S {
+    KOS_ATOMIC(KOS_OBJ_ID) func_obj;
+    KOS_ATOMIC(KOS_OBJ_ID) catch_info;
+    KOS_ATOMIC(KOS_OBJ_ID) instr_offs;
+    KOS_ATOMIC(KOS_OBJ_ID) regs[1];
+};
+
+typedef struct KOS_STACK_FRAME_HDR_S KOS_STACK_FRAME;
+
 int kos_stack_push(KOS_CONTEXT ctx,
-                   KOS_OBJ_ID  func_obj);
+                   KOS_OBJ_ID  func_obj,
+                   KOS_OBJ_ID  this_obj,
+                   uint8_t     ret_reg,
+                   uint8_t     gen_reg);
 
 void kos_stack_pop(KOS_CONTEXT ctx);
 
