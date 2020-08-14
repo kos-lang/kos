@@ -1063,9 +1063,9 @@ static void print_regs(unsigned reg_idx, unsigned num_regs, const char *tag)
     assert(num_regs <= KOS_NO_REG);
 
     if (num_regs == 1)
-        printf("  %s%s r%u\n", tag, lalign(tag), reg_idx);
+        printf(" - %s%s : r%u\n", tag, lalign(tag), reg_idx);
     else
-        printf("  %s%s r%u-r%u\n", tag, lalign(tag), reg_idx, reg_idx + num_regs - 1);
+        printf(" - %s%s : r%u..r%u\n", tag, lalign(tag), reg_idx, reg_idx + num_regs - 1);
 }
 
 static int print_func(void *cookie, uint32_t func_index)
@@ -1088,25 +1088,25 @@ static int print_func(void *cookie, uint32_t func_index)
         return KOS_ERROR_INVALID_NUMBER;
 
     state = (KOS_FUNCTION_STATE)KOS_atomic_read_relaxed_u32(OBJPTR(FUNCTION, func)->state);
-    printf("  %s\n", state == KOS_FUN  ? "function" :
-                     state == KOS_CTOR ? "class"    :
-                                         "generator");
+    printf(" - type         : %s\n", state == KOS_FUN  ? "function" :
+                                     state == KOS_CTOR ? "class"    :
+                                                         "generator");
 
-    printf("  num_regs     %u\n", OBJPTR(FUNCTION, func)->opts.num_regs);
-    printf("  closure_size %u\n", OBJPTR(FUNCTION, func)->opts.closure_size);
-    printf("  min_args     %u\n", OBJPTR(FUNCTION, func)->opts.min_args);
-    printf("  num_def_args %u\n", OBJPTR(FUNCTION, func)->opts.num_def_args);
+    printf(" - registers    : %u\n", OBJPTR(FUNCTION, func)->opts.num_regs);
+    printf(" - closure size : %u\n", OBJPTR(FUNCTION, func)->opts.closure_size);
+    printf(" - minimum args : %u\n", OBJPTR(FUNCTION, func)->opts.min_args);
+    printf(" - default args : %u\n", OBJPTR(FUNCTION, func)->opts.num_def_args);
 
     num_args = KOS_min((unsigned)OBJPTR(FUNCTION, func)->opts.rest_reg,
                        (unsigned)OBJPTR(FUNCTION, func)->opts.args_reg +
                             (unsigned)OBJPTR(FUNCTION, func)->opts.min_args +
                             (unsigned)OBJPTR(FUNCTION, func)->opts.num_def_args);
 
-    print_regs(OBJPTR(FUNCTION, func)->opts.args_reg, num_args, "args");
-    print_regs(OBJPTR(FUNCTION, func)->opts.rest_reg, 1, "rest");
-    print_regs(OBJPTR(FUNCTION, func)->opts.ellipsis_reg, 1, "ellipsis");
-    print_regs(OBJPTR(FUNCTION, func)->opts.this_reg, 1, "this");
-    print_regs(OBJPTR(FUNCTION, func)->opts.bind_reg, OBJPTR(FUNCTION, func)->opts.num_binds, "binds");
+    print_regs(OBJPTR(FUNCTION, func)->opts.args_reg, num_args, "args regs");
+    print_regs(OBJPTR(FUNCTION, func)->opts.rest_reg, 1, "rest reg");
+    print_regs(OBJPTR(FUNCTION, func)->opts.ellipsis_reg, 1, "ellipsis reg");
+    print_regs(OBJPTR(FUNCTION, func)->opts.this_reg, 1, "this reg");
+    print_regs(OBJPTR(FUNCTION, func)->opts.bind_reg, OBJPTR(FUNCTION, func)->opts.num_binds, "binds regs");
 
     return KOS_SUCCESS;
 }
