@@ -1,13 +1,18 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2014-2020 Chris Dragan
 
+var more = true
+
 fun go_deeper
 {
     try {
-        async go_deeper()
+        if more {
+            async go_deeper()
+        }
     }
     catch const e {
         # if we cannot spawn any more threads, ignore it
+        more = false
     }
 
     go_deeper()
