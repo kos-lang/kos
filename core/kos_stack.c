@@ -203,6 +203,8 @@ int kos_stack_push(KOS_CONTEXT ctx,
         RAISE_EXCEPTION_STR(str_err_stack_overflow);
 
     /* Prepare stack for accommodating new stack frame */
+
+    /* Case 1: Not a generator, no closure */
     if (state < KOS_GEN_INIT && ! (OBJPTR(FUNCTION, func.o)->opts.closure_size)) {
 
         if ( ! stack || stack_size + room > stack->capacity) {
@@ -228,6 +230,7 @@ int kos_stack_push(KOS_CONTEXT ctx,
             assert(base_idx + room <= new_stack->capacity);
         }
     }
+    /* Case 2: Instantiated generator - reuse (push) its stack object */
     else if (state > KOS_GEN_INIT) {
 
         const KOS_OBJ_ID gen_stack = OBJPTR(FUNCTION, func.o)->generator_stack_frame;
@@ -254,6 +257,7 @@ int kos_stack_push(KOS_CONTEXT ctx,
 
         goto cleanup;
     }
+    /* Case 3: New generator or closure, create new reentrant stack object */
     else {
 
         if (IS_BAD_PTR(ctx->stack))
