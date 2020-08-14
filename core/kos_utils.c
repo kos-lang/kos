@@ -577,26 +577,29 @@ static int object_to_string_or_cstr_vec(KOS_CONTEXT        ctx,
 
 static int vector_append_array(KOS_CONTEXT        ctx,
                                KOS_VECTOR        *cstr_vec,
-                               KOS_OBJ_ID         obj_id,
+                               KOS_OBJ_ID         array_obj,
                                KOS_STR_REC_GUARD *guard)
 {
     int               error;
     uint32_t          length;
     uint32_t          i;
     KOS_STR_REC_GUARD new_guard;
+    KOS_LOCAL         array;
 
-    assert(GET_OBJ_TYPE(obj_id) == OBJ_ARRAY);
+    KOS_init_local_with(ctx, &array, array_obj);
+
+    assert(GET_OBJ_TYPE(array.o) == OBJ_ARRAY);
 
     new_guard.next       = guard;
-    new_guard.obj_id_ptr = &obj_id;
+    new_guard.obj_id_ptr = &array.o;
 
-    length = KOS_get_array_size(obj_id);
+    length = KOS_get_array_size(array.o);
 
     TRY(kos_append_cstr(ctx, cstr_vec, str_array_open, sizeof(str_array_open)-1));
 
     for (i = 0; i < length; ) {
 
-        KOS_OBJ_ID val_id = KOS_array_read(ctx, obj_id, i);
+        KOS_OBJ_ID val_id = KOS_array_read(ctx, array.o, i);
         TRY_OBJID(val_id);
 
         if (is_to_string_recursive(&new_guard, val_id)) {
@@ -622,6 +625,8 @@ static int vector_append_array(KOS_CONTEXT        ctx,
     TRY(kos_append_cstr(ctx, cstr_vec, str_array_close, sizeof(str_array_close)-1));
 
 cleanup:
+    KOS_destroy_top_local(ctx, &array);
+
     return error;
 }
 
