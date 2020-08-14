@@ -185,7 +185,6 @@ int kos_stack_push(KOS_CONTEXT ctx,
            OBJPTR(FUNCTION, func.o)->opts.num_regs == 0);
 
     assert((state > KOS_GEN_INIT) || (gen_reg == KOS_NO_REG));
-    assert(ret_reg <= KOS_NO_REG);
 
     num_regs = OBJPTR(FUNCTION, func.o)->handler
                ? 1 : OBJPTR(FUNCTION, func.o)->opts.num_regs;
