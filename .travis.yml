@@ -60,6 +60,11 @@ jobs:
         script:
           - tests/run default slowdispatch
 
+      - name: "Deep Stack"
+        if: branch != coverity_scan
+        script:
+          - tests/run default deepstack
+
       - name: "Valgrind"
         if: branch != coverity_scan
         addons:
@@ -80,6 +85,7 @@ jobs:
           - pip install --user cpp-coveralls
         script:
           - tests/run gcov
+          - tests/run gcov deepstack
         after_success:
           - coveralls --exclude tests --no-gcov
 

@@ -249,6 +249,11 @@ ifeq ($(UNAME), Darwin)
     LDFLAGS += $(APPLE_FLAGS)
 endif
 
+deepstack ?= 0
+ifeq ($(deepstack), 1)
+    CFLAGS += -DCONFIG_DEEP_STACK
+endif
+
 ##############################################################################
 # Various options
 

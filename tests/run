@@ -60,6 +60,7 @@ while [ $# -gt 0 ]; do
         madgc)        RUN_MADGC=1    ;;
         default)      set_defaults   ;;
         slowdispatch) export fastdispatch=0 ;;
+        deepstack)    export deepstack=1    ;;
         *)            echo "Error: Unrecognized parameter - $1" >&2 ; exit 1
     esac
     shift
@@ -104,6 +105,7 @@ runtests()
     [ -n "$gcov"   ] && WITH_TOOL="$WITH_TOOL with gcov"
     [ -n "$mad_gc" ] && WITH_TOOL="$WITH_TOOL with mad GC"
     [ -n "$fastdispatch" ] && [ "$fastdispatch" = "0" ] && WITH_TOOL=" with slow dispatch"
+    [ -n "$deepstack" ] && [ "$deepstack" = "1" ] && WITH_TOOL=" with deep stack"
 
     if [ -n "$SANITIZER" ]; then
         local CFLAGS
