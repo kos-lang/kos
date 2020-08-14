@@ -170,11 +170,12 @@ struct KOS_THREAD_MGMT_S {
 };
 
 enum KOS_INSTANCE_FLAGS_E {
-    KOS_INST_NO_FLAGS  = 0,
-    KOS_INST_VERBOSE   = 1,
-    KOS_INST_DEBUG     = 2,
-    KOS_INST_DISASM    = 4,
-    KOS_INST_MANUAL_GC = 8
+    KOS_INST_NO_FLAGS          = 0,
+    KOS_INST_VERBOSE           = 1,
+    KOS_INST_DEBUG             = 2,
+    KOS_INST_DISASM            = 4,
+    KOS_INST_MANUAL_GC         = 8,
+    KOS_INST_DISABLE_TAIL_CALL = 16
 };
 
 struct KOS_INSTANCE_S {
