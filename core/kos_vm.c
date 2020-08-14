@@ -3368,7 +3368,6 @@ handle_return:
                 PROF_ZONE_N(INSTR, "return")
 
                 KOS_OBJ_ID       num_regs_obj;
-                KOS_OBJ_ID       this_obj;
                 const KOS_OBJ_ID func_obj = get_current_func(stack_frame);
                 size_t           size;
                 unsigned         rgen;
@@ -3381,7 +3380,6 @@ handle_return:
 
                 size         = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->size);
                 num_regs_obj = KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[size - 1]);
-                this_obj     = KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[size - 2]);
 
                 assert(IS_SMALL_INT(num_regs_obj));
 
