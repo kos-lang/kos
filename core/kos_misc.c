@@ -542,6 +542,8 @@ unsigned kos_print_float(char *buf, unsigned size, double value)
     if (((conv.u >> 52) & 0x7FFU) == 0x7FFU) {
         if (conv.u << 12) {
             static const char nan[] = "nan";
+
+            assert(sizeof(nan) - 1 <= size);
             memcpy(buf, nan, sizeof(nan) - 1);
             end = buf + sizeof(nan) - 1;
         }
@@ -550,6 +552,7 @@ unsigned kos_print_float(char *buf, unsigned size, double value)
             const size_t      offs       = value < 0 ? 0 : 1;
             const size_t      str_size   = sizeof(infinity) - offs - 1;
 
+            assert(str_size <= size);
             memcpy(buf, infinity + offs, str_size);
             end = buf + str_size;
         }
