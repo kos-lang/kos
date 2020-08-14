@@ -3083,7 +3083,7 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
 
                 error = prepare_call(ctx, instr, func.o, &this_.o,
                                      args.o, num_args ? rarg1 : 0, num_args,
-                                     rdest, rfinal);
+                                     (uint8_t)rdest, (uint8_t)rfinal);
                 if (error) {
                     KOS_destroy_top_locals(ctx, &func, &args);
                     goto cleanup;
