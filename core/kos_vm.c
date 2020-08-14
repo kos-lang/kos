@@ -3365,7 +3365,7 @@ handle_return:
             }
 
             if (depth) {
-                PROF_ZONE_N(INSTR, "return");
+                PROF_ZONE_N(INSTR, "return")
 
                 KOS_OBJ_ID       num_regs_obj;
                 KOS_OBJ_ID       this_obj;
