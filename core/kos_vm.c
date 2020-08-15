@@ -3587,8 +3587,8 @@ KOS_OBJ_ID kos_vm_run_module(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 {
     int        error;
     KOS_OBJ_ID func_obj;
-    KOS_OBJ_ID ret_obj;
-    int        pushed = 0;
+    KOS_OBJ_ID ret_obj = KOS_BADPTR;
+    int        pushed  = 0;
 
     assert( ! IS_BAD_PTR(module_obj));
     assert(GET_OBJ_TYPE(module_obj) == OBJ_MODULE);
@@ -3628,6 +3628,8 @@ KOS_OBJ_ID kos_vm_run_module(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
         kos_stack_pop(ctx);
 
     assert(error == KOS_SUCCESS || error == KOS_ERROR_EXCEPTION);
+    assert( ! error || IS_BAD_PTR(ret_obj));
+    assert(error || ! IS_BAD_PTR(ret_obj));
 
-    return error ? KOS_BADPTR : ret_obj;
+    return ret_obj;
 }

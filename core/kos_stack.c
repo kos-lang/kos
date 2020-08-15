@@ -234,7 +234,6 @@ int kos_stack_push(KOS_CONTEXT ctx,
 
         const KOS_OBJ_ID gen_stack = OBJPTR(FUNCTION, func.o)->generator_stack_frame;
         uint32_t         size;
-        KOS_OBJ_ID       old_regs;
 
         assert( ! IS_BAD_PTR(gen_stack));
         assert(GET_OBJ_TYPE(gen_stack) == OBJ_STACK);
@@ -246,9 +245,8 @@ int kos_stack_push(KOS_CONTEXT ctx,
 
         TRY(chain_stack_frame(ctx, gen_stack));
 
-        old_regs = KOS_atomic_read_relaxed_obj(OBJPTR(STACK, gen_stack)->buf[size - 1]);
-        assert(IS_SMALL_INT(old_regs));
-        assert((uint32_t)(GET_SMALL_INT(old_regs) & 0xFFU) == num_regs);
+        assert(IS_SMALL_INT(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, gen_stack)->buf[size - 1])));
+        assert((uint32_t)(GET_SMALL_INT(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, gen_stack)->buf[size - 1])) & 0xFFU) == num_regs);
 
         KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, gen_stack)->buf[size - 1], TO_SMALL_INT(reg_init));
 
