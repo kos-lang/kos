@@ -85,7 +85,6 @@ jobs:
           - pip install --user cpp-coveralls
         script:
           - tests/run gcov
-          - tests/run gcov deepstack
         after_success:
           - coveralls --exclude tests --no-gcov
 
