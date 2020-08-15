@@ -159,7 +159,7 @@ int kos_stack_push(KOS_CONTEXT ctx,
     uint32_t         base_idx;
     uint32_t         state;
     const int64_t    catch_init = (int64_t)KOS_NO_CATCH << 8;
-    int64_t          reg_init;
+    int32_t          reg_init;
     unsigned         num_regs;
     unsigned         room;
     const KOS_TYPE   type       = GET_OBJ_TYPE(func_obj);
@@ -196,7 +196,7 @@ int kos_stack_push(KOS_CONTEXT ctx,
         this_.o = KOS_BADPTR;
     room = num_regs + KOS_STACK_EXTRA;
 
-    reg_init = ((int64_t)gen_reg << 16) | ((int64_t)ret_reg << 8) | (int64_t)num_regs;
+    reg_init = ((int32_t)gen_reg << 16) | ((int32_t)ret_reg << 8) | (int32_t)num_regs;
 
     if (ctx->stack_depth + room > KOS_MAX_STACK_DEPTH)
         RAISE_EXCEPTION_STR(str_err_stack_overflow);
