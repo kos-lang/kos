@@ -1007,6 +1007,7 @@ int main(void)
 
     /************************************************************************/
     /* CALL constructor - return another object instead of this */
+#ifndef CONFIG_DEEP_STACK
     {
         static const char str[]  = "own property";
         KOS_OBJ_ID        str_prop;
@@ -1049,6 +1050,7 @@ int main(void)
         TEST(ret == TO_SMALL_INT(0xC0DEU));
         TEST_NO_EXCEPTION();
     }
+#endif
 
     /************************************************************************/
     /* CALL constructor */
