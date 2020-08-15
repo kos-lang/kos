@@ -2122,7 +2122,7 @@ do {
     assert f.name         == "f"
     assert f.registers    == 1
     assert f.instructions == 2 # LOAD.VOID, RETURN
-    assert f.size         == 5
+    assert f.size         == 4
     assert f.offset       >  0
 
     assert base.function.name         == "function"

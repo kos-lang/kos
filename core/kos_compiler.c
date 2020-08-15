@@ -48,8 +48,7 @@ static int visit_node(KOS_COMP_UNIT      *program,
 static int invocation(KOS_COMP_UNIT      *program,
                       const KOS_AST_NODE *node,
                       KOS_REG           **reg,
-                      KOS_BYTECODE_INSTR  instr,
-                      unsigned            tail_closure_size);
+                      KOS_BYTECODE_INSTR  instr);
 
 static int function_literal(KOS_COMP_UNIT      *program,
                             const KOS_AST_NODE *node,
@@ -1191,7 +1190,7 @@ static int finish_global_scope(KOS_COMP_UNIT *program,
         TRY(gen_instr1(program, INSTR_LOAD_VOID, reg->reg));
     }
 
-    TRY(gen_instr2(program, INSTR_RETURN, program->scope_stack->num_indep_vars, reg->reg));
+    TRY(gen_instr1(program, INSTR_RETURN, reg->reg));
 
     free_reg(program, reg);
     reg = 0;
@@ -1432,7 +1431,7 @@ static int gen_return(KOS_COMP_UNIT *program,
         TRY(gen_instr1(program, INSTR_JUMP, 0));
     }
     else
-        TRY(gen_instr2(program, INSTR_RETURN, get_closure_size(program), reg));
+        TRY(gen_instr1(program, INSTR_RETURN, reg));
 
 cleanup:
     return error;
@@ -1467,9 +1466,8 @@ static int return_stmt(KOS_COMP_UNIT      *program,
         }
 
         if ( ! try_scope && node->children->type == NT_INVOCATION) {
-            const uint8_t closure_size = get_closure_size(program);
             tail_call = 1;
-            TRY(invocation(program, node->children, &reg, INSTR_TAIL_CALL, closure_size));
+            TRY(invocation(program, node->children, &reg, INSTR_TAIL_CALL));
             assert( ! reg);
         }
         else {
@@ -3036,23 +3034,19 @@ cleanup:
 static int invocation(KOS_COMP_UNIT      *program,
                       const KOS_AST_NODE *node,
                       KOS_REG           **reg,
-                      KOS_BYTECODE_INSTR  instr,
-                      unsigned            tail_closure_size)
+                      KOS_BYTECODE_INSTR  instr)
 {
     int      error;
     KOS_REG *args;
     KOS_REG *obj        = 0;
     KOS_REG *fun        = 0;
-    int32_t  rdest      = (int32_t)tail_closure_size;
     int      interp_str = node->type == NT_INTERPOLATED_STRING;
     int      num_contig_args;
 
-    assert(tail_closure_size <= KOS_MAX_REGS);
     assert(node->children);
 
     if (node->children->type == NT_SUPER_CTOR_LITERAL) {
         assert(instr == INSTR_CALL);
-        assert(tail_closure_size == 0);
         return super_invocation(program, node, reg);
     }
 
@@ -3117,6 +3111,8 @@ static int invocation(KOS_COMP_UNIT      *program,
         /* TODO ignore moves if all args are existing, contiguous registers */
 
         if (instr == INSTR_CALL) {
+            int32_t rdest;
+
             if ( ! *reg) {
                 for (i = 0; i < num_contig_args; i++) {
                     if (argn[i]->tmp) {
@@ -3129,21 +3125,29 @@ static int invocation(KOS_COMP_UNIT      *program,
                 TRY(gen_reg(program, reg));
 
             rdest = (*reg)->reg;
-        }
 
-        if (obj) {
-            instr = (instr == INSTR_CALL) ? INSTR_CALL_N : INSTR_TAIL_CALL_N;
-
-            TRY(gen_instr5(program, instr, rdest, fun->reg, obj->reg,
-                           num_contig_args ? (unsigned)argn[0]->reg : KOS_NO_REG,
-                           num_contig_args));
+            if (obj) {
+                TRY(gen_instr5(program, INSTR_CALL_N, rdest, fun->reg, obj->reg,
+                               num_contig_args ? (unsigned)argn[0]->reg : KOS_NO_REG,
+                               num_contig_args));
+            }
+            else {
+                TRY(gen_instr4(program, INSTR_CALL_FUN, rdest, fun->reg,
+                               num_contig_args ? (unsigned)argn[0]->reg : KOS_NO_REG,
+                               num_contig_args));
+            }
         }
         else {
-            instr = (instr == INSTR_CALL) ? INSTR_CALL_FUN : INSTR_TAIL_CALL_FUN;
-
-            TRY(gen_instr4(program, instr, rdest, fun->reg,
-                           num_contig_args ? (unsigned)argn[0]->reg : KOS_NO_REG,
-                           num_contig_args));
+            if (obj) {
+                TRY(gen_instr4(program, INSTR_TAIL_CALL_N, fun->reg, obj->reg,
+                               num_contig_args ? (unsigned)argn[0]->reg : KOS_NO_REG,
+                               num_contig_args));
+            }
+            else {
+                TRY(gen_instr3(program, INSTR_TAIL_CALL_FUN, fun->reg,
+                               num_contig_args ? (unsigned)argn[0]->reg : KOS_NO_REG,
+                               num_contig_args));
+            }
         }
 
         while (num_contig_args) {
@@ -3165,9 +3169,11 @@ static int invocation(KOS_COMP_UNIT      *program,
         }
 
         if (instr == INSTR_CALL)
-            rdest = (*reg)->reg;
-
-        TRY(gen_instr4(program, instr, rdest, fun->reg, obj->reg, args->reg));
+            TRY(gen_instr4(program, instr, (*reg)->reg, fun->reg, obj->reg, args->reg));
+        else {
+            assert(instr == INSTR_TAIL_CALL);
+            TRY(gen_instr3(program, instr, fun->reg, obj->reg, args->reg));
+        }
 
         if (args != *reg)
             free_reg(program, args);
@@ -5379,7 +5385,7 @@ static int visit_node(KOS_COMP_UNIT      *program,
         case NT_INVOCATION:
             /* fall through */
         case NT_INTERPOLATED_STRING:
-            error = invocation(program, node, reg, INSTR_CALL, 0);
+            error = invocation(program, node, reg, INSTR_CALL);
             break;
         case NT_OPERATOR:
             error = process_operator(program, node, reg);

@@ -166,14 +166,14 @@ DEFINE_INSTRUCTION(CALL_FUN, 0xBC)
 /* Call generator which is "READY" or "ACTIVE".  r.final is set to false
  * if a subsequent value is yielded or true if the generator returned. */
 DEFINE_INSTRUCTION(CALL_GEN, 0xBD)
-/* RETURN <closure.size.uint8>, <r.src> */
+/* RETURN <r.src> */
 DEFINE_INSTRUCTION(RETURN, 0xBE)
-/* TAIL.CALL <closure.size.uint8>, <r.func>, <r.this>, <r.args> */
+/* TAIL.CALL <r.func>, <r.this>, <r.args> */
 DEFINE_INSTRUCTION(TAIL_CALL, 0xBF)
-/* TAIL.CALL.N <closure.size.uint8>, <r.func>, <r.this>, <r.arg1>, <numargs.uint8> */
+/* TAIL.CALL.N <r.func>, <r.this>, <r.arg1>, <numargs.uint8> */
 /* Arguments are in consecutive registers, r.arg1 ignored if numargs.uint8 is 0. */
 DEFINE_INSTRUCTION(TAIL_CALL_N, 0xC0)
-/* TAIL.CALL.FUN <closure.size.uint8>, <r.func>, <r.arg1>, <numargs.uint8> */
+/* TAIL.CALL.FUN <r.func>, <r.arg1>, <numargs.uint8> */
 /* Arguments are in consecutive registers, r.arg1 ignored if numargs.uint8 is 0. */
 DEFINE_INSTRUCTION(TAIL_CALL_FUN, 0xC1)
 /* YIELD <r.src> */

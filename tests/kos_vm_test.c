@@ -192,7 +192,7 @@ int main(void)
             INSTR_SET,          0, 1, 2,
             INSTR_LOAD_INT8,    2, 0,
             INSTR_GET_PROP8,    3, 0, 0,
-            INSTR_RETURN,       0, 3
+            INSTR_RETURN,       3
         };
 
         TEST(!IS_BAD_PTR(str_prop));
@@ -212,7 +212,7 @@ int main(void)
             INSTR_SET_PROP8,    0, 0/*"prop2"*/, 1,
             INSTR_LOAD_CONST,   1, IMM32(0),/*"prop2"*/
             INSTR_GET,          1, 0, 1,
-            INSTR_RETURN,       0, 1
+            INSTR_RETURN,       1
         };
 
         TEST(!IS_BAD_PTR(str_prop));
@@ -230,7 +230,7 @@ int main(void)
             INSTR_LOAD_INT8,  2, 10,
             INSTR_SET,        0, 1, 2,
             INSTR_GET_ELEM,   1, 0, IMM32(-2),
-            INSTR_RETURN,     0, 1
+            INSTR_RETURN,     1
         };
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, 0, 0) == TO_SMALL_INT(10));
@@ -246,7 +246,7 @@ int main(void)
             INSTR_SET_ELEM,   0, IMM32(2), 1,
             INSTR_LOAD_INT8,  1, (uint8_t)(int8_t)-1,
             INSTR_GET,        2, 0, 1,
-            INSTR_RETURN,     0, 2
+            INSTR_RETURN,     2
         };
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, 0, 0) == TO_SMALL_INT(-8));
@@ -262,7 +262,7 @@ int main(void)
             INSTR_LOAD_CONST,   0, IMM32(0),/*"prop1"*/
             INSTR_LOAD_INT8,    1, (uint8_t)(int8_t)-6,
             INSTR_SET,          0, 0, 1,
-            INSTR_RETURN,       0, 0
+            INSTR_RETURN,       0
         };
 
         TEST(!IS_BAD_PTR(str_prop));
@@ -279,7 +279,7 @@ int main(void)
             INSTR_LOAD_TRUE, 1,
             INSTR_LOAD_INT8, 2, (uint8_t)(int8_t)-6,
             INSTR_SET,       0, 1, 2,
-            INSTR_RETURN,    0, 0
+            INSTR_RETURN,    0
         };
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, 0, 0) == KOS_BADPTR);
@@ -293,7 +293,7 @@ int main(void)
             INSTR_LOAD_OBJ,   0,
             INSTR_LOAD_INT8,  1, 0,
             INSTR_SET,        0, 1, 1,
-            INSTR_RETURN,     0, 0
+            INSTR_RETURN,     0
         };
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, 0, 0) == KOS_BADPTR);
@@ -309,7 +309,7 @@ int main(void)
             INSTR_LOAD_CONST,   0, IMM32(0),/*"prop1"*/
             INSTR_LOAD_INT8,    1, (uint8_t)(int8_t)-6,
             INSTR_SET_PROP8,    0, 0/*"prop1"*/, 1,
-            INSTR_RETURN,       0, 0
+            INSTR_RETURN,       0
         };
 
         TEST(!IS_BAD_PTR(str_prop));
@@ -327,7 +327,7 @@ int main(void)
             INSTR_LOAD_CONST,   0, IMM32(0),/*"prop1"*/
             INSTR_LOAD_INT8,    1, (uint8_t)(int8_t)-6,
             INSTR_SET_ELEM,     0, IMM32(0), 1,
-            INSTR_RETURN,       0, 0
+            INSTR_RETURN,       0
         };
 
         TEST(!IS_BAD_PTR(str_prop));
@@ -345,7 +345,7 @@ int main(void)
             INSTR_LOAD_ARRAY,   0, IMM32(1),
             INSTR_LOAD_CONST,   1, IMM32(0),/*"prop1"*/
             INSTR_SET_ELEM,     0, IMM32(1), 1,
-            INSTR_RETURN,       0, 0
+            INSTR_RETURN,       0
         };
 
         TEST(!IS_BAD_PTR(str_prop));
@@ -362,7 +362,7 @@ int main(void)
         const uint8_t code[] = {
             INSTR_LOAD_CONST,   0, IMM32(0),/*"prop1"*/
             INSTR_SET_ELEM,     0, IMM32(0), 0,
-            INSTR_RETURN,       0, 0
+            INSTR_RETURN,       0
         };
 
         TEST(!IS_BAD_PTR(str_prop));
@@ -381,7 +381,7 @@ int main(void)
             INSTR_LOAD_INT8,    1, (uint8_t)(int8_t)-9,
             INSTR_SET_PROP8,    0, 0/*"prop5"*/, 1,
             INSTR_HAS_SH_PROP8, 2, 0, 0/*"prop5"*/,
-            INSTR_RETURN,       0, 2
+            INSTR_RETURN,       2
         };
 
         TEST(!IS_BAD_PTR(str_prop));
@@ -400,7 +400,7 @@ int main(void)
             INSTR_LOAD_INT8,    1, (uint8_t)(int8_t)-9,
             INSTR_SET_PROP8,    0, 0/*"prop5"*/, 1,
             INSTR_HAS_DP_PROP8, 2, 0, 0,/*"prop5"*/
-            INSTR_RETURN,       0, 2
+            INSTR_RETURN,       2
         };
 
         TEST(!IS_BAD_PTR(str_prop));
@@ -425,7 +425,7 @@ int main(void)
             INSTR_PUSH,         1, 1,
             INSTR_LOAD_CONST,   2, IMM32(0)/*"prop5"*/,
             INSTR_PUSH,         1, 2,
-            INSTR_RETURN,       0, 1
+            INSTR_RETURN,       1
         };
 
         TEST(!IS_BAD_PTR(str_prop));
@@ -463,7 +463,7 @@ int main(void)
             INSTR_PUSH_EX,      1, 1,
             INSTR_LOAD_CONST,   2, IMM32(0)/*"01"*/,
             INSTR_PUSH_EX,      1, 2,
-            INSTR_RETURN,       0, 1
+            INSTR_RETURN,       1
         };
 
         TEST(!IS_BAD_PTR(str_prop));
@@ -501,7 +501,7 @@ int main(void)
             INSTR_SET_PROP8,    0, 0,/*"prop6"*/ 1,
             INSTR_DEL_PROP8,    0, 0,/*"prop6"*/
             INSTR_HAS_DP_PROP8, 1, 0, 0,/*"prop6"*/
-            INSTR_RETURN,       0, 1
+            INSTR_RETURN,       1
         };
 
         TEST(!IS_BAD_PTR(str_prop));
@@ -519,7 +519,7 @@ int main(void)
             INSTR_LOAD_OBJ,     0,
             INSTR_DEL_PROP8,    0, 0,/*"prop6"*/
             INSTR_HAS_DP_PROP8, 0, 0, 0,/*"prop6"*/
-            INSTR_RETURN,       0, 0
+            INSTR_RETURN,       0
         };
 
         TEST(!IS_BAD_PTR(str_prop));
@@ -540,7 +540,7 @@ int main(void)
             INSTR_LOAD_CONST,   1, IMM32(0),/*"prop7*/
             INSTR_DEL,          0, 1,
             INSTR_HAS_DP_PROP8, 1, 0, 0,/*"prop7"*/
-            INSTR_RETURN,       0, 1
+            INSTR_RETURN,       1
         };
 
         TEST(!IS_BAD_PTR(str_prop));
@@ -559,7 +559,7 @@ int main(void)
             INSTR_LOAD_CONST,   1, IMM32(0),/*"prop7*/
             INSTR_DEL,          0, 1,
             INSTR_HAS_DP_PROP8, 1, 0, 0,/*"prop7"*/
-            INSTR_RETURN,       0, 1
+            INSTR_RETURN,       1
         };
 
         TEST(!IS_BAD_PTR(str_prop));
@@ -575,7 +575,7 @@ int main(void)
             INSTR_LOAD_TRUE,  0,
             INSTR_JUMP,       IMM32(2),
             INSTR_LOAD_FALSE, 0,
-            INSTR_RETURN,     0, 0
+            INSTR_RETURN,     0
         };
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 1, 0, 0, 0) == KOS_TRUE);
@@ -587,15 +587,15 @@ int main(void)
     {
         const uint8_t code[] = {
             INSTR_LOAD_INT8,  0, 1,
-            INSTR_JUMP,       IMM32(10),
+            INSTR_JUMP,       IMM32(9),
             INSTR_LOAD_INT8,  1, 2,
             INSTR_ADD,        0, 0, 1,
-            INSTR_RETURN,     0, 0,
+            INSTR_RETURN,     0,
             INSTR_LOAD_INT8,  1, 3,
             INSTR_ADD,        0, 0, 1,
-            INSTR_JUMP,       IMM32(-22),
+            INSTR_JUMP,       IMM32(-21),
             INSTR_LOAD_VOID,  0,
-            INSTR_RETURN,     0, 0
+            INSTR_RETURN,     0
         };
 
         KOS_OBJ_ID ret = run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, 0, 0);
@@ -613,7 +613,7 @@ int main(void)
             INSTR_LOAD_TRUE,  0,
             INSTR_JUMP_COND,  IMM32(2), 0,
             INSTR_LOAD_FALSE, 0,
-            INSTR_RETURN,     0, 0
+            INSTR_RETURN,     0
         };
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 1, 0, 0, 0) == KOS_TRUE);
@@ -627,7 +627,7 @@ int main(void)
             INSTR_LOAD_TRUE,     0,
             INSTR_JUMP_NOT_COND, IMM32(2), 0,
             INSTR_LOAD_FALSE,    0,
-            INSTR_RETURN,        0, 0
+            INSTR_RETURN,        0
         };
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 1, 0, 0, 0) == KOS_FALSE);
@@ -641,7 +641,7 @@ int main(void)
             INSTR_LOAD_FALSE,    0,
             INSTR_JUMP_NOT_COND, IMM32(2), 0,
             INSTR_LOAD_TRUE,     0,
-            INSTR_RETURN,        0, 0
+            INSTR_RETURN,        0
         };
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 1, 0, 0, 0) == KOS_FALSE);
@@ -652,9 +652,9 @@ int main(void)
     /* LOAD.CONST (function), CALL */
     {
         const uint8_t code[] = {
-            INSTR_JUMP,        IMM32(3),
+            INSTR_JUMP,        IMM32(2),
 
-            INSTR_RETURN,      0, 0,
+            INSTR_RETURN,      0,
 
             INSTR_LOAD_CONST8, 0, 0,
             INSTR_LOAD_ARRAY8, 1, 1,
@@ -662,7 +662,7 @@ int main(void)
             INSTR_SET_ELEM,    1, IMM32(0), 2,
             INSTR_LOAD_VOID,   2,
             INSTR_CALL,        0, 0, 2, 1,
-            INSTR_RETURN,      0, 0
+            INSTR_RETURN,      0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(2, 1);
         KOS_OBJ_ID        func = create_func(ctx, 5, &opts);
@@ -686,13 +686,13 @@ int main(void)
             INSTR_CALL,        0, 0, 2, 1,
             INSTR_LOAD_INT8,   1, 2,
             INSTR_ADD,         0, 0, 1,
-            INSTR_RETURN,      0, 0,
+            INSTR_RETURN,      0,
 
             INSTR_MUL,         0, 0, 0,
-            INSTR_RETURN,      0, 0
+            INSTR_RETURN,      0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(2, 1);
-        KOS_OBJ_ID        func = create_func(ctx, 36, &opts);
+        KOS_OBJ_ID        func = create_func(ctx, 35, &opts);
 
         KOS_OBJ_ID ret = run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, &func, 1);
         TEST_NO_EXCEPTION();
@@ -705,15 +705,15 @@ int main(void)
     /* LOAD.CONST (function), CALL */
     {
         const uint8_t code[] = {
-            INSTR_JUMP,       IMM32(3),
+            INSTR_JUMP,       IMM32(2),
 
-            INSTR_RETURN,     0, 0,
+            INSTR_RETURN,     0,
 
             INSTR_LOAD_CONST, 0, IMM32(0),
             INSTR_LOAD_INT8,  1, 121,
             INSTR_LOAD_ARRAY, 2, IMM32(0),
             INSTR_CALL,       0, 0, 1, 2,
-            INSTR_RETURN,     0, 0
+            INSTR_RETURN,     0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(1, 0);
         KOS_OBJ_ID        func;
@@ -733,15 +733,15 @@ int main(void)
     /* CALL.N */
     {
         const uint8_t code[] = {
-            INSTR_JUMP,       IMM32(3),
+            INSTR_JUMP,       IMM32(2),
 
-            INSTR_RETURN,     0, 0,
+            INSTR_RETURN,     0,
 
             INSTR_LOAD_CONST, 0, IMM32(0),
             INSTR_LOAD_INT8,  1, 42,
             INSTR_LOAD_VOID,  2,
             INSTR_CALL_N,     0, 0, 2, 1, 1,
-            INSTR_RETURN,     0, 0
+            INSTR_RETURN,     0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(2, 1);
         KOS_OBJ_ID        func = create_func(ctx, 5, &opts);
@@ -757,15 +757,15 @@ int main(void)
     /* CALL.N - zero args */
     {
         const uint8_t code[] = {
-            INSTR_JUMP,       IMM32(6),
+            INSTR_JUMP,       IMM32(5),
 
             INSTR_LOAD_INT8,  0, 43,
-            INSTR_RETURN,     0, 0,
+            INSTR_RETURN,     0,
 
             INSTR_LOAD_CONST, 0, IMM32(0),
             INSTR_LOAD_VOID,  1,
             INSTR_CALL_N,     0, 0, 1, 255, 0,
-            INSTR_RETURN,     0, 0
+            INSTR_RETURN,     0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(1, 0);
         KOS_OBJ_ID        func = create_func(ctx, 5, &opts);
@@ -781,14 +781,14 @@ int main(void)
     /* CALL.FUN */
     {
         const uint8_t code[] = {
-            INSTR_JUMP,       IMM32(3),
+            INSTR_JUMP,       IMM32(2),
 
-            INSTR_RETURN,     0, 0,
+            INSTR_RETURN,     0,
 
             INSTR_LOAD_CONST, 0, IMM32(0),
             INSTR_LOAD_INT8,  1, 42,
             INSTR_CALL_FUN,   0, 0, 1, 1,
-            INSTR_RETURN,     0, 0
+            INSTR_RETURN,     0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(2, 1);
         KOS_OBJ_ID        func = create_func(ctx, 5, &opts);
@@ -804,14 +804,14 @@ int main(void)
     /* CALL.FUN - zero args */
     {
         const uint8_t code[] = {
-            INSTR_JUMP,       IMM32(6),
+            INSTR_JUMP,       IMM32(5),
 
             INSTR_LOAD_INT8,  0, 44,
-            INSTR_RETURN,     0, 0,
+            INSTR_RETURN,     0,
 
             INSTR_LOAD_CONST, 0, IMM32(0),
             INSTR_CALL_FUN,   0, 0, 255, 0,
-            INSTR_RETURN,     0, 0
+            INSTR_RETURN,     0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(1, 0);
         KOS_OBJ_ID        func = create_func(ctx, 5, &opts);
@@ -830,13 +830,13 @@ int main(void)
             INSTR_LOAD_CONST8, 0, 0,
             INSTR_LOAD_INT8,   1, 42,
             INSTR_CALL_FUN,    0, 0, 1, 1,
-            INSTR_RETURN,      0, 0,
+            INSTR_RETURN,      0,
 
             INSTR_LOAD_INT8,   0, 43,
-            INSTR_RETURN,      0, 0
+            INSTR_RETURN,      0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(1, 0);
-        KOS_OBJ_ID        func = create_func(ctx, 14, &opts);
+        KOS_OBJ_ID        func = create_func(ctx, 13, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, &func, 1) == TO_SMALL_INT(43));
         TEST_NO_EXCEPTION();
@@ -851,13 +851,13 @@ int main(void)
             INSTR_LOAD_INT8,   2, 5,
             INSTR_CALL_N,      2, 0, 2, 255, 0,          /* effectively add 130 */
             INSTR_CALL_N,      2, 1, 2, 255, 0,          /* effectively add 100 */
-            INSTR_RETURN,      0, 2,
+            INSTR_RETURN,      2,
 
             INSTR_LOAD_INT8,   0, 30,
             INSTR_ADD,         0, 0, 1,                  /* add 30 to this */
             INSTR_LOAD_INT8,   1, 100,
             INSTR_ADD,         0, 0, 1,                  /* add 100 to this */
-            INSTR_RETURN,      0, 0
+            INSTR_RETURN,      0
         };
 
         KOS_FUNCTION_OPTS opts;
@@ -865,11 +865,11 @@ int main(void)
 
         opts = create_func_opts(2, 0);
         opts.this_reg = 1;
-        constants[0] = create_func(ctx, 24, &opts);
+        constants[0] = create_func(ctx, 23, &opts);
 
         opts = create_func_opts(2, 0);
         opts.this_reg = 0;
-        constants[1] = create_func(ctx, 31, &opts);
+        constants[1] = create_func(ctx, 30, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, constants, 2) == TO_SMALL_INT(235));
         TEST_NO_EXCEPTION();
@@ -882,7 +882,7 @@ int main(void)
             INSTR_LOAD_VOID,   0,
             INSTR_LOAD_ARRAY8, 1, 0,
             INSTR_CALL,        0, 0, 0, 1,
-            INSTR_RETURN,      0, 0
+            INSTR_RETURN,      0
         };
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, 0, 0) == KOS_BADPTR);
@@ -896,15 +896,15 @@ int main(void)
         KOS_FUNCTION_OPTS opts;
         KOS_OBJ_ID        constants[2];
         const uint8_t     code[] = {
-            INSTR_JUMP,         IMM32(3),
+            INSTR_JUMP,         IMM32(2),
 
-            INSTR_RETURN,       0, 0,
+            INSTR_RETURN,       0,
 
             INSTR_LOAD_CONST8,  0, 1,
             INSTR_LOAD_CONST,   1, IMM32(0),
             INSTR_LOAD_VOID,    2,
             INSTR_CALL,         0, 0, 2, 1,
-            INSTR_RETURN,       0, 0
+            INSTR_RETURN,       0
         };
 
         constants[0] = KOS_new_const_ascii_cstring(ctx, str);
@@ -923,15 +923,15 @@ int main(void)
     /* CALL - not enough args */
     {
         const uint8_t code[] = {
-            INSTR_JUMP,        IMM32(3),
+            INSTR_JUMP,        IMM32(2),
 
-            INSTR_RETURN,      0, 0,
+            INSTR_RETURN,      0,
 
             INSTR_LOAD_CONST8, 0, 0,
             INSTR_LOAD_VOID,   1,
             INSTR_LOAD_ARRAY8, 2, 0,
             INSTR_CALL,        0, 0, 1, 2,
-            INSTR_RETURN,      0, 0
+            INSTR_RETURN,      0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(2, 10);
         KOS_OBJ_ID        func = create_func(ctx, 5, &opts);
@@ -944,13 +944,13 @@ int main(void)
     /* CALL.FUN - not enough args */
     {
         const uint8_t code[] = {
-            INSTR_JUMP,        IMM32(3),
+            INSTR_JUMP,        IMM32(2),
 
-            INSTR_RETURN,      0, 0,
+            INSTR_RETURN,      0,
 
             INSTR_LOAD_CONST8, 0, 0,
             INSTR_CALL_FUN,    0, 0, 255, 0,
-            INSTR_RETURN,      0, 0
+            INSTR_RETURN,      0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(2, 1);
         KOS_OBJ_ID        func = create_func(ctx, 5, &opts);
@@ -968,15 +968,15 @@ int main(void)
         KOS_OBJ_ID        constants[4];
         KOS_OBJ_ID        ret;
         const uint8_t     code[] = {
-            INSTR_JUMP,        IMM32(7),
+            INSTR_JUMP,        IMM32(6),
 
             INSTR_SET_PROP8,   1, 0, 0,
-            INSTR_RETURN,      0, 1,
+            INSTR_RETURN,      1,
 
             INSTR_LOAD_FUN8,   0, 2,
             INSTR_LOAD_CONST,  1, IMM32(1),
             INSTR_CALL_FUN,    0, 0, 1, 1,
-            INSTR_RETURN,      0, 0
+            INSTR_RETURN,      0
         };
 
         constants[0] = KOS_new_const_ascii_cstring(ctx, str);
@@ -1014,15 +1014,15 @@ int main(void)
         KOS_OBJ_ID        constants[4];
         KOS_OBJ_ID        ret;
         const uint8_t     code[] = {
-            INSTR_JUMP,        IMM32(7),
+            INSTR_JUMP,        IMM32(6),
 
             INSTR_SET_PROP8,   1, 0, 0,
-            INSTR_RETURN,      0, 0,
+            INSTR_RETURN,      0,
 
             INSTR_LOAD_FUN8,   0, 2,
             INSTR_LOAD_CONST,  1, IMM32(1),
             INSTR_CALL_FUN,    0, 0, 1, 1,
-            INSTR_RETURN,      0, 0
+            INSTR_RETURN,      0
         };
 
         constants[0] = KOS_new_const_ascii_cstring(ctx, str);
@@ -1057,18 +1057,18 @@ int main(void)
         KOS_OBJ_ID        str_prop;
         KOS_OBJ_ID        ret;
         const uint8_t     code[]   = {
-            INSTR_JUMP,        IMM32(9),
+            INSTR_JUMP,        IMM32(8),
 
             INSTR_SET_PROP8,   1, 0, 0,
             INSTR_LOAD_VOID,   0,                /* return value is ignored */
-            INSTR_RETURN,      0, 1,
+            INSTR_RETURN,      1,
 
             INSTR_LOAD_FUN8,   0, 2,
             INSTR_LOAD_ARRAY8, 1, 1,             /* create arguments array */
             INSTR_LOAD_CONST,  2, IMM32(1),
             INSTR_SET_ELEM,    1, IMM32(0), 2,   /* set argument */
             INSTR_CALL,        0, 0, 1, 1,
-            INSTR_RETURN,      0, 0
+            INSTR_RETURN,      0
         };
 
         KOS_FUNCTION_OPTS opts;
@@ -1104,16 +1104,16 @@ int main(void)
     /* INSTANCEOF */
     {
         const uint8_t code[] = {
-            INSTR_JUMP,       IMM32(3),
+            INSTR_JUMP,       IMM32(2),
 
-            INSTR_RETURN,     0, 0,
+            INSTR_RETURN,     0,
 
             INSTR_LOAD_FUN,   0, IMM32(0),
             INSTR_LOAD_ARRAY, 1, IMM32(0),
             INSTR_CALL,       1, 0, 1, 1,
 
             INSTR_INSTANCEOF, 0, 1, 0,
-            INSTR_RETURN,     0, 0
+            INSTR_RETURN,     0
         };
 
         KOS_FUNCTION_OPTS opts;
@@ -1133,9 +1133,9 @@ int main(void)
     /* The same function addresses - the same default prototypes */
     {
         const uint8_t code[] = {
-            INSTR_JUMP,          IMM32(3),
+            INSTR_JUMP,          IMM32(2),
 
-            INSTR_RETURN,        0, 0,
+            INSTR_RETURN,        0,
 
             INSTR_LOAD_FUN8,     2, 0,
             INSTR_LOAD_FUN8,     3, 0,
@@ -1154,7 +1154,7 @@ int main(void)
 
             INSTR_LOAD_TRUE,     0,             /* If everything went OK, return true.     */
 
-            INSTR_RETURN,        0, 0
+            INSTR_RETURN,        0
         };
 
         KOS_FUNCTION_OPTS opts;
@@ -1174,10 +1174,10 @@ int main(void)
     /* Different function addresses - different default prototypes */
     {
         const uint8_t code[] = {
-            INSTR_JUMP,          IMM32(6),
+            INSTR_JUMP,          IMM32(4),
 
-            INSTR_RETURN,        0, 0,
-            INSTR_RETURN,        0, 0,
+            INSTR_RETURN,        0,
+            INSTR_RETURN,        0,
 
             INSTR_LOAD_FUN8,     2, 0,
             INSTR_LOAD_FUN8,     3, 2,
@@ -1196,7 +1196,7 @@ int main(void)
 
             INSTR_LOAD_TRUE,     0,             /* If everything went OK, return true.     */
 
-            INSTR_RETURN,        0, 0
+            INSTR_RETURN,        0
         };
 
         KOS_FUNCTION_OPTS opts;
@@ -1208,7 +1208,7 @@ int main(void)
         constants[1] = KOS_new_object(ctx); /* prototype */
 
         opts = create_func_opts(1, 0);
-        constants[2] = create_class(ctx, 8, &opts);
+        constants[2] = create_class(ctx, 7, &opts);
 
         constants[3] = KOS_new_object(ctx); /* prototype */
 
@@ -1222,7 +1222,7 @@ int main(void)
         const uint8_t code[] = {
             INSTR_LOAD_FUN8,  0, 0,
             INSTR_GET_PROTO,  0, 0,
-            INSTR_RETURN,     0, 0
+            INSTR_RETURN,     0
         };
 
         KOS_FUNCTION_OPTS opts;
@@ -1245,7 +1245,7 @@ int main(void)
             INSTR_LOAD_VOID,   1,
             INSTR_LOAD_ARRAY,  2, IMM32(0),
             INSTR_CALL,        0, 0, 1, 2,
-            INSTR_RETURN,      0, 0
+            INSTR_RETURN,      0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(1, 0);
         KOS_OBJ_ID        func = create_gen(ctx, 3, &opts);
@@ -1268,10 +1268,10 @@ int main(void)
             INSTR_LOAD_CONST8, 1, 0,              /* generator yields 'this' */
             INSTR_CALL_N,      0, 0, 1, 255, 0,   /* instantiate generator   */
             INSTR_CALL_FUN,    0, 0, 2, 0,        /* invoke generator        */
-            INSTR_RETURN,      0, 0,
+            INSTR_RETURN,      0,
 
             INSTR_YIELD,       0,                 /* generator yields 'this' */
-            INSTR_RETURN,      0, 0
+            INSTR_RETURN,      0
         };
 
         KOS_FUNCTION_OPTS opts;
@@ -1281,7 +1281,7 @@ int main(void)
 
         opts = create_func_opts(1, 0);
         opts.this_reg = 0;
-        constants[1] = create_gen(ctx, 20, &opts);
+        constants[1] = create_gen(ctx, 19, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, constants, 2) == TO_SMALL_INT(0xCAFEU));
         TEST_NO_EXCEPTION();
@@ -1294,13 +1294,13 @@ int main(void)
             INSTR_LOAD_CONST8, 0, 0,
             INSTR_CALL_FUN,    0, 0, 100, 0,
             INSTR_CALL_FUN,    0, 0, 100, 0,
-            INSTR_RETURN,      0, 0,
+            INSTR_RETURN,      0,
 
             INSTR_LOAD_INT8,   0, 42,
             INSTR_YIELD,       0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(1, 0);
-        KOS_OBJ_ID        func = create_gen(ctx, 16, &opts);
+        KOS_OBJ_ID        func = create_gen(ctx, 15, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 1, 0, &func, 1) == TO_SMALL_INT(42));
         TEST_NO_EXCEPTION();
@@ -1316,7 +1316,7 @@ int main(void)
 
             INSTR_CALL_FUN,    1, 0, 0, 0,    /* yields 0 ('this') */
             INSTR_CALL_FUN,    1, 0, 0, 0,    /* yields 'void', because args are empty */
-            INSTR_RETURN,      0, 1,
+            INSTR_RETURN,      1,
 
             INSTR_YIELD,       0,
             INSTR_JUMP,        IMM32(-7)
@@ -1325,7 +1325,7 @@ int main(void)
         KOS_OBJ_ID        func;
 
         opts.this_reg = 0;
-        func = create_gen(ctx, 25, &opts);
+        func = create_gen(ctx, 24, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 4, 0, &func, 1) == KOS_VOID);
         TEST_NO_EXCEPTION();
@@ -1355,7 +1355,7 @@ int main(void)
             INSTR_CALL_GEN,      4, 0, 1,           /* no more */
             INSTR_JUMP_COND,     IMM32(3), 1,
             INSTR_LOAD_INT8,     3, 0,
-            INSTR_RETURN,        0, 3,
+            INSTR_RETURN,        3,
 
             INSTR_JUMP,          IMM32(12),
             INSTR_MOVE,          2, 0,
@@ -1365,10 +1365,10 @@ int main(void)
             INSTR_CMP_LT,        2, 0, 1,
             INSTR_JUMP_COND,     IMM32(-22), 2,
             INSTR_LOAD_VOID,     2,
-            INSTR_RETURN,        0, 2
+            INSTR_RETURN,        2
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(3, 2);
-        KOS_OBJ_ID        func = create_gen(ctx, 83, &opts);
+        KOS_OBJ_ID        func = create_gen(ctx, 82, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 5, 0, &func, 1) == TO_SMALL_INT(3+4+5));
         TEST_NO_EXCEPTION();
@@ -1382,12 +1382,12 @@ int main(void)
             INSTR_LOAD_INT8,   1, 0,
             INSTR_LOAD_ARRAY8, 2, 1,
             INSTR_CALL,        0, 0, 1, 2, /* instantiate generator */
-            INSTR_RETURN,      0, 1,
+            INSTR_RETURN,      1,
 
             INSTR_YIELD,       1
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(3, 2);
-        KOS_OBJ_ID        func = create_gen(ctx, 17, &opts);
+        KOS_OBJ_ID        func = create_gen(ctx, 16, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, &func, 1) == KOS_BADPTR);
         TEST_EXCEPTION();
@@ -1401,12 +1401,12 @@ int main(void)
             INSTR_LOAD_INT8,   1, 0,
             INSTR_LOAD_VOID,   2,
             INSTR_CALL,        0, 0, 1, 2, /* instantiate generator */
-            INSTR_RETURN,      0, 1,
+            INSTR_RETURN,      1,
 
             INSTR_YIELD,       1
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(2, 0);
-        KOS_OBJ_ID        func = create_gen(ctx, 16, &opts);
+        KOS_OBJ_ID        func = create_gen(ctx, 15, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, &func, 1) == KOS_BADPTR);
         TEST_EXCEPTION();
@@ -1420,7 +1420,7 @@ int main(void)
             INSTR_LOAD_INT8,   1, 120,
             INSTR_CALL_N,      0, 0, 1, 0, 1, /* instantiate generator */
             INSTR_CALL_FUN,    0, 0, 0, 0,    /* invoke generator */
-            INSTR_RETURN,      0, 0,
+            INSTR_RETURN,      0,
 
             INSTR_YIELD,       1
         };
@@ -1428,7 +1428,7 @@ int main(void)
         KOS_OBJ_ID        func;
 
         opts.this_reg = 1;
-        func = create_gen(ctx, 20, &opts);
+        func = create_gen(ctx, 19, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, &func, 1) == TO_SMALL_INT(120));
         TEST_NO_EXCEPTION();
@@ -1454,7 +1454,7 @@ int main(void)
             INSTR_SET_ELEM,    2, IMM32(0), 3,
             INSTR_CALL,        3, 0, 1, 2,       /* yields 17 */
             INSTR_SUB,         4, 4, 3,          /* 250 */
-            INSTR_RETURN,      0, 4,
+            INSTR_RETURN,      4,
 
             INSTR_LOAD_INT8,   1, 1,
             INSTR_ADD,         0, 0, 1,    /* use 'this' as the initial value */
@@ -1466,7 +1466,7 @@ int main(void)
         KOS_OBJ_ID        ret;
 
         opts.this_reg = 0;
-        func = create_gen(ctx, 67, &opts);
+        func = create_gen(ctx, 66, &opts);
 
         ret = run_code(&inst, ctx, &code[0], sizeof(code), 5, 0, &func, 1);
         TEST_NO_EXCEPTION();
@@ -1486,16 +1486,16 @@ int main(void)
 
             INSTR_CALL_FUN,    1, 0, 11, 0,
             INSTR_CALL_FUN,    1, 0, 12, 0,
-            INSTR_RETURN,      0, 1,
+            INSTR_RETURN,      1,
 
             INSTR_YIELD,       0,
-            INSTR_RETURN,      0, 0
+            INSTR_RETURN,      0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(1, 0);
         KOS_OBJ_ID        func;
 
         opts.this_reg = 0;
-        func = create_gen(ctx, 25, &opts);
+        func = create_gen(ctx, 24, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, &func, 1) == KOS_BADPTR);
         TEST_EXCEPTION();
@@ -1510,16 +1510,16 @@ int main(void)
 
             INSTR_CALL_GEN,    2, 0, 1,    /* returns 'true' in register 1 */
             INSTR_CALL_GEN,    2, 0, 2,    /* raise exception */
-            INSTR_RETURN,      0, 1,
+            INSTR_RETURN,      1,
 
-            INSTR_RETURN,      0, 0,
-            INSTR_JUMP,        IMM32(-8)
+            INSTR_RETURN,      0,
+            INSTR_JUMP,        IMM32(-7)
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(1, 0);
         KOS_OBJ_ID        func;
 
         opts.this_reg = 0;
-        func = create_gen(ctx, 22, &opts);
+        func = create_gen(ctx, 20, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, &func, 1) == KOS_BADPTR);
         TEST_EXCEPTION();
@@ -1532,13 +1532,13 @@ int main(void)
             INSTR_LOAD_CONST8, 0, 0,
             INSTR_LOAD_INT8,   1, 13,
             INSTR_CALL_N,      0, 0, 1, 10, 0, /* invoke function */
-            INSTR_RETURN,      0, 0,
+            INSTR_RETURN,      0,
 
             INSTR_YIELD,       0,
-            INSTR_RETURN,      0, 0
+            INSTR_RETURN,      0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(1, 0);
-        KOS_OBJ_ID        func = create_func(ctx, 15, &opts);
+        KOS_OBJ_ID        func = create_func(ctx, 14, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, &func, 1) == KOS_BADPTR);
         TEST_EXCEPTION();
@@ -1553,13 +1553,13 @@ int main(void)
             INSTR_CALL,        0, 0, 1, 1, /* instantiate generator */
 
             INSTR_CALL_GEN,    0, 0, 0,    /* invoke generator */
-            INSTR_RETURN,      0, 0,
+            INSTR_RETURN,      0,
 
             INSTR_LOAD_INT8,   0, 0,
-            INSTR_RETURN,      0, 0
+            INSTR_RETURN,      0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(1, 0);
-        KOS_OBJ_ID        func = create_gen(ctx, 18, &opts);
+        KOS_OBJ_ID        func = create_gen(ctx, 17, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, &func, 1) == KOS_TRUE);
         TEST_NO_EXCEPTION();
@@ -1574,14 +1574,14 @@ int main(void)
             INSTR_CALL,        0, 0, 1, 1, /* instantiate generator */
 
             INSTR_CALL_GEN,    0, 0, 0,    /* invoke generator */
-            INSTR_RETURN,      0, 0,
+            INSTR_RETURN,      0,
 
             INSTR_LOAD_INT8,   0, 0,
             INSTR_YIELD,       0,
-            INSTR_RETURN,      0, 0
+            INSTR_RETURN,      0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(1, 0);
-        KOS_OBJ_ID        func = create_gen(ctx, 21, &opts);
+        KOS_OBJ_ID        func = create_gen(ctx, 20, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, &func, 1) == KOS_FALSE);
         TEST_NO_EXCEPTION();
@@ -1593,17 +1593,17 @@ int main(void)
         const uint8_t code[] = {
             INSTR_LOAD_CONST8, 0, 0,
             INSTR_LOAD_ARRAY8, 1, 0,
-            INSTR_TAIL_CALL,   0, 0, 0, 1,
+            INSTR_TAIL_CALL,   0, 0, 1,
 
             /* unreachable */
             INSTR_LOAD_VOID,   0,
-            INSTR_RETURN,      0, 0,
+            INSTR_RETURN,      0,
 
             INSTR_LOAD_INT8,   0, 42,
-            INSTR_RETURN,      0, 0
+            INSTR_RETURN,      0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(1, 0);
-        KOS_OBJ_ID        func = create_func(ctx, 16, &opts);
+        KOS_OBJ_ID        func = create_func(ctx, 14, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, &func, 1) == TO_SMALL_INT(42));
         TEST_NO_EXCEPTION();
@@ -1617,22 +1617,22 @@ int main(void)
             INSTR_LOAD_INT8,   1, 3,
             INSTR_LOAD_INT8,   2, 20,
             INSTR_LOAD_INT8,   3, 100,
-            INSTR_TAIL_CALL_N, 0, 0, 1, 2, 2,
+            INSTR_TAIL_CALL_N, 0, 1, 2, 2,
 
             /* unreachable */
             INSTR_LOAD_VOID,   0,
-            INSTR_RETURN,      0, 0,
+            INSTR_RETURN,      0,
 
             INSTR_ADD,         0, 0, 0,        /* arg 0 - 100 */
             INSTR_ADD,         0, 0, 1,        /* arg 1 - 20  */
             INSTR_ADD,         0, 0, 2,        /* this  - 3   */
-            INSTR_RETURN,      0, 0
+            INSTR_RETURN,      0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(3, 2);
         KOS_OBJ_ID        func;
 
         opts.this_reg = 2;
-        func = create_func(ctx, 23, &opts);
+        func = create_func(ctx, 21, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 4, 0, &func, 1) == TO_SMALL_INT(143));
         TEST_NO_EXCEPTION();
@@ -1645,18 +1645,18 @@ int main(void)
             INSTR_LOAD_CONST8,   0, 0,
             INSTR_LOAD_INT8,     1, 20,
             INSTR_LOAD_INT8,     2, 100,
-            INSTR_TAIL_CALL_FUN, 0, 0, 1, 2,
+            INSTR_TAIL_CALL_FUN, 0, 1, 2,
 
             /* unreachable */
             INSTR_LOAD_VOID,     0,
-            INSTR_RETURN,        0, 0,
+            INSTR_RETURN,        0,
 
             INSTR_ADD,           0, 0, 0,        /* arg 0 - 100 */
             INSTR_ADD,           0, 0, 1,        /* arg 1 - 20  */
-            INSTR_RETURN,        0, 0
+            INSTR_RETURN,        0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(3, 2);
-        KOS_OBJ_ID        func = create_func(ctx, 19, &opts);
+        KOS_OBJ_ID        func = create_func(ctx, 17, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, &func, 1) == TO_SMALL_INT(140));
         TEST_NO_EXCEPTION();
@@ -1666,11 +1666,11 @@ int main(void)
     /* CATCH - nothing is thrown */
     {
         const uint8_t code[] = {
-            INSTR_CATCH,      0, IMM32(6),
+            INSTR_CATCH,      0, IMM32(5),
             INSTR_LOAD_INT8,  0, 0,
-            INSTR_RETURN,     0, 0,
+            INSTR_RETURN,     0,
             INSTR_LOAD_INT8,  0, 1,
-            INSTR_RETURN,     0, 0
+            INSTR_RETURN,     0
         };
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 1, 0, 0, 0) == TO_SMALL_INT(0));
@@ -1685,7 +1685,7 @@ int main(void)
             INSTR_LOAD_INT8,  0, 0,
             INSTR_LOAD_INT8,  1, 1,
             INSTR_THROW,      1,
-            INSTR_RETURN,     0, 0
+            INSTR_RETURN,     0
         };
 
         KOS_OBJ_ID obj = run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, 0, 0);
@@ -1699,12 +1699,12 @@ int main(void)
     /* CATCH - catch when invalid instruction operands cause exception */
     {
         const uint8_t code[] = {
-            INSTR_CATCH,      0, IMM32(9),
+            INSTR_CATCH,      0, IMM32(8),
             INSTR_LOAD_VOID,  0,
             INSTR_SET,        0, 0, 0, /* throws */
-            INSTR_RETURN,     0, 0,
+            INSTR_RETURN,     0,
             INSTR_LOAD_TRUE,  0,
-            INSTR_RETURN,     0, 0
+            INSTR_RETURN,     0
         };
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 1, 0, 0, 0) == KOS_TRUE);
@@ -1720,7 +1720,7 @@ int main(void)
             INSTR_LOAD_FALSE, 0,
             INSTR_LOAD_TRUE,  1,
             INSTR_THROW,      1,
-            INSTR_RETURN,     0, 0
+            INSTR_RETURN,     0
         };
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, 0, 0) == KOS_BADPTR);
@@ -1736,15 +1736,15 @@ int main(void)
             INSTR_LOAD_ARRAY8, 2, 0,
             INSTR_CATCH,       1, IMM32(5),
             INSTR_CALL,        0, 0, 1, 2,
-            INSTR_RETURN,      0, 1,
+            INSTR_RETURN,      1,
 
             INSTR_LOAD_INT8,   0, 42,
             INSTR_LOAD_FALSE,  1,
             INSTR_THROW,       0,
-            INSTR_RETURN,      0, 1
+            INSTR_RETURN,      1
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(2, 0);
-        KOS_OBJ_ID        func = create_func(ctx, 22, &opts);
+        KOS_OBJ_ID        func = create_func(ctx, 21, &opts);
 
         KOS_OBJ_ID obj = run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, &func, 1);
         TEST_NO_EXCEPTION();
@@ -1760,37 +1760,37 @@ int main(void)
             INSTR_LOAD_CONST8, 0, 1,
             INSTR_LOAD_VOID,   1,
             INSTR_LOAD_ARRAY,  2, IMM32(0),
-            INSTR_CATCH,       0, IMM32(8),
+            INSTR_CATCH,       0, IMM32(7),
             INSTR_CALL,        0, 0, 1, 2,
-            INSTR_RETURN,      0, 1,
+            INSTR_RETURN,      1,
             INSTR_LOAD_INT8,   2, 1,
             INSTR_GET_PROP8,   0, 0, 0/* "value" */,
             INSTR_ADD,         0, 0, 2,
-            INSTR_RETURN,      0, 0,
+            INSTR_RETURN,      0,
 
             INSTR_LOAD_CONST8, 0, 2,
             INSTR_LOAD_VOID,   1,
             INSTR_LOAD_ARRAY,  2, IMM32(0),
-            INSTR_CATCH,       0, IMM32(8),
+            INSTR_CATCH,       0, IMM32(7),
             INSTR_CALL,        0, 0, 1, 2,
-            INSTR_RETURN,      0, 1,
+            INSTR_RETURN,      1,
             INSTR_LOAD_INT8,   2, 1,
             INSTR_GET_PROP8,   0, 0, 0/* "value" */,
             INSTR_ADD,         0, 0, 2,
             INSTR_THROW,       0,
-            INSTR_RETURN,      0, 1,
+            INSTR_RETURN,      1,
 
             INSTR_LOAD_CONST8, 0, 3,
             INSTR_LOAD_VOID,   1,
             INSTR_LOAD_ARRAY,  2, IMM32(0),
-            INSTR_CATCH,       0, IMM32(8),
+            INSTR_CATCH,       0, IMM32(7),
             INSTR_CALL,        0, 0, 1, 2,
-            INSTR_RETURN,      0, 1,
+            INSTR_RETURN,      1,
             INSTR_LOAD_INT8,   2, 1,
             INSTR_GET_PROP8,   0, 0, 0/* "value" */,
             INSTR_ADD,         0, 0, 2,
             INSTR_THROW,       0,
-            INSTR_RETURN,      0, 1,
+            INSTR_RETURN,      1,
 
             INSTR_LOAD_INT8,   0, 1,
             INSTR_THROW,       0
@@ -1802,13 +1802,13 @@ int main(void)
         constants[0] = KOS_STR_VALUE;
 
         opts = create_func_opts(3, 0);
-        constants[1] = create_func(ctx,  39, &opts);
+        constants[1] = create_func(ctx,  37, &opts);
 
         opts = create_func_opts(3, 0);
-        constants[2] = create_func(ctx,  80, &opts);
+        constants[2] = create_func(ctx,  76, &opts);
 
         opts = create_func_opts(2, 0);
-        constants[3] = create_func(ctx, 121, &opts);
+        constants[3] = create_func(ctx, 115, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, constants, 4) == TO_SMALL_INT(4));
         TEST_NO_EXCEPTION();
@@ -1823,14 +1823,14 @@ int main(void)
             INSTR_LOAD_VOID,   1,
             INSTR_CALL_N,      0, 0, 1, 21, 0,       /* returns the last function */
             INSTR_CALL_N,      0, 0, 1, 23, 0,       /* sets register 1 to 41     */
-            INSTR_RETURN,      1, 1,
+            INSTR_RETURN,      1,
 
             /* reg 1 is register array of the main function */
             INSTR_LOAD_CONST8, 2, 1,
             INSTR_BIND_SELF,   2, 0,                 /* bind own registers    */
             INSTR_BIND,        2, 1, 1,              /* bind main's registers */
             INSTR_LOAD_INT8,   0, 37,
-            INSTR_RETURN,      1, 2,                 /* leave one reg (reg 0) */
+            INSTR_RETURN,      2,                    /* leave one reg (reg 0) */
 
             /* reg 1 is register array of the above function */
             /* reg 2 is register array of the main function  */
@@ -1839,7 +1839,7 @@ int main(void)
             INSTR_ADD,         0, 0, 1,
             INSTR_SET_ELEM,    2, IMM32(1), 0,
             INSTR_LOAD_VOID,   0,
-            INSTR_RETURN,      0, 0
+            INSTR_RETURN,      0
         };
 
         KOS_FUNCTION_OPTS opts;
@@ -1849,12 +1849,12 @@ int main(void)
         opts.closure_size = 1;
         opts.bind_reg     = 1;
         opts.num_binds    = 1;
-        constants[0] = create_func(ctx, 23, &opts);
+        constants[0] = create_func(ctx, 22, &opts);
 
         opts = create_func_opts(3, 0);
         opts.bind_reg  = 1;
         opts.num_binds = 2;
-        constants[1] = create_func(ctx, 39, &opts);
+        constants[1] = create_func(ctx, 37, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 2, 1, constants, 2) == TO_SMALL_INT(41));
         TEST_NO_EXCEPTION();
@@ -1877,7 +1877,7 @@ int main(void)
             INSTR_LOAD_CONST,  4, IMM32(0),
 
             INSTR_CALL,        0, 0, 1, 2,           /* add 3[0] to 4 */
-            INSTR_RETURN,      1, 4,
+            INSTR_RETURN,      4,
 
             /* reg 1 is register array of the main function        */
             /* reg 2 is array from register 3 in the main function */
@@ -1897,7 +1897,7 @@ int main(void)
         opts = create_func_opts(4, 0);
         opts.bind_reg  = 1;
         opts.num_binds = 2;
-        constants[1] = create_gen(ctx, 53, &opts);
+        constants[1] = create_gen(ctx, 52, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 5, 1, constants, 2) == TO_SMALL_INT(-300));
         TEST_NO_EXCEPTION();
@@ -1910,7 +1910,7 @@ int main(void)
             INSTR_LOAD_VOID,  0,
             INSTR_LOAD_ARRAY, 1, IMM32(0),
             INSTR_BIND,       0, 0, 1,
-            INSTR_RETURN,     0, 0
+            INSTR_RETURN,     0
         };
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, 0, 0) == KOS_BADPTR);
@@ -1923,7 +1923,7 @@ int main(void)
         const uint8_t code[] = {
             INSTR_LOAD_VOID,  0,
             INSTR_BIND_SELF,  0, 0,
-            INSTR_RETURN,     1, 0
+            INSTR_RETURN,     0
         };
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 2, 1, 0, 0) == KOS_BADPTR);
@@ -1953,7 +1953,7 @@ int main(void)
             INSTR_SET_ELEM,    1, IMM32(2), 0,       /* 0x100 */
             INSTR_LOAD_INT8,   0, 5,
             INSTR_CALL,        2, 3, 0, 1,
-            INSTR_RETURN,      6, 2,
+            INSTR_RETURN,      2,
 
             /* Level 1: this outer function starts with:
              * 0 - independent var
@@ -1973,7 +1973,7 @@ int main(void)
             INSTR_BIND,        6, 3, 2,
             INSTR_BIND,        6, 4, 3,
             INSTR_SET_ELEM,    4, IMM32(-3), 6,
-            INSTR_RETURN,      1, 3,
+            INSTR_RETURN,      3,
 
             /* Level 2: this inner function starts with:
              * 98  - arg 0
@@ -1994,7 +1994,7 @@ int main(void)
             INSTR_OR,          0, 0, 4,              /* | 0x1000 */
             INSTR_OR,          0, 0, 105,            /* | 0x8000 */
             INSTR_OR,          0, 0, 106,            /* | 0x10 */
-            INSTR_RETURN,      0, 0
+            INSTR_RETURN,      0
         };
 
         KOS_FUNCTION_OPTS opts;
@@ -2013,14 +2013,14 @@ int main(void)
         opts.closure_size = 1;
         opts.bind_reg     = 4;
         opts.num_binds    = 2;
-        constants[4] = create_func(ctx,  93, &opts);
+        constants[4] = create_func(ctx,  92, &opts);
 
         opts = create_func_opts(107, 3);
         opts.args_reg  = 98;
         opts.this_reg  = 101;
         opts.bind_reg  = 102;
         opts.num_binds = 5;
-        constants[5] = create_func(ctx, 146, &opts);
+        constants[5] = create_func(ctx, 144, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 6, 6, constants, 6) == TO_SMALL_INT(0x69055));
         TEST_NO_EXCEPTION();
@@ -2044,17 +2044,17 @@ int main(void)
 
             INSTR_LOAD_FUN8,     1, 0,
             INSTR_BIND_DEFAULTS, 1, 0,
-            INSTR_TAIL_CALL_FUN, 0, 1, 255, 0,
+            INSTR_TAIL_CALL_FUN, 1, 255, 0,
 
             INSTR_LOAD_FUN8,     3, 1,
             INSTR_BIND_SELF,     3, 0,
-            INSTR_TAIL_CALL_FUN, 3, 3, 255, 0,
+            INSTR_TAIL_CALL_FUN, 3, 255, 0,
 
             INSTR_LOAD_ARRAY8,   0, 0,
             STACK_MOVE(0),
             STACK_MOVE(1),
             STACK_MOVE(2),
-            INSTR_RETURN,        0, 0
+            INSTR_RETURN,        0
         };
         KOS_OBJ_ID ret;
 
@@ -2065,12 +2065,12 @@ int main(void)
         opts.args_reg     = 0;
         opts.num_def_args = 3;
         opts.closure_size = 3;
-        constants[0] = create_func(ctx, 44, &opts);
+        constants[0] = create_func(ctx, 43, &opts);
 
         opts = create_func_opts(3, 0);
         opts.bind_reg  = 1;
         opts.num_binds = 1;
-        constants[1] = create_func(ctx, 55, &opts);
+        constants[1] = create_func(ctx, 53, &opts);
 
         ret = run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, constants, 2);
         TEST( ! IS_BAD_PTR(ret));
@@ -2098,12 +2098,12 @@ int main(void)
             INSTR_BIND_DEFAULTS, 2, 0,
             INSTR_LOAD_INT8,     0, 5,
             INSTR_LOAD_INT8,     1, 6,
-            INSTR_TAIL_CALL_FUN, 0, 2, 0, 2,
+            INSTR_TAIL_CALL_FUN, 2, 0, 2,
 
             INSTR_LOAD_TRUE,     0,
             INSTR_LOAD_FUN8,     5, 1,
             INSTR_BIND_SELF,     5, 0,
-            INSTR_TAIL_CALL_FUN, 5, 5, 255, 0,
+            INSTR_TAIL_CALL_FUN, 5, 255, 0,
 
             INSTR_LOAD_ARRAY8,   0, 0,
             STACK_MOVE(0),
@@ -2111,7 +2111,7 @@ int main(void)
             STACK_MOVE(2),
             STACK_MOVE(3),
             STACK_MOVE(4),
-            INSTR_RETURN,        0, 0
+            INSTR_RETURN,        0
         };
         KOS_OBJ_ID ret;
 
@@ -2122,12 +2122,12 @@ int main(void)
         opts.args_reg     = 1;
         opts.num_def_args = 3;
         opts.closure_size = 5;
-        constants[0] = create_func(ctx, 50, &opts);
+        constants[0] = create_func(ctx, 49, &opts);
 
         opts = create_func_opts(3, 0);
         opts.bind_reg  = 1;
         opts.num_binds = 1;
-        constants[1] = create_func(ctx, 63, &opts);
+        constants[1] = create_func(ctx, 61, &opts);
 
         ret = run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, constants, 2);
         TEST( ! IS_BAD_PTR(ret));
@@ -2146,7 +2146,7 @@ int main(void)
     {
         const uint8_t code[] = {
             INSTR_LOAD_CONST8,   0, 0,
-            INSTR_JUMP,          IMM32(31),
+            INSTR_JUMP,          IMM32(30),
 
             /* 0 - begin
              * 1 - end */
@@ -2157,7 +2157,7 @@ int main(void)
             INSTR_ADD,           0, 0, 3,
             INSTR_CMP_LT,        4, 0, 1,
             INSTR_JUMP_COND,     IMM32(-17), 4,
-            INSTR_RETURN,        0, 2,
+            INSTR_RETURN,        2,
 
             INSTR_LOAD_INT8,     3, 64,
             INSTR_LOAD_INT8,     4, 96,
@@ -2167,7 +2167,7 @@ int main(void)
             INSTR_LOAD_INT8,     3, 7,
             INSTR_LOAD_INT8,     4, 25,
             INSTR_CALL_FUN,      0, 0, 3, 2,
-            INSTR_TAIL_CALL,     0, 2, 1, 0,
+            INSTR_TAIL_CALL,     2, 1, 0,
 
             INSTR_LOAD_VOID,     0,
             INSTR_LOAD_VOID,     1,
@@ -2176,7 +2176,7 @@ int main(void)
             INSTR_LOAD_VOID,     4,
             INSTR_LOAD_FUN8,     KOS_MAX_ARGS_IN_REGS + 5 + 2, 2,
             INSTR_BIND_SELF,     KOS_MAX_ARGS_IN_REGS + 5 + 2, 0,
-            INSTR_TAIL_CALL_FUN, KOS_MAX_ARGS_IN_REGS + 5 + 2, KOS_MAX_ARGS_IN_REGS + 5 + 2, 255, 0,
+            INSTR_TAIL_CALL_FUN, KOS_MAX_ARGS_IN_REGS + 5 + 2, 255, 0,
 
             INSTR_LOAD_ARRAY8,   0, 0,
             STACK_MOVE( 0), STACK_MOVE( 1), STACK_MOVE( 2), STACK_MOVE( 3), STACK_MOVE( 4),
@@ -2187,7 +2187,7 @@ int main(void)
             STACK_MOVE(25), STACK_MOVE(26), STACK_MOVE(27), STACK_MOVE(28), STACK_MOVE(29),
             STACK_MOVE(30), STACK_MOVE(31), STACK_MOVE(32), STACK_MOVE(33), STACK_MOVE(34),
             STACK_MOVE(35), STACK_MOVE(36), STACK_MOVE(37), STACK_MOVE(38),
-            INSTR_RETURN,        0, 0
+            INSTR_RETURN,        0
         };
 
         int i;
@@ -2208,12 +2208,12 @@ int main(void)
         opts.ellipsis_reg = KOS_MAX_ARGS_IN_REGS + 5;
         opts.this_reg     = KOS_MAX_ARGS_IN_REGS + 5 + 1;
         opts.closure_size = KOS_MAX_ARGS_IN_REGS + 5 + 2;
-        constants[1] = create_func(ctx, 72, &opts);
+        constants[1] = create_func(ctx, 70, &opts);
 
         opts = create_func_opts(3, 0);
         opts.bind_reg  = 1;
         opts.num_binds = 1;
-        constants[2] = create_func(ctx, 93, &opts);
+        constants[2] = create_func(ctx, 90, &opts);
 
         ret = run_code(&inst, ctx, &code[0], sizeof(code), 5, 0, constants, 3);
         TEST( ! IS_BAD_PTR(ret));
@@ -2255,7 +2255,7 @@ int main(void)
     {
         const uint8_t code[] = {
             INSTR_LOAD_CONST8,   0, 0,
-            INSTR_JUMP,          IMM32(31),
+            INSTR_JUMP,          IMM32(30),
 
             /* 0 - begin
              * 1 - end */
@@ -2266,7 +2266,7 @@ int main(void)
             INSTR_ADD,           0, 0, 3,
             INSTR_CMP_LT,        4, 0, 1,
             INSTR_JUMP_COND,     IMM32(-17), 4,
-            INSTR_RETURN,        0, 2,
+            INSTR_RETURN,        2,
 
             INSTR_LOAD_INT8,     3, 100,
             INSTR_LOAD_INT8,     4, 105,
@@ -2276,11 +2276,11 @@ int main(void)
             INSTR_LOAD_INT8,     3, 1,
             INSTR_LOAD_INT8,     4, KOS_MAX_ARGS_IN_REGS + 10,
             INSTR_CALL_FUN,      0, 0, 3, 2,
-            INSTR_TAIL_CALL,     0, 2, 1, 0,
+            INSTR_TAIL_CALL,     2, 1, 0,
 
             INSTR_LOAD_FUN8,     KOS_MAX_ARGS_IN_REGS + 2, 2,
             INSTR_BIND_SELF,     KOS_MAX_ARGS_IN_REGS + 2, 0,
-            INSTR_TAIL_CALL_FUN, KOS_MAX_ARGS_IN_REGS + 2, KOS_MAX_ARGS_IN_REGS + 2, 255, 0,
+            INSTR_TAIL_CALL_FUN, KOS_MAX_ARGS_IN_REGS + 2, 255, 0,
 
             INSTR_LOAD_ARRAY8,   0, 0,
             STACK_MOVE( 0), STACK_MOVE( 1), STACK_MOVE( 2), STACK_MOVE( 3), STACK_MOVE( 4),
@@ -2290,7 +2290,7 @@ int main(void)
             STACK_MOVE(20), STACK_MOVE(21), STACK_MOVE(22), STACK_MOVE(23), STACK_MOVE(24),
             STACK_MOVE(25), STACK_MOVE(26), STACK_MOVE(27), STACK_MOVE(28), STACK_MOVE(29),
             STACK_MOVE(30), STACK_MOVE(31), STACK_MOVE(32), STACK_MOVE(33),
-            INSTR_RETURN,        0, 0
+            INSTR_RETURN,        0
         };
 
         int i;
@@ -2310,12 +2310,12 @@ int main(void)
         opts.ellipsis_reg = KOS_MAX_ARGS_IN_REGS;
         opts.this_reg     = KOS_MAX_ARGS_IN_REGS + 1;
         opts.closure_size = KOS_MAX_ARGS_IN_REGS + 2;
-        constants[1] = create_func(ctx, 72, &opts);
+        constants[1] = create_func(ctx, 70, &opts);
 
         opts = create_func_opts(3, 0);
         opts.bind_reg  = 1;
         opts.num_binds = 1;
-        constants[2] = create_func(ctx, 83, &opts);
+        constants[2] = create_func(ctx, 80, &opts);
 
         ret = run_code(&inst, ctx, &code[0], sizeof(code), 5, 0, constants, 3);
         TEST( ! IS_BAD_PTR(ret));

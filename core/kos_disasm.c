@@ -22,6 +22,7 @@ static int get_num_operands(KOS_BYTECODE_INSTR instr)
         case INSTR_LOAD_VOID:           /* fall through */
         case INSTR_LOAD_OBJ:            /* fall through */
         case INSTR_JUMP:                /* fall through */
+        case INSTR_RETURN:              /* fall through */
         case INSTR_YIELD:               /* fall through */
         case INSTR_THROW:
             return 1;
@@ -46,7 +47,6 @@ static int get_num_operands(KOS_BYTECODE_INSTR instr)
         case INSTR_JUMP_NOT_COND:       /* fall through */
         case INSTR_BIND_SELF:           /* fall through */
         case INSTR_BIND_DEFAULTS:       /* fall through */
-        case INSTR_RETURN:              /* fall through */
         case INSTR_CATCH:               /* fall through */
         case INSTR_PUSH:                /* fall through */
         case INSTR_PUSH_EX:
@@ -81,18 +81,18 @@ static int get_num_operands(KOS_BYTECODE_INSTR instr)
         case INSTR_HAS_SH_PROP8:        /* fall through */
         case INSTR_INSTANCEOF:          /* fall through */
         case INSTR_BIND:                /* fall through */
-        case INSTR_CALL_GEN:
+        case INSTR_CALL_GEN:            /* fall through */
+        case INSTR_TAIL_CALL:           /* fall through */
+        case INSTR_TAIL_CALL_FUN:
             return 3;
 
         case INSTR_CALL:                /* fall through */
         case INSTR_CALL_FUN:            /* fall through */
-        case INSTR_TAIL_CALL:           /* fall through */
-        case INSTR_TAIL_CALL_FUN:       /* fall through */
+        case INSTR_TAIL_CALL_N:         /* fall through */
         case INSTR_GET_RANGE:
             return 4;
 
-        case INSTR_CALL_N:              /* fall through */
-        case INSTR_TAIL_CALL_N:
+        case INSTR_CALL_N:
             return 5;
     }
 }
@@ -223,23 +223,18 @@ int kos_is_register(KOS_BYTECODE_INSTR instr, int op)
         case INSTR_JUMP_COND:
             /* fall through */
         case INSTR_JUMP_NOT_COND:
-            /* fall through */
-        case INSTR_RETURN:
-            /* fall through */
-        case INSTR_TAIL_CALL:
             return op;
 
         case INSTR_CALL_N:
             return op < 4;
 
         case INSTR_CALL_FUN:
+            /* fall through */
+        case INSTR_TAIL_CALL_N:
             return op < 3;
 
-        case INSTR_TAIL_CALL_N:
-            return op && op < 4;
-
         case INSTR_TAIL_CALL_FUN:
-            return op && op < 3;
+            return op < 2;
 
         case INSTR_JUMP:
             return 0;

@@ -2947,11 +2947,11 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(TAIL_CALL): /* <closure.size.uint8>, <r.func>, <r.this>, <r.args> */
+            BEGIN_INSTRUCTION(TAIL_CALL): /* <r.func>, <r.this>, <r.args> */
                 /* fall through */
-            BEGIN_INSTRUCTION(TAIL_CALL_N): /* <closure.size.uint8>, <r.func>, <r.this>, <r.arg1>, <numargs.uint8> */
+            BEGIN_INSTRUCTION(TAIL_CALL_N): /* <r.func>, <r.this>, <r.arg1>, <numargs.uint8> */
                 /* fall through */
-            BEGIN_INSTRUCTION(TAIL_CALL_FUN): /* <closure.size.uint8>, <r.func>, <r.arg1>, <numargs.uint8> */
+            BEGIN_INSTRUCTION(TAIL_CALL_FUN): /* <r.func>, <r.arg1>, <numargs.uint8> */
                 /* fall through */
             BEGIN_INSTRUCTION(CALL_N): /* <r.dest>, <r.func>, <r.this>, <r.arg1>, <numargs.uint8> */
                 /* fall through */
@@ -2961,7 +2961,7 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
                 /* fall through */
             BEGIN_INSTRUCTION(CALL): { /* <r.dest>, <r.func>, <r.this>, <r.args> */
                 PROF_ZONE_N(INSTR, "CALL")
-                const unsigned     rfunc     = bytecode[2];
+                unsigned           rfunc     = ~0U;
                 unsigned           rthis     = ~0U;
                 unsigned           rfinal    = KOS_NO_REG;
                 unsigned           rargs     = ~0U;
@@ -2978,38 +2978,41 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
 
                 KOS_init_locals(ctx, 4, &func, &ret, &this_, &args);
 
-                rdest = bytecode[1];
-
                 switch (instr) {
 
                     case INSTR_TAIL_CALL:
-                        rthis     = bytecode[3];
-                        rargs     = bytecode[4];
+                        rdest     = ~0U;
+                        rfunc     = bytecode[1];
+                        rthis     = bytecode[2];
+                        rargs     = bytecode[3];
                         tail_call = 1;
-                        delta     = 5;
-                        assert(rdest <= num_regs);
+                        delta     = 4;
                         break;
 
                     case INSTR_TAIL_CALL_N:
-                        rthis     = bytecode[3];
-                        rarg1     = bytecode[4];
-                        num_args  = bytecode[5];
-                        tail_call = 1;
-                        delta     = 6;
-                        assert(rdest <= num_regs);
-                        assert( ! num_args || rarg1 + num_args <= num_regs);
-                        break;
-
-                    case INSTR_TAIL_CALL_FUN:
+                        rdest     = ~0U;
+                        rfunc     = bytecode[1];
+                        rthis     = bytecode[2];
                         rarg1     = bytecode[3];
                         num_args  = bytecode[4];
                         tail_call = 1;
                         delta     = 5;
-                        assert(rdest <= num_regs);
+                        assert( ! num_args || rarg1 + num_args <= num_regs);
+                        break;
+
+                    case INSTR_TAIL_CALL_FUN:
+                        rdest     = ~0U;
+                        rfunc     = bytecode[1];
+                        rarg1     = bytecode[2];
+                        num_args  = bytecode[3];
+                        tail_call = 1;
+                        delta     = 4;
                         assert( ! num_args || rarg1 + num_args <= num_regs);
                         break;
 
                     case INSTR_CALL:
+                        rdest = bytecode[1];
+                        rfunc = bytecode[2];
                         rthis = bytecode[3];
                         rargs = bytecode[4];
                         delta = 5;
@@ -3017,6 +3020,8 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
                         break;
 
                     case INSTR_CALL_N:
+                        rdest    = bytecode[1];
+                        rfunc    = bytecode[2];
                         rthis    = bytecode[3];
                         rarg1    = bytecode[4];
                         num_args = bytecode[5];
@@ -3026,6 +3031,8 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
                         break;
 
                     case INSTR_CALL_FUN:
+                        rdest    = bytecode[1];
+                        rfunc    = bytecode[2];
                         rarg1    = bytecode[3];
                         num_args = bytecode[4];
                         delta    = 5;
@@ -3035,6 +3042,8 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
 
                     default:
                         assert(instr == INSTR_CALL_GEN);
+                        rdest  = bytecode[1];
+                        rfunc  = bytecode[2];
                         rfinal = bytecode[3];
                         delta = 4;
                         assert(rdest < num_regs);
@@ -3042,7 +3051,6 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
                 }
 
                 if (rthis != ~0U) {
-                    rthis = bytecode[3];
                     assert(rthis < num_regs);
 
                     this_.o = read_reg(stack_frame, rthis);
@@ -3235,9 +3243,9 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
 
             /* TODO remove closure size from RETURN and TAIL.CALL */
 
-            BEGIN_INSTRUCTION(RETURN): { /* <closure.size.uint8>, <r.src> */
+            BEGIN_INSTRUCTION(RETURN): { /* <r.src> */
                 PROF_ZONE_N(INSTR, "RETURN")
-                const unsigned rsrc = bytecode[2];
+                const unsigned rsrc = bytecode[1];
 
                 assert(regs_idx >= 3);
                 assert(rsrc < num_regs);
