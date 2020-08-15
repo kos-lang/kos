@@ -960,7 +960,53 @@ int main(void)
     }
 
     /************************************************************************/
-    /* CALL constructor */
+    /* CALL constructor - return this */
+    {
+        static const char str[]  = "own property";
+        KOS_OBJ_ID        str_prop;
+        KOS_FUNCTION_OPTS opts;
+        KOS_OBJ_ID        constants[4];
+        KOS_OBJ_ID        ret;
+        const uint8_t     code[] = {
+            INSTR_JUMP,        IMM32(7),
+
+            INSTR_SET_PROP8,   1, 0, 0,
+            INSTR_RETURN,      0, 1,
+
+            INSTR_LOAD_FUN8,   0, 2,
+            INSTR_LOAD_CONST,  1, IMM32(1),
+            INSTR_CALL_FUN,    0, 0, 1, 1,
+            INSTR_RETURN,      0, 0
+        };
+
+        constants[0] = KOS_new_const_ascii_cstring(ctx, str);
+
+        constants[1] = TO_SMALL_INT(0xC0DEU);
+
+        opts = create_func_opts(2, 1);
+        constants[2] = create_class(ctx, 5, &opts);
+
+        constants[3] = KOS_new_object(ctx); /* prototype */
+
+        str_prop     = KOS_new_const_ascii_cstring(ctx, str);
+
+        TEST(!IS_BAD_PTR(constants[0]));
+        TEST(!IS_BAD_PTR(constants[1]));
+        TEST(!IS_BAD_PTR(constants[2]));
+        TEST(!IS_BAD_PTR(constants[3]));
+        TEST(!IS_BAD_PTR(str_prop));
+
+        ret = run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, constants, 4);
+        TEST_NO_EXCEPTION();
+
+        TEST(!IS_SMALL_INT(ret));
+        TEST(GET_OBJ_TYPE(ret) == OBJ_OBJECT);
+        TEST(KOS_get_property(ctx, ret, str_prop) == TO_SMALL_INT(0xC0DEU));
+        TEST_NO_EXCEPTION();
+    }
+
+    /************************************************************************/
+    /* CALL constructor - return another object instead of this */
     {
         static const char str[]  = "own property";
         KOS_OBJ_ID        str_prop;
@@ -999,9 +1045,8 @@ int main(void)
         ret = run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, constants, 4);
         TEST_NO_EXCEPTION();
 
-        TEST(!IS_SMALL_INT(ret));
-        TEST(GET_OBJ_TYPE(ret) == OBJ_OBJECT);
-        TEST(KOS_get_property(ctx, ret, str_prop) == TO_SMALL_INT(0xC0DEU));
+        TEST(IS_SMALL_INT(ret));
+        TEST(ret == TO_SMALL_INT(0xC0DEU));
         TEST_NO_EXCEPTION();
     }
 
@@ -1016,7 +1061,7 @@ int main(void)
 
             INSTR_SET_PROP8,   1, 0, 0,
             INSTR_LOAD_VOID,   0,                /* return value is ignored */
-            INSTR_RETURN,      0, 0,
+            INSTR_RETURN,      0, 1,
 
             INSTR_LOAD_FUN8,   0, 2,
             INSTR_LOAD_ARRAY8, 1, 1,             /* create arguments array */

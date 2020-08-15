@@ -296,7 +296,6 @@ typedef struct KOS_STACK_FRAME_HDR_S KOS_STACK_FRAME;
 
 int kos_stack_push(KOS_CONTEXT ctx,
                    KOS_OBJ_ID  func_obj,
-                   KOS_OBJ_ID  this_obj,
                    uint8_t     ret_reg,
                    uint8_t     gen_reg);
 

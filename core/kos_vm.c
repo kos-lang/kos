@@ -42,10 +42,6 @@ KOS_DECLARE_STATIC_CONST_STRING(str_err_slice_not_function,  "slice is not a fun
 KOS_DECLARE_STATIC_CONST_STRING(str_err_too_few_args,        "not enough arguments passed to a function");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_unsup_operand_types, "unsupported operand types");
 
-DECLARE_STATIC_CONST_OBJECT(new_this, OBJ_OPAQUE, 0xC0);
-
-#define NEW_THIS KOS_CONST_ID(new_this)
-
 static KOS_OBJ_ID add_integer(KOS_CONTEXT ctx,
                               int64_t     a,
                               KOS_OBJ_ID  bobj)
@@ -754,6 +750,18 @@ static void write_to_yield_reg(KOS_CONTEXT ctx,
     KOS_atomic_write_relaxed_ptr(stack_frame->regs[yield_reg], obj_id);
 }
 
+static KOS_OBJ_ID create_this(KOS_CONTEXT ctx, KOS_OBJ_ID func_obj)
+{
+    const KOS_OBJ_ID proto_obj = KOS_atomic_read_relaxed_obj(OBJPTR(CLASS, func_obj)->prototype);
+
+    assert( ! IS_BAD_PTR(proto_obj));
+
+    if (OBJPTR(FUNCTION, func_obj)->handler)
+        return proto_obj;
+
+    return KOS_new_object_with_prototype(ctx, proto_obj);
+}
+
 static int prepare_call(KOS_CONTEXT        ctx,
                         KOS_BYTECODE_INSTR instr,
                         KOS_OBJ_ID         func_obj,
@@ -815,24 +823,12 @@ static int prepare_call(KOS_CONTEXT        ctx,
 
         /* Constructor function */
         case KOS_CTOR:
-            if (*this_obj == NEW_THIS) {
-                KOS_CLASS *const class_ptr = OBJPTR(CLASS, func.o);
-                const KOS_OBJ_ID proto_obj = KOS_atomic_read_relaxed_obj(class_ptr->prototype);
-                assert( ! IS_BAD_PTR(proto_obj));
-
-                if (OBJPTR(FUNCTION, func.o)->handler)
-                    *this_obj = proto_obj;
-                else {
-                    *this_obj = KOS_new_object_with_prototype(ctx, proto_obj);
-                    TRY_OBJID(*this_obj);
-                }
-            }
             /* fall through */
 
         /* Regular function */
         case KOS_FUN: {
             assert(gen_reg == KOS_NO_REG);
-            TRY(kos_stack_push(ctx, func.o, (state == KOS_CTOR) ? *this_obj : KOS_BADPTR, ret_reg, KOS_NO_REG));
+            TRY(kos_stack_push(ctx, func.o, ret_reg, KOS_NO_REG));
 
             if ( ! OBJPTR(FUNCTION, func.o)->handler)
                 TRY(init_registers(ctx,
@@ -852,7 +848,7 @@ static int prepare_call(KOS_CONTEXT        ctx,
             TRY_OBJID(func.o);
 
             assert(gen_reg == KOS_NO_REG);
-            TRY(kos_stack_push(ctx, func.o, KOS_BADPTR, ret_reg, KOS_NO_REG));
+            TRY(kos_stack_push(ctx, func.o, ret_reg, KOS_NO_REG));
 
             KOS_atomic_write_relaxed_u32(OBJPTR(FUNCTION, func.o)->state, KOS_GEN_READY);
 
@@ -895,7 +891,7 @@ static int prepare_call(KOS_CONTEXT        ctx,
 
             state_set = 1;
 
-            TRY(kos_stack_push(ctx, func.o, KOS_BADPTR, ret_reg, gen_reg));
+            TRY(kos_stack_push(ctx, func.o, ret_reg, gen_reg));
 
             if ( ! OBJPTR(FUNCTION, func.o)->handler) {
                 if (state == KOS_GEN_ACTIVE) {
@@ -3071,7 +3067,11 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
                 switch (GET_OBJ_TYPE(func.o)) {
 
                     case OBJ_CLASS:
-                        this_.o = NEW_THIS;
+                        this_.o = create_this(ctx, func.o);
+                        if (IS_BAD_PTR(this_.o)) {
+                            KOS_destroy_top_locals(ctx, &func, &args);
+                            goto cleanup;
+                        }
                         /* fall through */
                     case OBJ_FUNCTION:
                         break;
@@ -3357,13 +3357,6 @@ handle_return:
             store_instr_offs(stack_frame,
                              (uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode));
 
-            if ( ! KOS_is_exception_pending(ctx) &&
-                (READ_OBJ_TYPE(get_current_func(stack_frame)) == OBJ_CLASS)) {
-
-                const size_t size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->size);
-                out = KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[size - 2]);
-            }
-
             if (depth) {
                 PROF_ZONE_N(INSTR, "return")
 
@@ -3515,8 +3508,17 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
     KOS_init_local_with(ctx, &this_, this_obj);
     KOS_init_local_with(ctx, &func,  func_obj);
 
-    if (type == OBJ_CLASS && (call_flavor != KOS_APPLY_FUNCTION || this_.o == KOS_VOID))
-        this_.o = NEW_THIS;
+    state = get_func_state(func.o);
+
+    if (type == OBJ_CLASS && (call_flavor != KOS_APPLY_FUNCTION || this_.o == KOS_VOID)) {
+        assert(state == KOS_CTOR);
+        this_.o = create_this(ctx, func.o);
+
+        if (IS_BAD_PTR(this_.o)) {
+            KOS_destroy_top_locals(ctx, &func, &ret);
+            return KOS_BADPTR;
+        }
+    }
 
     error = prepare_call(ctx, INSTR_CALL, func.o, &this_.o, args.o, 0, 0, KOS_NO_REG, KOS_NO_REG);
 
@@ -3524,8 +3526,6 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
         KOS_destroy_top_locals(ctx, &func, &ret);
         return KOS_BADPTR;
     }
-
-    state = get_func_state(func.o);
 
     if (state == KOS_GEN_INIT)
         ret.o = this_.o;
@@ -3558,9 +3558,7 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
             assert(ctx->local_list == &func);
 
             assert(IS_BAD_PTR(ret.o) || GET_OBJ_TYPE(ret.o) <= OBJ_LAST_TYPE);
-
-            if ( ! IS_BAD_PTR(ret.o) && (READ_OBJ_TYPE(func.o) == OBJ_CLASS))
-                ret.o = this_.o;
+            assert((state != KOS_CTOR) || (ret.o == this_.o));
         }
 
         finish_call(ctx, get_current_stack_frame(ctx),
@@ -3602,7 +3600,7 @@ KOS_OBJ_ID kos_vm_run_module(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
         assert(GET_OBJ_TYPE(func_obj) == OBJ_FUNCTION);
         assert(GET_OBJ_TYPE(OBJPTR(FUNCTION, func_obj)->module) == OBJ_MODULE);
 
-        error = kos_stack_push(ctx, func_obj, KOS_BADPTR, KOS_NO_REG, KOS_NO_REG);
+        error = kos_stack_push(ctx, func_obj, KOS_NO_REG, KOS_NO_REG);
 
         if ( ! error)
             pushed = 1;

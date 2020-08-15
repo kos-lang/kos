@@ -150,7 +150,6 @@ static int push_new_reentrant_stack(KOS_CONTEXT ctx,
 
 int kos_stack_push(KOS_CONTEXT ctx,
                    KOS_OBJ_ID  func_obj,
-                   KOS_OBJ_ID  this_obj,
                    uint8_t     ret_reg,
                    uint8_t     gen_reg)
 {
@@ -167,10 +166,8 @@ int kos_stack_push(KOS_CONTEXT ctx,
     KOS_STACK       *new_stack;
     KOS_STACK_FRAME *stack_frame;
     KOS_LOCAL        func;
-    KOS_LOCAL        this_;
 
     KOS_init_local_with(ctx, &func, func_obj);
-    KOS_init_local_with(ctx, &this_, this_obj);
 
     if (type != OBJ_FUNCTION && type != OBJ_CLASS)
         RAISE_EXCEPTION_STR(str_err_not_callable);
@@ -188,12 +185,6 @@ int kos_stack_push(KOS_CONTEXT ctx,
 
     num_regs = OBJPTR(FUNCTION, func.o)->handler
                ? 1 : OBJPTR(FUNCTION, func.o)->opts.num_regs;
-    if ( ! IS_BAD_PTR(this_.o) && (state == KOS_CTOR) && ! OBJPTR(FUNCTION, func.o)->handler) {
-        assert(GET_OBJ_TYPE(func.o) == OBJ_CLASS);
-        ++num_regs;
-    }
-    else
-        this_.o = KOS_BADPTR;
     room = num_regs + KOS_STACK_EXTRA;
 
     reg_init = ((int32_t)gen_reg << 16) | ((int32_t)ret_reg << 8) | (int32_t)num_regs;
@@ -291,13 +282,10 @@ int kos_stack_push(KOS_CONTEXT ctx,
             KOS_atomic_write_relaxed_ptr(stack_frame->regs[idx], KOS_BADPTR);
     }
 
-    if ( ! IS_BAD_PTR(this_.o))
-        KOS_atomic_write_relaxed_ptr(stack_frame->regs[num_regs - 1], this_.o);
-
     ctx->stack_depth += room;
 
 cleanup:
-    KOS_destroy_top_locals(ctx, &this_, &func);
+    KOS_destroy_top_local(ctx, &func);
 
     return error;
 }
