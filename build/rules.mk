@@ -19,7 +19,8 @@ else
     out_dir_base_rel = Out/debug
 endif
 
-out_dir_base = $(call inv_path,$(depth))$(out_dir_base_rel)
+kos_dir     ?= $(call inv_path,$(depth))
+out_dir_base = $(kos_dir)$(out_dir_base_rel)
 out_dir_rel  = $(out_dir_base_rel)/$(depth)
 out_dir      = $(out_dir_base)/$(depth)
 
@@ -135,11 +136,11 @@ else
 
         # Configure LTO, if available
         ifeq ($(UNAME), Linux)
-            LTOAR ?= $(shell $(call inv_path,$(depth))build/find_lto ar $(CC))
+            LTOAR ?= $(shell $(kos_dir)build/find_lto ar $(CC))
             ifeq (,$(LTOAR))
                 lto ?= 0
             else
-                ifeq (true,$(shell $(call inv_path,$(depth))build/have_lto $(CC)))
+                ifeq (true,$(shell $(kos_dir)build/have_lto $(CC)))
                     lto ?= 1
                 else
                     lto ?= 0
@@ -167,7 +168,7 @@ else
 
     CFLAGS += -fPIC
 
-    ifeq (true,$(shell $(call inv_path,$(depth))build/have_visibility $(CC)))
+    ifeq (true,$(shell $(kos_dir)build/have_visibility $(CC)))
         CFLAGS += -fvisibility=hidden -DKOS_SUPPORTS_VISIBILITY
     endif
 
@@ -176,7 +177,7 @@ else
         LD_DEFS = -Wl,-exported_symbols_list -Wl,$1.macos.def
     else
         SHARED_LDFLAGS += -shared
-        ifeq (true,$(shell $(call inv_path,$(depth))build/have_dynamic_list $(CC)))
+        ifeq (true,$(shell $(kos_dir)build/have_dynamic_list $(CC)))
             LD_DEFS = -Wl,--dynamic-list=$1.gnu.def
         endif
     endif
@@ -215,7 +216,7 @@ else
             EXE_LDFLAGS += -ledit -ltermcap
         endif
     else
-        ifeq (true,$(shell $(call inv_path,$(depth))build/have_readline $(CC)))
+        ifeq (true,$(shell $(kos_dir)build/have_readline $(CC)))
             CFLAGS      += -DCONFIG_READLINE
             EXE_LDFLAGS += -lreadline
         endif

@@ -92,7 +92,7 @@ runtest()
 
     echo "$SCRIPT" | grep -q "\.py$" && [ $PY3 = 1 ] && PREFIX=python3
     echo "$SCRIPT" | grep -q "\.kos$" && PREFIX=Out/release/interpreter/kos
-    echo "$SCRIPT" | grep -q "\.js$"  && PREFIX="$JS_INTERPRETER/Out/release/js/js"
+    echo "$SCRIPT" | grep -q "\.js$"  && PREFIX=Out/release/js/js
 
     tests/perf/measure -t "$1" -n "$LOOPS" $PREFIX "$@"
 }
