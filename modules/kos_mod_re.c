@@ -156,26 +156,26 @@ enum RE_FLAG {
 };
 
 enum RE_INSTR {
-    INSTR_MATCH_ONE_CHAR,   /* MATCH.ONE.CHAR <code>              */
-    INSTR_MATCH_ONE_CHAR32, /* MATCH.ONE.CHAR <code_hi> <code_lo> */
-    INSTR_MATCH_ANY_CHAR,   /* MATCH.ANY.CHAR                     */
-    INSTR_MATCH_CLASS,      /* MATCH.CLASS <class_id>             */
-    INSTR_MATCH_NOT_CLASS,  /* MATCH.NOT.CLASS <class_id>         */
-    INSTR_MATCH_LINE_BEGIN, /* MATCH.LINE.BEGIN                   */
-    INSTR_MATCH_LINE_END,   /* MATCH.LINE.END                     */
-    INSTR_BEGIN_GROUP,      /* BEGIN.GROUP <group_id>             */
-    INSTR_END_GROUP,        /* END.GROUP <group_id>               */
-    INSTR_FORK,             /* FORK <offs>                        */
-    INSTR_JUMP,             /* JUMP <offs>                        */
-    INSTR_GREEDY_COUNT,     /* GREEDY.COUNT <offs> <min>          */
-    INSTR_LAZY_COUNT,       /* LAZY.COUNT <offs> <min>            */
-    INSTR_GREEDY_JUMP,      /* GREEDY.JUMP <offs> <min> <max>     */
-    INSTR_LAZY_JUMP         /* LAZY.JUMP <offs> <min> <max>       */
+    INSTR_MATCH_ONE_CHAR,   /* MATCH.ONE.CHAR <code>                     */
+    INSTR_MATCH_ONE_CHAR32, /* MATCH.ONE.CHAR <code_hi> <code_lo>        */
+    INSTR_MATCH_ANY_CHAR,   /* MATCH.ANY.CHAR                            */
+    INSTR_MATCH_CLASS,      /* MATCH.CLASS <class_id>                    */
+    INSTR_MATCH_NOT_CLASS,  /* MATCH.NOT.CLASS <class_id>                */
+    INSTR_MATCH_LINE_BEGIN, /* MATCH.LINE.BEGIN                          */
+    INSTR_MATCH_LINE_END,   /* MATCH.LINE.END                            */
+    INSTR_BEGIN_GROUP,      /* BEGIN.GROUP <group_id>                    */
+    INSTR_END_GROUP,        /* END.GROUP <group_id>                      */
+    INSTR_FORK,             /* FORK <offs>                               */
+    INSTR_JUMP,             /* JUMP <offs>                               */
+    INSTR_GREEDY_COUNT,     /* GREEDY.COUNT <offs> <count_id> <min>      */
+    INSTR_LAZY_COUNT,       /* LAZY.COUNT <offs> <count_id> <min>        */
+    INSTR_GREEDY_JUMP,      /* GREEDY.JUMP <offs> <count_id> <min> <max> */
+    INSTR_LAZY_JUMP         /* LAZY.JUMP <offs> <count_id> <min> <max>   */
 };
 
 struct RE_INSTR_DESC_S {
     const char *str_instr;
-    unsigned    num_args          : 2;
+    unsigned    num_args          : 3;
     unsigned    first_arg_is_offs : 1;
 };
 
@@ -193,10 +193,10 @@ static const RE_INSTR_DESC re_instr_descs[] = {
     { "END.GROUP",        1, 0 },
     { "FORK",             1, 1 },
     { "JUMP",             1, 1 },
-    { "GREEDY.COUNT",     2, 1 },
-    { "LAZY.COUNT",       2, 1 },
-    { "GREEDY.JUMP",      3, 1 },
-    { "LAZY.JUMP",        3, 1 }
+    { "GREEDY.COUNT",     3, 1 },
+    { "LAZY.COUNT",       3, 1 },
+    { "GREEDY.JUMP",      4, 1 },
+    { "LAZY.JUMP",        4, 1 }
 };
 
 struct RE_CTX {
@@ -206,6 +206,7 @@ struct RE_CTX {
     int             can_be_multiplicity;
     unsigned        num_groups;
     unsigned        group_depth;
+    unsigned        num_counts;
     KOS_VECTOR      buf;
     KOS_VECTOR      class_descs;
     KOS_VECTOR      class_data;
@@ -223,6 +224,7 @@ struct RE_CLASS_RANGE {
 
 struct RE {
     uint16_t num_groups;
+    uint16_t num_counts;
     uint16_t bytecode_size;
     uint16_t bytecode[1];
 };
@@ -312,9 +314,16 @@ static int emit_instr2(struct RE_CTX *re_ctx, enum RE_INSTR code, uint32_t arg1,
     return emit_instr(re_ctx, code, 2, arg1, arg2);
 }
 
-static int emit_instr3(struct RE_CTX *re_ctx, enum RE_INSTR code, uint32_t arg1, uint32_t arg2, uint32_t arg3)
+static int emit_instr3(struct RE_CTX *re_ctx, enum RE_INSTR code,
+                       uint32_t arg1, uint32_t arg2, uint32_t arg3)
 {
     return emit_instr(re_ctx, code, 3, arg1, arg2, arg3);
+}
+
+static int emit_instr4(struct RE_CTX *re_ctx, enum RE_INSTR code,
+                       uint32_t arg1, uint32_t arg2, uint32_t arg3, uint32_t arg4)
+{
+    return emit_instr(re_ctx, code, 4, arg1, arg2, arg3, arg4);
 }
 
 static void encode_utf8(uint32_t code, char *buf, size_t buf_size)
@@ -765,15 +774,16 @@ static int emit_multiplicity(struct RE_CTX *re_ctx,
                              uint32_t       max_count)
 {
     int            error;
-    const uint32_t pivot = (uint32_t)re_ctx->buf.size;
-    const int      lazy  = peek_next_char(&re_ctx->iter) == '?';
+    const uint32_t pivot    = (uint32_t)re_ctx->buf.size;
+    const int      lazy     = peek_next_char(&re_ctx->iter) == '?';
+    unsigned       count_id = re_ctx->num_counts++;
     uint32_t       jump_offs;
     uint32_t       count_size;
 
     if (lazy)
         consume_next_char(re_ctx);
 
-    TRY(emit_instr2(re_ctx, lazy ? INSTR_LAZY_COUNT : INSTR_GREEDY_COUNT, 0, min_count));
+    TRY(emit_instr3(re_ctx, lazy ? INSTR_LAZY_COUNT : INSTR_GREEDY_COUNT, 0, count_id, min_count));
 
     count_size = (uint32_t)re_ctx->buf.size - pivot;
 
@@ -781,9 +791,10 @@ static int emit_multiplicity(struct RE_CTX *re_ctx,
 
     jump_offs = (uint32_t)re_ctx->buf.size;
 
-    TRY(emit_instr3(re_ctx,
+    TRY(emit_instr4(re_ctx,
                     lazy ? INSTR_LAZY_JUMP : INSTR_GREEDY_JUMP,
                     0,
+                    count_id,
                     min_count,
                     max_count));
 
@@ -1023,7 +1034,7 @@ static void disassemble(struct RE *re, const char *re_cstr)
         assert(mnem_remaining >= 1);
         *mnem_buf = 0;
 
-        printf("%08X:%-20s %-17s%s\n", (unsigned)offs, bytes, desc->str_instr, buf);
+        printf("%08X:%-25s %-17s%s\n", (unsigned)offs, bytes, desc->str_instr, buf);
     }
 }
 
@@ -1052,6 +1063,7 @@ static int parse_re(KOS_CONTEXT ctx, KOS_OBJ_ID regex_str, KOS_OBJ_ID regex)
     re_ctx.can_be_multiplicity = 0;
     re_ctx.num_groups          = 0U;
     re_ctx.group_depth         = 0U;
+    re_ctx.num_counts          = 0U;
 
     TRY(parse_alternative_match_seq(&re_ctx));
 
@@ -1062,6 +1074,7 @@ static int parse_re(KOS_CONTEXT ctx, KOS_OBJ_ID regex_str, KOS_OBJ_ID regex)
     }
 
     re->num_groups    = (uint16_t)re_ctx.num_groups;
+    re->num_counts    = (uint16_t)re_ctx.num_counts;
     re->bytecode_size = (uint16_t)(re_ctx.buf.size / sizeof(uint16_t));
     memcpy(re->bytecode, re_ctx.buf.buffer, re_ctx.buf.size);
 
@@ -1318,34 +1331,37 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT ctx,
 
             BEGIN_INSTRUCTION(GREEDY_COUNT): {
                 const int16_t         delta     = (int16_t)bytecode[1];
-                const uint16_t        min_count = bytecode[2];
+                //const uint16_t        count_id  = bytecode[2];
+                const uint16_t        min_count = bytecode[3];
                 const enum POSS_STATE active    = min_count ? STATE_INACTIVE : STATE_ACTIVE;
 
                 assert(delta);
 
                 TRY(push_possibility(&poss_stack, ctx, re, bytecode + delta, &iter, active));
 
-                bytecode += 3;
+                bytecode += 4;
                 NEXT_INSTRUCTION;
             }
 
             BEGIN_INSTRUCTION(LAZY_COUNT): {
                 const int16_t         delta     = (int16_t)bytecode[1];
-                const uint16_t        min_count = bytecode[2];
+                //const uint16_t        count_id  = bytecode[2];
+                const uint16_t        min_count = bytecode[3];
                 const enum POSS_STATE active    = min_count ? STATE_INACTIVE : STATE_ACTIVE;
 
                 assert(delta);
 
-                TRY(push_possibility(&poss_stack, ctx, re, bytecode + 3, &iter, active));
+                TRY(push_possibility(&poss_stack, ctx, re, bytecode + 4, &iter, active));
 
-                bytecode += active ? delta : 3;
+                bytecode += active ? delta : 4;
                 NEXT_INSTRUCTION;
             }
 
             BEGIN_INSTRUCTION(GREEDY_JUMP): {
                 const int16_t  delta     = (int16_t)bytecode[1];
-                const uint16_t min_count = bytecode[2];
-                const uint16_t max_count = bytecode[3];
+                //const uint16_t count_id  = bytecode[2];
+                const uint16_t min_count = bytecode[3];
+                const uint16_t max_count = bytecode[4];
                 unsigned       count;
 
                 assert(delta);
@@ -1364,7 +1380,7 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT ctx,
                         TRY(duplicate_possibility(&poss_stack, ctx));
                         set_iter(&poss_stack, &iter);
                     }
-                    bytecode += (count < max_count) ? delta : 4;
+                    bytecode += (count < max_count) ? delta : 5;
                 }
 
                 NEXT_INSTRUCTION;
@@ -1372,8 +1388,9 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT ctx,
 
             BEGIN_INSTRUCTION(LAZY_JUMP): {
                 const int16_t  delta     = (int16_t)bytecode[1];
-                const uint16_t min_count = bytecode[2];
-                const uint16_t max_count = bytecode[3];
+                //const uint16_t count_id  = bytecode[2];
+                const uint16_t min_count = bytecode[3];
+                const uint16_t max_count = bytecode[4];
                 unsigned       count;
 
                 assert(delta);
@@ -1390,7 +1407,7 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT ctx,
                         poss_stack.top->active = STATE_ACTIVE;
                         set_iter(&poss_stack, &iter);
                     }
-                    bytecode += 4;
+                    bytecode += 5;
                 }
 
                 NEXT_INSTRUCTION;
