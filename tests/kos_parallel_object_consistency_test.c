@@ -114,7 +114,7 @@ static int calc_props_per_th(int desired_value, int num_threads)
 
     desired_value /= num_threads;
 
-    return desired_value > 2 ? desired_value : 2;
+    return desired_value > 4 ? desired_value : 4;
 }
 
 int main(void)
