@@ -466,7 +466,7 @@ KOS_OBJ_ID KOS_get_property_with_depth(KOS_CONTEXT                  ctx,
             for (;;) {
                 KOS_PITEM *const cur_item  = items + (idx &= mask);
                 KOS_OBJ_ID       cur_key   = KOS_atomic_read_relaxed_obj(cur_item->key);
-                const KOS_OBJ_ID cur_value = KOS_atomic_read_relaxed_obj(cur_item->value);
+                const KOS_OBJ_ID cur_value = KOS_atomic_read_acquire_obj(cur_item->value);
 
                 /* Object property table is being resized, so read value from the new table */
                 if (cur_value == CLOSED) {
@@ -685,7 +685,7 @@ int KOS_set_property(KOS_CONTEXT ctx,
                 }
 
                 /* Read value at this slot */
-                oldval = KOS_atomic_read_relaxed_obj(cur_item->value);
+                oldval = KOS_atomic_read_acquire_obj(cur_item->value);
 
                 /* We will use the new table if it was copied */
                 if (oldval != CLOSED) {
@@ -703,7 +703,7 @@ int KOS_set_property(KOS_CONTEXT ctx,
                     /* It's OK if someone else wrote in the mean time */
                     if ( ! KOS_atomic_cas_strong_ptr(cur_item->value, oldval, value.o))
                         /* Re-read in case it was moved to the new table */
-                        oldval = KOS_atomic_read_relaxed_obj(cur_item->value);
+                        oldval = KOS_atomic_read_acquire_obj(cur_item->value);
                 }
 
                 /* Another thread is resizing the table - use new property table */
@@ -984,7 +984,7 @@ KOS_OBJ_ID KOS_new_object_walk(KOS_CONTEXT                  ctx,
         for (i = 0; i < capacity; i++) {
             KOS_PITEM       *cur_item = OBJPTR(OBJECT_STORAGE, prop_table.o)->items + i;
             const KOS_OBJ_ID key      = KOS_atomic_read_relaxed_obj(cur_item->key);
-            const KOS_OBJ_ID value    = KOS_atomic_read_relaxed_obj(cur_item->value);
+            const KOS_OBJ_ID value    = KOS_atomic_read_acquire_obj(cur_item->value);
 
             if (IS_BAD_PTR(key) || value == TOMBSTONE)
                 continue;
@@ -992,6 +992,7 @@ KOS_OBJ_ID KOS_new_object_walk(KOS_CONTEXT                  ctx,
             if (value == CLOSED) {
                 const KOS_OBJ_ID new_prop_table = KOS_atomic_read_relaxed_obj(
                         OBJPTR(OBJECT_STORAGE, prop_table.o)->new_prop_table);
+                assert( ! IS_BAD_PTR(new_prop_table));
 
                 copy_table(ctx, obj.o, prop_table.o, new_prop_table);
 
