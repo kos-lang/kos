@@ -1331,7 +1331,9 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT ctx,
 
             BEGIN_INSTRUCTION(GREEDY_COUNT): {
                 const int16_t         delta     = (int16_t)bytecode[1];
-                //const uint16_t        count_id  = bytecode[2];
+#if 0
+                const uint16_t        count_id  = bytecode[2];
+#endif
                 const uint16_t        min_count = bytecode[3];
                 const enum POSS_STATE active    = min_count ? STATE_INACTIVE : STATE_ACTIVE;
 
@@ -1345,7 +1347,9 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT ctx,
 
             BEGIN_INSTRUCTION(LAZY_COUNT): {
                 const int16_t         delta     = (int16_t)bytecode[1];
-                //const uint16_t        count_id  = bytecode[2];
+#if 0
+                const uint16_t        count_id  = bytecode[2];
+#endif
                 const uint16_t        min_count = bytecode[3];
                 const enum POSS_STATE active    = min_count ? STATE_INACTIVE : STATE_ACTIVE;
 
@@ -1359,7 +1363,9 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT ctx,
 
             BEGIN_INSTRUCTION(GREEDY_JUMP): {
                 const int16_t  delta     = (int16_t)bytecode[1];
-                //const uint16_t count_id  = bytecode[2];
+#if 0
+                const uint16_t count_id  = bytecode[2];
+#endif
                 const uint16_t min_count = bytecode[3];
                 const uint16_t max_count = bytecode[4];
                 unsigned       count;
@@ -1388,7 +1394,9 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT ctx,
 
             BEGIN_INSTRUCTION(LAZY_JUMP): {
                 const int16_t  delta     = (int16_t)bytecode[1];
-                //const uint16_t count_id  = bytecode[2];
+#if 0
+                const uint16_t count_id  = bytecode[2];
+#endif
                 const uint16_t min_count = bytecode[3];
                 const uint16_t max_count = bytecode[4];
                 unsigned       count;
