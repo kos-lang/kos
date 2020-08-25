@@ -1229,15 +1229,14 @@ extern KOS_ATOMIC(uint32_t) kos_fuzz_instructions;
 #   define BEGIN_BREAKPOINT_INSTRUCTION OP_BREAKPOINT
 #   define NEXT_INSTRUCTION                                         \
         do {                                                        \
-            uint8_t jump_offs;                                      \
+            uint32_t jump_offs;                                     \
                                                                     \
             FUZZ_LIMIT();                                           \
             KOS_PERF_CNT(instructions);                             \
             instr     = (KOS_BYTECODE_INSTR)*bytecode;              \
-            jump_offs = (uint8_t)(instr - INSTR_BREAKPOINT);        \
-            if (jump_offs < (INSTR_LAST_OPCODE - INSTR_BREAKPOINT)) \
-                goto *dispatch_table[jump_offs];                    \
-            goto OP_BREAKPOINT;                                     \
+            jump_offs = (uint32_t)(instr - INSTR_BREAKPOINT);       \
+            jump_offs = (jump_offs < (INSTR_LAST_OPCODE - INSTR_BREAKPOINT)) ? jump_offs : 0; \
+            goto *dispatch_table[jump_offs];                        \
         } while (0)
 
 #else
