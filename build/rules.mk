@@ -194,12 +194,6 @@ else
 
     fastdispatch ?= 1
     ifeq ($(fastdispatch), 1)
-        COMPILER_VER := $(shell $(CC) --version 2>&1)
-        ifeq (,$(filter clang gcc,$(COMPILER_VER)))
-            fastdispatch := 0
-        endif
-    endif
-    ifeq ($(fastdispatch), 1)
         CFLAGS += -DCONFIG_FAST_DISPATCH
     else
         STRICTFLAGS += -pedantic
