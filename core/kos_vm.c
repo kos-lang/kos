@@ -59,7 +59,7 @@ static KOS_OBJ_ID add_integer(KOS_CONTEXT ctx,
             break;
 
         case OBJ_FLOAT:
-            ret = KOS_new_float(ctx, a + OBJPTR(FLOAT, bobj)->value);
+            ret = KOS_new_float(ctx, (double)a + OBJPTR(FLOAT, bobj)->value);
             break;
 
         default:
@@ -115,7 +115,7 @@ static KOS_OBJ_ID sub_integer(KOS_CONTEXT ctx,
             break;
 
         case OBJ_FLOAT:
-            ret = KOS_new_float(ctx, a - OBJPTR(FLOAT, bobj)->value);
+            ret = KOS_new_float(ctx, (double)a - OBJPTR(FLOAT, bobj)->value);
             break;
 
         default:
@@ -172,7 +172,7 @@ static KOS_OBJ_ID mul_integer(KOS_CONTEXT ctx,
             break;
 
         case OBJ_FLOAT:
-            ret = KOS_new_float(ctx, a * OBJPTR(FLOAT, bobj)->value);
+            ret = KOS_new_float(ctx, (double)a * OBJPTR(FLOAT, bobj)->value);
             break;
 
         default:
