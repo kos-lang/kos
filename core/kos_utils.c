@@ -1631,6 +1631,9 @@ int KOS_iterator_next(KOS_CONTEXT ctx,
                 KOS_LOCAL  iter;
                 uint32_t   idx;
 
+                if (state == KOS_GEN_DONE)
+                    break;
+
                 KOS_init_local_with(ctx, &iter, iter_id);
                 KOS_init_local_with(ctx, &obj,  obj_id);
 
@@ -1669,6 +1672,7 @@ int KOS_iterator_next(KOS_CONTEXT ctx,
                 KOS_atomic_write_release_ptr(OBJPTR(ITERATOR, iter_id)->last_key, KOS_VOID);
                 KOS_atomic_write_release_ptr(OBJPTR(ITERATOR, iter_id)->last_value,
                                              OBJPTR(ITERATOR, iter_id)->obj);
+                return KOS_SUCCESS;
             }
             break;
 
@@ -1684,21 +1688,22 @@ int KOS_iterator_next(KOS_CONTEXT ctx,
             assert(GET_OBJ_TYPE(obj_id) == OBJ_ARRAY);
 
             size = KOS_get_array_size(obj_id);
-            if (idx >= size) {
-                KOS_atomic_write_relaxed_u32(OBJPTR(ITERATOR, iter_id)->index, size);
+            if (idx < size) {
+
+                KOS_init_local_with(ctx, &iter, iter_id);
+                obj_id = KOS_array_read(ctx, obj_id, (int)idx);
+                iter_id = KOS_destroy_top_local(ctx, &iter);
+
+                if ( ! IS_BAD_PTR(obj_id)) {
+                    KOS_atomic_write_release_ptr(OBJPTR(ITERATOR, iter_id)->last_key,   TO_SMALL_INT((int64_t)idx));
+                    KOS_atomic_write_release_ptr(OBJPTR(ITERATOR, iter_id)->last_value, obj_id);
+                    return KOS_SUCCESS;
+                }
+
                 break;
             }
 
-            KOS_atomic_write_release_ptr(OBJPTR(ITERATOR, iter_id)->last_key, TO_SMALL_INT((int64_t)idx));
-
-            KOS_init_local_with(ctx, &iter, iter_id);
-            obj_id = KOS_array_read(ctx, obj_id, (int)idx);
-            iter_id = KOS_destroy_top_local(ctx, &iter);
-            if (obj_id) {
-                KOS_atomic_write_release_ptr(OBJPTR(ITERATOR, iter_id)->last_value, obj_id);
-                return KOS_SUCCESS;
-            }
-
+            KOS_atomic_write_relaxed_u32(OBJPTR(ITERATOR, iter_id)->index, size);
             break;
         }
 
@@ -1711,21 +1716,22 @@ int KOS_iterator_next(KOS_CONTEXT ctx,
             assert(GET_OBJ_TYPE(obj_id) == OBJ_STRING);
 
             size = KOS_get_string_length(obj_id);
-            if (idx >= size) {
-                KOS_atomic_write_relaxed_u32(OBJPTR(ITERATOR, iter_id)->index, size);
-                break;
+            if (idx < size) {
+
+                KOS_init_local_with(ctx, &iter, iter_id);
+                obj_id = KOS_string_get_char(ctx, obj_id, (int)idx);
+                iter_id = KOS_destroy_top_local(ctx, &iter);
+
+                if ( ! IS_BAD_PTR(obj_id)) {
+                    KOS_atomic_write_release_ptr(OBJPTR(ITERATOR, iter_id)->last_key,   TO_SMALL_INT((int64_t)idx));
+                    KOS_atomic_write_release_ptr(OBJPTR(ITERATOR, iter_id)->last_value, obj_id);
+                    return KOS_SUCCESS;
+                }
+
+                return KOS_ERROR_EXCEPTION;
             }
 
-            KOS_atomic_write_release_ptr(OBJPTR(ITERATOR, iter_id)->last_key, TO_SMALL_INT((int64_t)idx));
-
-            KOS_init_local_with(ctx, &iter, iter_id);
-            obj_id = KOS_string_get_char(ctx, obj_id, (int)idx);
-            iter_id = KOS_destroy_top_local(ctx, &iter);
-            if (obj_id) {
-                KOS_atomic_write_release_ptr(OBJPTR(ITERATOR, iter_id)->last_value, obj_id);
-                return KOS_SUCCESS;
-            }
-
+            KOS_atomic_write_relaxed_u32(OBJPTR(ITERATOR, iter_id)->index, size);
             break;
         }
 
@@ -1738,19 +1744,23 @@ int KOS_iterator_next(KOS_CONTEXT ctx,
             assert(GET_OBJ_TYPE(obj_id) == OBJ_BUFFER);
 
             size = KOS_get_buffer_size(obj_id);
-            if (idx >= size) {
-                KOS_atomic_write_relaxed_u32(OBJPTR(ITERATOR, iter_id)->index, size);
-                break;
+            if (idx < size) {
+
+                KOS_atomic_write_release_ptr(OBJPTR(ITERATOR, iter_id)->last_key, TO_SMALL_INT((int64_t)idx));
+
+                elem = KOS_buffer_data_volatile(obj_id)[idx];
+                KOS_atomic_write_release_ptr(OBJPTR(ITERATOR, iter_id)->last_value, TO_SMALL_INT(elem));
+
+                return KOS_SUCCESS;
             }
 
-            KOS_atomic_write_release_ptr(OBJPTR(ITERATOR, iter_id)->last_key, TO_SMALL_INT((int64_t)idx));
-
-            elem = KOS_buffer_data_volatile(obj_id)[idx];
-            KOS_atomic_write_release_ptr(OBJPTR(ITERATOR, iter_id)->last_value, TO_SMALL_INT(elem));
-
-            return KOS_SUCCESS;
+            KOS_atomic_write_relaxed_u32(OBJPTR(ITERATOR, iter_id)->index, size);
+            break;
         }
     }
+
+    KOS_atomic_write_release_ptr(OBJPTR(ITERATOR, iter_id)->last_key,   KOS_BADPTR);
+    KOS_atomic_write_release_ptr(OBJPTR(ITERATOR, iter_id)->last_value, KOS_BADPTR);
 
     return KOS_ERROR_NOT_FOUND;
 }
