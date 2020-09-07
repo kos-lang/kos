@@ -44,6 +44,7 @@ _KOS_instance_register_thread
 _KOS_instance_set_args
 _KOS_instance_unregister_thread
 _KOS_is_generator
+_KOS_iterator_next
 _KOS_load_module
 _KOS_load_module_from_memory
 _KOS_module_add_constructor
@@ -69,9 +70,9 @@ _KOS_new_dynamic_prop
 _KOS_new_float
 _KOS_new_function
 _KOS_new_int
+_KOS_new_iterator
+_KOS_new_iterator_copy
 _KOS_new_object
-_KOS_new_object_walk
-_KOS_new_object_walk_copy
 _KOS_new_object_with_prototype
 _KOS_new_string
 _KOS_new_string_esc
@@ -79,7 +80,6 @@ _KOS_new_string_from_buffer
 _KOS_new_string_from_codes
 _KOS_object_to_string
 _KOS_object_to_string_or_cstr_vec
-_KOS_object_walk
 _KOS_print_exception
 _KOS_print_to_cstr_vec
 _KOS_raise_exception

@@ -38,7 +38,7 @@ typedef enum KOS_ENTITY_TYPE_E {
     OBJ_ARRAY_STORAGE  = 28,
     OBJ_BUFFER_STORAGE = 30,
     OBJ_DYNAMIC_PROP   = 32,
-    OBJ_OBJECT_WALK    = 34,
+    OBJ_ITERATOR       = 34,
     OBJ_MODULE         = 36,
     OBJ_STACK          = 38,
 
@@ -446,14 +446,21 @@ typedef struct KOS_DYNAMIC_PROP_S {
     KOS_OBJ_ID           setter;
 } KOS_DYNAMIC_PROP;
 
-typedef struct KOS_OBJECT_WALK_S {
+typedef struct KOS_ITERATOR_S {
     KOS_OBJ_HEADER         header;
     KOS_ATOMIC(uint32_t)   index;
+    KOS_TYPE               type;
     KOS_OBJ_ID             obj;
     KOS_OBJ_ID             key_table;
     KOS_ATOMIC(KOS_OBJ_ID) last_key;
     KOS_ATOMIC(KOS_OBJ_ID) last_value;
-} KOS_OBJECT_WALK;
+} KOS_ITERATOR;
+
+enum KOS_DEPTH_E {
+    KOS_DEEP,    /* Iterate over properties of this object and prototypes        */
+    KOS_SHALLOW, /* Iterate over properties of this object, but not prototypes   */
+    KOS_CONTENTS /* Iterate over contents of the container (e.g. array elements) */
+};
 
 #ifdef __cplusplus
 extern "C" {
@@ -488,6 +495,19 @@ KOS_OBJ_ID KOS_new_builtin_class(KOS_CONTEXT          ctx,
 
 KOS_API
 KOS_OBJ_ID KOS_new_dynamic_prop(KOS_CONTEXT ctx);
+
+KOS_API
+KOS_OBJ_ID KOS_new_iterator(KOS_CONTEXT      ctx,
+                            KOS_OBJ_ID       obj_id,
+                            enum KOS_DEPTH_E depth);
+
+KOS_API
+KOS_OBJ_ID KOS_new_iterator_copy(KOS_CONTEXT ctx,
+                                 KOS_OBJ_ID  walk_id);
+
+KOS_API
+int KOS_iterator_next(KOS_CONTEXT ctx,
+                      KOS_OBJ_ID  walk_id);
 
 #ifdef __cplusplus
 }

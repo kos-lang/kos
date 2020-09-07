@@ -423,10 +423,10 @@ static void raise_no_property(KOS_CONTEXT ctx, KOS_OBJ_ID prop)
     kos_vector_destroy(&prop_cstr);
 }
 
-KOS_OBJ_ID KOS_get_property_with_depth(KOS_CONTEXT                  ctx,
-                                       KOS_OBJ_ID                   obj_id,
-                                       KOS_OBJ_ID                   prop,
-                                       enum KOS_OBJECT_WALK_DEPTH_E deep)
+KOS_OBJ_ID KOS_get_property_with_depth(KOS_CONTEXT      ctx,
+                                       KOS_OBJ_ID       obj_id,
+                                       KOS_OBJ_ID       prop,
+                                       enum KOS_DEPTH_E shallow)
 {
     KOS_OBJ_ID retval = KOS_BADPTR;
 
@@ -439,7 +439,7 @@ KOS_OBJ_ID KOS_get_property_with_depth(KOS_CONTEXT                  ctx,
         KOS_ATOMIC(KOS_OBJ_ID) *props = get_properties(obj_id);
 
         /* Find non-empty property table in this object or in a prototype */
-        if (deep) {
+        if ( ! shallow) {
             while ( ! props || IS_BAD_PTR(read_props(props))) {
                 obj_id = KOS_get_prototype(ctx, obj_id);
 
@@ -506,7 +506,7 @@ KOS_OBJ_ID KOS_get_property_with_depth(KOS_CONTEXT                  ctx,
                 if (IS_BAD_PTR(cur_key)) {
 
                     /* Find non-empty property table in a prototype */
-                    if (deep) {
+                    if ( ! shallow) {
                         do {
                             obj_id = KOS_get_prototype(ctx, obj_id);
 
@@ -931,9 +931,9 @@ int KOS_has_prototype(KOS_CONTEXT ctx,
     return 0;
 }
 
-KOS_OBJ_ID KOS_new_object_walk(KOS_CONTEXT                  ctx,
-                               KOS_OBJ_ID                   obj_id,
-                               enum KOS_OBJECT_WALK_DEPTH_E deep)
+KOS_OBJ_ID kos_new_object_walk(KOS_CONTEXT      ctx,
+                               KOS_OBJ_ID       obj_id,
+                               enum KOS_DEPTH_E shallow)
 {
     int       error         = KOS_SUCCESS;
     KOS_LOCAL obj;
@@ -944,21 +944,22 @@ KOS_OBJ_ID KOS_new_object_walk(KOS_CONTEXT                  ctx,
     KOS_init_locals(ctx, 4, &obj, &key_table, &prop_table, &walk);
     obj.o = obj_id;
 
-    walk.o = OBJID(OBJECT_WALK,
-                   (KOS_OBJECT_WALK *)kos_alloc_object(ctx,
-                                                       KOS_ALLOC_MOVABLE,
-                                                       OBJ_OBJECT_WALK,
-                                                       sizeof(KOS_OBJECT_WALK)));
+    walk.o = OBJID(ITERATOR,
+                   (KOS_ITERATOR *)kos_alloc_object(ctx,
+                                                    KOS_ALLOC_MOVABLE,
+                                                    OBJ_ITERATOR,
+                                                    sizeof(KOS_ITERATOR)));
     if (IS_BAD_PTR(walk.o))
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
 
-    assert(READ_OBJ_TYPE(walk.o) == OBJ_OBJECT_WALK);
+    assert(READ_OBJ_TYPE(walk.o) == OBJ_ITERATOR);
 
-    OBJPTR(OBJECT_WALK, walk.o)->obj        = obj.o;
-    OBJPTR(OBJECT_WALK, walk.o)->key_table  = KOS_BADPTR;
-    OBJPTR(OBJECT_WALK, walk.o)->index      = 0;
-    OBJPTR(OBJECT_WALK, walk.o)->last_key   = KOS_BADPTR;
-    OBJPTR(OBJECT_WALK, walk.o)->last_value = KOS_BADPTR;
+    OBJPTR(ITERATOR, walk.o)->obj        = obj.o;
+    OBJPTR(ITERATOR, walk.o)->key_table  = KOS_BADPTR;
+    OBJPTR(ITERATOR, walk.o)->index      = 0;
+    OBJPTR(ITERATOR, walk.o)->type       = OBJ_OBJECT;
+    OBJPTR(ITERATOR, walk.o)->last_key   = KOS_BADPTR;
+    OBJPTR(ITERATOR, walk.o)->last_value = KOS_BADPTR;
 
     key_table.o = KOS_new_object(ctx);
     TRY_OBJID(key_table.o);
@@ -1003,9 +1004,9 @@ KOS_OBJ_ID KOS_new_object_walk(KOS_CONTEXT                  ctx,
 
             TRY(KOS_set_property(ctx, key_table.o, key, KOS_VOID));
         }
-    } while ( ! IS_BAD_PTR(obj.o) && deep);
+    } while ( ! IS_BAD_PTR(obj.o) && ! shallow);
 
-    OBJPTR(OBJECT_WALK, walk.o)->key_table =
+    OBJPTR(ITERATOR, walk.o)->key_table =
             read_props(get_properties(key_table.o));
 
 cleanup:
@@ -1017,39 +1018,7 @@ cleanup:
     return walk.o;
 }
 
-KOS_OBJ_ID KOS_new_object_walk_copy(KOS_CONTEXT ctx,
-                                    KOS_OBJ_ID  walk_id)
-{
-    int              error = KOS_SUCCESS;
-    KOS_OBJECT_WALK *walk;
-    KOS_LOCAL        src;
-
-    KOS_init_local_with(ctx, &src, walk_id);
-
-    walk = (KOS_OBJECT_WALK *)kos_alloc_object(ctx,
-                                               KOS_ALLOC_MOVABLE,
-                                               OBJ_OBJECT_WALK,
-                                               sizeof(KOS_OBJECT_WALK));
-
-    if ( ! walk)
-        RAISE_ERROR(KOS_ERROR_EXCEPTION);
-
-    assert(GET_OBJ_TYPE(src.o) == OBJ_OBJECT_WALK);
-
-    KOS_atomic_write_relaxed_u32(walk->index,
-            KOS_atomic_read_relaxed_u32(OBJPTR(OBJECT_WALK, src.o)->index));
-    walk->obj        = OBJPTR(OBJECT_WALK, src.o)->obj;
-    walk->key_table  = OBJPTR(OBJECT_WALK, src.o)->key_table;
-    walk->last_key   = KOS_atomic_read_relaxed_obj(OBJPTR(OBJECT_WALK, src.o)->last_key);
-    walk->last_value = KOS_atomic_read_relaxed_obj(OBJPTR(OBJECT_WALK, src.o)->last_value);
-
-cleanup:
-    KOS_destroy_top_local(ctx, &src);
-
-    return error ? KOS_BADPTR : OBJID(OBJECT_WALK, walk);
-}
-
-int KOS_object_walk(KOS_CONTEXT ctx,
+int kos_object_walk(KOS_CONTEXT ctx,
                     KOS_OBJ_ID  walk_id)
 {
     int        error    = KOS_ERROR_INTERNAL;
@@ -1061,20 +1030,21 @@ int KOS_object_walk(KOS_CONTEXT ctx,
     KOS_init_locals(ctx, 3, &walk, &table, &key);
     walk.o = walk_id;
 
-    assert(GET_OBJ_TYPE(walk.o) == OBJ_OBJECT_WALK);
+    assert(GET_OBJ_TYPE(walk.o) == OBJ_ITERATOR);
+    assert(OBJPTR(ITERATOR, walk.o)->type == OBJ_OBJECT);
 
-    if ( ! IS_BAD_PTR(OBJPTR(OBJECT_WALK, walk.o)->key_table)) {
-        table.o  = OBJPTR(OBJECT_WALK, walk.o)->key_table;
+    if ( ! IS_BAD_PTR(OBJPTR(ITERATOR, walk.o)->key_table)) {
+        table.o  = OBJPTR(ITERATOR, walk.o)->key_table;
         capacity = KOS_atomic_read_relaxed_u32(OBJPTR(OBJECT_STORAGE, table.o)->capacity);
     }
 
     for (;;) {
 
-        const int32_t index = KOS_atomic_add_i32(OBJPTR(OBJECT_WALK, walk.o)->index, 1);
+        const uint32_t index = KOS_atomic_add_u32(OBJPTR(ITERATOR, walk.o)->index, 1U);
 
-        if ((uint32_t)index >= capacity) {
-            KOS_atomic_write_relaxed_ptr(OBJPTR(OBJECT_WALK, walk.o)->last_key,   KOS_BADPTR);
-            KOS_atomic_write_relaxed_ptr(OBJPTR(OBJECT_WALK, walk.o)->last_value, KOS_BADPTR);
+        if (index >= capacity) {
+            KOS_atomic_write_relaxed_ptr(OBJPTR(ITERATOR, walk.o)->last_key,   KOS_BADPTR);
+            KOS_atomic_write_relaxed_ptr(OBJPTR(ITERATOR, walk.o)->last_value, KOS_BADPTR);
             error = KOS_ERROR_NOT_FOUND;
             break;
         }
@@ -1084,14 +1054,14 @@ int KOS_object_walk(KOS_CONTEXT ctx,
         if ( ! IS_BAD_PTR(key.o)) {
 
             const KOS_OBJ_ID value = KOS_get_property(ctx,
-                                                      OBJPTR(OBJECT_WALK, walk.o)->obj,
+                                                      OBJPTR(ITERATOR, walk.o)->obj,
                                                       key.o);
 
             if (IS_BAD_PTR(value))
                 KOS_clear_exception(ctx);
             else {
-                KOS_atomic_write_relaxed_ptr(OBJPTR(OBJECT_WALK, walk.o)->last_key,   key.o);
-                KOS_atomic_write_relaxed_ptr(OBJPTR(OBJECT_WALK, walk.o)->last_value, value);
+                KOS_atomic_write_relaxed_ptr(OBJPTR(ITERATOR, walk.o)->last_key,   key.o);
+                KOS_atomic_write_relaxed_ptr(OBJPTR(ITERATOR, walk.o)->last_value, value);
                 error = KOS_SUCCESS;
                 break;
             }

@@ -1440,14 +1440,14 @@ static uint32_t mark_children_gray(KOS_OBJ_ID obj_id)
             marked += mark_object_black(OBJPTR(DYNAMIC_PROP, obj_id)->setter);
             break;
 
-        case OBJ_OBJECT_WALK:
+        case OBJ_ITERATOR:
             /* TODO make these atomic */
-            marked += set_mark_state(OBJPTR(OBJECT_WALK, obj_id)->obj,         GRAY);
-            marked += set_mark_state(OBJPTR(OBJECT_WALK, obj_id)->key_table,   GRAY);
+            marked += set_mark_state(OBJPTR(ITERATOR, obj_id)->obj,         GRAY);
+            marked += set_mark_state(OBJPTR(ITERATOR, obj_id)->key_table,   GRAY);
             marked += set_mark_state(KOS_atomic_read_relaxed_obj(
-                                     OBJPTR(OBJECT_WALK, obj_id)->last_key),   GRAY);
+                                     OBJPTR(ITERATOR, obj_id)->last_key),   GRAY);
             marked += set_mark_state(KOS_atomic_read_relaxed_obj(
-                                     OBJPTR(OBJECT_WALK, obj_id)->last_value), GRAY);
+                                     OBJPTR(ITERATOR, obj_id)->last_value), GRAY);
             break;
 
         case OBJ_MODULE:
@@ -2047,11 +2047,11 @@ static void update_child_ptrs(KOS_OBJ_HEADER *hdr)
             update_child_ptr(&((KOS_DYNAMIC_PROP *)hdr)->setter);
             break;
 
-        case OBJ_OBJECT_WALK:
-            update_child_ptr(&((KOS_OBJECT_WALK *)hdr)->obj);
-            update_child_ptr(&((KOS_OBJECT_WALK *)hdr)->key_table);
-            update_child_ptr((KOS_OBJ_ID *)&((KOS_OBJECT_WALK *)hdr)->last_key);
-            update_child_ptr((KOS_OBJ_ID *)&((KOS_OBJECT_WALK *)hdr)->last_value);
+        case OBJ_ITERATOR:
+            update_child_ptr(&((KOS_ITERATOR *)hdr)->obj);
+            update_child_ptr(&((KOS_ITERATOR *)hdr)->key_table);
+            update_child_ptr((KOS_OBJ_ID *)&((KOS_ITERATOR *)hdr)->last_key);
+            update_child_ptr((KOS_OBJ_ID *)&((KOS_ITERATOR *)hdr)->last_value);
             break;
 
         case OBJ_MODULE:

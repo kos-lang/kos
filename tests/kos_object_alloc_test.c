@@ -54,9 +54,9 @@ static void *alloc_dynamic_prop(KOS_CONTEXT ctx)
     return kos_alloc_object(ctx, KOS_ALLOC_MOVABLE, OBJ_DYNAMIC_PROP, sizeof(KOS_DYNAMIC_PROP));
 }
 
-static void *alloc_object_walk(KOS_CONTEXT ctx)
+static void *alloc_iterator(KOS_CONTEXT ctx)
 {
-    return kos_alloc_object(ctx, KOS_ALLOC_MOVABLE, OBJ_OBJECT_WALK, sizeof(KOS_OBJECT_WALK));
+    return kos_alloc_object(ctx, KOS_ALLOC_MOVABLE, OBJ_ITERATOR, sizeof(KOS_ITERATOR));
 }
 
 static void *alloc_module(KOS_CONTEXT ctx)
@@ -172,7 +172,7 @@ int main(void)
         { alloc_buffer,       OBJ_BUFFER,       sizeof(KOS_BUFFER)       },
         { alloc_function,     OBJ_FUNCTION,     sizeof(KOS_FUNCTION)     },
         { alloc_dynamic_prop, OBJ_DYNAMIC_PROP, sizeof(KOS_DYNAMIC_PROP) },
-        { alloc_object_walk,  OBJ_OBJECT_WALK,  sizeof(KOS_OBJECT_WALK)  },
+        { alloc_iterator,     OBJ_ITERATOR,     sizeof(KOS_ITERATOR)     },
         { alloc_module,       OBJ_MODULE,       sizeof(KOS_MODULE)       },
         { alloc_stack,        OBJ_STACK,        sizeof(KOS_STACK)        }
     };

@@ -430,10 +430,10 @@ static int predefine_globals(KOS_CONTEXT    ctx,
     KOS_init_local_with(ctx, &module_names, module_names_obj);
     KOS_init_local(ctx, &walk);
 
-    walk.o = KOS_new_object_walk(ctx, global_names, KOS_SHALLOW);
+    walk.o = kos_new_object_walk(ctx, global_names, KOS_SHALLOW);
     TRY_OBJID(walk.o);
 
-    while ( ! KOS_object_walk(ctx, walk.o)) {
+    while ( ! kos_object_walk(ctx, walk.o)) {
 
         assert(IS_SMALL_INT(KOS_get_walk_value(walk.o)));
 
@@ -446,10 +446,10 @@ static int predefine_globals(KOS_CONTEXT    ctx,
                                           is_repl ? 0 : 1));
     }
 
-    walk.o = KOS_new_object_walk(ctx, module_names.o, KOS_SHALLOW);
+    walk.o = kos_new_object_walk(ctx, module_names.o, KOS_SHALLOW);
     TRY_OBJID(walk.o);
 
-    while ( ! KOS_object_walk(ctx, walk.o)) {
+    while ( ! kos_object_walk(ctx, walk.o)) {
 
         assert(IS_SMALL_INT(KOS_get_walk_value(walk.o)));
 
@@ -871,10 +871,10 @@ int kos_comp_walk_globals(void                          *vframe,
 
     assert(GET_OBJ_TYPE(module_obj) == OBJ_MODULE);
 
-    walk.o = KOS_new_object_walk(ctx, OBJPTR(MODULE, module_obj)->global_names, KOS_SHALLOW);
+    walk.o = kos_new_object_walk(ctx, OBJPTR(MODULE, module_obj)->global_names, KOS_SHALLOW);
     TRY_OBJID(walk.o);
 
-    while ( ! KOS_object_walk(ctx, walk.o)) {
+    while ( ! kos_object_walk(ctx, walk.o)) {
 
         assert(IS_SMALL_INT(KOS_get_walk_value(walk.o)));
 

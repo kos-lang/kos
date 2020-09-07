@@ -913,26 +913,26 @@ static int verify_object_walk(KOS_OBJ_ID obj_id)
 {
     KOS_OBJ_ID v;
 
-    TEST(GET_OBJ_TYPE(obj_id) == OBJ_OBJECT_WALK);
+    TEST(GET_OBJ_TYPE(obj_id) == OBJ_ITERATOR);
 
-    TEST(KOS_atomic_read_relaxed_u32(OBJPTR(OBJECT_WALK, obj_id)->index) == 58);
+    TEST(KOS_atomic_read_relaxed_u32(OBJPTR(ITERATOR, obj_id)->index) == 58);
 
-    v = OBJPTR(OBJECT_WALK, obj_id)->obj;
+    v = OBJPTR(ITERATOR, obj_id)->obj;
     TEST( ! IS_BAD_PTR(v));
     TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
     TEST(OBJPTR(INTEGER, v)->value == 59);
 
-    v = OBJPTR(OBJECT_WALK, obj_id)->key_table;
+    v = OBJPTR(ITERATOR, obj_id)->key_table;
     TEST( ! IS_BAD_PTR(v));
     TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
     TEST(OBJPTR(INTEGER, v)->value == 60);
 
-    v = KOS_atomic_read_relaxed_obj(OBJPTR(OBJECT_WALK, obj_id)->last_key);
+    v = KOS_atomic_read_relaxed_obj(OBJPTR(ITERATOR, obj_id)->last_key);
     TEST( ! IS_BAD_PTR(v));
     TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
     TEST(OBJPTR(INTEGER, v)->value == 61);
 
-    v = KOS_atomic_read_relaxed_obj(OBJPTR(OBJECT_WALK, obj_id)->last_value);
+    v = KOS_atomic_read_relaxed_obj(OBJPTR(ITERATOR, obj_id)->last_value);
     TEST( ! IS_BAD_PTR(v));
     TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
     TEST(OBJPTR(INTEGER, v)->value == 62);
@@ -947,21 +947,21 @@ static KOS_OBJ_ID alloc_object_walk(KOS_CONTEXT  ctx,
 {
     KOS_OBJ_ID  obj_id[5];
     OBJECT_DESC desc[5] = {
-        { OBJ_OBJECT_WALK, (uint32_t)sizeof(KOS_OBJECT_WALK) },
-        { OBJ_INTEGER,     (uint32_t)sizeof(KOS_INTEGER)     },
-        { OBJ_INTEGER,     (uint32_t)sizeof(KOS_INTEGER)     },
-        { OBJ_INTEGER,     (uint32_t)sizeof(KOS_INTEGER)     },
-        { OBJ_INTEGER,     (uint32_t)sizeof(KOS_INTEGER)     }
+        { OBJ_ITERATOR, (uint32_t)sizeof(KOS_ITERATOR) },
+        { OBJ_INTEGER,  (uint32_t)sizeof(KOS_INTEGER)     },
+        { OBJ_INTEGER,  (uint32_t)sizeof(KOS_INTEGER)     },
+        { OBJ_INTEGER,  (uint32_t)sizeof(KOS_INTEGER)     },
+        { OBJ_INTEGER,  (uint32_t)sizeof(KOS_INTEGER)     }
     };
 
     if (alloc_page_with_objects(ctx, obj_id, desc, NELEMS(obj_id)))
         return KOS_BADPTR;
 
-    OBJPTR(OBJECT_WALK, obj_id[0])->obj       = obj_id[1];
-    OBJPTR(OBJECT_WALK, obj_id[0])->key_table = obj_id[2];
-    KOS_atomic_write_relaxed_u32(OBJPTR(OBJECT_WALK, obj_id[0])->index,      58);
-    KOS_atomic_write_relaxed_ptr(OBJPTR(OBJECT_WALK, obj_id[0])->last_key,   obj_id[3]);
-    KOS_atomic_write_relaxed_ptr(OBJPTR(OBJECT_WALK, obj_id[0])->last_value, obj_id[4]);
+    OBJPTR(ITERATOR, obj_id[0])->obj       = obj_id[1];
+    OBJPTR(ITERATOR, obj_id[0])->key_table = obj_id[2];
+    KOS_atomic_write_relaxed_u32(OBJPTR(ITERATOR, obj_id[0])->index,      58);
+    KOS_atomic_write_relaxed_ptr(OBJPTR(ITERATOR, obj_id[0])->last_key,   obj_id[3]);
+    KOS_atomic_write_relaxed_ptr(OBJPTR(ITERATOR, obj_id[0])->last_value, obj_id[4]);
 
     OBJPTR(INTEGER, obj_id[1])->value = 59;
     OBJPTR(INTEGER, obj_id[2])->value = 60;

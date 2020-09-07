@@ -1839,10 +1839,10 @@ class object::const_iterator {
 
         const_iterator() { }
 
-        const_iterator(context                 ctx,
-                       KOS_OBJ_ID              obj_id,
-                       KOS_OBJECT_WALK_DEPTH_E depth)
-            : walk_(ctx, ctx.check_error(KOS_new_object_walk(ctx, obj_id, depth)))
+        const_iterator(context     ctx,
+                       KOS_OBJ_ID  obj_id,
+                       KOS_DEPTH_E depth)
+            : walk_(ctx, ctx.check_error(KOS_new_iterator(ctx, obj_id, depth)))
         {
             operator++();
         }
@@ -1851,12 +1851,12 @@ class object::const_iterator {
             : elem_(it.elem_)
         {
             context ctx(it.walk_.get_context());
-            walk_ = handle(ctx, ctx.check_error(KOS_new_object_walk_copy(ctx, it.walk_)));
+            walk_ = handle(ctx, ctx.check_error(KOS_new_iterator_copy(ctx, it.walk_)));
         }
 
         const_iterator& operator=(const const_iterator& it) {
             context ctx(walk_.get_context());
-            walk_ = handle(ctx, ctx.check_error(KOS_new_object_walk_copy(ctx, it.walk_)));
+            walk_ = handle(ctx, ctx.check_error(KOS_new_iterator_copy(ctx, it.walk_)));
             elem_ = it.elem_;
             return *this;
         }
@@ -1875,7 +1875,7 @@ class object::const_iterator {
 
         const_iterator& operator++() {
             context ctx(walk_.get_context());
-            if (KOS_object_walk(ctx, walk_))
+            if (KOS_iterator_next(ctx, walk_))
                 elem_ = value_type();
             else
                 elem_ = std::make_pair<string, handle>(string(ctx, KOS_get_walk_key(walk_)),

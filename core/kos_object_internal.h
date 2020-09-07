@@ -166,6 +166,13 @@ int kos_object_copy_prop_table(KOS_CONTEXT ctx,
 
 int kos_is_truthy(KOS_OBJ_ID obj_id);
 
+KOS_OBJ_ID kos_new_object_walk(KOS_CONTEXT      ctx,
+                               KOS_OBJ_ID       obj_id,
+                               enum KOS_DEPTH_E shallow);
+
+int kos_object_walk(KOS_CONTEXT ctx,
+                    KOS_OBJ_ID  walk_id);
+
 /*==========================================================================*/
 /* KOS_ARRAY                                                                */
 /*==========================================================================*/

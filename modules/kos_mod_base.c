@@ -107,9 +107,9 @@ cleanup:
     return error ? KOS_BADPTR : KOS_VOID;
 }
 
-static KOS_OBJ_ID object_iterator(KOS_CONTEXT                  ctx,
-                                  KOS_OBJ_ID                   regs_obj,
-                                  enum KOS_OBJECT_WALK_DEPTH_E deep)
+static KOS_OBJ_ID object_iterator(KOS_CONTEXT      ctx,
+                                  KOS_OBJ_ID       regs_obj,
+                                  enum KOS_DEPTH_E depth)
 {
     int        error;
     KOS_OBJ_ID ret    = KOS_BADPTR;
@@ -129,8 +129,8 @@ static KOS_OBJ_ID object_iterator(KOS_CONTEXT                  ctx,
     walk.o = KOS_array_read(ctx, regs.o, 0);
     TRY_OBJID(walk.o);
 
-    if (GET_OBJ_TYPE(walk.o) != OBJ_OBJECT_WALK) {
-        walk.o = KOS_new_object_walk(ctx, walk.o, deep);
+    if (GET_OBJ_TYPE(walk.o) != OBJ_ITERATOR) {
+        walk.o = KOS_new_iterator(ctx, walk.o, depth);
         TRY_OBJID(walk.o);
 
         TRY(KOS_array_write(ctx, regs.o, 0, walk.o));
@@ -140,7 +140,7 @@ static KOS_OBJ_ID object_iterator(KOS_CONTEXT                  ctx,
         array.o = KOS_new_array(ctx, 2);
         TRY_OBJID(array.o);
 
-        if ( ! KOS_object_walk(ctx, walk.o)) {
+        if ( ! KOS_iterator_next(ctx, walk.o)) {
 
             value.o = KOS_get_walk_value(walk.o);
 
@@ -153,7 +153,7 @@ static KOS_OBJ_ID object_iterator(KOS_CONTEXT                  ctx,
 
                 value.o = KOS_call_function(ctx,
                                             OBJPTR(DYNAMIC_PROP, value.o)->getter,
-                                            OBJPTR(OBJECT_WALK, walk.o)->obj,
+                                            OBJPTR(ITERATOR, walk.o)->obj,
                                             args);
                 if (IS_BAD_PTR(value.o)) {
                     assert(KOS_is_exception_pending(ctx));
@@ -1056,10 +1056,10 @@ static KOS_OBJ_ID array_constructor(KOS_CONTEXT ctx,
             }
 
             case OBJ_OBJECT: {
-                walk.o = KOS_new_object_walk(ctx, arg.o, KOS_SHALLOW);
+                walk.o = KOS_new_iterator(ctx, arg.o, KOS_SHALLOW);
                 TRY_OBJID(walk.o);
 
-                while ( ! KOS_object_walk(ctx, walk.o)) {
+                while ( ! KOS_iterator_next(ctx, walk.o)) {
 
                     walk_val.o = KOS_get_walk_value(walk.o);
 
@@ -1072,7 +1072,7 @@ static KOS_OBJ_ID array_constructor(KOS_CONTEXT ctx,
 
                         walk_val.o = KOS_call_function(ctx,
                                                        OBJPTR(DYNAMIC_PROP, walk_val.o)->getter,
-                                                       OBJPTR(OBJECT_WALK, walk.o)->obj,
+                                                       OBJPTR(ITERATOR, walk.o)->obj,
                                                        get_args);
                         if (IS_BAD_PTR(walk_val.o)) {
                             assert(KOS_is_exception_pending(ctx));

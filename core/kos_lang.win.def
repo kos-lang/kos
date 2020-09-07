@@ -45,6 +45,7 @@ EXPORTS
     KOS_instance_set_args
     KOS_instance_unregister_thread
     KOS_is_generator
+    KOS_iterator_next
     KOS_load_module
     KOS_load_module_from_memory
     KOS_module_add_constructor
@@ -70,9 +71,9 @@ EXPORTS
     KOS_new_float
     KOS_new_function
     KOS_new_int
+    KOS_new_iterator
+    KOS_new_iterator_copy
     KOS_new_object
-    KOS_new_object_walk
-    KOS_new_object_walk_copy
     KOS_new_object_with_prototype
     KOS_new_string
     KOS_new_string_esc
@@ -80,7 +81,6 @@ EXPORTS
     KOS_new_string_from_codes
     KOS_object_to_string
     KOS_object_to_string_or_cstr_vec
-    KOS_object_walk
     KOS_print_exception
     KOS_print_to_cstr_vec
     KOS_raise_exception
