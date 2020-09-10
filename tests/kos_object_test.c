@@ -14,26 +14,26 @@
 #define TEST_EXCEPTION() do { TEST(KOS_is_exception_pending(ctx)); KOS_clear_exception(ctx); } while (0)
 #define TEST_NO_EXCEPTION() TEST( ! KOS_is_exception_pending(ctx))
 
-static int walk_object(KOS_CONTEXT      ctx,
-                       KOS_OBJ_ID       obj,
-                       KOS_OBJ_ID      *expected,
-                       unsigned         num_expected,
-                       enum KOS_DEPTH_E depth)
+static int iterate_object(KOS_CONTEXT      ctx,
+                          KOS_OBJ_ID       obj,
+                          KOS_OBJ_ID      *expected,
+                          unsigned         num_expected,
+                          enum KOS_DEPTH_E depth)
 {
-    KOS_OBJ_ID walk;
+    KOS_OBJ_ID iter;
     unsigned   count = 0;
 
-    walk = KOS_new_iterator(ctx, obj, depth);
-    TEST( ! IS_BAD_PTR(walk));
+    iter = KOS_new_iterator(ctx, obj, depth);
+    TEST( ! IS_BAD_PTR(iter));
 
-    while ( ! KOS_iterator_next(ctx, walk)) {
+    while (KOS_iterator_next(ctx, iter) == KOS_SUCCESS) {
 
         unsigned i;
 
         /* Find this key and value on the expected list */
         for (i = 0; i < num_expected; i += 2) {
-            if (KOS_get_walk_key(walk)   == expected[i] &&
-                KOS_get_walk_value(walk) == expected[i + 1])
+            if (KOS_get_walk_key(iter)   == expected[i] &&
+                KOS_get_walk_value(iter) == expected[i + 1])
                 break;
         }
 
@@ -105,7 +105,7 @@ int main(void)
 
     /************************************************************************/
     {
-        KOS_OBJ_ID walk;
+        KOS_OBJ_ID iter;
 
         const KOS_OBJ_ID o = KOS_new_object(ctx);
         TEST(!IS_BAD_PTR(o));
@@ -124,24 +124,24 @@ int main(void)
 
         /* Retrieve both properties by walking */
         {
-            walk = KOS_new_iterator(ctx, o, KOS_SHALLOW);
-            TEST( ! IS_BAD_PTR(walk));
+            iter = KOS_new_iterator(ctx, o, KOS_SHALLOW);
+            TEST( ! IS_BAD_PTR(iter));
 
-            TEST(KOS_iterator_next(ctx, walk) == KOS_SUCCESS);
-            TEST(KOS_get_walk_key(walk)   == str_aaa);
-            TEST(KOS_get_walk_value(walk) == TO_SMALL_INT(100));
+            TEST(KOS_iterator_next(ctx, iter) == KOS_SUCCESS);
+            TEST(KOS_get_walk_key(iter)   == str_aaa);
+            TEST(KOS_get_walk_value(iter) == TO_SMALL_INT(100));
 
-            TEST(KOS_iterator_next(ctx, walk) == KOS_SUCCESS);
-            TEST(KOS_get_walk_key(walk)   == str_bbb);
-            TEST(KOS_get_walk_value(walk) == TO_SMALL_INT(200));
+            TEST(KOS_iterator_next(ctx, iter) == KOS_SUCCESS);
+            TEST(KOS_get_walk_key(iter)   == str_bbb);
+            TEST(KOS_get_walk_value(iter) == TO_SMALL_INT(200));
 
-            TEST(KOS_iterator_next(ctx, walk) == KOS_ERROR_NOT_FOUND);
-            TEST(IS_BAD_PTR(KOS_get_walk_key(walk)));
-            TEST(IS_BAD_PTR(KOS_get_walk_value(walk)));
+            TEST(KOS_iterator_next(ctx, iter) == KOS_ERROR_NOT_FOUND);
+            TEST(IS_BAD_PTR(KOS_get_walk_key(iter)));
+            TEST(IS_BAD_PTR(KOS_get_walk_value(iter)));
 
-            TEST(KOS_iterator_next(ctx, walk) == KOS_ERROR_NOT_FOUND);
-            TEST(IS_BAD_PTR(KOS_get_walk_key(walk)));
-            TEST(IS_BAD_PTR(KOS_get_walk_value(walk)));
+            TEST(KOS_iterator_next(ctx, iter) == KOS_ERROR_NOT_FOUND);
+            TEST(IS_BAD_PTR(KOS_get_walk_key(iter)));
+            TEST(IS_BAD_PTR(KOS_get_walk_value(iter)));
         }
 
         /* Cannot retrieve non-existent property */
@@ -162,20 +162,20 @@ int main(void)
 
         /* Retrieve the remaining property by walking */
         {
-            walk = KOS_new_iterator(ctx, o, KOS_SHALLOW);
-            TEST( ! IS_BAD_PTR(walk));
+            iter = KOS_new_iterator(ctx, o, KOS_SHALLOW);
+            TEST( ! IS_BAD_PTR(iter));
 
-            TEST(KOS_iterator_next(ctx, walk) == KOS_SUCCESS);
-            TEST(KOS_get_walk_key(walk)   == str_bbb);
-            TEST(KOS_get_walk_value(walk) == TO_SMALL_INT(200));
+            TEST(KOS_iterator_next(ctx, iter) == KOS_SUCCESS);
+            TEST(KOS_get_walk_key(iter)   == str_bbb);
+            TEST(KOS_get_walk_value(iter) == TO_SMALL_INT(200));
 
-            TEST(KOS_iterator_next(ctx, walk) == KOS_ERROR_NOT_FOUND);
-            TEST(IS_BAD_PTR(KOS_get_walk_key(walk)));
-            TEST(IS_BAD_PTR(KOS_get_walk_value(walk)));
+            TEST(KOS_iterator_next(ctx, iter) == KOS_ERROR_NOT_FOUND);
+            TEST(IS_BAD_PTR(KOS_get_walk_key(iter)));
+            TEST(IS_BAD_PTR(KOS_get_walk_value(iter)));
 
-            TEST(KOS_iterator_next(ctx, walk) == KOS_ERROR_NOT_FOUND);
-            TEST(IS_BAD_PTR(KOS_get_walk_key(walk)));
-            TEST(IS_BAD_PTR(KOS_get_walk_value(walk)));
+            TEST(KOS_iterator_next(ctx, iter) == KOS_ERROR_NOT_FOUND);
+            TEST(IS_BAD_PTR(KOS_get_walk_key(iter)));
+            TEST(IS_BAD_PTR(KOS_get_walk_value(iter)));
         }
     }
 
@@ -517,19 +517,19 @@ int main(void)
             expected[4] = str_3;
             expected[6] = str_5;
 
-            TEST(walk_object(ctx, obj_a, expected, sizeof(expected)/sizeof(expected[0]), KOS_SHALLOW) == KOS_SUCCESS);
-            TEST(walk_object(ctx, obj_b, expected, sizeof(expected)/sizeof(expected[0]), KOS_DEEP) == KOS_SUCCESS);
+            TEST(iterate_object(ctx, obj_a, expected, sizeof(expected)/sizeof(expected[0]), KOS_SHALLOW) == KOS_SUCCESS);
+            TEST(iterate_object(ctx, obj_b, expected, sizeof(expected)/sizeof(expected[0]), KOS_DEEP) == KOS_SUCCESS);
         }
 
         {
-            KOS_OBJ_ID walk;
+            KOS_OBJ_ID iter;
 
-            walk = KOS_new_iterator(ctx, obj_b, KOS_SHALLOW);
-            TEST( ! IS_BAD_PTR(walk));
+            iter = KOS_new_iterator(ctx, obj_b, KOS_SHALLOW);
+            TEST( ! IS_BAD_PTR(iter));
 
-            TEST(KOS_iterator_next(ctx, walk) == KOS_ERROR_NOT_FOUND);
-            TEST(IS_BAD_PTR(KOS_get_walk_key(walk)));
-            TEST(IS_BAD_PTR(KOS_get_walk_value(walk)));
+            TEST(KOS_iterator_next(ctx, iter) == KOS_ERROR_NOT_FOUND);
+            TEST(IS_BAD_PTR(KOS_get_walk_key(iter)));
+            TEST(IS_BAD_PTR(KOS_get_walk_value(iter)));
         }
 
         {
@@ -540,7 +540,7 @@ int main(void)
             expected[0] = str_2;
             expected[2] = str_4;
 
-            TEST(walk_object(ctx, obj_c, expected, sizeof(expected)/sizeof(expected[0]), KOS_SHALLOW) == KOS_SUCCESS);
+            TEST(iterate_object(ctx, obj_c, expected, sizeof(expected)/sizeof(expected[0]), KOS_SHALLOW) == KOS_SUCCESS);
         }
 
         {
@@ -557,7 +557,7 @@ int main(void)
             expected[6] = str_4;
             expected[8] = str_5;
 
-            TEST(walk_object(ctx, obj_c, expected, sizeof(expected)/sizeof(expected[0]), KOS_DEEP) == KOS_SUCCESS);
+            TEST(iterate_object(ctx, obj_c, expected, sizeof(expected)/sizeof(expected[0]), KOS_DEEP) == KOS_SUCCESS);
         }
 
         {
@@ -568,7 +568,7 @@ int main(void)
             expected[0] = str_5;
             expected[2] = str_6;
 
-            TEST(walk_object(ctx, obj_d, expected, sizeof(expected)/sizeof(expected[0]), KOS_SHALLOW) == KOS_SUCCESS);
+            TEST(iterate_object(ctx, obj_d, expected, sizeof(expected)/sizeof(expected[0]), KOS_SHALLOW) == KOS_SUCCESS);
         }
 
         {
@@ -587,7 +587,7 @@ int main(void)
             expected[8]  = str_5;
             expected[10] = str_6;
 
-            TEST(walk_object(ctx, obj_d, expected, sizeof(expected)/sizeof(expected[0]), KOS_DEEP) == KOS_SUCCESS);
+            TEST(iterate_object(ctx, obj_d, expected, sizeof(expected)/sizeof(expected[0]), KOS_DEEP) == KOS_SUCCESS);
         }
     }
 
