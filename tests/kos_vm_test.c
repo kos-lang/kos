@@ -1348,18 +1348,18 @@ int main(void)
             INSTR_LOAD_ITER,     0, 0,              /* convert to iterator   */
 
             INSTR_LOAD_VOID,     1,
-            INSTR_NEXT,          1, 0, IMM32(2),    /* yields 3 */
+            INSTR_NEXT_JUMP,     1, 0, IMM32(2),    /* yields 3 */
             INSTR_THROW,         0,
             INSTR_LOAD_VOID,     2,
-            INSTR_NEXT,          2, 0, IMM32(2),    /* yields 4 */
+            INSTR_NEXT_JUMP,     2, 0, IMM32(2),    /* yields 4 */
             INSTR_THROW,         0,
             INSTR_ADD,           1, 1, 2,
             INSTR_LOAD_VOID,     2,
-            INSTR_NEXT,          2, 0, IMM32(2),    /* yields 5 */
+            INSTR_NEXT_JUMP,     2, 0, IMM32(2),    /* yields 5 */
             INSTR_THROW,         0,
             INSTR_ADD,           1, 1, 2,
 
-            INSTR_NEXT,          2, 0, IMM32(2),    /* end of generator, skips the load */
+            INSTR_NEXT_JUMP,     2, 0, IMM32(2),    /* end of generator, skips the load */
             INSTR_RETURN,        1,
             INSTR_THROW,         0
         };
@@ -1388,18 +1388,18 @@ int main(void)
             INSTR_LOAD_ITER,     0, 0,              /* convert to iterator   */
 
             INSTR_LOAD_VOID,     1,
-            INSTR_NEXT,          1, 0, IMM32(2),    /* yields 3 */
+            INSTR_NEXT_JUMP,     1, 0, IMM32(2),    /* yields 3 */
             INSTR_THROW,         0,
             INSTR_LOAD_VOID,     2,
-            INSTR_NEXT,          2, 0, IMM32(2),    /* yields 4 */
+            INSTR_NEXT_JUMP,     2, 0, IMM32(2),    /* yields 4 */
             INSTR_THROW,         0,
             INSTR_ADD,           1, 1, 2,
             INSTR_LOAD_VOID,     2,
-            INSTR_NEXT,          2, 0, IMM32(2),    /* yields 5 */
+            INSTR_NEXT_JUMP,     2, 0, IMM32(2),    /* yields 5 */
             INSTR_THROW,         0,
             INSTR_ADD,           1, 1, 2,
 
-            INSTR_NEXT,          2, 0, IMM32(2),    /* end of generator, skips the load */
+            INSTR_NEXT_JUMP,     2, 0, IMM32(2),    /* end of generator, skips the load */
             INSTR_RETURN,        1,
             INSTR_THROW,         0
         };
@@ -1544,8 +1544,8 @@ int main(void)
             INSTR_LOAD_CONST8, 0, 0,
             INSTR_CALL_FUN,    0, 0, 0, 0, /* instantiate generator */
 
-            INSTR_NEXT,        1, 0, IMM32(0), /* jumps to next instruction */
-            INSTR_NEXT,        1, 0, IMM32(0), /* raise exception */
+            INSTR_NEXT_JUMP,   1, 0, IMM32(0), /* jumps to next instruction */
+            INSTR_NEXT_JUMP,   1, 0, IMM32(0), /* raise exception */
             INSTR_RETURN,      1,
 
             INSTR_RETURN,      0,
@@ -1588,7 +1588,7 @@ int main(void)
             INSTR_LOAD_ITER,   0, 0,       /* convert to generator */
 
             INSTR_LOAD_TRUE,   1,
-            INSTR_NEXT,        1, 0, IMM32(2),
+            INSTR_NEXT_JUMP,   1, 0, IMM32(2),
             INSTR_RETURN,      1,
             INSTR_LOAD_FALSE,  1
         };

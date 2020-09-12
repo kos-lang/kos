@@ -147,10 +147,10 @@ DEFINE_INSTRUCTION(JUMP_COND, 0xB6)
  * Relative jump, taken only if r.src is falsy. */
 DEFINE_INSTRUCTION(JUMP_NOT_COND, 0xB7)
 
-/* NEXT <r.dest>, <r.func>, <delta.int32> */
+/* NEXT.JUMP <r.dest>, <r.func>, <delta.int32> */
 /* Call generator created with LOAD.ITER.
  * If generator yields a value, jump to the specified offset. */
-DEFINE_INSTRUCTION(NEXT, 0xB8)
+DEFINE_INSTRUCTION(NEXT_JUMP, 0xB8)
 
 /* BIND <r.dest>, <slot.idx.uint8>, <r.src>
  * Bind an array to a function (closure). */

@@ -82,7 +82,7 @@ static int get_num_operands(KOS_BYTECODE_INSTR instr)
         case INSTR_HAS_SH_PROP8:        /* fall through */
         case INSTR_INSTANCEOF:          /* fall through */
         case INSTR_BIND:                /* fall through */
-        case INSTR_NEXT:                /* fall through */
+        case INSTR_NEXT_JUMP:           /* fall through */
         case INSTR_TAIL_CALL:           /* fall through */
         case INSTR_TAIL_CALL_FUN:
             return 3;
@@ -137,7 +137,7 @@ int kos_get_operand_size(KOS_BYTECODE_INSTR instr, int op)
 
         case INSTR_GET_ELEM:
             /* fall through */
-        case INSTR_NEXT:
+        case INSTR_NEXT_JUMP:
             if (op == 2)
                 return 4;
             break;
@@ -168,7 +168,7 @@ static int get_offset_operand_tail(KOS_BYTECODE_INSTR instr, int op)
                 return 0;
             break;
 
-        case INSTR_NEXT:
+        case INSTR_NEXT_JUMP:
             if (op == 2)
                 return 0;
             break;
@@ -243,7 +243,7 @@ int kos_is_register(KOS_BYTECODE_INSTR instr, int op)
 
         case INSTR_TAIL_CALL_FUN:
             /* fall through */
-        case INSTR_NEXT:
+        case INSTR_NEXT_JUMP:
             return op < 2;
 
         case INSTR_JUMP:
@@ -356,7 +356,7 @@ static const char *const str_instr[] = {
     "JUMP",
     "JUMP.COND",
     "JUMP.NOT.COND",
-    "NEXT",
+    "NEXT.JUMP",
     "BIND",
     "BIND.SELF",
     "BIND.DEFAULTS",

@@ -816,7 +816,7 @@ static int prepare_call(KOS_CONTEXT        ctx,
             RAISE_EXCEPTION_STR(str_err_too_few_args);
     }
 
-    if (instr == INSTR_NEXT && state < KOS_GEN_READY)
+    if (instr == INSTR_NEXT_JUMP && state < KOS_GEN_READY)
         RAISE_EXCEPTION_STR(str_err_not_generator);
 
     switch (state) {
@@ -950,7 +950,7 @@ static void finish_call(KOS_CONTEXT        ctx,
         if (state >= KOS_GEN_INIT) {
             if (OBJPTR(STACK, ctx->stack)->flags & KOS_CAN_YIELD) {
                 state = KOS_GEN_DONE;
-                if (instr != INSTR_NEXT) {
+                if (instr != INSTR_NEXT_JUMP) {
                     KOS_LOCAL saved_func;
 
                     KOS_init_local_with(ctx, &saved_func, func_obj);
@@ -2964,8 +2964,8 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(NEXT): { /* <r.dest>, <r.func>, <delta.int32> */
-                PROF_ZONE_N(INSTR, "NEXT")
+            BEGIN_INSTRUCTION(NEXT_JUMP): { /* <r.dest>, <r.func>, <delta.int32> */
+                PROF_ZONE_N(INSTR, "NEXT.JUMP")
                 KOS_LOCAL      iter;
                 int            finished = 0;
 
@@ -3440,7 +3440,7 @@ handle_return:
 
                 set_closure_stack_size(ctx, stack, stack_frame);
 
-                finish_call(ctx, stack_frame, (rgen == KOS_NO_REG) ? INSTR_CALL : INSTR_NEXT);
+                finish_call(ctx, stack_frame, (rgen == KOS_NO_REG) ? INSTR_CALL : INSTR_NEXT_JUMP);
 
                 if (KOS_is_exception_pending(ctx))
                     error = KOS_ERROR_EXCEPTION;
@@ -3475,7 +3475,7 @@ handle_return:
 
                 switch ((KOS_BYTECODE_INSTR)*bytecode) {
 
-                    case INSTR_NEXT: /* TODO read jump offset */
+                    case INSTR_NEXT_JUMP: /* TODO read jump offset */
                         bytecode += 7;
                         break;
 
@@ -3623,7 +3623,7 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
         }
 
         finish_call(ctx, get_current_stack_frame(ctx),
-                    call_flavor == KOS_CALL_GENERATOR ? INSTR_NEXT : INSTR_CALL);
+                    call_flavor == KOS_CALL_GENERATOR ? INSTR_NEXT_JUMP : INSTR_CALL);
 
         if ((state > KOS_GEN_INIT) && (get_func_state(func.o) == KOS_GEN_DONE)) {
             if (call_flavor == KOS_CALL_GENERATOR &&

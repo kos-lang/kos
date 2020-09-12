@@ -866,7 +866,7 @@ static void write_jump_offs(KOS_COMP_UNIT *program,
     opcode = *buf;
 
     assert(opcode == INSTR_CATCH     ||
-           opcode == INSTR_NEXT      ||
+           opcode == INSTR_NEXT_JUMP ||
            opcode == INSTR_JUMP      ||
            opcode == INSTR_JUMP_COND ||
            opcode == INSTR_JUMP_NOT_COND);
@@ -877,7 +877,7 @@ static void write_jump_offs(KOS_COMP_UNIT *program,
             jump_instr_size = 5;
             break;
 
-        case INSTR_NEXT:
+        case INSTR_NEXT_JUMP:
             jump_instr_size = 7;
             break;
 
@@ -888,7 +888,7 @@ static void write_jump_offs(KOS_COMP_UNIT *program,
 
     jump_offs = target_offs - (jump_instr_offs + jump_instr_size);
 
-    buf += (opcode == INSTR_CATCH) ? 2 : (opcode == INSTR_NEXT) ? 3 : 1;
+    buf += (opcode == INSTR_CATCH) ? 2 : (opcode == INSTR_NEXT_JUMP) ? 3 : 1;
 
     for (end = buf+4; buf < end; ++buf) {
         *buf      =   (uint8_t)jump_offs;
@@ -2001,7 +2001,7 @@ static int for_in(KOS_COMP_UNIT      *program,
     TRY(add_addr2line(program, &assg_node->token, KOS_FALSE_VALUE));
 
     next_jump_offs = program->cur_offs;
-    TRY(gen_instr3(program, INSTR_NEXT, item_reg->reg, iter_reg->reg, 0));
+    TRY(gen_instr3(program, INSTR_NEXT_JUMP, item_reg->reg, iter_reg->reg, 0));
 
     update_jump_offs(program, initial_jump_offs, next_jump_offs);
     update_jump_offs(program, next_jump_offs, loop_start_offs);
