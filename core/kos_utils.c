@@ -1540,7 +1540,6 @@ void KOS_raise_printf(KOS_CONTEXT ctx,
 KOS_OBJ_ID KOS_new_iterator_copy(KOS_CONTEXT ctx,
                                  KOS_OBJ_ID  iter_id)
 {
-    int           error = KOS_SUCCESS;
     KOS_ITERATOR *iter;
     KOS_LOCAL     src;
 
@@ -1553,28 +1552,25 @@ KOS_OBJ_ID KOS_new_iterator_copy(KOS_CONTEXT ctx,
                                             OBJ_ITERATOR,
                                             sizeof(KOS_ITERATOR));
 
-    if ( ! iter)
-        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    if (iter) {
+        KOS_atomic_write_relaxed_u32(iter->index,
+                KOS_atomic_read_relaxed_u32(OBJPTR(ITERATOR, src.o)->index));
+        iter->type       = OBJPTR(ITERATOR, src.o)->type;
+        iter->obj        = OBJPTR(ITERATOR, src.o)->obj;
+        iter->key_table  = OBJPTR(ITERATOR, src.o)->key_table;
+        iter->last_key   = KOS_atomic_read_relaxed_obj(OBJPTR(ITERATOR, src.o)->last_key);
+        iter->last_value = KOS_atomic_read_relaxed_obj(OBJPTR(ITERATOR, src.o)->last_value);
+    }
 
-    KOS_atomic_write_relaxed_u32(iter->index,
-            KOS_atomic_read_relaxed_u32(OBJPTR(ITERATOR, src.o)->index));
-    iter->type       = OBJPTR(ITERATOR, src.o)->type;
-    iter->obj        = OBJPTR(ITERATOR, src.o)->obj;
-    iter->key_table  = OBJPTR(ITERATOR, src.o)->key_table;
-    iter->last_key   = KOS_atomic_read_relaxed_obj(OBJPTR(ITERATOR, src.o)->last_key);
-    iter->last_value = KOS_atomic_read_relaxed_obj(OBJPTR(ITERATOR, src.o)->last_value);
-
-cleanup:
     KOS_destroy_top_local(ctx, &src);
 
-    return error ? KOS_BADPTR : OBJID(ITERATOR, iter);
+    return OBJID(ITERATOR, iter);
 }
 
 KOS_OBJ_ID KOS_new_iterator(KOS_CONTEXT      ctx,
                             KOS_OBJ_ID       obj_id,
                             enum KOS_DEPTH_E depth)
 {
-    int           error = KOS_SUCCESS;
     KOS_ITERATOR *iter;
     KOS_LOCAL     obj;
     KOS_TYPE      type;
@@ -1604,7 +1600,7 @@ KOS_OBJ_ID KOS_new_iterator(KOS_CONTEXT      ctx,
 
     KOS_destroy_top_local(ctx, &obj);
 
-    return error ? KOS_BADPTR : OBJID(ITERATOR, iter);
+    return OBJID(ITERATOR, iter);
 }
 
 int KOS_iterator_next(KOS_CONTEXT ctx,
