@@ -1869,40 +1869,6 @@ cleanup:
     return error;
 }
 
-static int invoke_get_iterator(KOS_COMP_UNIT *program,
-                               KOS_REG       **reg)
-{
-    int               error          = KOS_SUCCESS;
-    int               str_idx;
-    KOS_REG          *func_reg       = 0;
-    KOS_REG          *obj_reg        = *reg;
-    KOS_TOKEN         token;
-    static const char str_iterator[] = "iterator";
-
-    if ( ! (*reg)->tmp) {
-        *reg = 0;
-        TRY(gen_reg(program, reg));
-    }
-
-    TRY(gen_reg(program, &func_reg));
-
-    memset(&token, 0, sizeof(token));
-    token.begin  = str_iterator;
-    token.length = sizeof(str_iterator) - 1;
-    token.type   = TT_IDENTIFIER;
-
-    TRY(gen_str(program, &token, &str_idx));
-
-    TRY(gen_get_prop_instr(program, func_reg->reg, obj_reg->reg, str_idx));
-
-    TRY(gen_instr5(program, INSTR_CALL_N, (*reg)->reg, func_reg->reg, obj_reg->reg, KOS_NO_REG, 0));
-
-    free_reg(program, func_reg);
-
-cleanup:
-    return error;
-}
-
 static int for_in(KOS_COMP_UNIT      *program,
                   const KOS_AST_NODE *node)
 {
@@ -1972,13 +1938,9 @@ static int for_in(KOS_COMP_UNIT      *program,
 
     if (var_node->next) {
 
-        KOS_REG *value_iter_reg = item_reg;
+        assert(item_reg->tmp);
 
-        assert(value_iter_reg->tmp);
-
-        TRY(invoke_get_iterator(program, &value_iter_reg));
-
-        assert(value_iter_reg == item_reg);
+        TRY(gen_instr2(program, INSTR_LOAD_ITER, item_reg->reg, item_reg->reg));
 
         for ( ; var_node; var_node = var_node->next) {
 
@@ -1987,7 +1949,7 @@ static int for_in(KOS_COMP_UNIT      *program,
             TRY(lookup_local_var(program, var_node, &var_reg));
             assert(var_reg);
 
-            TRY(gen_instr4(program, INSTR_CALL_FUN, var_reg->reg, value_iter_reg->reg, KOS_NO_REG, 0));
+            TRY(gen_instr2(program, INSTR_NEXT, var_reg->reg, item_reg->reg));
         }
     }
 
@@ -4185,8 +4147,19 @@ static int assignment(KOS_COMP_UNIT      *program,
         TRY(visit_node(program, rhs_node, &rhs));
     assert(rhs);
 
-    if (node_type == NT_MULTI_ASSIGNMENT)
-        TRY(invoke_get_iterator(program, &rhs));
+    if (node_type == NT_MULTI_ASSIGNMENT) {
+        KOS_REG *rsrc = 0;
+
+        if (rhs->tmp)
+            rsrc = rhs;
+        else {
+            rsrc = rhs;
+            rhs  = 0;
+            TRY(gen_reg(program, &rhs));
+        }
+
+        TRY(gen_instr2(program, INSTR_LOAD_ITER, rhs->reg, rsrc->reg));
+    }
 
     for ( ; node; node = node->next) {
 
@@ -4201,7 +4174,7 @@ static int assignment(KOS_COMP_UNIT      *program,
 
                     assert(reg != rhs);
 
-                    TRY(gen_instr4(program, INSTR_CALL_FUN, reg->reg, rhs->reg, KOS_NO_REG, 0));
+                    TRY(gen_instr2(program, INSTR_NEXT, reg->reg, rhs->reg));
                 }
                 else {
 
@@ -4232,7 +4205,7 @@ static int assignment(KOS_COMP_UNIT      *program,
 
                 TRY(gen_reg(program, &reg));
 
-                TRY(gen_instr4(program, INSTR_CALL_FUN, reg->reg, rhs->reg, KOS_NO_REG, 0));
+                TRY(gen_instr2(program, INSTR_NEXT, reg->reg, rhs->reg));
             }
             else
                 reg = rhs;

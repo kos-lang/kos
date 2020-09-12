@@ -1348,18 +1348,13 @@ int main(void)
             INSTR_LOAD_ITER,     0, 0,              /* convert to iterator   */
 
             INSTR_LOAD_VOID,     1,
-            INSTR_NEXT_JUMP,     1, 0, IMM32(2),    /* yields 3 */
-            INSTR_THROW,         0,
-            INSTR_LOAD_VOID,     2,
-            INSTR_NEXT_JUMP,     2, 0, IMM32(2),    /* yields 4 */
-            INSTR_THROW,         0,
+            INSTR_NEXT,          1, 0,              /* yields 3 */
+            INSTR_NEXT,          2, 0,              /* yields 4 */
             INSTR_ADD,           1, 1, 2,
-            INSTR_LOAD_VOID,     2,
-            INSTR_NEXT_JUMP,     2, 0, IMM32(2),    /* yields 5 */
-            INSTR_THROW,         0,
+            INSTR_NEXT,          2, 0,              /* yields 5 */
             INSTR_ADD,           1, 1, 2,
 
-            INSTR_NEXT_JUMP,     2, 0, IMM32(2),    /* end of generator, skips the load */
+            INSTR_NEXT_JUMP,     2, 0, IMM32(2),    /* end of generator */
             INSTR_RETURN,        1,
             INSTR_THROW,         0
         };
@@ -1388,20 +1383,15 @@ int main(void)
             INSTR_LOAD_ITER,     0, 0,              /* convert to iterator   */
 
             INSTR_LOAD_VOID,     1,
-            INSTR_NEXT_JUMP,     1, 0, IMM32(2),    /* yields 3 */
-            INSTR_THROW,         0,
-            INSTR_LOAD_VOID,     2,
-            INSTR_NEXT_JUMP,     2, 0, IMM32(2),    /* yields 4 */
-            INSTR_THROW,         0,
+            INSTR_NEXT,          1, 0,              /* yields 3 */
+            INSTR_NEXT,          2, 0,              /* yields 4 */
             INSTR_ADD,           1, 1, 2,
-            INSTR_LOAD_VOID,     2,
-            INSTR_NEXT_JUMP,     2, 0, IMM32(2),    /* yields 5 */
-            INSTR_THROW,         0,
+            INSTR_NEXT,          2, 0,              /* yields 5 */
             INSTR_ADD,           1, 1, 2,
 
             INSTR_NEXT_JUMP,     2, 0, IMM32(2),    /* end of generator, skips the load */
             INSTR_RETURN,        1,
-            INSTR_THROW,         0
+            INSTR_THROW,         2
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(1, 0);
         KOS_OBJ_ID        func = create_gen(ctx, 5, &opts);
@@ -1538,14 +1528,16 @@ int main(void)
     }
 
     /************************************************************************/
-    /* NEXT - call beyond the end of generator */
+    /* NEXT.JUMP - detect end of generator */
     {
         const uint8_t code[] = {
             INSTR_LOAD_CONST8, 0, 0,
             INSTR_CALL_FUN,    0, 0, 0, 0, /* instantiate generator */
+            INSTR_LOAD_ITER,   0, 0,       /* convert to iterator   */
 
-            INSTR_NEXT_JUMP,   1, 0, IMM32(0), /* jumps to next instruction */
-            INSTR_NEXT_JUMP,   1, 0, IMM32(0), /* raise exception */
+            INSTR_NEXT_JUMP,   1, 0, IMM32(10), /* generator ends, does not jump */
+            INSTR_NEXT_JUMP,   1, 0, IMM32(3),  /* generator ended already */
+            INSTR_LOAD_INT8,   1, 42,
             INSTR_RETURN,      1,
 
             INSTR_RETURN,      0,
@@ -1555,7 +1547,31 @@ int main(void)
         KOS_OBJ_ID        func;
 
         opts.this_reg = 0;
-        func = create_gen(ctx, 24, &opts);
+        func = create_gen(ctx, 30, &opts);
+
+        TEST(run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, &func, 1) == TO_SMALL_INT(42));
+        TEST_NO_EXCEPTION();
+    }
+
+    /************************************************************************/
+    /* NEXT - call beyond the end of generator */
+    {
+        const uint8_t code[] = {
+            INSTR_LOAD_CONST8, 0, 0,
+            INSTR_CALL_FUN,    0, 0, 0, 0, /* instantiate generator */
+            INSTR_LOAD_ITER,   0, 0,       /* convert to iterator   */
+
+            INSTR_NEXT,        1, 0,
+            INSTR_RETURN,      1,
+
+            INSTR_RETURN,      0,
+            INSTR_JUMP,        IMM32(-7)
+        };
+        KOS_FUNCTION_OPTS opts = create_func_opts(1, 0);
+        KOS_OBJ_ID        func;
+
+        opts.this_reg = 0;
+        func = create_gen(ctx, 16, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, &func, 1) == KOS_BADPTR);
         TEST_EXCEPTION();

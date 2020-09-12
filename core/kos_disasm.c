@@ -50,7 +50,8 @@ static int get_num_operands(KOS_BYTECODE_INSTR instr)
         case INSTR_BIND_DEFAULTS:       /* fall through */
         case INSTR_CATCH:               /* fall through */
         case INSTR_PUSH:                /* fall through */
-        case INSTR_PUSH_EX:
+        case INSTR_PUSH_EX:             /* fall through */
+        case INSTR_NEXT:
             return 2;
 
         case INSTR_GET:                 /* fall through */
@@ -357,6 +358,7 @@ static const char *const str_instr[] = {
     "JUMP.COND",
     "JUMP.NOT.COND",
     "NEXT.JUMP",
+    "NEXT",
     "BIND",
     "BIND.SELF",
     "BIND.DEFAULTS",

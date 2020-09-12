@@ -2964,6 +2964,8 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
+            BEGIN_INSTRUCTION(NEXT): /* <r.dest>, <r.func> */
+                /* fall through */
             BEGIN_INSTRUCTION(NEXT_JUMP): { /* <r.dest>, <r.func>, <delta.int32> */
                 PROF_ZONE_N(INSTR, "NEXT.JUMP")
                 KOS_LOCAL      iter;
@@ -3025,9 +3027,20 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
                     goto cleanup;
                 }
 
-                KOS_help_gc(ctx);
+                if (instr == INSTR_NEXT) {
+                    if (finished) {
+                        KOS_raise_generator_end(ctx);
+                        goto cleanup;
+                    }
 
-                bytecode += 7 + (finished ? 0 : (int32_t)load_32(bytecode + 3));
+                    bytecode += 3;
+                }
+                else {
+                    KOS_help_gc(ctx);
+
+                    bytecode += 7 + (finished ? 0 : (int32_t)load_32(bytecode + 3));
+                }
+
                 NEXT_INSTRUCTION;
             }
 

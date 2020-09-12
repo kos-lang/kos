@@ -151,39 +151,43 @@ DEFINE_INSTRUCTION(JUMP_NOT_COND, 0xB7)
 /* Call generator created with LOAD.ITER.
  * If generator yields a value, jump to the specified offset. */
 DEFINE_INSTRUCTION(NEXT_JUMP, 0xB8)
+/* NEXT <r.dest>, <r.func> */
+/* Call generator created with LOAD.ITER.
+ * If generator ends, throw an exception. */
+DEFINE_INSTRUCTION(NEXT, 0xB9)
 
 /* BIND <r.dest>, <slot.idx.uint8>, <r.src>
  * Bind an array to a function (closure). */
-DEFINE_INSTRUCTION(BIND, 0xB9)
+DEFINE_INSTRUCTION(BIND, 0xBA)
 /* BIND.SELF <r.dest>, <slot.idx.uint8> */
-DEFINE_INSTRUCTION(BIND_SELF, 0xBA)
+DEFINE_INSTRUCTION(BIND_SELF, 0xBB)
 /* BIND.DEFAULTS <r.dest>, <r.src>
  * Bind an array to a function (closure) as a list of arg default values. */
-DEFINE_INSTRUCTION(BIND_DEFAULTS, 0xBB)
+DEFINE_INSTRUCTION(BIND_DEFAULTS, 0xBC)
 
 /* CALL <r.dest>, <r.func>, <r.this>, <r.args> */
-DEFINE_INSTRUCTION(CALL, 0xBC)
+DEFINE_INSTRUCTION(CALL, 0xBD)
 /* CALL.N <r.dest>, <r.func>, <r.this>, <r.arg1>, <numargs.uint8> */
 /* Arguments are in consecutive registers, r.arg1 ignored if numargs.uint8 is 0. */
-DEFINE_INSTRUCTION(CALL_N, 0xBD)
+DEFINE_INSTRUCTION(CALL_N, 0xBE)
 /* CALL.FUN <r.dest>, <r.func>, <r.arg1>, <numargs.uint8> */
 /* Arguments are in consecutive registers, r.arg1 ignored if numargs.uint8 is 0. */
-DEFINE_INSTRUCTION(CALL_FUN, 0xBE)
+DEFINE_INSTRUCTION(CALL_FUN, 0xBF)
 /* RETURN <r.src> */
-DEFINE_INSTRUCTION(RETURN, 0xBF)
+DEFINE_INSTRUCTION(RETURN, 0xC0)
 /* TAIL.CALL <r.func>, <r.this>, <r.args> */
-DEFINE_INSTRUCTION(TAIL_CALL, 0xC0)
+DEFINE_INSTRUCTION(TAIL_CALL, 0xC1)
 /* TAIL.CALL.N <r.func>, <r.this>, <r.arg1>, <numargs.uint8> */
 /* Arguments are in consecutive registers, r.arg1 ignored if numargs.uint8 is 0. */
-DEFINE_INSTRUCTION(TAIL_CALL_N, 0xC1)
+DEFINE_INSTRUCTION(TAIL_CALL_N, 0xC2)
 /* TAIL.CALL.FUN <r.func>, <r.arg1>, <numargs.uint8> */
 /* Arguments are in consecutive registers, r.arg1 ignored if numargs.uint8 is 0. */
-DEFINE_INSTRUCTION(TAIL_CALL_FUN, 0xC2)
+DEFINE_INSTRUCTION(TAIL_CALL_FUN, 0xC3)
 /* YIELD <r.src> */
-DEFINE_INSTRUCTION(YIELD, 0xC3)
+DEFINE_INSTRUCTION(YIELD, 0xC4)
 /* THROW <r.src> */
-DEFINE_INSTRUCTION(THROW, 0xC4)
+DEFINE_INSTRUCTION(THROW, 0xC5)
 /* CATCH <r.dest>, <delta.int32> */
-DEFINE_INSTRUCTION(CATCH, 0xC5)
+DEFINE_INSTRUCTION(CATCH, 0xC6)
 /* CANCEL */
-DEFINE_INSTRUCTION(CANCEL, 0xC6)
+DEFINE_INSTRUCTION(CANCEL, 0xC7)
