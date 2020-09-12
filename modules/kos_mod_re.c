@@ -1166,13 +1166,16 @@ static int push_possibility(struct RE_POSS_STACK *poss_stack,
 
 static void pop_possibility(struct RE_POSS_STACK *poss_stack)
 {
-    const size_t new_size = poss_stack->buffer.size - sizeof(struct RE_POSS_STACK_ITEM);
+    size_t new_size;
 
-    kos_vector_resize(&poss_stack->buffer, new_size);
+    assert(poss_stack->buffer.size >= sizeof(struct RE_POSS_STACK_ITEM));
 
-    if (new_size) {
+    new_size = poss_stack->buffer.size - sizeof(struct RE_POSS_STACK_ITEM);
+
+    poss_stack->buffer.size = new_size;
+
+    if (new_size)
         poss_stack->top = (struct RE_POSS_STACK_ITEM *)(poss_stack->buffer.buffer + new_size - sizeof(struct RE_POSS_STACK_ITEM));
-    }
     else
         poss_stack->top = 0;
 }
@@ -1373,6 +1376,9 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT ctx,
                 assert(delta);
                 assert(poss_stack.top);
 
+                if ( ! poss_stack.top)
+                    RAISE_ERROR(KOS_ERROR_INTERNAL);
+
                 count = ++poss_stack.top->count;
 
                 if (count < min_count)
@@ -1403,6 +1409,9 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT ctx,
 
                 assert(delta);
                 assert(poss_stack.top);
+
+                if ( ! poss_stack.top)
+                    RAISE_ERROR(KOS_ERROR_INTERNAL);
 
                 count = ++poss_stack.top->count;
 
