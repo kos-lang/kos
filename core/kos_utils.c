@@ -1706,7 +1706,8 @@ int KOS_iterator_next(KOS_CONTEXT ctx,
                     return KOS_SUCCESS;
                 }
 
-                break;
+                assert(KOS_is_exception_pending(ctx));
+                return KOS_ERROR_EXCEPTION;
             }
 
             KOS_atomic_write_relaxed_u32(OBJPTR(ITERATOR, iter_id)->index, size);
@@ -1764,6 +1765,8 @@ int KOS_iterator_next(KOS_CONTEXT ctx,
             break;
         }
     }
+
+    assert( ! KOS_is_exception_pending(ctx));
 
     KOS_atomic_write_release_ptr(OBJPTR(ITERATOR, iter_id)->last_key,   KOS_BADPTR);
     KOS_atomic_write_release_ptr(OBJPTR(ITERATOR, iter_id)->last_value, KOS_BADPTR);
