@@ -35,6 +35,7 @@ static int get_num_operands(KOS_BYTECODE_INSTR instr)
         case INSTR_LOAD_ARRAY8:         /* fall through */
         case INSTR_LOAD_ARRAY:          /* fall through */
         case INSTR_LOAD_OBJ_PROTO:      /* fall through */
+        case INSTR_LOAD_ITER:           /* fall through */
         case INSTR_MOVE:                /* fall through */
         case INSTR_GET_PROTO:           /* fall through */
         case INSTR_GET_GLOBAL:          /* fall through */
@@ -81,7 +82,7 @@ static int get_num_operands(KOS_BYTECODE_INSTR instr)
         case INSTR_HAS_SH_PROP8:        /* fall through */
         case INSTR_INSTANCEOF:          /* fall through */
         case INSTR_BIND:                /* fall through */
-        case INSTR_CALL_GEN:            /* fall through */
+        case INSTR_NEXT:                /* fall through */
         case INSTR_TAIL_CALL:           /* fall through */
         case INSTR_TAIL_CALL_FUN:
             return 3;
@@ -135,6 +136,8 @@ int kos_get_operand_size(KOS_BYTECODE_INSTR instr, int op)
             break;
 
         case INSTR_GET_ELEM:
+            /* fall through */
+        case INSTR_NEXT:
             if (op == 2)
                 return 4;
             break;
@@ -162,6 +165,11 @@ static int get_offset_operand_tail(KOS_BYTECODE_INSTR instr, int op)
 
         case INSTR_CATCH:
             if (op == 1)
+                return 0;
+            break;
+
+        case INSTR_NEXT:
+            if (op == 2)
                 return 0;
             break;
 
@@ -234,6 +242,8 @@ int kos_is_register(KOS_BYTECODE_INSTR instr, int op)
             return op < 3;
 
         case INSTR_TAIL_CALL_FUN:
+            /* fall through */
+        case INSTR_NEXT:
             return op < 2;
 
         case INSTR_JUMP:
@@ -303,6 +313,7 @@ static const char *const str_instr[] = {
     "LOAD.ARRAY",
     "LOAD.OBJ",
     "LOAD.OBJ.PROTO",
+    "LOAD.ITER",
     "MOVE",
     "GET",
     "GET.ELEM",
@@ -345,13 +356,13 @@ static const char *const str_instr[] = {
     "JUMP",
     "JUMP.COND",
     "JUMP.NOT.COND",
+    "NEXT",
     "BIND",
     "BIND.SELF",
     "BIND.DEFAULTS",
     "CALL",
     "CALL.N",
     "CALL.FUN",
-    "CALL.GEN",
     "RETURN",
     "TAIL.CALL",
     "TAIL.CALL.N",

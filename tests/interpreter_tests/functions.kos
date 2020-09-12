@@ -836,6 +836,26 @@ do {
     })
 }
 
+# call generator from itself
+do {
+    fun gen
+    {
+        var x = yield 0
+        yield x()
+    }
+
+    var it = gen()
+    assert it(it) == 0
+    var except = void
+    try {
+        it(it)
+    }
+    catch const e {
+        except = e
+    }
+    assert except != void
+}
+
 # lots of arguments
 do {
     fun lots_of_args(a0, args...)
@@ -2034,11 +2054,18 @@ do {
     assert gen  instanceof base.generator
 
     const a = []
-    for const x in func {
-        a.push(x)
+    var except = void
+    try {
+        for const x in func {
+            a.push(x)
+        }
     }
-    assert a.size == 1
-    assert a[0] == func
+    catch const e {
+        except = e
+    }
+    assert a.size == 0
+    assert except != void
+    except = void
 
     a.resize(0)
     for const x in func() {
@@ -2052,7 +2079,9 @@ do {
         a.push(x)
     }
     assert a.size == 1
-    assert a[0] == ctor
+    assert typeof a[0] == "array"
+    assert a[0].size == 2
+    assert a[0][0] == "prototype"
 
     a.resize(0)
     for const x in ctor() {
@@ -2064,7 +2093,6 @@ do {
     assert a[0][1] == 42
 
     a.resize(0)
-    var except = void
     try {
         for const x in gen {
             a.push(x)

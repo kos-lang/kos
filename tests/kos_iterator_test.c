@@ -461,17 +461,8 @@ int main(void)
         iter = KOS_new_iterator(ctx, obj, KOS_CONTENTS);
         TEST( ! IS_BAD_PTR(iter));
 
-        TEST(KOS_iterator_next(ctx, iter) == KOS_SUCCESS);
-        TEST(KOS_get_walk_key(iter) == KOS_VOID);
-        TEST(KOS_get_walk_value(iter) == obj);
-
-        TEST(KOS_iterator_next(ctx, iter) == KOS_ERROR_NOT_FOUND);
-        TEST(IS_BAD_PTR(KOS_get_walk_key(iter)));
-        TEST(IS_BAD_PTR(KOS_get_walk_value(iter)));
-
-        TEST(KOS_iterator_next(ctx, iter) == KOS_ERROR_NOT_FOUND);
-        TEST(IS_BAD_PTR(KOS_get_walk_key(iter)));
-        TEST(IS_BAD_PTR(KOS_get_walk_value(iter)));
+        TEST(KOS_iterator_next(ctx, iter) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
     }
 
     /************************************************************************/
@@ -517,12 +508,9 @@ int main(void)
         TEST( ! IS_BAD_PTR(iter));
 
         TEST(KOS_iterator_next(ctx, iter) == KOS_SUCCESS);
-        TEST(KOS_get_walk_key(iter) == KOS_VOID);
-        TEST(KOS_get_walk_value(iter) == obj);
-
-        TEST(KOS_iterator_next(ctx, iter) == KOS_ERROR_NOT_FOUND);
-        TEST(IS_BAD_PTR(KOS_get_walk_key(iter)));
-        TEST(IS_BAD_PTR(KOS_get_walk_value(iter)));
+        TEST(GET_OBJ_TYPE(KOS_get_walk_key(iter)) == OBJ_STRING);
+        TEST(KOS_string_compare(KOS_get_walk_key(iter), KOS_CONST_ID(str_prototype)) == 0);
+        TEST(GET_OBJ_TYPE(KOS_get_walk_value(iter)) == OBJ_DYNAMIC_PROP);
 
         TEST(KOS_iterator_next(ctx, iter) == KOS_ERROR_NOT_FOUND);
         TEST(IS_BAD_PTR(KOS_get_walk_key(iter)));
@@ -566,17 +554,8 @@ int main(void)
         iter = KOS_new_iterator(ctx, obj, KOS_CONTENTS);
         TEST( ! IS_BAD_PTR(iter));
 
-        TEST(KOS_iterator_next(ctx, iter) == KOS_SUCCESS);
-        TEST(KOS_get_walk_key(iter) == KOS_VOID);
-        TEST(KOS_get_walk_value(iter) == obj);
-
-        TEST(KOS_iterator_next(ctx, iter) == KOS_ERROR_NOT_FOUND);
-        TEST(IS_BAD_PTR(KOS_get_walk_key(iter)));
-        TEST(IS_BAD_PTR(KOS_get_walk_value(iter)));
-
-        TEST(KOS_iterator_next(ctx, iter) == KOS_ERROR_NOT_FOUND);
-        TEST(IS_BAD_PTR(KOS_get_walk_key(iter)));
-        TEST(IS_BAD_PTR(KOS_get_walk_value(iter)));
+        TEST(KOS_iterator_next(ctx, iter) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
     }
 
     /************************************************************************/

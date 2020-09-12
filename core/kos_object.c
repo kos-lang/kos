@@ -1031,7 +1031,8 @@ int kos_object_walk(KOS_CONTEXT ctx,
     walk.o = walk_id;
 
     assert(GET_OBJ_TYPE(walk.o) == OBJ_ITERATOR);
-    assert(OBJPTR(ITERATOR, walk.o)->type == OBJ_OBJECT);
+    assert(OBJPTR(ITERATOR, walk.o)->type == OBJ_OBJECT ||
+           OBJPTR(ITERATOR, walk.o)->type == OBJ_CLASS);
 
     if ( ! IS_BAD_PTR(OBJPTR(ITERATOR, walk.o)->key_table)) {
         table.o  = OBJPTR(ITERATOR, walk.o)->key_table;

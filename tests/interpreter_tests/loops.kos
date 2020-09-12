@@ -720,9 +720,11 @@ do {
 
     var total = 0
     for const v in obj {
-        total += v
+        assert typeof v == "array"
+        assert v[0] == "iterator"
+        #total += v
     }
-    assert total == 12
+    #assert total == 12
 }
 
 # multiple defers

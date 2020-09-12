@@ -866,6 +866,7 @@ static void write_jump_offs(KOS_COMP_UNIT *program,
     opcode = *buf;
 
     assert(opcode == INSTR_CATCH     ||
+           opcode == INSTR_NEXT      ||
            opcode == INSTR_JUMP      ||
            opcode == INSTR_JUMP_COND ||
            opcode == INSTR_JUMP_NOT_COND);
@@ -876,6 +877,10 @@ static void write_jump_offs(KOS_COMP_UNIT *program,
             jump_instr_size = 5;
             break;
 
+        case INSTR_NEXT:
+            jump_instr_size = 7;
+            break;
+
         default:
             jump_instr_size = 6;
             break;
@@ -883,7 +888,7 @@ static void write_jump_offs(KOS_COMP_UNIT *program,
 
     jump_offs = target_offs - (jump_instr_offs + jump_instr_size);
 
-    buf += (opcode == INSTR_CATCH) ? 2 : 1;
+    buf += (opcode == INSTR_CATCH) ? 2 : (opcode == INSTR_NEXT) ? 3 : 1;
 
     for (end = buf+4; buf < end; ++buf) {
         *buf      =   (uint8_t)jump_offs;
@@ -1902,15 +1907,13 @@ static int for_in(KOS_COMP_UNIT      *program,
                   const KOS_AST_NODE *node)
 {
     int                 error;
+    int                 initial_jump_offs;
     int                 loop_start_offs;
-    int                 cond_jump_instr_offs = -1;
-    int                 final_jump_instr_offs;
-    int                 continue_offs;
+    int                 next_jump_offs;
     const KOS_AST_NODE *var_node;
     const KOS_AST_NODE *expr_node;
     const KOS_AST_NODE *assg_node;
     KOS_REG            *reg            = 0;
-    KOS_REG            *final_reg      = 0;
     KOS_REG            *iter_reg       = 0;
     KOS_REG            *item_reg       = 0;
     KOS_BREAK_OFFS     *old_break_offs = program->cur_frame->break_offs;
@@ -1940,9 +1943,19 @@ static int for_in(KOS_COMP_UNIT      *program,
 
     kos_activate_new_vars(program, assg_node->children);
 
-    TRY(invoke_get_iterator(program, &iter_reg));
+    if (iter_reg->tmp)
+        reg = iter_reg;
+    else {
+        reg      = iter_reg;
+        iter_reg = 0;
+        TRY(gen_reg(program, &iter_reg));
+    }
 
     TRY(add_addr2line(program, &assg_node->token, KOS_FALSE_VALUE));
+
+    TRY(gen_instr2(program, INSTR_LOAD_ITER, iter_reg->reg, reg->reg));
+
+    reg = 0;
 
     if ( ! var_node->next) {
 
@@ -1952,14 +1965,8 @@ static int for_in(KOS_COMP_UNIT      *program,
     else
         TRY(gen_reg(program, &item_reg));
 
-    TRY(gen_reg(program, &final_reg));
-
-    TRY(gen_instr3(program, INSTR_CALL_GEN, item_reg->reg, iter_reg->reg, final_reg->reg));
-
-    cond_jump_instr_offs = program->cur_offs;
-    TRY(gen_instr2(program, INSTR_JUMP_COND, 0, final_reg->reg));
-
-    free_reg(program, final_reg);
+    initial_jump_offs = program->cur_offs;
+    TRY(gen_instr1(program, INSTR_JUMP, 0));
 
     loop_start_offs = program->cur_offs;
 
@@ -1993,18 +2000,13 @@ static int for_in(KOS_COMP_UNIT      *program,
 
     TRY(add_addr2line(program, &assg_node->token, KOS_FALSE_VALUE));
 
-    continue_offs = program->cur_offs;
+    next_jump_offs = program->cur_offs;
+    TRY(gen_instr3(program, INSTR_NEXT, item_reg->reg, iter_reg->reg, 0));
 
-    TRY(gen_instr3(program, INSTR_CALL_GEN, item_reg->reg, iter_reg->reg, final_reg->reg));
+    update_jump_offs(program, initial_jump_offs, next_jump_offs);
+    update_jump_offs(program, next_jump_offs, loop_start_offs);
+    finish_break_continue(program, next_jump_offs, old_break_offs);
 
-    final_jump_instr_offs = program->cur_offs;
-    TRY(gen_instr2(program, INSTR_JUMP_NOT_COND, 0, final_reg->reg));
-
-    update_jump_offs(program, final_jump_instr_offs, loop_start_offs);
-    update_jump_offs(program, cond_jump_instr_offs, program->cur_offs);
-    finish_break_continue(program, continue_offs, old_break_offs);
-
-    final_reg = 0;
     free_reg(program, item_reg);
     item_reg = 0;
     free_reg(program, iter_reg);

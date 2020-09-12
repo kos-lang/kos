@@ -326,11 +326,12 @@ do {
 
 do {
     assert typeof void == "void"
-    expect_fail(fun {
-        for const x in void { }
-    })
-
     var count = 0
+    for const x in void {
+        count += 1
+    }
+    assert count == 0
+
     for const x in base.deep(void) {
         count += 1
     }
@@ -1125,13 +1126,14 @@ do {
 
 do {
     assert base.sum([]) == 0
+    assert base.sum(void) == 0
     assert base.sum([], "") == ""
     assert base.sum([10, 200, 3, 4000]) == 4213
     assert base.sum([4.0, 2.0, 8.0]) == 14.0
     assert base.sum(["ab", "c", "def", "gh"], "") == "abcdefgh"
 
     expect_fail(base.sum)
-    expect_fail(() => base.sum(void))
+    expect_fail(() => base.sum(fun { throw void }))
     expect_fail(()=>base.sum([1], ""))
 }
 
@@ -1545,7 +1547,8 @@ do {
 
 do {
     assert (["a", "b", "c"] -> base.count_elements) == 3
-    expect_fail(() => void -> base.count_elements)
+    assert base.count_elements(void) == 0
+    expect_fail(() => fun { throw void; yield void } () -> base.count_elements)
 }
 
 ##############################################################################

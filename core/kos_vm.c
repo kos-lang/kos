@@ -816,7 +816,7 @@ static int prepare_call(KOS_CONTEXT        ctx,
             RAISE_EXCEPTION_STR(str_err_too_few_args);
     }
 
-    if (instr == INSTR_CALL_GEN && state < KOS_GEN_READY)
+    if (instr == INSTR_NEXT && state < KOS_GEN_READY)
         RAISE_EXCEPTION_STR(str_err_not_generator);
 
     switch (state) {
@@ -950,7 +950,7 @@ static void finish_call(KOS_CONTEXT        ctx,
         if (state >= KOS_GEN_INIT) {
             if (OBJPTR(STACK, ctx->stack)->flags & KOS_CAN_YIELD) {
                 state = KOS_GEN_DONE;
-                if (instr != INSTR_CALL_GEN) {
+                if (instr != INSTR_NEXT) {
                     KOS_LOCAL saved_func;
 
                     KOS_init_local_with(ctx, &saved_func, func_obj);
@@ -1508,6 +1508,24 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
 
                 assert(rdest < num_regs);
                 write_reg(stack_frame, rdest, out);
+
+                bytecode += 3;
+                NEXT_INSTRUCTION;
+            }
+
+            BEGIN_INSTRUCTION(LOAD_ITER): { /* <r.dest>, <r.src> */
+                PROF_ZONE_N(INSTR, "LOAD.ITER")
+                const unsigned rsrc = bytecode[2];
+
+                assert(rsrc < num_regs);
+
+                out = KOS_new_iterator(ctx, read_reg(stack_frame, rsrc), KOS_CONTENTS);
+                TRY_OBJID(out);
+
+                rdest = bytecode[1];
+
+                assert(rdest < num_regs);
+                KOS_atomic_write_relaxed_ptr(stack_frame->regs[rdest], out);
 
                 bytecode += 3;
                 NEXT_INSTRUCTION;
@@ -2946,6 +2964,73 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
+            BEGIN_INSTRUCTION(NEXT): { /* <r.dest>, <r.func>, <delta.int32> */
+                PROF_ZONE_N(INSTR, "NEXT")
+                KOS_LOCAL      iter;
+                int            finished = 0;
+
+                const unsigned riter = bytecode[2];
+                rdest                = bytecode[1];
+
+                assert(riter < num_regs);
+                assert(rdest < num_regs);
+
+                iter.o = read_reg(stack_frame, riter);
+
+                if (GET_OBJ_TYPE(iter.o) != OBJ_ITERATOR)
+                    RAISE_EXCEPTION_STR(str_err_not_callable);
+
+                /* TODO call generator functions in-place */
+
+                KOS_init_local_with(ctx, &iter, iter.o);
+
+                error = KOS_iterator_next(ctx, iter.o);
+
+                iter.o = KOS_destroy_top_local(ctx, &iter);
+
+                if ( ! error) {
+                    KOS_OBJ_ID key_obj = KOS_get_walk_key(iter.o);
+
+                    if (GET_OBJ_TYPE(key_obj) == OBJ_STRING) {
+                        KOS_OBJ_ID pair;
+
+                        KOS_init_local_with(ctx, &iter, iter.o);
+
+                        pair = KOS_new_array(ctx, 2);
+
+                        iter.o = KOS_destroy_top_local(ctx, &iter);
+
+                        TRY_OBJID(pair);
+
+                        TRY(KOS_array_write(ctx, pair, 0, KOS_get_walk_key(iter.o)));
+                        TRY(KOS_array_write(ctx, pair, 1, KOS_get_walk_value(iter.o)));
+
+                        write_reg(stack_frame, rdest, pair);
+                    }
+                    else
+                        write_reg(stack_frame, rdest, KOS_get_walk_value(iter.o));
+                }
+                else if (error == KOS_ERROR_NOT_FOUND) {
+                    assert( ! KOS_is_exception_pending(ctx));
+
+                    write_reg(stack_frame, rdest, KOS_VOID);
+
+                    finished = 1;
+
+                    error = KOS_SUCCESS;
+                }
+                else {
+                    assert(error == KOS_ERROR_EXCEPTION);
+                    assert(KOS_is_exception_pending(ctx));
+                    goto cleanup;
+                }
+
+                KOS_help_gc(ctx);
+
+                bytecode += 7 + (finished ? 0 : (int32_t)load_32(bytecode + 3));
+                NEXT_INSTRUCTION;
+            }
+
             BEGIN_INSTRUCTION(TAIL_CALL): /* <r.func>, <r.this>, <r.args> */
                 /* fall through */
             BEGIN_INSTRUCTION(TAIL_CALL_N): /* <r.func>, <r.this>, <r.arg1>, <numargs.uint8> */
@@ -2956,13 +3041,10 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
                 /* fall through */
             BEGIN_INSTRUCTION(CALL_FUN): /* <r.dest>, <r.func>, <r.arg1>, <numargs.uint8> */
                 /* fall through */
-            BEGIN_INSTRUCTION(CALL_GEN): /* <r.dest>, <r.func>, <r.final> */
-                /* fall through */
             BEGIN_INSTRUCTION(CALL): { /* <r.dest>, <r.func>, <r.this>, <r.args> */
                 PROF_ZONE_N(INSTR, "CALL")
                 unsigned           rfunc     = ~0U;
                 unsigned           rthis     = ~0U;
-                unsigned           rfinal    = KOS_NO_REG;
                 unsigned           rargs     = ~0U;
                 unsigned           rarg1     = ~0U;
                 unsigned           num_args  = 0;
@@ -3029,7 +3111,8 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
                         assert( ! num_args || rarg1 + num_args <= num_regs);
                         break;
 
-                    case INSTR_CALL_FUN:
+                    default:
+                        assert(instr == INSTR_CALL_FUN);
                         rdest    = bytecode[1];
                         rfunc    = bytecode[2];
                         rarg1    = bytecode[3];
@@ -3037,15 +3120,6 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
                         delta    = 5;
                         assert(rdest < num_regs);
                         assert( ! num_args || rarg1 + num_args <= num_regs);
-                        break;
-
-                    default:
-                        assert(instr == INSTR_CALL_GEN);
-                        rdest  = bytecode[1];
-                        rfunc  = bytecode[2];
-                        rfinal = bytecode[3];
-                        delta = 4;
-                        assert(rdest < num_regs);
                         break;
                 }
 
@@ -3090,7 +3164,7 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
 
                 error = prepare_call(ctx, instr, func.o, &this_.o,
                                      args.o, num_args ? rarg1 : 0, num_args,
-                                     (uint8_t)rdest, (uint8_t)rfinal);
+                                     (uint8_t)rdest, KOS_NO_REG);
                 if (error) {
                     KOS_destroy_top_locals(ctx, &func, &args);
                     goto cleanup;
@@ -3191,26 +3265,6 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
 
                     if (KOS_is_exception_pending(ctx))
                         error = KOS_ERROR_EXCEPTION;
-
-                    if (instr == INSTR_CALL_GEN) {
-
-                        state = get_func_state(func.o);
-
-                        if (error && state == KOS_GEN_DONE
-                                && is_generator_end_exception(ctx)) {
-                            KOS_clear_exception(ctx);
-                            error = KOS_SUCCESS;
-                        }
-                        if ( ! error) {
-                            const KOS_OBJ_ID result = KOS_BOOL(state == KOS_GEN_DONE);
-                            if (rfinal == rdest)
-                                out = result;
-                            else {
-                                assert(rfinal < num_regs);
-                                write_reg(stack_frame, rfinal, result);
-                            }
-                        }
-                    }
                 }
 
                 assert(ctx->stack == stack);
@@ -3231,10 +3285,8 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
                     goto handle_return;
                 }
 
-                if (instr != INSTR_CALL_GEN || ! IS_BAD_PTR(out)) {
-                    assert(rdest < num_regs);
-                    write_reg(stack_frame, rdest, out);
-                }
+                assert(rdest < num_regs);
+                write_reg(stack_frame, rdest, out);
 
                 bytecode += delta;
                 NEXT_INSTRUCTION;
@@ -3388,7 +3440,7 @@ handle_return:
 
                 set_closure_stack_size(ctx, stack, stack_frame);
 
-                finish_call(ctx, stack_frame, (rgen == KOS_NO_REG) ? INSTR_CALL : INSTR_CALL_GEN);
+                finish_call(ctx, stack_frame, (rgen == KOS_NO_REG) ? INSTR_CALL : INSTR_NEXT);
 
                 if (KOS_is_exception_pending(ctx))
                     error = KOS_ERROR_EXCEPTION;
@@ -3423,8 +3475,8 @@ handle_return:
 
                 switch ((KOS_BYTECODE_INSTR)*bytecode) {
 
-                    case INSTR_CALL_GEN:
-                        bytecode += 4;
+                    case INSTR_NEXT: /* TODO read jump offset */
+                        bytecode += 7;
                         break;
 
                     case INSTR_CALL_N:
@@ -3451,6 +3503,8 @@ handle_return:
                     }
                 }
                 else {
+
+                    /* TODO perform jump depending on generator's state */
 
                     const KOS_OBJ_ID status = KOS_BOOL(get_func_state(func_obj) == KOS_GEN_DONE);
 
@@ -3569,7 +3623,7 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
         }
 
         finish_call(ctx, get_current_stack_frame(ctx),
-                    call_flavor == KOS_CALL_GENERATOR ? INSTR_CALL_GEN : INSTR_CALL);
+                    call_flavor == KOS_CALL_GENERATOR ? INSTR_NEXT : INSTR_CALL);
 
         if ((state > KOS_GEN_INIT) && (get_func_state(func.o) == KOS_GEN_DONE)) {
             if (call_flavor == KOS_CALL_GENERATOR &&

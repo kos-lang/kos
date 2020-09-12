@@ -46,6 +46,7 @@ static const char str_object_open[]             = "{";
 static const char str_object_sep[]              = ", ";
 static const char str_recursive_array[]         = "[...]";
 static const char str_recursive_object[]        = "{...}";
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_generator, "function is not a generator");
 
 static const int8_t extra_len_map[256] = {
     /* 0 .. 127 */
@@ -1582,7 +1583,7 @@ KOS_OBJ_ID KOS_new_iterator(KOS_CONTEXT      ctx,
 
     type = GET_OBJ_TYPE(obj_id);
 
-    if ((type == OBJ_OBJECT) || (depth != KOS_CONTENTS))
+    if ((type == OBJ_OBJECT) || (type == OBJ_CLASS) || (depth != KOS_CONTENTS))
         return kos_new_object_walk(ctx, obj_id, depth);
 
     KOS_init_local_with(ctx, &obj, obj_id);
@@ -1615,8 +1616,9 @@ int KOS_iterator_next(KOS_CONTEXT ctx,
     switch (OBJPTR(ITERATOR, iter_id)->type) {
 
         case OBJ_OBJECT:
+            /* fall through */
+        case OBJ_CLASS:
             return kos_object_walk(ctx, iter_id);
-
 
         case OBJ_FUNCTION: {
             KOS_FUNCTION_STATE state;
@@ -1661,6 +1663,10 @@ int KOS_iterator_next(KOS_CONTEXT ctx,
                     return KOS_ERROR_EXCEPTION;
 
                 break;
+            }
+            else {
+                KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_generator));
+                return KOS_ERROR_EXCEPTION;
             }
         }
         /* fall through */

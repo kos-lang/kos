@@ -131,7 +131,7 @@ do {
 
     assert find_lowest([9, 10, -5, 245, -1000, 9000, -1]) == -1000
 
-    check(find_lowest, { registers: 5, instructions: 11, size: 48 })
+    check(find_lowest, { registers: 5, instructions: 8, size: 33 })
 }
 
 #============================================================================#
@@ -207,7 +207,7 @@ do {
         assert iter() == 0.5
     }
 
-    check(map, { registers: 5, instructions: 10, size: 41 })
+    check(map, { registers: 5, instructions: 7, size: 26 })
 }
 
 #============================================================================#

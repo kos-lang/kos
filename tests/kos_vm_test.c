@@ -1334,45 +1334,79 @@ int main(void)
     }
 
     /************************************************************************/
-    /* LOAD.CONST (generator), YIELD, CALL.GEN */
+    /* LOAD.ITER, NEXT */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_CONST8,   0, 0,
-            INSTR_LOAD_ARRAY8,   2, 2,
+            INSTR_LOAD_ARRAY8,   0, 3,
             INSTR_LOAD_INT8,     1, 3,
-            INSTR_SET_ELEM,      2, IMM32(0), 1,    /* begin (3) */
-            INSTR_LOAD_INT8,     1, 6,
-            INSTR_SET_ELEM,      2, IMM32(1), 1,    /* end (6) */
+            INSTR_SET_ELEM,      0, IMM32(0), 1,
+            INSTR_LOAD_INT8,     1, 4,
+            INSTR_SET_ELEM,      0, IMM32(1), 1,
+            INSTR_LOAD_INT8,     1, 5,
+            INSTR_SET_ELEM,      0, IMM32(2), 1,
+
+            INSTR_LOAD_ITER,     0, 0,              /* convert to iterator   */
+
             INSTR_LOAD_VOID,     1,
-            INSTR_CALL,          0, 0, 1, 2,        /* instantiate generator */
-
-            INSTR_LOAD_ARRAY8,   2, 0,
-            INSTR_CALL,          3, 0, 1, 2,        /* yields 3 */
-            INSTR_CALL,          4, 0, 1, 2,        /* yields 4 */
-            INSTR_ADD,           3, 3, 4,
-            INSTR_CALL_GEN,      4, 0, 1,           /* yields 5 */
-            INSTR_ADD,           3, 3, 4,
-            INSTR_JUMP_NOT_COND, IMM32(3), 1,
-            INSTR_LOAD_INT8,     3, 0,
-            INSTR_CALL_GEN,      4, 0, 1,           /* no more */
-            INSTR_JUMP_COND,     IMM32(3), 1,
-            INSTR_LOAD_INT8,     3, 0,
-            INSTR_RETURN,        3,
-
-            INSTR_JUMP,          IMM32(12),
-            INSTR_MOVE,          2, 0,
-            INSTR_YIELD,         2,
-            INSTR_LOAD_INT8,     2, 1,
-            INSTR_ADD,           0, 0, 2,
-            INSTR_CMP_LT,        2, 0, 1,
-            INSTR_JUMP_COND,     IMM32(-22), 2,
+            INSTR_NEXT,          1, 0, IMM32(2),    /* yields 3 */
+            INSTR_THROW,         0,
             INSTR_LOAD_VOID,     2,
-            INSTR_RETURN,        2
-        };
-        KOS_FUNCTION_OPTS opts = create_func_opts(3, 2);
-        KOS_OBJ_ID        func = create_gen(ctx, 82, &opts);
+            INSTR_NEXT,          2, 0, IMM32(2),    /* yields 4 */
+            INSTR_THROW,         0,
+            INSTR_ADD,           1, 1, 2,
+            INSTR_LOAD_VOID,     2,
+            INSTR_NEXT,          2, 0, IMM32(2),    /* yields 5 */
+            INSTR_THROW,         0,
+            INSTR_ADD,           1, 1, 2,
 
-        TEST(run_code(&inst, ctx, &code[0], sizeof(code), 5, 0, &func, 1) == TO_SMALL_INT(3+4+5));
+            INSTR_NEXT,          2, 0, IMM32(2),    /* end of generator, skips the load */
+            INSTR_RETURN,        1,
+            INSTR_THROW,         0
+        };
+
+        TEST(run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, 0, 0) == TO_SMALL_INT(3 + 4 + 5));
+        TEST_NO_EXCEPTION();
+    }
+
+    /************************************************************************/
+    /* LOAD.CONST (generator), YIELD, NEXT */
+    {
+        const uint8_t code[] = {
+            INSTR_JUMP,          IMM32(19),
+
+            INSTR_LOAD_INT8,     0, 3,
+            INSTR_YIELD,         0,
+            INSTR_LOAD_INT8,     0, 4,
+            INSTR_YIELD,         0,
+            INSTR_LOAD_INT8,     0, 5,
+            INSTR_YIELD,         0,
+            INSTR_LOAD_VOID,     0,
+            INSTR_RETURN,        0,
+
+            INSTR_LOAD_CONST8,   0, 0,
+            INSTR_CALL_FUN,      0, 0, 255, 0,      /* instantiate generator */
+            INSTR_LOAD_ITER,     0, 0,              /* convert to iterator   */
+
+            INSTR_LOAD_VOID,     1,
+            INSTR_NEXT,          1, 0, IMM32(2),    /* yields 3 */
+            INSTR_THROW,         0,
+            INSTR_LOAD_VOID,     2,
+            INSTR_NEXT,          2, 0, IMM32(2),    /* yields 4 */
+            INSTR_THROW,         0,
+            INSTR_ADD,           1, 1, 2,
+            INSTR_LOAD_VOID,     2,
+            INSTR_NEXT,          2, 0, IMM32(2),    /* yields 5 */
+            INSTR_THROW,         0,
+            INSTR_ADD,           1, 1, 2,
+
+            INSTR_NEXT,          2, 0, IMM32(2),    /* end of generator, skips the load */
+            INSTR_RETURN,        1,
+            INSTR_THROW,         0
+        };
+        KOS_FUNCTION_OPTS opts = create_func_opts(1, 0);
+        KOS_OBJ_ID        func = create_gen(ctx, 5, &opts);
+
+        TEST(run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, &func, 1) == TO_SMALL_INT(3 + 4 + 5));
         TEST_NO_EXCEPTION();
     }
 
@@ -1504,14 +1538,14 @@ int main(void)
     }
 
     /************************************************************************/
-    /* CALL.GEN - call beyond the end of generator */
+    /* NEXT - call beyond the end of generator */
     {
         const uint8_t code[] = {
             INSTR_LOAD_CONST8, 0, 0,
             INSTR_CALL_FUN,    0, 0, 0, 0, /* instantiate generator */
 
-            INSTR_CALL_GEN,    2, 0, 1,    /* returns 'true' in register 1 */
-            INSTR_CALL_GEN,    2, 0, 2,    /* raise exception */
+            INSTR_NEXT,        1, 0, IMM32(0), /* jumps to next instruction */
+            INSTR_NEXT,        1, 0, IMM32(0), /* raise exception */
             INSTR_RETURN,      1,
 
             INSTR_RETURN,      0,
@@ -1521,9 +1555,9 @@ int main(void)
         KOS_OBJ_ID        func;
 
         opts.this_reg = 0;
-        func = create_gen(ctx, 20, &opts);
+        func = create_gen(ctx, 24, &opts);
 
-        TEST(run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, &func, 1) == KOS_BADPTR);
+        TEST(run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, &func, 1) == KOS_BADPTR);
         TEST_EXCEPTION();
     }
 
@@ -1547,45 +1581,18 @@ int main(void)
     }
 
     /************************************************************************/
-    /* CALL.GEN - put both return value and status in the same register */
+    /* NEXT - set output register to VOID on generator end */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_CONST8, 0, 0,
-            INSTR_LOAD_ARRAY8, 1, 0,
-            INSTR_CALL,        0, 0, 1, 1, /* instantiate generator */
+            INSTR_LOAD_ARRAY8, 0, 0,       /* load empty array */
+            INSTR_LOAD_ITER,   0, 0,       /* convert to generator */
 
-            INSTR_CALL_GEN,    0, 0, 0,    /* invoke generator */
-            INSTR_RETURN,      0,
-
-            INSTR_LOAD_INT8,   0, 0,
-            INSTR_RETURN,      0
+            INSTR_LOAD_TRUE,   1,
+            INSTR_NEXT,        1, 0, IMM32(2),
+            INSTR_RETURN,      1,
+            INSTR_LOAD_FALSE,  1
         };
-        KOS_FUNCTION_OPTS opts = create_func_opts(1, 0);
-        KOS_OBJ_ID        func = create_gen(ctx, 17, &opts);
-
-        TEST(run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, &func, 1) == KOS_TRUE);
-        TEST_NO_EXCEPTION();
-    }
-
-    /************************************************************************/
-    /* CALL.GEN - put both return value and status in the same register */
-    {
-        const uint8_t code[] = {
-            INSTR_LOAD_CONST8, 0, 0,
-            INSTR_LOAD_ARRAY,  1, IMM32(0),
-            INSTR_CALL,        0, 0, 1, 1, /* instantiate generator */
-
-            INSTR_CALL_GEN,    0, 0, 0,    /* invoke generator */
-            INSTR_RETURN,      0,
-
-            INSTR_LOAD_INT8,   0, 0,
-            INSTR_YIELD,       0,
-            INSTR_RETURN,      0
-        };
-        KOS_FUNCTION_OPTS opts = create_func_opts(1, 0);
-        KOS_OBJ_ID        func = create_gen(ctx, 20, &opts);
-
-        TEST(run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, &func, 1) == KOS_FALSE);
+        TEST(run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, 0, 0) == KOS_VOID);
         TEST_NO_EXCEPTION();
     }
 
