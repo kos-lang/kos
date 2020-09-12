@@ -3,6 +3,7 @@
  */
 
 #include "../inc/kos_array.h"
+#include "../inc/kos_bytecode.h"
 #include "../inc/kos_instance.h"
 #include "../inc/kos_entity.h"
 #include "../inc/kos_error.h"
@@ -151,7 +152,7 @@ static int push_new_reentrant_stack(KOS_CONTEXT ctx,
 int kos_stack_push(KOS_CONTEXT ctx,
                    KOS_OBJ_ID  func_obj,
                    uint8_t     ret_reg,
-                   uint8_t     gen_reg)
+                   uint8_t     instr)
 {
     int              error      = KOS_SUCCESS;
     uint32_t         stack_size;
@@ -181,13 +182,13 @@ int kos_stack_push(KOS_CONTEXT ctx,
     assert( ! OBJPTR(FUNCTION, func.o)->handler ||
            OBJPTR(FUNCTION, func.o)->opts.num_regs == 0);
 
-    assert((state > KOS_GEN_INIT) || (gen_reg == KOS_NO_REG));
+    assert((state > KOS_GEN_INIT) || (instr > INSTR_NEXT));
 
     num_regs = OBJPTR(FUNCTION, func.o)->handler
                ? 1 : OBJPTR(FUNCTION, func.o)->opts.num_regs;
     room = num_regs + KOS_STACK_EXTRA;
 
-    reg_init = ((int32_t)gen_reg << 16) | ((int32_t)ret_reg << 8) | (int32_t)num_regs;
+    reg_init = ((int32_t)instr << 16) | ((int32_t)ret_reg << 8) | (int32_t)num_regs;
 
     if (ctx->stack_depth + room > KOS_MAX_STACK_DEPTH)
         RAISE_EXCEPTION_STR(str_err_stack_overflow);

@@ -1536,7 +1536,7 @@ int main(void)
             INSTR_LOAD_ITER,   0, 0,       /* convert to iterator   */
 
             INSTR_NEXT_JUMP,   1, 0, IMM32(10), /* generator ends, does not jump */
-            INSTR_NEXT_JUMP,   1, 0, IMM32(3),  /* generator ended already */
+            INSTR_NEXT_JUMP,   1, 0, IMM32(3),  /* generator was already ended, throw */
             INSTR_LOAD_INT8,   1, 42,
             INSTR_RETURN,      1,
 
@@ -1549,8 +1549,8 @@ int main(void)
         opts.this_reg = 0;
         func = create_gen(ctx, 30, &opts);
 
-        TEST(run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, &func, 1) == TO_SMALL_INT(42));
-        TEST_NO_EXCEPTION();
+        TEST(run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, &func, 1) == KOS_BADPTR);
+        TEST_EXCEPTION();
     }
 
     /************************************************************************/

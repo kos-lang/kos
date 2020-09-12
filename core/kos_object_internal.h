@@ -282,7 +282,7 @@ uint32_t kos_string_iter_peek_next_code(KOS_STRING_ITER *iter);
  *     -1     current instr offset
  *     0      r0
  *     +N-1   rN-1
- *     +N     N | (ret_reg << 8) | (gen_reg << 16)
+ *     +N     N | (ret_reg << 8) | (instr << 16)
  *
  * For constructors, 'this' is also pushed as the last (additional) register,
  * i.e. one more register than the function actually uses.  The number of
@@ -304,7 +304,7 @@ typedef struct KOS_STACK_FRAME_HDR_S KOS_STACK_FRAME;
 int kos_stack_push(KOS_CONTEXT ctx,
                    KOS_OBJ_ID  func_obj,
                    uint8_t     ret_reg,
-                   uint8_t     gen_reg);
+                   uint8_t     instr);
 
 void kos_stack_pop(KOS_CONTEXT ctx);
 

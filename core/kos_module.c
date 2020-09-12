@@ -1619,7 +1619,7 @@ static KOS_OBJ_ID import_and_run(KOS_CONTEXT ctx,
         OBJPTR(FUNCTION, func_obj)->module = module.o;
         OBJPTR(FUNCTION, func_obj)->name   = KOS_CONST_ID(str_global);
 
-        TRY(kos_stack_push(ctx, func_obj, KOS_NO_REG, KOS_NO_REG));
+        TRY(kos_stack_push(ctx, func_obj, KOS_NO_REG, INSTR_CALL));
 
         error = ((struct KOS_MODULE_INIT_S *)OBJPTR(OPAQUE, mod_init.o))->init(ctx, module.o);
 
