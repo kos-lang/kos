@@ -827,7 +827,7 @@ static int prepare_call(KOS_CONTEXT        ctx,
         /* Regular function */
         case KOS_FUN: {
             assert(instr > INSTR_NEXT);
-            TRY(kos_stack_push(ctx, func.o, ret_reg, instr));
+            TRY(kos_stack_push(ctx, func.o, ret_reg, (uint8_t)instr));
 
             if ( ! OBJPTR(FUNCTION, func.o)->handler)
                 TRY(init_registers(ctx,
@@ -847,7 +847,7 @@ static int prepare_call(KOS_CONTEXT        ctx,
             TRY_OBJID(func.o);
 
             assert(instr > INSTR_NEXT);
-            TRY(kos_stack_push(ctx, func.o, ret_reg, instr));
+            TRY(kos_stack_push(ctx, func.o, ret_reg, (uint8_t)instr));
 
             KOS_atomic_write_relaxed_u32(OBJPTR(FUNCTION, func.o)->state, KOS_GEN_READY);
 
@@ -890,7 +890,7 @@ static int prepare_call(KOS_CONTEXT        ctx,
 
             state_set = 1;
 
-            TRY(kos_stack_push(ctx, func.o, ret_reg, instr));
+            TRY(kos_stack_push(ctx, func.o, ret_reg, (uint8_t)instr));
 
             if ( ! OBJPTR(FUNCTION, func.o)->handler) {
                 if (state == KOS_GEN_ACTIVE) {
