@@ -111,6 +111,10 @@ runtest 10 tests/perf/array_index_iter.kos
 runtest 10 tests/perf/array_index_iter.py
 runtest 10 tests/perf/array_index_iter.js
 
+runtest 10 tests/perf/object_for_in.kos
+runtest 10 tests/perf/object_for_in.py
+runtest 10 tests/perf/object_for_in.js
+
 runtest 10 tests/perf/sort_strings.kos
 runtest 10 tests/perf/sort_strings.py
 runtest 10 tests/perf/sort_strings.js
