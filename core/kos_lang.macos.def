@@ -47,6 +47,7 @@ _KOS_is_generator
 _KOS_iterator_next
 _KOS_load_module
 _KOS_load_module_from_memory
+_KOS_lock_object
 _KOS_module_add_constructor
 _KOS_module_add_function
 _KOS_module_add_global

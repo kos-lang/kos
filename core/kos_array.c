@@ -21,6 +21,7 @@
 KOS_DECLARE_STATIC_CONST_STRING(str_err_empty,         "array is empty");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_index, "array index is out of range");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_array,     "object is not an array");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_read_only,     "array is read-only");
 
 DECLARE_STATIC_CONST_OBJECT(tombstone, OBJ_OPAQUE, 0xA0);
 DECLARE_STATIC_CONST_OBJECT(closed,    OBJ_OPAQUE, 0xA1);
@@ -89,6 +90,8 @@ KOS_OBJ_ID KOS_new_array(KOS_CONTEXT ctx,
 
     if (array) {
         KOS_ARRAY_STORAGE *storage = 0;
+
+        KOS_atomic_write_relaxed_u32(array->flags, 0);
 
         if (buf_built_in) {
             if (buf_alloc_size) {
@@ -266,6 +269,8 @@ int KOS_array_write(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, int idx, KOS_OBJ_ID valu
 
     if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY)
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_array));
+    else if (KOS_atomic_read_relaxed_u32(OBJPTR(ARRAY, obj_id)->flags) & KOS_READ_ONLY)
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_read_only));
     else {
         const uint32_t   size   = KOS_atomic_read_relaxed_u32(OBJPTR(ARRAY, obj_id)->size);
         const uint32_t   bufidx = (idx < 0) ? ((uint32_t)idx + size) : (uint32_t)idx;
@@ -313,6 +318,8 @@ KOS_OBJ_ID KOS_array_cas(KOS_CONTEXT ctx,
 
     if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY)
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_array));
+    else if (KOS_atomic_read_relaxed_u32(OBJPTR(ARRAY, obj_id)->flags) & KOS_READ_ONLY)
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_read_only));
     else {
         const uint32_t size   = KOS_atomic_read_relaxed_u32(OBJPTR(ARRAY, obj_id)->size);
         const uint32_t bufidx = (idx < 0) ? ((uint32_t)idx + size) : (uint32_t)idx;
@@ -415,6 +422,8 @@ int KOS_array_reserve(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, uint32_t new_capacity)
 
     if (GET_OBJ_TYPE(array.o) != OBJ_ARRAY)
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_array));
+    else if (KOS_atomic_read_relaxed_u32(OBJPTR(ARRAY, array.o)->flags) & KOS_READ_ONLY)
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_read_only));
     else {
         KOS_ARRAY_STORAGE *old_buf  = get_data(array.o);
         uint32_t           capacity = old_buf ? KOS_atomic_read_relaxed_u32(old_buf->capacity) : 0U;
@@ -457,6 +466,8 @@ int KOS_array_resize(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, uint32_t size)
 
     if (GET_OBJ_TYPE(array.o) != OBJ_ARRAY)
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_array));
+    else if (KOS_atomic_read_relaxed_u32(OBJPTR(ARRAY, array.o)->flags) & KOS_READ_ONLY)
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_read_only));
     else {
         KOS_ARRAY_STORAGE *buf      = get_data(array.o);
         const uint32_t     capacity = buf ? KOS_atomic_read_relaxed_u32(buf->capacity) : 0U;
@@ -610,6 +621,8 @@ int KOS_array_insert(KOS_CONTEXT ctx,
 
     if (GET_OBJ_TYPE(dest.o) != OBJ_ARRAY)
         RAISE_EXCEPTION_STR(str_err_not_array);
+    else if (KOS_atomic_read_relaxed_u32(OBJPTR(ARRAY, dest.o)->flags) & KOS_READ_ONLY)
+        RAISE_EXCEPTION_STR(str_err_read_only);
     else if (src_begin != src_end && GET_OBJ_TYPE(src.o) != OBJ_ARRAY)
         RAISE_EXCEPTION_STR(str_err_not_array);
 
@@ -714,6 +727,8 @@ int KOS_array_push(KOS_CONTEXT ctx,
 
     if (GET_OBJ_TYPE(array.o) != OBJ_ARRAY)
         RAISE_EXCEPTION_STR(str_err_not_array);
+    else if (KOS_atomic_read_relaxed_u32(OBJPTR(ARRAY, array.o)->flags) & KOS_READ_ONLY)
+        RAISE_EXCEPTION_STR(str_err_read_only);
 
     buf = get_data(array.o);
 
@@ -781,6 +796,8 @@ KOS_OBJ_ID KOS_array_pop(KOS_CONTEXT ctx,
 
     if (GET_OBJ_TYPE(array.o) != OBJ_ARRAY)
         RAISE_EXCEPTION_STR(str_err_not_array);
+    else if (KOS_atomic_read_relaxed_u32(OBJPTR(ARRAY, array.o)->flags) & KOS_READ_ONLY)
+        RAISE_EXCEPTION_STR(str_err_read_only);
 
     len = KOS_get_array_size(array.o);
 
@@ -809,6 +826,10 @@ int KOS_array_fill(KOS_CONTEXT ctx,
 
     if (GET_OBJ_TYPE(obj_id) != OBJ_ARRAY) {
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_array));
+        return KOS_ERROR_EXCEPTION;
+    }
+    else if (KOS_atomic_read_relaxed_u32(OBJPTR(ARRAY, obj_id)->flags) & KOS_READ_ONLY) {
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_read_only));
         return KOS_ERROR_EXCEPTION;
     }
 

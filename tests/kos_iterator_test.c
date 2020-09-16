@@ -295,14 +295,17 @@ int main(void)
     {
         KOS_OBJ_ID obj;
         KOS_OBJ_ID iter;
+        uint8_t   *data;
 
         obj = KOS_new_buffer(ctx, 3);
         TEST( ! IS_BAD_PTR(obj));
         TEST(GET_OBJ_TYPE(obj) == OBJ_BUFFER);
         TEST(KOS_get_buffer_size(obj) == 3);
-        KOS_buffer_data_volatile(obj)[0] = 10;
-        KOS_buffer_data_volatile(obj)[1] = 20;
-        KOS_buffer_data_volatile(obj)[2] = 30;
+        data = KOS_buffer_data_volatile(ctx, obj);
+        TEST(data);
+        data[0] = 10;
+        data[1] = 20;
+        data[2] = 30;
 
         /* ---------------------------------------------------------------- */
 

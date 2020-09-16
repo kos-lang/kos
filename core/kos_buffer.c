@@ -10,8 +10,10 @@
 #include "kos_object_internal.h"
 #include <string.h>
 
-static const char str_err_make_room_size[] = "buffer size limit exceeded";
-static const char str_err_not_buffer[]     = "object is not a buffer";
+KOS_DECLARE_STATIC_CONST_STRING(str_err_empty,          "cannot modify empty buffer");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_make_room_size, "buffer size limit exceeded");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_buffer,     "object is not a buffer");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_read_only,      "buffer is read-only");
 
 #define KOS_buffer_alloc_size(cap) (sizeof(KOS_BUFFER_STORAGE) + ((cap) - 1U))
 
@@ -77,8 +79,9 @@ KOS_OBJ_ID KOS_new_buffer(KOS_CONTEXT ctx,
                                  sizeof(KOS_BUFFER))));
     if ( ! IS_BAD_PTR(obj.o)) {
 
-        OBJPTR(BUFFER, obj.o)->size = size;
-        OBJPTR(BUFFER, obj.o)->data = KOS_BADPTR;
+        OBJPTR(BUFFER, obj.o)->size  = size;
+        OBJPTR(BUFFER, obj.o)->flags = 0;
+        OBJPTR(BUFFER, obj.o)->data  = KOS_BADPTR;
 
         if (capacity) {
 
@@ -125,7 +128,9 @@ int KOS_buffer_reserve(KOS_CONTEXT ctx,
     new_capacity = (new_capacity + (KOS_BUFFER_CAPACITY_ALIGN-1)) & ~(KOS_BUFFER_CAPACITY_ALIGN-1);
 
     if (GET_OBJ_TYPE(obj.o) != OBJ_BUFFER)
-        KOS_raise_exception_cstring(ctx, str_err_not_buffer);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_buffer));
+    else if (KOS_atomic_read_relaxed_u32(OBJPTR(BUFFER, obj.o)->flags) & KOS_READ_ONLY)
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_read_only));
     else {
         for (;;) {
             uint32_t capacity;
@@ -173,7 +178,9 @@ int KOS_buffer_resize(KOS_CONTEXT ctx,
     assert( ! IS_BAD_PTR(obj_id));
 
     if (GET_OBJ_TYPE(obj_id) != OBJ_BUFFER)
-        KOS_raise_exception_cstring(ctx, str_err_not_buffer);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_buffer));
+    else if (KOS_atomic_read_relaxed_u32(OBJPTR(BUFFER, obj_id)->flags) & KOS_READ_ONLY)
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_read_only));
     else {
         const uint32_t old_size = KOS_atomic_read_relaxed_u32(OBJPTR(BUFFER, obj_id)->size);
 
@@ -211,7 +218,9 @@ uint8_t *KOS_buffer_data(KOS_CONTEXT ctx,
     assert( ! IS_BAD_PTR(obj_id));
 
     if (GET_OBJ_TYPE(obj_id) != OBJ_BUFFER)
-        KOS_raise_exception_cstring(ctx, str_err_not_buffer);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_buffer));
+    else if (KOS_atomic_read_relaxed_u32(OBJPTR(BUFFER, obj_id)->flags) & KOS_READ_ONLY)
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_read_only));
     else {
 
         KOS_OBJ_ID buf_id = get_storage(obj_id);
@@ -242,6 +251,32 @@ cleanup:
     return ret;
 }
 
+uint8_t *KOS_buffer_data_volatile(KOS_CONTEXT ctx,
+                                  KOS_OBJ_ID  obj_id)
+{
+    uint8_t *ret = 0;
+
+    assert( ! IS_BAD_PTR(obj_id));
+
+    if (GET_OBJ_TYPE(obj_id) != OBJ_BUFFER)
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_buffer));
+    else if (KOS_atomic_read_relaxed_u32(OBJPTR(BUFFER, obj_id)->flags) & KOS_READ_ONLY)
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_read_only));
+    else {
+        const KOS_OBJ_ID buf_obj = KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, obj_id)->data);
+
+        if (IS_BAD_PTR(buf_obj))
+            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_empty));
+        else {
+            KOS_BUFFER_STORAGE *data = OBJPTR(BUFFER_STORAGE, buf_obj);
+
+            ret = &data->buf[0];
+        }
+    }
+
+    return ret;
+}
+
 uint8_t *KOS_buffer_make_room(KOS_CONTEXT ctx,
                               KOS_OBJ_ID  obj_id,
                               unsigned    size_delta)
@@ -251,7 +286,9 @@ uint8_t *KOS_buffer_make_room(KOS_CONTEXT ctx,
     assert( ! IS_BAD_PTR(obj_id));
 
     if (GET_OBJ_TYPE(obj_id) != OBJ_BUFFER)
-        KOS_raise_exception_cstring(ctx, str_err_not_buffer);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_buffer));
+    else if (KOS_atomic_read_relaxed_u32(OBJPTR(BUFFER, obj_id)->flags) & KOS_READ_ONLY)
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_read_only));
     else {
         for (;;) {
             const uint32_t   old_size = KOS_atomic_read_relaxed_u32(OBJPTR(BUFFER, obj_id)->size);
@@ -264,7 +301,7 @@ uint8_t *KOS_buffer_make_room(KOS_CONTEXT ctx,
             const uint32_t off_heap_size = KOS_max(new_size, KOS_MAX_HEAP_OBJ_SIZE * 2U);
 
             if (size_delta > 0xFFFFFFFFU - old_size) {
-                KOS_raise_exception_cstring(ctx, str_err_make_room_size);
+                KOS_raise_exception(ctx, KOS_CONST_ID(str_err_make_room_size));
                 break;
             }
 
@@ -284,7 +321,9 @@ uint8_t *KOS_buffer_make_room(KOS_CONTEXT ctx,
             }
 
             if (KOS_atomic_cas_strong_u32(OBJPTR(BUFFER, obj_id)->size, old_size, new_size)) {
-                ret = KOS_buffer_data_volatile(obj_id) + old_size;
+                ret = KOS_buffer_data_volatile(ctx, obj_id);
+                if (ret)
+                    ret += old_size;
                 break;
             }
         }
@@ -304,7 +343,9 @@ int KOS_buffer_fill(KOS_CONTEXT ctx,
     assert( ! IS_BAD_PTR(obj_id));
 
     if (GET_OBJ_TYPE(obj_id) != OBJ_BUFFER)
-        KOS_raise_exception_cstring(ctx, str_err_not_buffer);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_buffer));
+    else if (KOS_atomic_read_relaxed_u32(OBJPTR(BUFFER, obj_id)->flags) & KOS_READ_ONLY)
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_read_only));
     else {
         uint32_t size = KOS_atomic_read_relaxed_u32(OBJPTR(BUFFER, obj_id)->size);
         KOS_BUFFER_STORAGE *const data = get_data(obj_id);
@@ -336,7 +377,9 @@ int KOS_buffer_copy(KOS_CONTEXT ctx,
     if (GET_OBJ_TYPE(destptr) != OBJ_BUFFER ||
         GET_OBJ_TYPE(srcptr)  != OBJ_BUFFER)
 
-        KOS_raise_exception_cstring(ctx, str_err_not_buffer);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_buffer));
+    else if (KOS_atomic_read_relaxed_u32(OBJPTR(BUFFER, destptr)->flags) & KOS_READ_ONLY)
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_read_only));
     else {
         uint32_t dest_size = KOS_atomic_read_relaxed_u32(OBJPTR(BUFFER, destptr)->size);
         KOS_BUFFER_STORAGE *const dest_data = get_data(destptr);
@@ -378,7 +421,7 @@ KOS_OBJ_ID KOS_buffer_slice(KOS_CONTEXT ctx,
     KOS_init_local_with(ctx, &obj, obj_id);
 
     if (GET_OBJ_TYPE(obj.o) != OBJ_BUFFER)
-        KOS_raise_exception_cstring(ctx, str_err_not_buffer);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_buffer));
     else {
         const uint32_t src_size = KOS_atomic_read_relaxed_u32(OBJPTR(BUFFER, obj.o)->size);
 

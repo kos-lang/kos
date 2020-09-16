@@ -940,7 +940,7 @@ class buffer: public object {
                     const uint32_t idx = static_cast<uint32_t>(idx_ < 0 ? (idx_ + static_cast<int>(size)) : idx_);
                     if (idx >= size)
                         throw std::out_of_range("buffer index out of range");
-                    uint8_t* const buf = KOS_buffer_data_volatile(elem_);
+                    const uint8_t* const buf = KOS_buffer_data_const(elem_);
                     assert(buf);
                     return static_cast<char>(buf[idx]);
                 }
@@ -1002,8 +1002,10 @@ class buffer: public object {
                     const uint32_t idx = static_cast<uint32_t>(idx_ < 0 ? (idx_ + static_cast<int>(size)) : idx_);
                     if (idx >= size)
                         throw std::out_of_range("buffer index out of range");
-                    uint8_t* const buf = KOS_buffer_data_volatile(elem_);
+                    uint8_t* const buf = KOS_buffer_data_volatile(elem_.get_context(), elem_);
                     assert(buf);
+                    if ( ! buf)
+                        elem_.get_context().signal_error();
                     buf[idx] = static_cast<uint8_t>(v);
                     return *this;
                 }

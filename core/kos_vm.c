@@ -993,7 +993,7 @@ static KOS_OBJ_ID read_buffer(KOS_CONTEXT ctx, KOS_OBJ_ID objptr, int idx)
         ret = KOS_BADPTR;
     }
     else {
-        uint8_t *const buf = KOS_buffer_data_volatile(objptr);
+        const uint8_t *const buf = KOS_buffer_data_const(objptr);
         ret = TO_SMALL_INT((int)buf[idx]);
     }
 
@@ -1021,7 +1021,9 @@ static int write_buffer(KOS_CONTEXT ctx, KOS_OBJ_ID objptr, int idx, KOS_OBJ_ID 
     if ((uint32_t)idx >= size)
         RAISE_EXCEPTION_STR(str_err_invalid_index);
     else {
-        uint8_t *const buf = KOS_buffer_data_volatile(objptr);
+        uint8_t *const buf = KOS_buffer_data_volatile(ctx, objptr);
+        if ( ! buf)
+            goto cleanup;
         buf[idx] = (uint8_t)byte_value;
     }
 

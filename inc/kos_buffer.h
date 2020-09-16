@@ -23,7 +23,7 @@ static inline uint32_t KOS_get_buffer_size(KOS_OBJ_ID obj_id)
     return KOS_atomic_read_relaxed_u32(OBJPTR(BUFFER, obj_id)->size);
 }
 
-static inline uint8_t *KOS_buffer_data_volatile(KOS_OBJ_ID obj_id)
+static inline const uint8_t *KOS_buffer_data_const(KOS_OBJ_ID obj_id)
 {
     assert(GET_OBJ_TYPE(obj_id) == OBJ_BUFFER);
     const KOS_OBJ_ID buf_obj = KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, obj_id)->data);
@@ -35,7 +35,7 @@ static inline uint8_t *KOS_buffer_data_volatile(KOS_OBJ_ID obj_id)
 #else
 
 #define KOS_get_buffer_size(obj_id) (KOS_atomic_read_relaxed_u32(OBJPTR(BUFFER, (obj_id))->size))
-#define KOS_buffer_data_volatile(obj_id) (&OBJPTR(BUFFER_STORAGE, KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, (obj_id))->data))->buf[0])
+#define KOS_buffer_data_const(obj_id) ((const uint8_t *)(&OBJPTR(BUFFER_STORAGE, KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, (obj_id))->data))->buf[0]))
 
 #endif
 
@@ -65,6 +65,10 @@ uint8_t *KOS_buffer_make_room(KOS_CONTEXT ctx,
 KOS_API
 uint8_t *KOS_buffer_data(KOS_CONTEXT ctx,
                          KOS_OBJ_ID  obj_id);
+
+KOS_API
+uint8_t *KOS_buffer_data_volatile(KOS_CONTEXT ctx,
+                                  KOS_OBJ_ID  obj_id);
 
 KOS_API
 int KOS_buffer_fill(KOS_CONTEXT ctx,

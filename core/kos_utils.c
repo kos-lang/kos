@@ -760,7 +760,7 @@ static int vector_append_buffer(KOS_CONTEXT ctx,
     TRY(kos_append_cstr(ctx, cstr_vec, str_buffer_open, sizeof(str_buffer_open)-1));
 
     dest = cstr_vec->buffer + cstr_vec->size - 1;
-    src  = KOS_buffer_data_volatile(obj_id);
+    src  = KOS_buffer_data_const(obj_id);
     end  = src + size;
 
     while (src < end) {
@@ -1214,12 +1214,12 @@ int KOS_array_push_expand(KOS_CONTEXT ctx,
         case OBJ_BUFFER: {
             const uint32_t size = KOS_get_buffer_size(value.o);
             uint32_t       i;
-            uint8_t       *buf  = 0;
+            const uint8_t *buf  = 0;
 
             TRY(KOS_array_resize(ctx, array.o, cur_size + size));
 
             if (size) {
-                buf = KOS_buffer_data_volatile(value.o);
+                buf = KOS_buffer_data_const(value.o);
                 assert(buf);
             }
 
@@ -1358,8 +1358,8 @@ static KOS_COMPARE_RESULT compare_buf(KOS_OBJ_ID a, KOS_OBJ_ID b)
     const uint32_t a_size   = KOS_get_buffer_size(a);
     const uint32_t b_size   = KOS_get_buffer_size(b);
     const uint32_t cmp_size = KOS_min(a_size, b_size);
-    const int      min_cmp  = memcmp(KOS_buffer_data_volatile(a),
-                                     KOS_buffer_data_volatile(b),
+    const int      min_cmp  = memcmp(KOS_buffer_data_const(a),
+                                     KOS_buffer_data_const(b),
                                      cmp_size);
 
     const int cmp = cmp_size ? min_cmp : 0;
@@ -1751,7 +1751,7 @@ int KOS_iterator_next(KOS_CONTEXT ctx,
 
                 KOS_atomic_write_release_ptr(OBJPTR(ITERATOR, iter_id)->last_key, TO_SMALL_INT((int64_t)idx));
 
-                elem = KOS_buffer_data_volatile(obj_id)[idx];
+                elem = KOS_buffer_data_const(obj_id)[idx];
                 KOS_atomic_write_release_ptr(OBJPTR(ITERATOR, iter_id)->last_value, TO_SMALL_INT(elem));
 
                 return KOS_SUCCESS;

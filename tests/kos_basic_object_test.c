@@ -4,14 +4,14 @@
 
 #include "../inc/kos_entity.h"
 #include "../inc/kos_array.h"
+#include "../inc/kos_buffer.h"
 #include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_object.h"
 #include "../inc/kos_string.h"
 #include "../core/kos_object_internal.h"
+#include "kos_test_tools.h"
 #include <stdio.h>
-
-#define TEST(test) do { if (!(test)) { printf("Failed: line %d: %s\n", __LINE__, #test); return 1; } } while (0)
 
 int main(void)
 {
@@ -282,6 +282,69 @@ int main(void)
         TEST(GET_OBJ_TYPE(obj) == OBJ_OBJECT);
 
         TEST(GET_OBJ_TYPE(obj) == OBJ_OBJECT);
+    }
+
+    /************************************************************************/
+    {
+        KOS_DECLARE_STATIC_CONST_STRING(str_xyz, "xyz");
+        KOS_OBJ_ID obj_id;
+
+        TEST(KOS_lock_object(ctx, KOS_TRUE) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+
+        TEST(KOS_lock_object(ctx, KOS_FALSE) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+
+        TEST(KOS_lock_object(ctx, KOS_VOID) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+
+        TEST(KOS_lock_object(ctx, TO_SMALL_INT(100)) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+
+        TEST(KOS_lock_object(ctx, KOS_CONST_ID(str_xyz)) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+
+        obj_id = KOS_new_int(ctx, (int64_t)0x7FFFFFFF << 32);
+        TEST( ! IS_BAD_PTR(obj_id));
+        TEST(GET_OBJ_TYPE(obj_id) == OBJ_INTEGER);
+        TEST(KOS_lock_object(ctx, obj_id) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+
+        obj_id = KOS_new_float(ctx, 0.1);
+        TEST( ! IS_BAD_PTR(obj_id));
+        TEST(GET_OBJ_TYPE(obj_id) == OBJ_FLOAT);
+        TEST(KOS_lock_object(ctx, obj_id) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+
+        obj_id = KOS_new_function(ctx);
+        TEST( ! IS_BAD_PTR(obj_id));
+        TEST(GET_OBJ_TYPE(obj_id) == OBJ_FUNCTION);
+        TEST(KOS_lock_object(ctx, obj_id) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+
+        obj_id = KOS_new_array(ctx, 0);
+        TEST( ! IS_BAD_PTR(obj_id));
+        TEST(GET_OBJ_TYPE(obj_id) == OBJ_ARRAY);
+        TEST(KOS_lock_object(ctx, obj_id) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+
+        obj_id = KOS_new_buffer(ctx, 0);
+        TEST( ! IS_BAD_PTR(obj_id));
+        TEST(GET_OBJ_TYPE(obj_id) == OBJ_BUFFER);
+        TEST(KOS_lock_object(ctx, obj_id) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+
+        obj_id = KOS_new_object(ctx);
+        TEST( ! IS_BAD_PTR(obj_id));
+        TEST(GET_OBJ_TYPE(obj_id) == OBJ_OBJECT);
+        TEST(KOS_lock_object(ctx, obj_id) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
+
+        obj_id = KOS_new_class(ctx, KOS_VOID);
+        TEST( ! IS_BAD_PTR(obj_id));
+        TEST(GET_OBJ_TYPE(obj_id) == OBJ_CLASS);
+        TEST(KOS_lock_object(ctx, obj_id) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
     }
 
     KOS_instance_destroy(&inst);

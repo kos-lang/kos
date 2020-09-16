@@ -141,8 +141,10 @@ int main(void)
 
             /* Fill buffer with expected data */
             {
-                uint8_t       *b   = KOS_buffer_data_volatile(data.buf.o);
+                uint8_t       *b   = KOS_buffer_data_volatile(ctx, data.buf.o);
                 uint8_t *const end = b + size;
+
+                TEST(b);
 
                 i = 0;
                 while (b < end)
@@ -167,8 +169,10 @@ int main(void)
             /* Check buffer contents */
             {
                 const size_t   endsize = KOS_get_buffer_size(data.buf.o);
-                uint8_t       *b       = KOS_buffer_data_volatile(data.buf.o);
+                uint8_t       *b       = KOS_buffer_data_volatile(ctx, data.buf.o);
                 uint8_t *const end     = b + endsize;
+
+                TEST(b);
 
                 for (i = 0 ; b < end; i++, b++) {
                     const uint8_t v = *b;

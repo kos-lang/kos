@@ -18,6 +18,7 @@
 
 static const char str_err_cannot_override_prototype[] = "cannot override prototype";
 static const char str_err_not_class[]                 = "object is not a class";
+KOS_DECLARE_STATIC_CONST_STRING(str_err_cannot_make_read_only, "cannot make object read only");
 
 KOS_OBJ_ID KOS_new_int(KOS_CONTEXT ctx, int64_t value)
 {
@@ -330,4 +331,40 @@ int kos_is_truthy(KOS_OBJ_ID obj_id)
     }
 
     return ret;
+}
+
+KOS_API
+int KOS_lock_object(KOS_CONTEXT ctx,
+                    KOS_OBJ_ID  obj_id)
+{
+    switch (GET_OBJ_TYPE(obj_id)) {
+        case OBJ_SMALL_INTEGER:
+            /* fall through */
+        case OBJ_INTEGER:
+            /* fall through */
+        case OBJ_FLOAT:
+            /* fall through */
+        case OBJ_STRING:
+            /* fall through */
+        case OBJ_BOOLEAN:
+            /* fall through */
+        case OBJ_VOID:
+            /* fall through */
+        case OBJ_FUNCTION:
+            return KOS_SUCCESS;
+
+        case OBJ_ARRAY:
+            KOS_atomic_write_relaxed_u32(OBJPTR(ARRAY, obj_id)->flags, KOS_READ_ONLY);
+            return KOS_SUCCESS;
+
+        case OBJ_BUFFER:
+            KOS_atomic_write_relaxed_u32(OBJPTR(BUFFER, obj_id)->flags, KOS_READ_ONLY);
+            return KOS_SUCCESS;
+
+        default:
+            break;
+    }
+
+    KOS_raise_exception(ctx, KOS_CONST_ID(str_err_cannot_make_read_only));
+    return KOS_ERROR_EXCEPTION;
 }

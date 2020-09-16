@@ -334,9 +334,14 @@ typedef struct KOS_OBJECT_S {
     KOS_FINALIZE           finalize;
 } KOS_OBJECT;
 
+enum KOS_BUF_FLAGS_E {
+    KOS_READ_ONLY = 1
+};
+
 typedef struct KOS_BUFFER_S {
     KOS_OBJ_HEADER         header;
     KOS_ATOMIC(uint32_t)   size;
+    KOS_ATOMIC(uint32_t)   flags;
     KOS_ATOMIC(KOS_OBJ_ID) data;
 } KOS_BUFFER;
 
@@ -508,6 +513,10 @@ KOS_OBJ_ID KOS_new_iterator_copy(KOS_CONTEXT ctx,
 KOS_API
 int KOS_iterator_next(KOS_CONTEXT ctx,
                       KOS_OBJ_ID  walk_id);
+
+KOS_API
+int KOS_lock_object(KOS_CONTEXT ctx,
+                    KOS_OBJ_ID  obj_id);
 
 #ifdef __cplusplus
 }

@@ -6,6 +6,7 @@
 #include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_string.h"
+#include "../inc/kos_utils.h"
 #include <stdio.h>
 
 #define TEST(test) do { if (!(test)) { printf("Failed: line %d: %s\n", __LINE__, #test); return 1; } } while (0)
@@ -85,7 +86,9 @@ int main(void)
         TEST(KOS_get_buffer_size(buf) == 128);
         TEST_NO_EXCEPTION();
 
-        data = KOS_buffer_data_volatile(buf);
+        data = KOS_buffer_data_volatile(ctx, buf);
+        TEST(data != 0);
+        TEST_NO_EXCEPTION();
 
         for (i = 0; i < 128; i++)
             data[0] = (uint8_t)i;
@@ -109,7 +112,7 @@ int main(void)
         TEST(KOS_get_buffer_size(buf) == 0);
         TEST_NO_EXCEPTION();
 
-        data = KOS_buffer_data_volatile(buf);
+        data = KOS_buffer_data_volatile(ctx, buf);
         TEST(data != 0);
         TEST_NO_EXCEPTION();
 
@@ -119,7 +122,7 @@ int main(void)
         TEST(KOS_get_buffer_size(buf) == 100);
         TEST_NO_EXCEPTION();
 
-        data = KOS_buffer_data_volatile(buf);
+        data = KOS_buffer_data_volatile(ctx, buf);
         TEST(data != 0);
         TEST_NO_EXCEPTION();
     }
@@ -176,8 +179,9 @@ int main(void)
         TEST(KOS_buffer_fill(ctx, buf, 0, -1, 0x55) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
 
-        data = KOS_buffer_data_volatile(buf);
+        data = KOS_buffer_data_volatile(ctx, buf);
         TEST(data);
+        TEST_NO_EXCEPTION();
 
         for (i = 0; i < 127; i++)
             TEST(data[i] == 0x55);
@@ -190,8 +194,9 @@ int main(void)
         TEST_NO_EXCEPTION();
         TEST(KOS_get_buffer_size(buf) == 512);
 
-        data = KOS_buffer_data_volatile(buf);
+        data = KOS_buffer_data_volatile(ctx, buf);
         TEST(data);
+        TEST_NO_EXCEPTION();
 
         for (i = 0; i < 90; i++)
             TEST(data[i] == 0x55);
@@ -199,8 +204,9 @@ int main(void)
         TEST(KOS_buffer_fill(ctx, buf, -500, 50, 0xAA) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
 
-        data = KOS_buffer_data_volatile(buf);
+        data = KOS_buffer_data_volatile(ctx, buf);
         TEST(data);
+        TEST_NO_EXCEPTION();
 
         for (i = 0; i < 12; i++)
             TEST(data[i] == 0x55);
@@ -241,7 +247,9 @@ int main(void)
         TEST_EXCEPTION();
         TEST(KOS_get_buffer_size(buf) == 3);
 
-        data = KOS_buffer_data_volatile(buf);
+        data = KOS_buffer_data_volatile(ctx, buf);
+        TEST(data);
+        TEST_NO_EXCEPTION();
         TEST(data[0] == 0x51);
         TEST(data[1] == 0x52);
         TEST(data[2] == 0x40);
@@ -269,7 +277,9 @@ int main(void)
 
         TEST(KOS_buffer_copy(ctx, buf1, 2, buf2, -4, 4) == KOS_SUCCESS);
 
-        data = KOS_buffer_data_volatile(buf1);
+        data = KOS_buffer_data_volatile(ctx, buf1);
+        TEST(data);
+        TEST_NO_EXCEPTION();
         for (i = 0; i < 2; i++)
             TEST(data[i] == 1);
         for (i = 2; i < 5; i++)
@@ -279,7 +289,9 @@ int main(void)
 
         TEST(KOS_buffer_copy(ctx, buf1, -2, buf2, -100, 100) == KOS_SUCCESS);
 
-        data = KOS_buffer_data_volatile(buf1);
+        data = KOS_buffer_data_volatile(ctx, buf1);
+        TEST(data);
+        TEST_NO_EXCEPTION();
         for (i = 0; i < 2; i++)
             TEST(data[i] == 1);
         for (i = 2; i < 5; i++)
@@ -289,7 +301,9 @@ int main(void)
         for (i = 8; i < 10; i++)
             TEST(data[i] == 2);
 
-        data = KOS_buffer_data_volatile(buf2);
+        data = KOS_buffer_data_volatile(ctx, buf2);
+        TEST(data);
+        TEST_NO_EXCEPTION();
         for (i = 0; i < 5; i++)
             TEST(data[i] == 2);
 
@@ -328,7 +342,9 @@ int main(void)
         TEST_NO_EXCEPTION();
         TEST(KOS_get_buffer_size(buf1) == 10);
 
-        data = KOS_buffer_data_volatile(buf1);
+        data = KOS_buffer_data_volatile(ctx, buf1);
+        TEST(data);
+        TEST_NO_EXCEPTION();
         for (i = 0; i < 10; i++)
             data[i] = (uint8_t)i;
 
@@ -342,7 +358,9 @@ int main(void)
         TEST_NO_EXCEPTION();
         TEST(KOS_get_buffer_size(buf2) == 4);
 
-        data = KOS_buffer_data_volatile(buf2);
+        data = KOS_buffer_data_volatile(ctx, buf2);
+        TEST(data);
+        TEST_NO_EXCEPTION();
 
         TEST(data[0] == 6);
         TEST(data[1] == 7);
@@ -358,6 +376,242 @@ int main(void)
         TEST( ! IS_BAD_PTR(buf1));
         TEST_NO_EXCEPTION();
         TEST(KOS_get_buffer_size(buf1) == 0);
+    }
+
+    /************************************************************************/
+    /* Read-only buffer of size 0 */
+    {
+        KOS_OBJ_ID buf = KOS_new_buffer(ctx, 0);
+        TEST( ! IS_BAD_PTR(buf));
+        TEST(GET_OBJ_TYPE(buf) == OBJ_BUFFER);
+        TEST_NO_EXCEPTION();
+        TEST(KOS_get_buffer_size(buf) == 0);
+
+        TEST(KOS_lock_object(ctx, buf) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+
+        TEST(KOS_buffer_reserve(ctx, buf, 0) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
+
+        TEST(KOS_buffer_reserve(ctx, buf, 1024) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
+        TEST(KOS_get_buffer_size(buf) == 0);
+
+        TEST(KOS_buffer_resize(ctx, buf, 0) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
+
+        TEST(KOS_buffer_resize(ctx, buf, 1024) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
+        TEST(KOS_get_buffer_size(buf) == 0);
+
+        TEST(KOS_buffer_make_room(ctx, buf, 0) == 0);
+        TEST_EXCEPTION();
+
+        TEST(KOS_buffer_make_room(ctx, buf, 16) == 0);
+        TEST_EXCEPTION();
+        TEST(KOS_get_buffer_size(buf) == 0);
+
+        TEST(KOS_buffer_data(ctx, buf) == 0);
+        TEST_EXCEPTION();
+
+        TEST(KOS_buffer_data_volatile(ctx, buf) == 0);
+        TEST_EXCEPTION();
+
+        TEST(KOS_buffer_fill(ctx, buf, 0, 1, 0) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
+    }
+
+    /************************************************************************/
+    /* Read-only buffer of size 16 */
+    {
+        KOS_OBJ_ID buf = KOS_new_buffer(ctx, 16);
+        TEST( ! IS_BAD_PTR(buf));
+        TEST(GET_OBJ_TYPE(buf) == OBJ_BUFFER);
+        TEST_NO_EXCEPTION();
+        TEST(KOS_get_buffer_size(buf) == 16);
+
+        {
+            int            i;
+            uint8_t *const data = KOS_buffer_data_volatile(ctx, buf);
+
+            TEST(data);
+            TEST_NO_EXCEPTION();
+            for (i = 0; i < 16; i++)
+                data[i] = (uint8_t)i;
+        }
+
+        TEST(KOS_lock_object(ctx, buf) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+
+        TEST(KOS_buffer_reserve(ctx, buf, 0) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
+        TEST(KOS_get_buffer_size(buf) == 16);
+
+        TEST(KOS_buffer_reserve(ctx, buf, 16) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
+
+        TEST(KOS_buffer_reserve(ctx, buf, 1024) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
+        TEST(KOS_get_buffer_size(buf) == 16);
+
+        TEST(KOS_buffer_resize(ctx, buf, 0) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
+        TEST(KOS_get_buffer_size(buf) == 16);
+
+        TEST(KOS_buffer_resize(ctx, buf, 16) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
+
+        TEST(KOS_buffer_resize(ctx, buf, 1024) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
+        TEST(KOS_get_buffer_size(buf) == 16);
+
+        TEST(KOS_buffer_make_room(ctx, buf, 0) == 0);
+        TEST_EXCEPTION();
+
+        TEST(KOS_buffer_make_room(ctx, buf, 16) == 0);
+        TEST_EXCEPTION();
+        TEST(KOS_get_buffer_size(buf) == 16);
+
+        TEST(KOS_buffer_data(ctx, buf) == 0);
+        TEST_EXCEPTION();
+
+        TEST(KOS_buffer_data_volatile(ctx, buf) == 0);
+        TEST_EXCEPTION();
+
+        TEST(KOS_buffer_fill(ctx, buf, 0, 16, 0) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
+
+        {
+            int                  i;
+            const uint8_t *const data = KOS_buffer_data_const(buf);
+            TEST(data);
+            for (i = 0; i < 16; i++)
+                TEST(data[i] == (uint8_t)i);
+        }
+    }
+
+    /************************************************************************/
+    /* Copy a read-only buffer */
+    {
+        KOS_OBJ_ID newbuf;
+        KOS_OBJ_ID buf = KOS_new_buffer(ctx, 16);
+        TEST( ! IS_BAD_PTR(buf));
+        TEST(GET_OBJ_TYPE(buf) == OBJ_BUFFER);
+        TEST_NO_EXCEPTION();
+        TEST(KOS_get_buffer_size(buf) == 16);
+
+        {
+            int            i;
+            uint8_t *const data = KOS_buffer_data_volatile(ctx, buf);
+            TEST(data);
+            TEST_NO_EXCEPTION();
+            for (i = 0; i < 16; i++)
+                data[i] = (uint8_t)(i + 50);
+        }
+
+        TEST(KOS_lock_object(ctx, buf) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+
+        newbuf = KOS_new_buffer(ctx, 8);
+        TEST( ! IS_BAD_PTR(newbuf));
+        TEST(GET_OBJ_TYPE(newbuf) == OBJ_BUFFER);
+        TEST_NO_EXCEPTION();
+        TEST(KOS_get_buffer_size(newbuf) == 8);
+
+        TEST(KOS_buffer_fill(ctx, newbuf, 0, 8, 1) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+
+        TEST(KOS_buffer_copy(ctx, newbuf, 1, buf, 2, 8) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+
+        {
+            const uint8_t *const data = KOS_buffer_data_const(newbuf);
+
+            TEST(data);
+            TEST(KOS_get_buffer_size(newbuf) == 8);
+            TEST(data[0] == 1);
+            TEST(data[1] == 52);
+            TEST(data[2] == 53);
+            TEST(data[3] == 54);
+            TEST(data[4] == 55);
+            TEST(data[5] == 56);
+            TEST(data[6] == 57);
+            TEST(data[7] == 1);
+        }
+
+        {
+            int                  i;
+            const uint8_t *const data = KOS_buffer_data_const(buf);
+
+            TEST(data);
+            TEST(KOS_get_buffer_size(buf) == 16);
+            for (i = 0; i < 16; i++)
+                TEST(data[i] == (uint8_t)(i + 50));
+        }
+    }
+
+    /************************************************************************/
+    /* Slice a read-only buffer */
+    {
+        KOS_OBJ_ID newbuf;
+        KOS_OBJ_ID buf = KOS_new_buffer(ctx, 16);
+        TEST( ! IS_BAD_PTR(buf));
+        TEST(GET_OBJ_TYPE(buf) == OBJ_BUFFER);
+        TEST_NO_EXCEPTION();
+        TEST(KOS_get_buffer_size(buf) == 16);
+
+        {
+            int            i;
+            uint8_t *const data = KOS_buffer_data_volatile(ctx, buf);
+            TEST(data);
+            TEST_NO_EXCEPTION();
+            for (i = 0; i < 16; i++)
+                data[i] = (uint8_t)(i + 50);
+        }
+
+        TEST(KOS_lock_object(ctx, buf) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+
+        newbuf = KOS_buffer_slice(ctx, buf, 1, 9);
+        TEST( ! IS_BAD_PTR(newbuf));
+        TEST(GET_OBJ_TYPE(newbuf) == OBJ_BUFFER);
+        TEST_NO_EXCEPTION();
+        TEST(KOS_get_buffer_size(newbuf) == 8);
+
+        {
+            int                  i;
+            const uint8_t *const data = KOS_buffer_data_const(newbuf);
+
+            TEST(data);
+            for (i = 0; i < 8; i++)
+                TEST(data[i] == (uint8_t)(i + 51));
+        }
+
+        {
+            uint8_t *data = KOS_buffer_data_volatile(ctx, newbuf);
+
+            TEST(data);
+            TEST_NO_EXCEPTION();
+
+            data[1] = 8;
+            data[3] = 9;
+
+            TEST(KOS_compare(buf, newbuf));
+            TEST_NO_EXCEPTION();
+
+            TEST(KOS_buffer_fill(ctx, newbuf, 0, 8, 5) == KOS_SUCCESS);
+            TEST_NO_EXCEPTION();
+        }
+
+        {
+            int                  i;
+            const uint8_t *const data = KOS_buffer_data_const(buf);
+
+            TEST(data);
+            TEST(KOS_get_buffer_size(buf) == 16);
+            for (i = 0; i < 16; i++)
+                TEST(data[i] == (uint8_t)(i + 50));
+        }
     }
 
     KOS_instance_destroy(&inst);

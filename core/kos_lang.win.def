@@ -48,6 +48,7 @@ EXPORTS
     KOS_iterator_next
     KOS_load_module
     KOS_load_module_from_memory
+    KOS_lock_object
     KOS_module_add_constructor
     KOS_module_add_function
     KOS_module_add_global

@@ -513,7 +513,7 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
 
             if (to_write > 0) {
 
-                uint8_t *data = KOS_buffer_data_volatile(arg.o);
+                const uint8_t *data = KOS_buffer_data_const(arg.o);
 
                 if (kos_is_heap_object(KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, arg.o)->data))) {
 

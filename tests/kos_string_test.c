@@ -1901,10 +1901,14 @@ int main(void)
     /************************************************************************/
     {
         KOS_OBJ_ID str = KOS_new_buffer(ctx, 1);
+        uint8_t   *data;
 
         TEST( ! IS_BAD_PTR(str));
 
-        KOS_buffer_data_volatile(str)[0] = 0x80U;
+        data = KOS_buffer_data_volatile(ctx, str);
+        TEST(data);
+        TEST_NO_EXCEPTION();
+        data[0] = 0x80U;
 
         str = KOS_new_string_from_buffer(ctx, str, 0, 1);
 
@@ -1927,11 +1931,15 @@ int main(void)
     /************************************************************************/
     {
         KOS_OBJ_ID str = KOS_new_buffer(ctx, 2);
+        uint8_t   *data;
 
         TEST( ! IS_BAD_PTR(str));
 
-        KOS_buffer_data_volatile(str)[0] = 0xC4U;
-        KOS_buffer_data_volatile(str)[1] = 0x80U;
+        data = KOS_buffer_data_volatile(ctx, str);
+        TEST(data);
+        TEST_NO_EXCEPTION();
+        data[0] = 0xC4U;
+        data[1] = 0x80U;
 
         str = KOS_new_string_from_buffer(ctx, str, 0, 2);
 
@@ -1944,13 +1952,17 @@ int main(void)
     /************************************************************************/
     {
         KOS_OBJ_ID str = KOS_new_buffer(ctx, 4);
+        uint8_t   *data;
 
         TEST( ! IS_BAD_PTR(str));
 
-        KOS_buffer_data_volatile(str)[0] = 0xF0U;
-        KOS_buffer_data_volatile(str)[1] = 0x90U;
-        KOS_buffer_data_volatile(str)[2] = 0x80U;
-        KOS_buffer_data_volatile(str)[3] = 0x80U;
+        data = KOS_buffer_data_volatile(ctx, str);
+        TEST(data);
+        TEST_NO_EXCEPTION();
+        data[0] = 0xF0U;
+        data[1] = 0x90U;
+        data[2] = 0x80U;
+        data[3] = 0x80U;
 
         str = KOS_new_string_from_buffer(ctx, str, 0, 4);
 

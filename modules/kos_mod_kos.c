@@ -113,7 +113,7 @@ static KOS_OBJ_ID raw_lexer(KOS_CONTEXT ctx,
 
         KOS_object_set_private_ptr(lexer.o, kos_lexer);
 
-        memcpy(&kos_lexer->buf[0], KOS_buffer_data_volatile(init.o), buf_size);
+        memcpy(&kos_lexer->buf[0], KOS_buffer_data_const(init.o), buf_size);
 
         kos_lexer_init(&kos_lexer->lexer, 0, &kos_lexer->buf[0], &kos_lexer->buf[buf_size]);
 

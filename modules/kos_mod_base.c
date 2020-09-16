@@ -1044,7 +1044,7 @@ static KOS_OBJ_ID array_constructor(KOS_CONTEXT ctx,
 
                     for (i = 0; i < buf_size; i++) {
 
-                        const uint8_t value = KOS_buffer_data_volatile(arg.o)[i];
+                        const uint8_t value = KOS_buffer_data_const(arg.o)[i];
 
                         TRY(KOS_array_write(ctx, ret.o,
                                             cur_size + i, TO_SMALL_INT((int)value)));
@@ -1252,9 +1252,15 @@ static KOS_OBJ_ID buffer_constructor(KOS_CONTEXT ctx,
             }
 
             if (size) {
+                uint8_t *buf;
+
                 TRY(KOS_buffer_resize(ctx, buffer.o, (uint32_t)size));
 
-                memset(KOS_buffer_data_volatile(buffer.o), (int)value, (size_t)size);
+                buf = KOS_buffer_data_volatile(ctx, buffer.o);
+                if ( ! buf)
+                    RAISE_ERROR(KOS_ERROR_EXCEPTION);
+
+                memset(buf, (int)value, (size_t)size);
             }
 
             continue;
@@ -1272,7 +1278,10 @@ static KOS_OBJ_ID buffer_constructor(KOS_CONTEXT ctx,
 
                 TRY(KOS_buffer_resize(ctx, buffer.o, cur_size + size));
 
-                data = KOS_buffer_data_volatile(buffer.o) + cur_size;
+                data = KOS_buffer_data_volatile(ctx, buffer.o);
+                if ( ! data)
+                    RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                data += cur_size;
 
                 for (i = 0; i < size; i++) {
                     int64_t value;
@@ -1292,24 +1301,34 @@ static KOS_OBJ_ID buffer_constructor(KOS_CONTEXT ctx,
 
             case OBJ_STRING: {
                 const uint32_t size = KOS_string_to_utf8(arg.o, 0, 0);
+                uint8_t       *data;
 
                 if (size == ~0U)
                     RAISE_EXCEPTION_STR(str_err_invalid_string);
 
                 TRY(KOS_buffer_resize(ctx, buffer.o, cur_size + size));
 
-                KOS_string_to_utf8(arg.o, KOS_buffer_data_volatile(buffer.o) + cur_size, size);
+                data = KOS_buffer_data_volatile(ctx, buffer.o);
+                if ( ! data)
+                    RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                data += cur_size;
+
+                KOS_string_to_utf8(arg.o, data, size);
                 break;
             }
 
             case OBJ_BUFFER: {
                 const uint32_t size = KOS_get_buffer_size(arg.o);
+                uint8_t       *data;
 
                 TRY(KOS_buffer_resize(ctx, buffer.o, cur_size + size));
 
-                memcpy(KOS_buffer_data_volatile(buffer.o) + cur_size,
-                       KOS_buffer_data_volatile(arg.o),
-                       size);
+                data = KOS_buffer_data_volatile(ctx, buffer.o);
+                if ( ! data)
+                    RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                data += cur_size;
+
+                memcpy(data, KOS_buffer_data_const(arg.o), size);
                 break;
             }
 
@@ -1352,7 +1371,10 @@ static KOS_OBJ_ID buffer_constructor(KOS_CONTEXT ctx,
                             TRY(KOS_buffer_resize(ctx, buffer.o, capacity));
                         }
 
-                        data = KOS_buffer_data_volatile(buffer.o) + size;
+                        data = KOS_buffer_data_volatile(ctx, buffer.o);
+                        if ( ! data)
+                            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                        data += size;
 
                         *data = (uint8_t)(uint64_t)value;
                         ++size;
@@ -2379,10 +2401,15 @@ static KOS_OBJ_ID resize(KOS_CONTEXT ctx,
 
         TRY(KOS_buffer_resize(ctx, array.o, (uint32_t)size));
 
-        if (size > old_size)
-            memset(KOS_buffer_data_volatile(array.o) + old_size,
-                   (int)int_value,
-                   (uint32_t)(size - old_size));
+        if (size > old_size) {
+            uint8_t *data = KOS_buffer_data_volatile(ctx, array.o);
+
+            if ( ! data)
+                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+            data += old_size;
+
+            memset(data, (int)int_value, (uint32_t)(size - old_size));
+        }
     }
     else {
         uint32_t old_size;
@@ -2962,10 +2989,10 @@ static int pack_format(KOS_CONTEXT               ctx,
             }
 
             for ( ; count; count--) {
-                KOS_OBJ_ID value_obj = KOS_array_read(ctx, fmt->data.o, fmt->idx++);
-                uint8_t   *src       = 0;
-                uint32_t   src_size;
-                uint32_t   copy_size;
+                KOS_OBJ_ID     value_obj = KOS_array_read(ctx, fmt->data.o, fmt->idx++);
+                const uint8_t *src       = 0;
+                uint32_t       src_size;
+                uint32_t       copy_size;
 
                 TRY_OBJID(value_obj);
 
@@ -2978,12 +3005,12 @@ static int pack_format(KOS_CONTEXT               ctx,
 
                 src_size = KOS_get_buffer_size(value_obj);
                 if (src_size)
-                    src = KOS_buffer_data_volatile(value_obj);
+                    src = KOS_buffer_data_const(value_obj);
 
                 copy_size = size > src_size ? src_size : size;
 
                 if (copy_size) {
-                    uint8_t *const src_end = src + copy_size;
+                    const uint8_t *const src_end = src + copy_size;
 
                     if (src_end > dst && src < dst)
                         copy_size = (uint32_t)(dst - src);
@@ -3100,7 +3127,7 @@ static int unpack_format(KOS_CONTEXT               ctx,
         goto cleanup;
 
     assert(data_size || ! size);
-    assert( ! size || KOS_buffer_data_volatile(buffer.o));
+    assert( ! size || KOS_buffer_data_const(buffer.o));
 
     offs = fmt->idx;
 
@@ -3129,7 +3156,7 @@ static int unpack_format(KOS_CONTEXT               ctx,
 
                 for (i = 0; i < size; i++) {
                     const unsigned rel_offs = big_end ? i : (size - 1 - i);
-                    value = (value << 8) | KOS_buffer_data_volatile(buffer.o)[offs + rel_offs];
+                    value = (value << 8) | KOS_buffer_data_const(buffer.o)[offs + rel_offs];
                 }
 
                 if (value_fmt == 'i' && size < 8) {
@@ -3175,10 +3202,14 @@ static int unpack_format(KOS_CONTEXT               ctx,
 
                 TRY_OBJID(obj);
 
-                if (size)
-                    memcpy(KOS_buffer_data_volatile(obj),
-                           &KOS_buffer_data_volatile(buffer.o)[offs],
-                           size);
+                if (size) {
+                    uint8_t *data = KOS_buffer_data_volatile(ctx, obj);
+
+                    if ( ! data)
+                        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+
+                    memcpy(data, &KOS_buffer_data_const(buffer.o)[offs], size);
+                }
 
                 TRY(KOS_array_push(ctx, fmt->data.o, obj, 0));
 
