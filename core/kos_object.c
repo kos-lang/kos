@@ -733,10 +733,8 @@ int KOS_set_property(KOS_CONTEXT ctx,
         }
     }
 
-    KOS_destroy_top_locals(ctx, &value, &obj);
-
 #ifdef CONFIG_PERF
-    if (value == TOMBSTONE) {
+    if (value.o == TOMBSTONE) {
         if (error)
             KOS_PERF_CNT(object_delete_fail);
         else
@@ -749,6 +747,8 @@ int KOS_set_property(KOS_CONTEXT ctx,
             KOS_PERF_CNT(object_set_success);
     }
 #endif
+
+    KOS_destroy_top_locals(ctx, &value, &obj);
 
     return error;
 }
