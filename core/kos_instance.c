@@ -341,6 +341,9 @@ int KOS_instance_init(KOS_INSTANCE *inst,
     assert(KOS_get_string_length(KOS_STR_EMPTY) == 0);
     assert(!kos_is_heap_object(KOS_STR_OUT_OF_MEMORY));
     assert(KOS_get_string_length(KOS_STR_OUT_OF_MEMORY) == 13);
+    assert(!kos_is_heap_object(KOS_CONST_ID(kos_empty_array)));
+    assert(GET_OBJ_TYPE(KOS_CONST_ID(kos_empty_array)) == OBJ_ARRAY);
+    assert(KOS_get_array_size(KOS_CONST_ID(kos_empty_array)) == 0);
 
 #ifdef CONFIG_FUZZ
     KOS_atomic_write_relaxed_u32(kos_fuzz_instructions, 0U);

@@ -18,6 +18,9 @@
 #include "kos_try.h"
 #include <assert.h>
 
+KOS_DECLARE_ALIGNED(32, const struct KOS_CONST_ARRAY_S kos_empty_array) =
+    { { { 0, 0 } }, { OBJ_ARRAY, 0, KOS_READ_ONLY, KOS_BADPTR } };
+
 KOS_DECLARE_STATIC_CONST_STRING(str_err_empty,         "array is empty");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_index, "array index is out of range");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_array,     "object is not an array");

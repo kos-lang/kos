@@ -855,15 +855,10 @@ static int vector_append_object(KOS_CONTEXT        ctx,
 
         if (GET_OBJ_TYPE(value.o) == OBJ_DYNAMIC_PROP) {
 
-            KOS_OBJ_ID actual;
-
-            KOS_OBJ_ID args = KOS_new_array(ctx, 0);
-            TRY_OBJID(args);
-
-            actual = KOS_call_function(ctx,
-                                       OBJPTR(DYNAMIC_PROP, value.o)->getter,
-                                       OBJPTR(ITERATOR, walk.o)->obj,
-                                       args);
+            KOS_OBJ_ID actual = KOS_call_function(ctx,
+                                                  OBJPTR(DYNAMIC_PROP, value.o)->getter,
+                                                  OBJPTR(ITERATOR, walk.o)->obj,
+                                                  KOS_CONST_ID(kos_empty_array));
             if (IS_BAD_PTR(actual)) {
                 assert(KOS_is_exception_pending(ctx));
                 KOS_clear_exception(ctx);
@@ -1178,9 +1173,8 @@ int KOS_array_push_expand(KOS_CONTEXT ctx,
     uint32_t  cur_size;
     KOS_LOCAL array;
     KOS_LOCAL value;
-    KOS_LOCAL gen_args;
 
-    KOS_init_locals(ctx, 3, &array, &value, &gen_args);
+    KOS_init_locals(ctx, 2, &array, &value);
 
     array.o = array_obj;
     value.o = value_obj;
@@ -1237,11 +1231,8 @@ int KOS_array_push_expand(KOS_CONTEXT ctx,
                 RAISE_EXCEPTION(str_err_cannot_expand);
 
             if (state != KOS_GEN_DONE) {
-                gen_args.o = KOS_new_array(ctx, 0);
-                TRY_OBJID(gen_args.o);
-
                 for (;;) {
-                    KOS_OBJ_ID ret = KOS_call_generator(ctx, value.o, KOS_VOID, gen_args.o);
+                    KOS_OBJ_ID ret = KOS_call_generator(ctx, value.o, KOS_VOID, KOS_CONST_ID(kos_empty_array));
                     if (IS_BAD_PTR(ret)) { /* end of iterator */
                         if (KOS_is_exception_pending(ctx))
                             error = KOS_ERROR_EXCEPTION;
@@ -1258,7 +1249,7 @@ int KOS_array_push_expand(KOS_CONTEXT ctx,
     }
 
 cleanup:
-    KOS_destroy_top_locals(ctx, &array, &gen_args);
+    KOS_destroy_top_locals(ctx, &array, &value);
 
     return error;
 }
@@ -1624,10 +1615,9 @@ int KOS_iterator_next(KOS_CONTEXT ctx,
 
             if (KOS_is_generator(obj_id, &state)) {
 
-                KOS_OBJ_ID gen_args;
-                KOS_LOCAL  obj;
-                KOS_LOCAL  iter;
-                uint32_t   idx;
+                KOS_LOCAL obj;
+                KOS_LOCAL iter;
+                uint32_t  idx;
 
                 if (state == KOS_GEN_DONE)
                     break;
@@ -1635,13 +1625,7 @@ int KOS_iterator_next(KOS_CONTEXT ctx,
                 KOS_init_local_with(ctx, &iter, iter_id);
                 KOS_init_local_with(ctx, &obj,  obj_id);
 
-                gen_args = KOS_new_array(ctx, 0);
-                if (IS_BAD_PTR(gen_args)) {
-                    KOS_destroy_top_locals(ctx, &obj, &iter);
-                    return KOS_ERROR_EXCEPTION;
-                }
-
-                obj_id = KOS_call_generator(ctx, obj.o, KOS_VOID, gen_args);
+                obj_id = KOS_call_generator(ctx, obj.o, KOS_VOID, KOS_CONST_ID(kos_empty_array));
 
                 iter_id = KOS_destroy_top_locals(ctx, &obj, &iter);
 

@@ -1706,25 +1706,11 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
                     TRY_OBJID(out);
 
                     if (GET_OBJ_TYPE(out) == OBJ_DYNAMIC_PROP) {
-                        KOS_OBJ_ID args;
-                        KOS_LOCAL  saved_out;
-                        KOS_LOCAL  saved_src;
-
                         store_instr_offs(stack_frame,
                                          (uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode));
                         out = OBJPTR(DYNAMIC_PROP, out)->getter;
 
-                        KOS_init_local_with(ctx, &saved_out, out);
-                        KOS_init_local_with(ctx, &saved_src, src);
-
-                        args = KOS_new_array(ctx, 0);
-
-                        src = KOS_destroy_top_local(ctx, &saved_src);
-                        out = KOS_destroy_top_local(ctx, &saved_out);
-
-                        TRY_OBJID(args);
-
-                        out = KOS_call_function(ctx, out, src, args);
+                        out = KOS_call_function(ctx, out, src, KOS_CONST_ID(kos_empty_array));
 
                         assert(ctx->regs_idx == regs_idx);
                     }
@@ -1871,25 +1857,11 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
                 TRY_OBJID(out);
 
                 if (GET_OBJ_TYPE(out) == OBJ_DYNAMIC_PROP) {
-                    KOS_OBJ_ID args;
-                    KOS_LOCAL  saved_out;
-                    KOS_LOCAL  saved_obj;
-
                     store_instr_offs(stack_frame,
                                      (uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode));
                     out = OBJPTR(DYNAMIC_PROP, out)->getter;
 
-                    KOS_init_local_with(ctx, &saved_out, out);
-                    KOS_init_local_with(ctx, &saved_obj, obj);
-
-                    args = KOS_new_array(ctx, 0);
-
-                    obj = KOS_destroy_top_local(ctx, &saved_obj);
-                    out = KOS_destroy_top_local(ctx, &saved_out);
-
-                    TRY_OBJID(args);
-
-                    out = KOS_call_function(ctx, out, obj, args);
+                    out = KOS_call_function(ctx, out, obj, KOS_CONST_ID(kos_empty_array));
                     TRY_OBJID(out);
 
                     assert(ctx->regs_idx == regs_idx);
@@ -3011,16 +2983,9 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
                     if ((state == KOS_GEN_READY || state == KOS_GEN_ACTIVE) && ! OBJPTR(FUNCTION, func.o)->handler) {
 
                         KOS_OBJ_ID this_obj = KOS_VOID;
-                        KOS_OBJ_ID args;
-
-                        args = KOS_new_array(ctx, 0);
-                        if (IS_BAD_PTR(args)) {
-                            KOS_destroy_top_locals(ctx, &func, &iter);
-                            goto cleanup;
-                        }
 
                         error = prepare_call(ctx, instr, func.o, &this_obj,
-                                             args, 0, 0, (uint8_t)rdest);
+                                             KOS_CONST_ID(kos_empty_array), 0, 0, (uint8_t)rdest);
                         if (error) {
                             KOS_destroy_top_locals(ctx, &func, &iter);
                             goto cleanup;
