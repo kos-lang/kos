@@ -167,6 +167,8 @@ Table of Contents
     * [infinity](#infinity)
     * [is\_infinity()](#is_infinity)
     * [is\_nan()](#is_nan)
+    * [max()](#max)
+    * [min()](#min)
     * [nan](#nan)
     * [pi](#pi)
     * [pow()](#pow)
@@ -3547,6 +3549,36 @@ Examples:
     false
     > math.is_nan([])
     false
+
+max()
+-----
+
+    max(value, [value...])
+
+Returns the largest argument.
+
+Uses the `>` (greater than) operator to find the largest argument and
+returns it.
+
+Example:
+
+    > math.max(2, 4, 6, -3, 5)
+    6
+
+min()
+-----
+
+    min(value, [value...])
+
+Returns the smallest argument.
+
+Uses the `<` (less than) operator to find the smallest argument and
+returns it.
+
+Example:
+
+    > math.min(2, 4, -3, 5)
+    -3
 
 nan
 ---

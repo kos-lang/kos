@@ -195,3 +195,24 @@ do {
 
     assert math.pow(1.7976931348623157e308, 2) == math.infinity
 }
+
+# math.min
+do {
+    expect_fail(()=>math.min())
+
+    assert math.min(1) == 1
+    assert math.min(1, -1) == -1
+    assert math.min(1, 2, -2, 3) == -2
+    assert math.min("bcd", "efg", "az", "hij") == "az"
+}
+
+# math.max
+do {
+    expect_fail(()=>math.max())
+
+    assert math.max(1) == 1
+    assert math.max(1, -1) == 1
+    assert math.max(1, 2, -2, 3) == 3
+    assert math.max("bcd", "efg", "az", "hij") == "hij"
+    assert math.max("hij", "bcd", "efg", "az") == "hij"
+}
