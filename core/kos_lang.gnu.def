@@ -12,6 +12,7 @@
     KOS_array_write;
     KOS_buffer_copy;
     KOS_buffer_data;
+    KOS_buffer_data_volatile;
     KOS_buffer_fill;
     KOS_buffer_make_room;
     KOS_buffer_reserve;

@@ -11,6 +11,7 @@ _KOS_array_slice
 _KOS_array_write
 _KOS_buffer_copy
 _KOS_buffer_data
+_KOS_buffer_data_volatile
 _KOS_buffer_fill
 _KOS_buffer_make_room
 _KOS_buffer_reserve
