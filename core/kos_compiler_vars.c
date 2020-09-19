@@ -450,8 +450,6 @@ static int import_global(const char *global_name,
     KOS_AST_NODE *const g_node = (KOS_AST_NODE *)
         kos_mempool_alloc(&info->program->allocator, sizeof(KOS_AST_NODE) + global_length);
 
-    assert(global_length <= 0xFFFFU);
-
     if (g_node) {
 
         KOS_TOKEN *token = &g_node->token;
