@@ -32,7 +32,7 @@
 #define KOS_STACK_OBJ_SIZE      4096U
 
 #define KOS_MAX_AST_DEPTH       100
-#define KOS_BUF_ALLOC_SIZE      4096U
+#define KOS_BUF_ALLOC_SIZE      0x10000U
 #define KOS_VEC_MAX_INC_SIZE    262144U
 #ifdef CONFIG_FUZZ
 #   define KOS_MAX_CODE_SIZE    0x10000U

@@ -14,8 +14,9 @@
 #include <stdio.h>
 #include <string.h>
 
-static const char str_err_div_by_zero[]         = "division by zero";
-static const char str_err_number_out_of_range[] = "number out of range";
+static const char str_err_div_by_zero[]             = "division by zero";
+static const char str_err_number_out_of_range[]     = "number out of range";
+static const char str_err_sum_of_strings_too_long[] = "sum of two strings exceeds 65535 characters";
 
 enum KOS_TERMINATOR_E {
     TERM_NONE   = 0,
@@ -33,7 +34,7 @@ static void collapse(KOS_AST_NODE    *node,
                      KOS_TOKEN_TYPE   token_type,
                      KOS_KEYWORD_TYPE keyword,
                      const char      *begin,
-                     unsigned         length)
+                     uint16_t         length)
 {
     node->children      = 0;
     node->type          = node_type;
@@ -52,7 +53,7 @@ static int collapse_numeric(KOS_COMP_UNIT     *program,
                             const KOS_NUMERIC *value)
 {
     int            error;
-    const unsigned length = sizeof(KOS_NUMERIC);
+    const uint16_t length = sizeof(KOS_NUMERIC);
     KOS_NUMERIC   *store  = (KOS_NUMERIC *)kos_mempool_alloc(&program->allocator, length);
 
     if (store) {
@@ -1304,6 +1305,12 @@ static int add_strings(KOS_COMP_UNIT      *program,
 
     new_length = a_length + b_length + (is_raw ? 3U : 2U);
 
+    if (new_length >= 0xFFFFU) {
+        program->error_str   = str_err_sum_of_strings_too_long;
+        program->error_token = &node->token;
+        return KOS_ERROR_COMPILE_FAILED;
+    }
+
     str = (char *)kos_mempool_alloc(&program->allocator, new_length);
 
     if ( ! str)
@@ -1322,7 +1329,7 @@ static int add_strings(KOS_COMP_UNIT      *program,
 
     node->token.type   = TT_STRING;
     node->token.begin  = str;
-    node->token.length = new_length;
+    node->token.length = (uint16_t)new_length;
 
     ++program->num_optimizations;
 
@@ -1660,7 +1667,7 @@ static int stringify(KOS_COMP_UNIT       *program,
                 return 0; /* Malloc errors are handled later */
 
             if (numeric.type == KOS_INTEGER_VALUE) {
-                len = (unsigned)snprintf(store, max_size, "\"%" PRId64 "\"", numeric.u.i);
+                len = snprintf(store, max_size, "\"%" PRId64 "\"", numeric.u.i);
                 if (len >= max_size)
                     len = max_size - 1;
             }
@@ -1680,8 +1687,10 @@ static int stringify(KOS_COMP_UNIT       *program,
                 len = size + 2;
             }
 
+            assert(len <= 0xFFFFU);
+
             tmp_node->token.begin  = store;
-            tmp_node->token.length = len;
+            tmp_node->token.length = (uint16_t)len;
             *node_ptr              = tmp_node;
             return 1;
         }
@@ -1771,7 +1780,7 @@ static int line(KOS_COMP_UNIT *program,
     assert( ! node->children);
 
     numeric.type = KOS_INTEGER_VALUE;
-    numeric.u.i  = node->token.pos.line;
+    numeric.u.i  = node->token.line;
 
     return collapse_numeric(program, node, &numeric);
 }

@@ -440,7 +440,7 @@ typedef struct KOS_IMPORT_INFO_V_S {
 } KOS_IMPORT_INFO_V;
 
 static int import_global(const char *global_name,
-                         unsigned    global_length,
+                         uint16_t    global_length,
                          int         module_idx,
                          int         global_idx,
                          void       *cookie)
@@ -450,6 +450,8 @@ static int import_global(const char *global_name,
     KOS_AST_NODE *const g_node = (KOS_AST_NODE *)
         kos_mempool_alloc(&info->program->allocator, sizeof(KOS_AST_NODE) + global_length);
 
+    assert(global_length <= 0xFFFFU);
+
     if (g_node) {
 
         KOS_TOKEN *token = &g_node->token;
@@ -457,10 +459,12 @@ static int import_global(const char *global_name,
 
         memset(g_node, 0, sizeof(*g_node));
 
-        token->begin  = (char *)g_node + sizeof(KOS_AST_NODE);
-        token->length = global_length;
-        token->pos    = info->node->token.pos;
-        token->type   = TT_IDENTIFIER;
+        token->begin   = (char *)g_node + sizeof(KOS_AST_NODE);
+        token->length  = global_length;
+        token->file_id = info->node->token.file_id;
+        token->column  = info->node->token.column;
+        token->line    = info->node->token.line;
+        token->type    = TT_IDENTIFIER;
 
         memcpy((void *)token->begin, global_name, global_length);
 
@@ -1177,7 +1181,7 @@ int kos_compiler_process_vars(KOS_COMP_UNIT *program,
 
 static int predefine_global(KOS_COMP_UNIT      *program,
                             const char         *name,
-                            size_t              name_len,
+                            uint16_t            name_len,
                             int                 idx,
                             int                 is_const,
                             enum KOS_VAR_TYPE_E type)
@@ -1191,16 +1195,16 @@ static int predefine_global(KOS_COMP_UNIT      *program,
         memset(&global->node, 0, sizeof(global->node));
         memcpy(global->name_buf, name, name_len + 1);
 
-        global->next                   = program->pre_globals;
-        global->type                   = type;
-        global->idx                    = idx;
-        global->is_const               = is_const;
-        global->node.type              = NT_IDENTIFIER;
-        global->node.token.begin       = global->name_buf;
-        global->node.token.length      = (unsigned)name_len;
-        global->node.token.pos.file_id = (unsigned)program->file_id;
-        global->node.token.type        = TT_IDENTIFIER;
-        program->pre_globals           = global;
+        global->next               = program->pre_globals;
+        global->type               = type;
+        global->idx                = idx;
+        global->is_const           = is_const;
+        global->node.type          = NT_IDENTIFIER;
+        global->node.token.begin   = global->name_buf;
+        global->node.token.length  = name_len;
+        global->node.token.file_id = program->file_id;
+        global->node.token.type    = TT_IDENTIFIER;
+        program->pre_globals       = global;
     }
     else
         error = KOS_ERROR_OUT_OF_MEMORY;
@@ -1210,7 +1214,7 @@ static int predefine_global(KOS_COMP_UNIT      *program,
 
 int kos_compiler_predefine_global(KOS_COMP_UNIT *program,
                                   const char    *name,
-                                  size_t         name_len,
+                                  uint16_t       name_len,
                                   int            idx,
                                   int            is_const)
 {
@@ -1219,7 +1223,7 @@ int kos_compiler_predefine_global(KOS_COMP_UNIT *program,
 
 int kos_compiler_predefine_module(KOS_COMP_UNIT *program,
                                   const char    *name,
-                                  size_t         name_len,
+                                  uint16_t       name_len,
                                   int            idx)
 {
     return predefine_global(program, name, name_len, idx, 1, VAR_MODULE);

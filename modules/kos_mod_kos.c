@@ -277,14 +277,14 @@ static KOS_OBJ_ID raw_lexer(KOS_CONTEXT ctx,
         TRY(KOS_set_property(ctx,
                              token.o,
                              key,
-                             TO_SMALL_INT((int)cur_token->pos.line)));
+                             TO_SMALL_INT((int)cur_token->line)));
 
         key = KOS_array_read(ctx, ids.o, CONST_STR_COLUMN);
         TRY_OBJID(key);
         TRY(KOS_set_property(ctx,
                              token.o,
                              key,
-                             TO_SMALL_INT((int)cur_token->pos.column)));
+                             TO_SMALL_INT((int)cur_token->column)));
 
         key = KOS_array_read(ctx, ids.o, CONST_STR_TYPE);
         TRY_OBJID(key);

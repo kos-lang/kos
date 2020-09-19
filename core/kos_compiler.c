@@ -426,11 +426,11 @@ static int compare_strings(const char *a, unsigned len_a, KOS_UTF8_ESCAPE escape
 
 static void get_token_str(const KOS_TOKEN *token,
                           const char     **out_begin,
-                          unsigned        *out_length,
+                          uint16_t        *out_length,
                           KOS_UTF8_ESCAPE *out_escape)
 {
     const char *begin  = token->begin;
-    unsigned    length = token->length;
+    uint16_t    length = token->length;
 
     *out_escape = KOS_UTF8_WITH_ESCAPE;
 
@@ -484,7 +484,7 @@ static int strings_compare_item(void               *what,
     const KOS_TOKEN       *token = (const KOS_TOKEN       *)what;
     const KOS_COMP_STRING *str   = (const KOS_COMP_STRING *)node;
     const char            *begin;
-    unsigned               length;
+    uint16_t               length;
     KOS_UTF8_ESCAPE        escape;
 
     if (str->header.type != KOS_COMP_CONST_STRING)
@@ -573,7 +573,7 @@ static int gen_str_esc(KOS_COMP_UNIT   *program,
         if (str) {
 
             const char     *begin;
-            unsigned        length;
+            uint16_t        length;
             KOS_UTF8_ESCAPE tok_escape;
 
             get_token_str(token, &begin, &length, &tok_escape);
@@ -605,10 +605,10 @@ static int gen_str(KOS_COMP_UNIT   *program,
     return gen_str_esc(program, token, KOS_UTF8_WITH_ESCAPE, str_idx);
 }
 
-static unsigned calc_assert_str_len(const char *begin,
+static uint16_t calc_assert_str_len(const char *begin,
                                     const char *end)
 {
-    unsigned length         = 0;
+    uint16_t length         = 0;
     int      last_printable = 0;
 
     for ( ; begin < end; ++begin) {
@@ -656,7 +656,7 @@ static int gen_assert_str(KOS_COMP_UNIT      *program,
     const char    *begin;
     const char    *end;
     char          *buf;
-    unsigned       length;
+    uint16_t       length;
     const unsigned max_length = 64;
 
     static const char assertion_failed[] = "Assertion failed: ";
@@ -714,7 +714,7 @@ static int add_addr2line(KOS_COMP_UNIT   *program,
     struct KOS_COMP_ADDR_TO_LINE_S new_loc;
 
     new_loc.offs = (uint32_t)program->cur_offs;
-    new_loc.line = (uint32_t)token->pos.line;
+    new_loc.line = token->line;
 
     if (addr2line->size && ! force) {
 
@@ -970,7 +970,7 @@ typedef struct KOS_IMPORT_INFO_S {
 } KOS_IMPORT_INFO;
 
 static int import_global(const char *global_name,
-                         unsigned    global_length,
+                         uint16_t    global_length,
                          int         module_idx,
                          int         global_idx,
                          void       *cookie)
@@ -983,10 +983,12 @@ static int import_global(const char *global_name,
 
     memset(&token, 0, sizeof(token));
 
-    token.begin  = global_name;
-    token.length = global_length;
-    token.pos    = info->pos;
-    token.type   = TT_IDENTIFIER;
+    token.begin   = global_name;
+    token.length  = global_length;
+    token.file_id = info->pos.file_id;
+    token.column  = info->pos.column;
+    token.line    = info->pos.line;
+    token.type    = TT_IDENTIFIER;
 
     var = kos_find_var(info->program->scope_stack->vars, &token);
 
@@ -1029,7 +1031,7 @@ static int import(KOS_COMP_UNIT      *program,
 
         if (node->token.op == OT_MUL) {
 
-            info.pos = node->token.pos;
+            info.pos = get_token_pos(&node->token);
 
             error = kos_comp_walk_globals(program->ctx,
                                           module_idx,
@@ -1055,7 +1057,7 @@ static int import(KOS_COMP_UNIT      *program,
                     RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
                 }
 
-                info.pos = node->token.pos;
+                info.pos = get_token_pos(&node->token);
 
                 TRY(import_global(node->token.begin,
                                   node->token.length,
@@ -1140,7 +1142,7 @@ static int append_frame(KOS_COMP_UNIT     *program,
 
         ptr->offs      = (uint32_t)fun_new_offs;
         if (program->cur_frame->fun_token)
-            ptr->line  = program->cur_frame->fun_token->pos.line;
+            ptr->line  = program->cur_frame->fun_token->line;
         else
             ptr->line  = 1;
         ptr->str_idx   = func_constant->name_str_idx;
@@ -2558,7 +2560,7 @@ static int refinement_module(KOS_COMP_UNIT      *program,
 
         int             global_idx;
         const char     *begin;
-        unsigned        length;
+        uint16_t        length;
         KOS_UTF8_ESCAPE escape;
 
         /* TODO this does not work for escaped strings, kos_comp_get_global_idx assumes NO_ESCAPE */
@@ -5421,7 +5423,7 @@ static int visit_node(KOS_COMP_UNIT      *program,
 }
 
 void kos_compiler_init(KOS_COMP_UNIT *program,
-                       int            file_id)
+                       uint16_t       file_id)
 {
     memset(program, 0, sizeof(*program));
 

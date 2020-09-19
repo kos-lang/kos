@@ -813,7 +813,7 @@ cleanup:
 int kos_comp_get_global_idx(void       *vframe,
                             int         module_idx,
                             const char *name,
-                            unsigned    length,
+                            uint16_t    length,
                             int        *global_idx)
 {
     int           error = KOS_SUCCESS;
@@ -1153,7 +1153,7 @@ static int compile_module(KOS_CONTEXT ctx,
         error == KOS_ERROR_PARSE_FAILED) {
 
         const KOS_FILE_POS pos = (error == KOS_ERROR_SCANNING_FAILED)
-                                 ? parser.lexer.pos : parser.token.pos;
+                                 ? parser.lexer.pos : get_token_pos(&parser.token);
         KOS_OBJ_ID error_obj = format_error(ctx,
                                             module.o,
                                             data,
@@ -1193,7 +1193,7 @@ static int compile_module(KOS_CONTEXT ctx,
                                             data,
                                             data_size,
                                             program.error_str,
-                                            program.error_token->pos);
+                                            get_token_pos(program.error_token));
         assert( ! IS_BAD_PTR(error_obj) || KOS_is_exception_pending(ctx));
         if ( ! IS_BAD_PTR(error_obj))
             KOS_raise_exception(ctx, error_obj);
@@ -1489,6 +1489,11 @@ static KOS_OBJ_ID import_and_run(KOS_CONTEXT ctx,
                     &actual_module_name, &module_dir, &module_path, &path_array,
                     &dir, &mod_init, &module);
 
+    if (name_size > 0xFFFFU) {
+        KOS_raise_printf(ctx, "Module name length %u exceeds 65535 bytes\n", name_size);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+
     /* Determine actual module name */
     actual_module_name.o = KOS_new_string(ctx, loading.module_name, loading.length);
     TRY_OBJID(actual_module_name.o);
@@ -1688,7 +1693,7 @@ int KOS_load_module_from_memory(KOS_CONTEXT ctx,
     int        idx;
     KOS_OBJ_ID module = import_and_run(ctx,
                                        module_name,
-                                       (unsigned)strlen(module_name),
+                                       module_name_len,
                                        0,
                                        buf,
                                        buf_size,
@@ -1699,7 +1704,7 @@ int KOS_load_module_from_memory(KOS_CONTEXT ctx,
 
 int kos_comp_import_module(void       *vframe,
                            const char *name,
-                           unsigned    length,
+                           uint16_t    length,
                            int        *module_idx)
 {
     KOS_CONTEXT ctx = (KOS_CONTEXT)vframe;

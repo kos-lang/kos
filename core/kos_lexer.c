@@ -21,8 +21,9 @@ static const char str_err_invalid_char[]        = "invalid character";
 static const char str_err_invalid_dec[]         = "invalid decimal literal";
 static const char str_err_invalid_utf8[]        = "invalid UTF-8 character sequence";
 static const char str_err_no_hex_digits[]       = "invalid escape sequence, no hex digits specified";
-static const char str_err_too_many_hex_digits[] = "invalid escape sequence, more than 6 hex digits specified";
 static const char str_err_tab[]                 = "unexpected tab character, tabs are not allowed";
+static const char str_err_too_many_hex_digits[] = "invalid escape sequence, more than 6 hex digits specified";
+static const char str_err_token_too_long[]      = "token length exceeds 65535 bytes";
 
 enum KOS_LEXEM_TYPE_E {
     LT_INVALID,
@@ -703,20 +704,21 @@ static int collect_bin(KOS_LEXER *lexer)
     return error;
 }
 
-static void collect_operator(KOS_LEXER *lexer, KOS_OPERATOR_TYPE *op)
+static KOS_OPERATOR_TYPE collect_operator(KOS_LEXER *lexer)
 {
     const struct KOS_OP_SPECIFIER_S *op_group =
             operator_map[hex_and_operator_map[(unsigned char)*lexer->prefetch_begin]];
 
-    const char *begin, *end;
-    int         idx = 1;
-    char        cur;
+    const char       *begin, *end;
+    int               idx = 1;
+    KOS_OPERATOR_TYPE op  = OT_NONE;
+    char              cur;
 
     do {
         unsigned c;
 
         cur = op_group->str[idx];
-        *op = op_group->type;
+        op  = op_group->type;
 
         c = prefetch_next(lexer, &begin, &end);
 
@@ -741,18 +743,22 @@ static void collect_operator(KOS_LEXER *lexer, KOS_OPERATOR_TYPE *op)
     /* operator_map currently poorly handles the transition from
      * . to ... - for now we need to fix it up to avoid incorrectly
      * interpreting two dots */
-    if (*op == OT_MORE && lexer->prefetch_end - lexer->prefetch_begin == 2) {
-        *op = OT_DOT;
+    if ((op == OT_MORE) && (lexer->prefetch_end - lexer->prefetch_begin == 2)) {
+        op = OT_DOT;
         --lexer->prefetch_end;
         --lexer->pos.column;
     }
+
+    return op;
 }
 
-static void find_keyword(const char *begin, const char *end, KOS_KEYWORD_TYPE *kw)
+static KOS_KEYWORD_TYPE find_keyword(const char *begin, const char *end)
 {
-    const int     num  = (int)(end - begin);
-    unsigned char low  = 1;
-    unsigned char high = sizeof(keywords) / sizeof(keywords[0]) - 1;
+    KOS_KEYWORD_TYPE kw   = KW_NONE;
+    const int        num  = (int)(end - begin);
+    unsigned char    low  = 1;
+    unsigned char    high = sizeof(keywords) / sizeof(keywords[0]) - 1;
+
     while (low <= high) {
         const unsigned char mid = (low + high) / 2U;
         int                 cmp = strncmp(begin, keywords[mid], (size_t)num);
@@ -760,7 +766,7 @@ static void find_keyword(const char *begin, const char *end, KOS_KEYWORD_TYPE *k
             if (keywords[mid][num])
                 high = mid - 1U;
             else {
-                *kw = (KOS_KEYWORD_TYPE)mid;
+                kw = (KOS_KEYWORD_TYPE)mid;
                 break;
             }
         }
@@ -769,10 +775,12 @@ static void find_keyword(const char *begin, const char *end, KOS_KEYWORD_TYPE *k
         else
             low = mid + 1U;
     }
+
+    return kw;
 }
 
 void kos_lexer_init(KOS_LEXER  *lexer,
-                    unsigned    file_id,
+                    uint16_t    file_id,
                     const char *begin,
                     const char *end)
 {
@@ -809,7 +817,9 @@ int kos_lexer_next_token(KOS_LEXER          *lexer,
     token->keyword = KW_NONE;
     token->op      = OT_NONE;
     token->sep     = ST_NONE;
-    token->pos     = lexer->pos;
+    token->file_id = lexer->pos.file_id;
+    token->column  = lexer->pos.column;
+    token->line    = lexer->pos.line;
 
     if (mode != NT_ANY) {
         token->type = TT_STRING;
@@ -864,8 +874,8 @@ int kos_lexer_next_token(KOS_LEXER          *lexer,
             case LT_UNDERSCORE:
                 collect_identifier(lexer);
                 end = lexer->prefetch_end;
-                find_keyword(begin, end, &token->keyword);
-                token->type = (token->keyword == KW_NONE) ? TT_IDENTIFIER : TT_KEYWORD;
+                token->keyword = find_keyword(begin, end);
+                token->type    = (token->keyword == KW_NONE) ? TT_IDENTIFIER : TT_KEYWORD;
                 break;
             case LT_STRING:
                 token->type = TT_STRING;
@@ -900,7 +910,7 @@ int kos_lexer_next_token(KOS_LEXER          *lexer,
                 break;
             case LT_OPERATOR:
                 token->type = TT_OPERATOR;
-                collect_operator(lexer, &token->op);
+                token->op   = collect_operator(lexer);
                 end = lexer->prefetch_end;
                 break;
             case LT_SEPARATOR:
@@ -925,7 +935,7 @@ int kos_lexer_next_token(KOS_LEXER          *lexer,
                     else {
                         token->type = TT_OPERATOR;
                         retract(lexer, begin2);
-                        collect_operator(lexer, &token->op);
+                        token->op = collect_operator(lexer);
                         end = lexer->prefetch_end;
                     }
                 }
@@ -962,8 +972,17 @@ int kos_lexer_next_token(KOS_LEXER          *lexer,
 
     lexer->prefetch_begin = lexer->prefetch_end;
 
-    token->begin  = begin;
-    token->length = (unsigned)(end - begin);
+    token->begin = begin;
+
+    if (end - begin > 0xFFFFU) {
+        token->length = 0xFFFFU;
+        if ( ! error) {
+            lexer->error_str = str_err_token_too_long;
+            error            = KOS_ERROR_SCANNING_FAILED;
+        }
+    }
+    else
+        token->length = (uint16_t)(end - begin);
 
     if (error) {
         if (lexer->pos.column == 1)
@@ -979,5 +998,16 @@ void kos_lexer_unget_token(KOS_LEXER *lexer, const KOS_TOKEN *token)
 {
     lexer->prefetch_begin = token->begin;
     lexer->prefetch_end   = token->begin;
-    lexer->pos            = token->pos;
+    lexer->pos            = get_token_pos(token);
+}
+
+KOS_FILE_POS get_token_pos(const KOS_TOKEN *token)
+{
+    KOS_FILE_POS pos;
+
+    pos.file_id = token->file_id;
+    pos.column  = token->column;
+    pos.line    = token->line;
+
+    return pos;
 }

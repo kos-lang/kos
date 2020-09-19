@@ -5,10 +5,12 @@
 #ifndef KOS_LEXER_H_INCLUDED
 #define KOS_LEXER_H_INCLUDED
 
+#include <stdint.h>
+
 typedef struct KOS_FILE_POS_S {
-    unsigned file_id;
-    unsigned line;
-    unsigned column;
+    uint32_t line;
+    uint32_t column;
+    uint16_t file_id;
 } KOS_FILE_POS;
 
 typedef struct KOS_LEXER_S {
@@ -155,12 +157,14 @@ typedef enum KOS_SEPARATOR_TYPE_E {
 
 typedef struct KOS_TOKEN_S {
     const char        *begin;
-    unsigned           length;
-    KOS_FILE_POS       pos;
-    KOS_TOKEN_TYPE     type;
-    KOS_KEYWORD_TYPE   keyword;
-    KOS_OPERATOR_TYPE  op;
-    KOS_SEPARATOR_TYPE sep;
+    uint32_t           line;
+    uint32_t           column;
+    uint16_t           file_id;
+    uint16_t           length;
+    KOS_TOKEN_TYPE     type    : 8;
+    KOS_KEYWORD_TYPE   keyword : 8;
+    KOS_OPERATOR_TYPE  op      : 8;
+    KOS_SEPARATOR_TYPE sep     : 8;
 } KOS_TOKEN;
 
 typedef enum KOS_NEXT_TOKEN_MODE_E {
@@ -169,7 +173,7 @@ typedef enum KOS_NEXT_TOKEN_MODE_E {
 } KOS_NEXT_TOKEN_MODE;
 
 void kos_lexer_init(KOS_LEXER  *lexer,
-                    unsigned    file_id,
+                    uint16_t    file_id,
                     const char *begin,
                     const char *end);
 
@@ -179,5 +183,7 @@ int  kos_lexer_next_token(KOS_LEXER          *lexer,
 
 void kos_lexer_unget_token(KOS_LEXER       *lexer,
                            const KOS_TOKEN *token);
+
+KOS_FILE_POS get_token_pos(const KOS_TOKEN *token);
 
 #endif

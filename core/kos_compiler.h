@@ -164,7 +164,7 @@ typedef struct KOS_COMP_FLOAT_S {
 typedef struct KOS_COMP_STRING_S {
     KOS_COMP_CONST  header;
     const char     *str;
-    unsigned        length;
+    uint16_t        length;
     KOS_UTF8_ESCAPE escape;
 } KOS_COMP_STRING;
 
@@ -225,7 +225,7 @@ typedef struct KOS_COMP_UNIT_S {
     int                  optimize;
     int                  num_optimizations;
 
-    int                  file_id;
+    uint16_t             file_id;
     int                  cur_offs;
     KOS_FRAME           *cur_frame;
 
@@ -260,17 +260,17 @@ typedef struct KOS_COMP_UNIT_S {
 } KOS_COMP_UNIT;
 
 void kos_compiler_init(KOS_COMP_UNIT *program,
-                       int            file_id);
+                       uint16_t       file_id);
 
 int kos_compiler_predefine_global(KOS_COMP_UNIT *program,
                                   const char    *name,
-                                  size_t         name_len,
+                                  uint16_t       name_len,
                                   int            idx,
                                   int            is_const);
 
 int kos_compiler_predefine_module(KOS_COMP_UNIT *program,
                                   const char    *name,
-                                  size_t         name_len,
+                                  uint16_t       name_len,
                                   int            idx);
 
 int kos_compiler_compile(KOS_COMP_UNIT *program,
@@ -331,17 +331,17 @@ KOS_SCOPE_REF *kos_find_scope_ref(KOS_FRAME *frame,
 
 int kos_comp_import_module(void       *ctx,
                            const char *name,
-                           unsigned    length,
+                           uint16_t    length,
                            int        *module_idx);
 
 int kos_comp_get_global_idx(void       *ctx,
                             int         module_idx,
                             const char *name,
-                            unsigned    length,
+                            uint16_t    length,
                             int        *global_idx);
 
 typedef int (*KOS_COMP_WALL_GLOBALS_CALLBACK)(const char *global_name,
-                                              unsigned    global_length,
+                                              uint16_t    global_length,
                                               int         module_idx,
                                               int         global_idx,
                                               void       *cookie);

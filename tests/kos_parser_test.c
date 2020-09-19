@@ -213,9 +213,9 @@ static int walk_tree(const KOS_AST_NODE *node,
     append_str_len(&out, end, "(", 1);
     append_str(&out, end, node_types[node->type]);
     append_str_len(&out, end, " ", 1);
-    append_int(&out, end, (int)token->pos.line);
+    append_int(&out, end, (int)token->line);
     append_str_len(&out, end, " ", 1);
-    append_int(&out, end, (int)token->pos.column);
+    append_int(&out, end, (int)token->column);
 
     if (token->type == TT_OPERATOR) {
         append_str_len(&out, end, " ", 1);
@@ -439,7 +439,7 @@ int main(int argc, char *argv[])
                 printf("Invalid error code returned by parser: %d, but expected %d\n",
                        test_error, expected_error);
                 if (test_error)
-                    printf("%u:%u: \"%s\"\n", parser.token.pos.line, parser.token.pos.column, parser.error_str);
+                    printf("%u:%u: \"%s\"\n", parser.token.line, parser.token.column, parser.error_str);
                 error = test_error ? test_error : expected_error;
                 break;
             }
@@ -448,7 +448,7 @@ int main(int argc, char *argv[])
                 error = walk_tree(ast, 0, print, test ? &end : 0, file_end);
 
             else if (test) {
-                const KOS_FILE_POS pos = parser.token.pos;
+                const KOS_FILE_POS pos = get_token_pos(&parser.token);
                 if ((unsigned)line   != pos.line ||
                     (unsigned)column != pos.column) {
 

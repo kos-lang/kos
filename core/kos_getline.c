@@ -263,7 +263,7 @@ int kos_getline(KOS_GETLINE      *state,
 
     for (;;) {
         const size_t   old_size  = buf->size;
-        const size_t   increment = KOS_BUF_ALLOC_SIZE;
+        const size_t   increment = 4096U;
         size_t         num_read;
         signal_handler old_signal;
         char*          ret_buf;

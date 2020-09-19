@@ -35,7 +35,7 @@ typedef struct KOS_PARSER_S {
 
 void kos_parser_init(KOS_PARSER           *parser,
                      struct KOS_MEMPOOL_S *mempool,
-                     unsigned              file_id,
+                     uint16_t              file_id,
                      const char           *begin,
                      const char           *end);
 

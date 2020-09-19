@@ -84,7 +84,7 @@ static int next_token(KOS_PARSER *parser)
 
             type = parser->token.type;
 
-            if (type == TT_COMMENT && parser->token.pos.line < parser->lexer.pos.line)
+            if (type == TT_COMMENT && parser->token.line < parser->lexer.pos.line)
                 had_eol = 1;
             else if (type == TT_EOL)
                 had_eol = 1;
@@ -2279,10 +2279,10 @@ static int gen_fake_const(KOS_PARSER   *parser,
     }
 
     name_len = (unsigned)snprintf(name, max_len, "%u:%u",
-                                  parser->token.pos.line, parser->token.pos.column);
+                                  parser->token.line, parser->token.column);
 
     node->token.begin   = name;
-    node->token.length  = name_len >= max_len ? max_len - 1 : name_len;
+    node->token.length  = (uint16_t)(name_len >= max_len ? max_len - 1 : name_len);
     node->token.type    = TT_IDENTIFIER;
     node->token.keyword = KW_NONE;
     node->token.op      = OT_NONE;
@@ -3264,7 +3264,7 @@ static int handle_imports(KOS_PARSER *parser, KOS_AST_NODE *root)
 
 void kos_parser_init(KOS_PARSER           *parser,
                      struct KOS_MEMPOOL_S *mempool,
-                     unsigned              file_id,
+                     uint16_t              file_id,
                      const char           *begin,
                      const char           *end)
 {
@@ -3285,7 +3285,9 @@ void kos_parser_init(KOS_PARSER           *parser,
     parser->state.in_class_member   = 0;
 
     parser->token.length            = 0;
-    parser->token.pos               = parser->lexer.pos;
+    parser->token.file_id           = parser->lexer.pos.file_id;
+    parser->token.column            = parser->lexer.pos.column;
+    parser->token.line              = parser->lexer.pos.line;
     parser->token.type              = TT_EOF;
     parser->token.keyword           = KW_NONE;
     parser->token.op                = OT_NONE;
