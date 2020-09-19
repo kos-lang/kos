@@ -1342,7 +1342,7 @@ static void collapse_typeof(KOS_COMP_UNIT      *program,
 {
     const KOS_NODE_TYPE a_type   = a->type;
     const char         *type     = 0;
-    unsigned            type_len = 0;
+    uint16_t            type_len = 0;
 
     switch (a_type) {
 

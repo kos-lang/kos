@@ -1748,8 +1748,10 @@ KOS_OBJ_ID KOS_repl(KOS_CONTEXT ctx,
         module_idx = (int)GET_SMALL_INT(module_idx_obj);
     }
 
+    assert(module_idx <= 0xFFFF);
+
     /* Compile evaluated source to bytecode */
-    TRY(compile_module(ctx, module.o, module_idx, buf, buf_size, 1));
+    TRY(compile_module(ctx, module.o, (uint16_t)module_idx, buf, buf_size, 1));
 
     /* Run module */
     ret = kos_vm_run_module(ctx, module.o);
@@ -1838,8 +1840,10 @@ KOS_OBJ_ID KOS_repl_stdin(KOS_CONTEXT ctx,
         module_idx = (int)GET_SMALL_INT(module_idx_obj);
     }
 
+    assert(module_idx <= 0xFFFF);
+
     /* Compile evaluated source to bytecode */
-    TRY(compile_module(ctx, module.o, module_idx, buf.buffer, (unsigned)buf.size, 1));
+    TRY(compile_module(ctx, module.o, (uint16_t)module_idx, buf.buffer, (unsigned)buf.size, 1));
 
     /* Free the buffer */
     kos_vector_destroy(&buf);

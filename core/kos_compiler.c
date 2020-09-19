@@ -657,7 +657,7 @@ static int gen_assert_str(KOS_COMP_UNIT      *program,
     const char    *end;
     char          *buf;
     uint16_t       length;
-    const unsigned max_length = 64;
+    const uint16_t max_length = 64;
 
     static const char assertion_failed[] = "Assertion failed: ";
 

@@ -156,15 +156,15 @@ typedef enum KOS_SEPARATOR_TYPE_E {
 } KOS_SEPARATOR_TYPE;
 
 typedef struct KOS_TOKEN_S {
-    const char        *begin;
-    uint32_t           line;
-    uint32_t           column;
-    uint16_t           file_id;
-    uint16_t           length;
-    KOS_TOKEN_TYPE     type    : 8;
-    KOS_KEYWORD_TYPE   keyword : 8;
-    KOS_OPERATOR_TYPE  op      : 8;
-    KOS_SEPARATOR_TYPE sep     : 8;
+    const char *begin;
+    uint32_t    line;
+    uint32_t    column;
+    uint16_t    file_id;
+    uint16_t    length;
+    unsigned    type    : 8;
+    unsigned    keyword : 8;
+    unsigned    op      : 8;
+    unsigned    sep     : 8;
 } KOS_TOKEN;
 
 typedef enum KOS_NEXT_TOKEN_MODE_E {
