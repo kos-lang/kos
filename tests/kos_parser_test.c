@@ -219,7 +219,7 @@ static int walk_tree(const KOS_AST_NODE *node,
 
     if (token->type == TT_OPERATOR) {
         append_str_len(&out, end, " ", 1);
-        for (i=0; operators[i].op != token->op &&
+        for (i=0; operators[i].op != (KOS_OPERATOR_TYPE)token->op &&
                   operators[i].op != OT_NONE; ++i);
         append_str(&out, end, operators[i].name);
     }
