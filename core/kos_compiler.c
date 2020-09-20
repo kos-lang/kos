@@ -2058,7 +2058,7 @@ static int break_continue_fallthrough(KOS_COMP_UNIT      *program,
 {
     int error;
 
-    TRY(push_break_offs(program, node->type));
+    TRY(push_break_offs(program, (KOS_NODE_TYPE)node->type));
 
     if (program->cur_frame->last_try_scope) {
 
@@ -2314,7 +2314,7 @@ static int try_stmt(KOS_COMP_UNIT      *program,
     KOS_VAR            *except_var     = 0;
     KOS_RETURN_OFFS    *return_offs    = program->cur_frame->return_offs;
     KOS_BREAK_OFFS     *old_break_offs = program->cur_frame->break_offs;
-    const KOS_NODE_TYPE node_type      = node->type;
+    const KOS_NODE_TYPE node_type      = (KOS_NODE_TYPE)node->type;
     const KOS_AST_NODE *try_node       = node->children;
     const KOS_AST_NODE *catch_node     = 0;
     const KOS_AST_NODE *defer_node     = 0;
@@ -3241,7 +3241,7 @@ static int check_const_literal(KOS_COMP_UNIT      *program,
     if ( ! const_node)
         return KOS_SUCCESS;
 
-    cur_node_type = const_node->type;
+    cur_node_type = (KOS_NODE_TYPE)const_node->type;
 
     if ((expected_type & CHECK_NUMERIC) && (cur_node_type == NT_NUMERIC_LITERAL))
         return KOS_SUCCESS;
@@ -3281,7 +3281,7 @@ static int pos_neg(KOS_COMP_UNIT      *program,
                    KOS_REG           **reg)
 {
     int                     error;
-    const KOS_OPERATOR_TYPE op  = node->token.op;
+    const KOS_OPERATOR_TYPE op  = (KOS_OPERATOR_TYPE)node->token.op;
     KOS_REG                *src = *reg;
 
     assert(op == OT_ADD || op == OT_SUB);
@@ -3369,7 +3369,7 @@ static int log_and_or(KOS_COMP_UNIT      *program,
     int                     error;
     int                     left_offs;
     int                     right_offs = 0;
-    const KOS_OPERATOR_TYPE op         = node->token.op;
+    const KOS_OPERATOR_TYPE op         = (KOS_OPERATOR_TYPE)node->token.op;
     KOS_REG                *left       = 0;
     KOS_REG                *right      = 0;
 
@@ -3630,8 +3630,8 @@ static int process_operator(KOS_COMP_UNIT      *program,
                             KOS_REG           **reg)
 {
     int                     error    = KOS_SUCCESS;
-    const KOS_OPERATOR_TYPE op       = node->token.op;
-    const KOS_KEYWORD_TYPE  kw       = node->token.keyword;
+    const KOS_OPERATOR_TYPE op       = (KOS_OPERATOR_TYPE)node->token.op;
+    const KOS_KEYWORD_TYPE  kw       = (KOS_KEYWORD_TYPE)node->token.keyword;
     KOS_REG                *reg1     = 0;
     KOS_REG                *reg2     = 0;
     int                     opcode   = 0;
@@ -3743,8 +3743,8 @@ static int process_operator(KOS_COMP_UNIT      *program,
 
                 if (const_a) {
                     if (const_b) {
-                        const KOS_NODE_TYPE a_type = const_a->type;
-                        const KOS_NODE_TYPE b_type = const_b->type;
+                        const KOS_NODE_TYPE a_type = (KOS_NODE_TYPE)const_a->type;
+                        const KOS_NODE_TYPE b_type = (KOS_NODE_TYPE)const_b->type;
 
                         if (a_type == NT_STRING_LITERAL ||
                             (a_type != NT_NUMERIC_LITERAL && b_type == NT_STRING_LITERAL)) {
@@ -4090,7 +4090,7 @@ static int assignment(KOS_COMP_UNIT      *program,
     const KOS_AST_NODE *rhs_node;
     KOS_REG            *reg       = 0;
     KOS_REG            *rhs       = 0;
-    const KOS_NODE_TYPE node_type = assg_node->type;
+    const KOS_NODE_TYPE node_type = (KOS_NODE_TYPE)assg_node->type;
 
     assert(node_type == NT_ASSIGNMENT || node_type == NT_MULTI_ASSIGNMENT);
 
@@ -4190,7 +4190,11 @@ static int assignment(KOS_COMP_UNIT      *program,
 
                 assert(node_type == NT_ASSIGNMENT);
 
-                TRY(gen_instr3(program, assign_instr(assg_node->token.op), reg->reg, reg->reg, rhs->reg));
+                TRY(gen_instr3(program,
+                               assign_instr((KOS_OPERATOR_TYPE)assg_node->token.op),
+                               reg->reg,
+                               reg->reg,
+                               rhs->reg));
 
                 free_reg(program, rhs);
             }
@@ -4213,10 +4217,10 @@ static int assignment(KOS_COMP_UNIT      *program,
                 reg = rhs;
 
             if (node->type == NT_REFINEMENT)
-                TRY(assign_member(program, assg_node->token.op, node, reg));
+                TRY(assign_member(program, (KOS_OPERATOR_TYPE)assg_node->token.op, node, reg));
 
             else if (node->type == NT_IDENTIFIER)
-                TRY(assign_non_local(program, assg_node->token.op, node, reg));
+                TRY(assign_non_local(program, (KOS_OPERATOR_TYPE)assg_node->token.op, node, reg));
 
             else if (node->type != NT_VOID_LITERAL) {
 
@@ -4999,7 +5003,7 @@ static int function_literal(KOS_COMP_UNIT      *program,
                 if ( ! const_node)
                     continue;
 
-                type = const_node->type;
+                type = (KOS_NODE_TYPE)const_node->type;
 
                 if (type == NT_IDENTIFIER      ||
                     type == NT_NUMERIC_LITERAL ||

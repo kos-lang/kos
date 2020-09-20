@@ -82,7 +82,7 @@ static int next_token(KOS_PARSER *parser)
             if (error)
                 break;
 
-            type = parser->token.type;
+            type = (KOS_TOKEN_TYPE)parser->token.type;
 
             if (type == TT_COMMENT && parser->token.line < parser->lexer.pos.line)
                 had_eol = 1;
@@ -116,7 +116,7 @@ static int assume_separator(KOS_PARSER *parser, KOS_SEPARATOR_TYPE sep)
     if (!error) {
         const KOS_TOKEN *token = &parser->token;
 
-        if (token->sep != sep) {
+        if ((KOS_SEPARATOR_TYPE)token->sep != sep) {
 
             switch (sep) {
                 case ST_COLON:
@@ -658,7 +658,7 @@ static int class_literal(KOS_PARSER    *parser,
 
             had_constructor = 1;
 
-            TRY(function_literal(parser, parser->token.keyword, &ctor_node));
+            TRY(function_literal(parser, (KOS_KEYWORD_TYPE)parser->token.keyword, &ctor_node));
 
             ast_push(*ret, ctor_node);
         }
@@ -821,7 +821,7 @@ static int object_literal(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
         TRY(next_token(parser));
 
-        prop_name_type = parser->token.type;
+        prop_name_type = (KOS_TOKEN_TYPE)parser->token.type;
 
         if (prop_name_type == TT_STRING)
             TRY(push_node(parser, prop, NT_STRING_LITERAL, 0));
@@ -899,7 +899,7 @@ static int primary_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
             case TT_KEYWORD:
                 switch (token->keyword) {
                     case KW_FUN:
-                        error = function_literal(parser, token->keyword, ret);
+                        error = function_literal(parser, (KOS_KEYWORD_TYPE)token->keyword, ret);
                         break;
                     case KW_CLASS:
                         error = class_literal(parser, ret);
@@ -1029,7 +1029,7 @@ static int arithm_bitwise_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
     if ((parser->token.op & OT_ARITHMETIC)) {
 
         int               depth   = 0;
-        KOS_OPERATOR_TYPE last_op = parser->token.op;
+        KOS_OPERATOR_TYPE last_op = (KOS_OPERATOR_TYPE)parser->token.op;
 
         if ((last_op == OT_ADD || last_op == OT_SUB)
             && parser->had_eol && parser->state.unary_depth == 0)
@@ -1065,7 +1065,7 @@ static int arithm_bitwise_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
                 node = *ret;
                 *ret = 0;
 
-                last_op = parser->token.op;
+                last_op = (KOS_OPERATOR_TYPE)parser->token.op;
 
                 TRY(new_node(parser, ret, NT_OPERATOR));
 
@@ -1091,7 +1091,7 @@ static int arithm_bitwise_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
                         node = *ret;
                         *ret = 0;
 
-                        last_op = parser->token.op;
+                        last_op = (KOS_OPERATOR_TYPE)parser->token.op;
 
                         TRY(new_node(parser, ret, NT_OPERATOR));
 
@@ -1140,7 +1140,7 @@ static int arithm_bitwise_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
     else if ((parser->token.op & OT_MASK) == OT_BITWISE) {
 
         int                     depth = 0;
-        const KOS_OPERATOR_TYPE op    = parser->token.op;
+        const KOS_OPERATOR_TYPE op    = (KOS_OPERATOR_TYPE)parser->token.op;
 
         *ret = node;
         node = 0;
@@ -1162,12 +1162,12 @@ static int arithm_bitwise_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
             node = 0;
 
             TRY(next_token(parser));
-        } while (parser->token.op == op);
+        } while ((KOS_OPERATOR_TYPE)parser->token.op == op);
 
         parser->ast_depth -= depth;
 
         {
-            const KOS_OPERATOR_TYPE next_op = parser->token.op;
+            const KOS_OPERATOR_TYPE next_op = (KOS_OPERATOR_TYPE)parser->token.op;
             if ((next_op & OT_MASK) == OT_BITWISE     ||
                 (next_op & OT_MASK) == OT_ARITHMETIC ||
                 next_op == OT_SHL || next_op == OT_SHR || next_op == OT_SHRU) {
@@ -1260,7 +1260,7 @@ static int logical_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
     if (parser->token.op == OT_LOGAND || parser->token.op == OT_LOGOR) {
 
         KOS_AST_NODE           *op_node = 0;
-        const KOS_OPERATOR_TYPE op      = parser->token.op;
+        const KOS_OPERATOR_TYPE op      = (KOS_OPERATOR_TYPE)parser->token.op;
         int                     depth   = 0;
 
         TRY(new_node(parser, ret, NT_OPERATOR));
@@ -1281,7 +1281,7 @@ static int logical_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
             TRY(next_token(parser));
 
-            if (parser->token.op == op) {
+            if ((KOS_OPERATOR_TYPE)parser->token.op == op) {
 
                 TRY(push_node(parser, op_node, NT_OPERATOR, &op_node));
 
@@ -1862,7 +1862,7 @@ cleanup:
 static int check_multi_assgn_lhs(KOS_PARSER         *parser,
                                  const KOS_AST_NODE *node)
 {
-    const KOS_NODE_TYPE type = node->type;
+    const KOS_NODE_TYPE type = (KOS_NODE_TYPE)node->type;
 
     if (type == NT_REFINEMENT ||
         type == NT_IDENTIFIER ||
@@ -1887,7 +1887,7 @@ static int expr_no_var(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
     TRY(right_hand_side_expr(parser, &node));
 
-    node_type = node->type;
+    node_type = (KOS_NODE_TYPE)node->type;
 
     TRY(next_token(parser));
 
@@ -2041,7 +2041,7 @@ static int function_stmt(KOS_PARSER *parser, int is_public, KOS_AST_NODE **ret)
     KOS_AST_NODE    *const_node;
     KOS_AST_NODE    *fun_node     = 0;
     KOS_TOKEN        fun_kw_token = parser->token;
-    KOS_KEYWORD_TYPE fun_keyword  = fun_kw_token.keyword;
+    KOS_KEYWORD_TYPE fun_keyword  = (KOS_KEYWORD_TYPE)fun_kw_token.keyword;
 
     TRY(next_token(parser));
 
@@ -2603,7 +2603,7 @@ static int switch_stmt(KOS_PARSER *parser, KOS_AST_NODE **ret)
             parser->unget = 1;
 
             TRY(next_statement(parser, &node));
-            node_type = node->type;
+            node_type = (KOS_NODE_TYPE)node->type;
 
             /* Note: Create empty scope if there is only a break in it */
             if (node_type != NT_BREAK || num_stmts) {
@@ -2768,7 +2768,7 @@ static int for_expr_list(KOS_PARSER        *parser,
 
             TRY(next_token(parser));
 
-            if (parser->token.sep == end_sep) {
+            if ((KOS_SEPARATOR_TYPE)parser->token.sep == end_sep) {
                 parser->unget = 1;
                 break;
             }

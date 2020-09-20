@@ -570,7 +570,7 @@ static int try_stmt(KOS_COMP_UNIT *program,
     int t2    = TERM_NONE;
     int t3    = TERM_NONE;
 
-    const KOS_NODE_TYPE node_type    = node->type;
+    const KOS_NODE_TYPE node_type    = (KOS_NODE_TYPE)node->type;
     KOS_AST_NODE       *finally_node = 0;
 
     push_scope(program, node);
@@ -887,9 +887,9 @@ static void identifier(KOS_COMP_UNIT *program,
                 /* fall through */
             case NT_VOID_LITERAL:
                 collapse(node,
-                         const_node->type,
-                         const_node->token.type,
-                         const_node->token.keyword,
+                         (KOS_NODE_TYPE)const_node->type,
+                         (KOS_TOKEN_TYPE)const_node->token.type,
+                         (KOS_KEYWORD_TYPE)const_node->token.keyword,
                          const_node->token.begin,
                          const_node->token.length);
 
@@ -917,8 +917,8 @@ static int assignment(KOS_COMP_UNIT *program,
     KOS_AST_NODE     *lhs_node  = node->children;
     KOS_AST_NODE     *rhs_node;
     KOS_AST_NODE     *assg_node = node;
-    KOS_NODE_TYPE     assg_type = node->type;
-    KOS_OPERATOR_TYPE assg_op   = node->token.op;
+    KOS_NODE_TYPE     assg_type = (KOS_NODE_TYPE)node->type;
+    KOS_OPERATOR_TYPE assg_op   = (KOS_OPERATOR_TYPE)node->token.op;
 
     assert(lhs_node);
     assert(lhs_node->next);
@@ -1028,7 +1028,7 @@ static int optimize_binary_op(KOS_COMP_UNIT      *program,
                               const KOS_AST_NODE *b)
 {
     int               error;
-    KOS_OPERATOR_TYPE op = node->token.op;
+    KOS_OPERATOR_TYPE op = (KOS_OPERATOR_TYPE)node->token.op;
     KOS_NUMERIC       numeric_a;
     KOS_NUMERIC       numeric_b;
 
@@ -1205,7 +1205,7 @@ static int optimize_unary_op(KOS_COMP_UNIT      *program,
                              KOS_AST_NODE       *node,
                              const KOS_AST_NODE *a)
 {
-    KOS_OPERATOR_TYPE op = node->token.op;
+    KOS_OPERATOR_TYPE op = (KOS_OPERATOR_TYPE)node->token.op;
     KOS_NUMERIC       numeric_a;
 
     if (a->token.type == TT_NUMERIC_BINARY) {
@@ -1273,8 +1273,8 @@ static int add_strings(KOS_COMP_UNIT      *program,
                        const KOS_AST_NODE *b)
 {
     char                *str;
-    const KOS_TOKEN_TYPE a_type   = a->token.type;
-    const KOS_TOKEN_TYPE b_type   = b->token.type;
+    const KOS_TOKEN_TYPE a_type   = (KOS_TOKEN_TYPE)a->token.type;
+    const KOS_TOKEN_TYPE b_type   = (KOS_TOKEN_TYPE)b->token.type;
     const char          *a_begin  = a->token.begin + 1;
     const char          *b_begin  = b->token.begin + 1;
     unsigned             a_length = a->token.length;
@@ -1340,7 +1340,7 @@ static void collapse_typeof(KOS_COMP_UNIT      *program,
                             KOS_AST_NODE       *node,
                             const KOS_AST_NODE *a)
 {
-    const KOS_NODE_TYPE a_type   = a->type;
+    const KOS_NODE_TYPE a_type   = (KOS_NODE_TYPE)a->type;
     const char         *type     = 0;
     uint16_t            type_len = 0;
 
@@ -1448,8 +1448,8 @@ static int operator_token(KOS_COMP_UNIT *program,
     if (b)
         cb = kos_get_const(program, b);
 
-    a_type = ca ? ca->type : NT_EMPTY;
-    b_type = cb ? cb->type : NT_EMPTY;
+    a_type = ca ? (KOS_NODE_TYPE)ca->type : NT_EMPTY;
+    b_type = cb ? (KOS_NODE_TYPE)cb->type : NT_EMPTY;
 
     switch (node->token.op) {
 
@@ -1458,7 +1458,7 @@ static int operator_token(KOS_COMP_UNIT *program,
         case OT_SUB: {
             if (b) {
 
-                const KOS_OPERATOR_TYPE op = node->token.op;
+                const KOS_OPERATOR_TYPE op = (KOS_OPERATOR_TYPE)node->token.op;
 
                 if (a_type == NT_NUMERIC_LITERAL && b_type == NT_NUMERIC_LITERAL)
                     error = optimize_binary_op(program, node, ca, cb);
@@ -1602,7 +1602,7 @@ static int stringify(KOS_COMP_UNIT       *program,
                      const KOS_AST_NODE **node_ptr,
                      KOS_AST_NODE        *tmp_node)
 {
-    const KOS_NODE_TYPE type = (*node_ptr)->type;
+    const KOS_NODE_TYPE type = (KOS_NODE_TYPE)(*node_ptr)->type;
 
     switch (type) {
 
@@ -1613,7 +1613,7 @@ static int stringify(KOS_COMP_UNIT       *program,
             /* fall through */
         case NT_BOOL_LITERAL: {
 
-            const KOS_KEYWORD_TYPE kw = (*node_ptr)->token.keyword;
+            const KOS_KEYWORD_TYPE kw = (KOS_KEYWORD_TYPE)(*node_ptr)->token.keyword;
 
             copy_node_as_string(tmp_node, *node_ptr);
 

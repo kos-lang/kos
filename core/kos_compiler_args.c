@@ -426,7 +426,7 @@ static int try_stmt(KOS_COMP_UNIT *program,
 {
     int error = KOS_SUCCESS;
 
-    const KOS_NODE_TYPE node_type = node->type;
+    const KOS_NODE_TYPE node_type = (KOS_NODE_TYPE)node->type;
 
     push_scope(program, node);
 
