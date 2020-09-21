@@ -775,16 +775,16 @@ cleanup:
 }
 
 static int function_literal(KOS_COMP_UNIT *program,
-                            KOS_AST_NODE  *node,
+                            KOS_AST_NODE  *fun_node,
                             KOS_VAR       *fun_var)
 {
     int           error;
     int           t;
+    int           num_optimizations = program->num_optimizations;
+    KOS_AST_NODE *node;
     KOS_AST_NODE *name_node;
 
-    push_scope(program, node);
-
-    name_node = node->children;
+    name_node = fun_node->children;
     assert(name_node);
 
     node = name_node->next;
@@ -802,16 +802,28 @@ static int function_literal(KOS_COMP_UNIT *program,
     assert(node->next->type == NT_LANDMARK);
     assert( ! node->next->next);
 
-    kos_activate_self_ref_func(program, fun_var);
+    do {
 
-    error = visit_node(program, node, &t);
+        program->num_optimizations = 0;
 
-    kos_deactivate_self_ref_func(program, fun_var);
+        push_scope(program, fun_node);
 
-    pop_scope(program);
+        kos_activate_self_ref_func(program, fun_var);
 
-    if ( ! error)
-        error = parameter_defaults(program, name_node->next, name_node);
+        error = visit_node(program, node, &t);
+
+        kos_deactivate_self_ref_func(program, fun_var);
+
+        pop_scope(program);
+
+        if ( ! error)
+            error = parameter_defaults(program, name_node->next, name_node);
+
+        num_optimizations += program->num_optimizations;
+
+    } while ( ! error && program->num_optimizations);
+
+    program->num_optimizations = num_optimizations;
 
     return error;
 }
