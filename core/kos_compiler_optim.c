@@ -280,13 +280,15 @@ typedef struct UPDATE_VARS_S {
 static int count_and_update_vars(KOS_RED_BLACK_NODE *node,
                                  void               *cookie)
 {
-    KOS_VAR   *var   = (KOS_VAR *)node;
-    KOS_SCOPE *scope = ((UPDATE_VARS *)cookie)->scope;
+    KOS_VAR   *var              = (KOS_VAR *)node;
+    KOS_SCOPE *scope            = ((UPDATE_VARS *)cookie)->scope;
+    int        trigger_opt_pass = 0;
 
     /* Change to const if the variable was never modified */
     if ((var->type & VAR_LOCALS_AND_ARGS) && ! var->is_const && ! var->num_assignments) {
 
-        var->is_const = 1;
+        trigger_opt_pass = 1;
+        var->is_const    = 1;
     }
 
     /* Demote independent vars and args if they are never accessed from closures */
@@ -314,8 +316,10 @@ static int count_and_update_vars(KOS_RED_BLACK_NODE *node,
     }
 
     /* Trigger another optimization pass if variable is not needed */
-    if ((var->num_assignments || var->num_reads_prev == -1) && ! var->num_reads && var->type != VAR_GLOBAL)
-        ++((UPDATE_VARS *)cookie)->program->num_optimizations;
+    if ((var->num_assignments || var->num_reads_prev != var->num_reads) && ! var->num_reads && var->type != VAR_GLOBAL)
+        trigger_opt_pass = 1;
+
+    ((UPDATE_VARS *)cookie)->program->num_optimizations += trigger_opt_pass;
 
     return KOS_SUCCESS;
 }
