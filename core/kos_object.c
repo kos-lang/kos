@@ -956,7 +956,7 @@ KOS_OBJ_ID kos_new_object_walk(KOS_CONTEXT      ctx,
     props = get_properties(obj.o);
 
     OBJPTR(ITERATOR, walk.o)->index         = 0;
-    OBJPTR(ITERATOR, walk.o)->depth         = depth;
+    OBJPTR(ITERATOR, walk.o)->depth         = (uint8_t)depth;
     OBJPTR(ITERATOR, walk.o)->type          = OBJ_OBJECT;
     OBJPTR(ITERATOR, walk.o)->obj           = obj.o;
     OBJPTR(ITERATOR, walk.o)->prop_obj      = obj.o;

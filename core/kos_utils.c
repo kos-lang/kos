@@ -1585,8 +1585,8 @@ KOS_OBJ_ID KOS_new_iterator(KOS_CONTEXT      ctx,
 
     if (iter) {
         iter->index         = 0;
-        iter->depth         = depth;
-        iter->type          = type;
+        iter->depth         = (uint8_t)depth;
+        iter->type          = (uint8_t)type;
         iter->obj           = obj.o;
         iter->prop_obj      = obj.o;
         iter->key_table     = KOS_BADPTR;
