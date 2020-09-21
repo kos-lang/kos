@@ -1546,11 +1546,14 @@ KOS_OBJ_ID KOS_new_iterator_copy(KOS_CONTEXT ctx,
     if (iter) {
         KOS_atomic_write_relaxed_u32(iter->index,
                 KOS_atomic_read_relaxed_u32(OBJPTR(ITERATOR, src.o)->index));
-        iter->type       = OBJPTR(ITERATOR, src.o)->type;
-        iter->obj        = OBJPTR(ITERATOR, src.o)->obj;
-        iter->key_table  = OBJPTR(ITERATOR, src.o)->key_table;
-        iter->last_key   = KOS_atomic_read_relaxed_obj(OBJPTR(ITERATOR, src.o)->last_key);
-        iter->last_value = KOS_atomic_read_relaxed_obj(OBJPTR(ITERATOR, src.o)->last_value);
+        iter->depth         = OBJPTR(ITERATOR, src.o)->depth;
+        iter->type          = OBJPTR(ITERATOR, src.o)->type;
+        iter->obj           = KOS_atomic_read_relaxed_obj(OBJPTR(ITERATOR, src.o)->obj);
+        iter->prop_obj      = KOS_atomic_read_relaxed_obj(OBJPTR(ITERATOR, src.o)->prop_obj);
+        iter->key_table     = KOS_atomic_read_relaxed_obj(OBJPTR(ITERATOR, src.o)->key_table);
+        iter->returned_keys = KOS_atomic_read_relaxed_obj(OBJPTR(ITERATOR, src.o)->returned_keys);
+        iter->last_key      = KOS_atomic_read_relaxed_obj(OBJPTR(ITERATOR, src.o)->last_key);
+        iter->last_value    = KOS_atomic_read_relaxed_obj(OBJPTR(ITERATOR, src.o)->last_value);
     }
 
     KOS_destroy_top_local(ctx, &src);
@@ -1581,12 +1584,15 @@ KOS_OBJ_ID KOS_new_iterator(KOS_CONTEXT      ctx,
                                             sizeof(KOS_ITERATOR));
 
     if (iter) {
-        iter->index      = 0;
-        iter->type       = type;
-        iter->obj        = obj.o;
-        iter->key_table  = KOS_BADPTR;
-        iter->last_key   = KOS_BADPTR;
-        iter->last_value = KOS_BADPTR;
+        iter->index         = 0;
+        iter->depth         = depth;
+        iter->type          = type;
+        iter->obj           = obj.o;
+        iter->prop_obj      = obj.o;
+        iter->key_table     = KOS_BADPTR;
+        iter->returned_keys = KOS_BADPTR;
+        iter->last_key      = KOS_BADPTR;
+        iter->last_value    = KOS_BADPTR;
     }
 
     KOS_destroy_top_local(ctx, &obj);
@@ -1657,7 +1663,7 @@ int KOS_iterator_next(KOS_CONTEXT ctx,
             if ( ! KOS_atomic_swap_u32(OBJPTR(ITERATOR, iter_id)->index, 1U)) {
                 KOS_atomic_write_release_ptr(OBJPTR(ITERATOR, iter_id)->last_key, KOS_VOID);
                 KOS_atomic_write_release_ptr(OBJPTR(ITERATOR, iter_id)->last_value,
-                                             OBJPTR(ITERATOR, iter_id)->obj);
+                                             KOS_atomic_read_relaxed_obj(OBJPTR(ITERATOR, iter_id)->obj));
                 return KOS_SUCCESS;
             }
             break;

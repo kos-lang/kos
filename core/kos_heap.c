@@ -1441,13 +1441,18 @@ static uint32_t mark_children_gray(KOS_OBJ_ID obj_id)
             break;
 
         case OBJ_ITERATOR:
-            /* TODO make these atomic */
-            marked += set_mark_state(OBJPTR(ITERATOR, obj_id)->obj,         GRAY);
-            marked += set_mark_state(OBJPTR(ITERATOR, obj_id)->key_table,   GRAY);
             marked += set_mark_state(KOS_atomic_read_relaxed_obj(
-                                     OBJPTR(ITERATOR, obj_id)->last_key),   GRAY);
+                                     OBJPTR(ITERATOR, obj_id)->obj),           GRAY);
             marked += set_mark_state(KOS_atomic_read_relaxed_obj(
-                                     OBJPTR(ITERATOR, obj_id)->last_value), GRAY);
+                                     OBJPTR(ITERATOR, obj_id)->prop_obj),      GRAY);
+            marked += set_mark_state(KOS_atomic_read_relaxed_obj(
+                                     OBJPTR(ITERATOR, obj_id)->key_table),     GRAY);
+            marked += set_mark_state(KOS_atomic_read_relaxed_obj(
+                                     OBJPTR(ITERATOR, obj_id)->returned_keys), GRAY);
+            marked += set_mark_state(KOS_atomic_read_relaxed_obj(
+                                     OBJPTR(ITERATOR, obj_id)->last_key),      GRAY);
+            marked += set_mark_state(KOS_atomic_read_relaxed_obj(
+                                     OBJPTR(ITERATOR, obj_id)->last_value),    GRAY);
             break;
 
         case OBJ_MODULE:
@@ -2048,8 +2053,10 @@ static void update_child_ptrs(KOS_OBJ_HEADER *hdr)
             break;
 
         case OBJ_ITERATOR:
-            update_child_ptr(&((KOS_ITERATOR *)hdr)->obj);
-            update_child_ptr(&((KOS_ITERATOR *)hdr)->key_table);
+            update_child_ptr((KOS_OBJ_ID *)&((KOS_ITERATOR *)hdr)->obj);
+            update_child_ptr((KOS_OBJ_ID *)&((KOS_ITERATOR *)hdr)->prop_obj);
+            update_child_ptr((KOS_OBJ_ID *)&((KOS_ITERATOR *)hdr)->key_table);
+            update_child_ptr((KOS_OBJ_ID *)&((KOS_ITERATOR *)hdr)->returned_keys);
             update_child_ptr((KOS_OBJ_ID *)&((KOS_ITERATOR *)hdr)->last_key);
             update_child_ptr((KOS_OBJ_ID *)&((KOS_ITERATOR *)hdr)->last_value);
             break;

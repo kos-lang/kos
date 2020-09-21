@@ -168,10 +168,10 @@ int kos_is_truthy(KOS_OBJ_ID obj_id);
 
 KOS_OBJ_ID kos_new_object_walk(KOS_CONTEXT      ctx,
                                KOS_OBJ_ID       obj_id,
-                               enum KOS_DEPTH_E shallow);
+                               enum KOS_DEPTH_E depth);
 
 int kos_object_walk(KOS_CONTEXT ctx,
-                    KOS_OBJ_ID  walk_id);
+                    KOS_OBJ_ID  iterator_id);
 
 /*==========================================================================*/
 /* KOS_ARRAY                                                                */

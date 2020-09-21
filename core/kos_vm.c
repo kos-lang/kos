@@ -3025,6 +3025,7 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
 
                     if (GET_OBJ_TYPE(key_obj) == OBJ_STRING) {
                         KOS_OBJ_ID pair;
+                        KOS_OBJ_ID value;
 
                         KOS_init_local_with(ctx, &iter, iter.o);
 
@@ -3034,8 +3035,32 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
 
                         TRY_OBJID(pair);
 
+                        value = KOS_get_walk_value(iter.o);
+
+                        if (GET_OBJ_TYPE(value) == OBJ_DYNAMIC_PROP) {
+                            KOS_LOCAL saved_pair;
+
+                            KOS_init_local_with(ctx, &iter,       iter.o);
+                            KOS_init_local_with(ctx, &saved_pair, pair);
+
+                            store_instr_offs(stack_frame,
+                                    (uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode));
+
+                            value = OBJPTR(DYNAMIC_PROP, value)->getter;
+
+                            value = KOS_call_function(ctx,
+                                                      value,
+                                                      KOS_atomic_read_relaxed_obj(OBJPTR(ITERATOR, iter.o)->obj),
+                                                      KOS_CONST_ID(kos_empty_array));
+                            TRY_OBJID(value);
+
+                            assert(ctx->regs_idx == regs_idx);
+
+                            iter.o = KOS_destroy_top_locals(ctx, &saved_pair, &iter);
+                        }
+
                         TRY(KOS_array_write(ctx, pair, 0, KOS_get_walk_key(iter.o)));
-                        TRY(KOS_array_write(ctx, pair, 1, KOS_get_walk_value(iter.o)));
+                        TRY(KOS_array_write(ctx, pair, 1, value));
 
                         write_reg(stack_frame, rdest, pair);
                     }

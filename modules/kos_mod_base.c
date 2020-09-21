@@ -112,7 +112,7 @@ static KOS_OBJ_ID object_iterator(KOS_CONTEXT      ctx,
                                   enum KOS_DEPTH_E depth)
 {
     int        error;
-    KOS_OBJ_ID ret    = KOS_BADPTR;
+    KOS_OBJ_ID ret = KOS_BADPTR;
     KOS_LOCAL  regs;
     KOS_LOCAL  array;
     KOS_LOCAL  walk;
@@ -140,8 +140,9 @@ static KOS_OBJ_ID object_iterator(KOS_CONTEXT      ctx,
         array.o = KOS_new_array(ctx, 2);
         TRY_OBJID(array.o);
 
-        if ( ! KOS_iterator_next(ctx, walk.o)) {
+        error = KOS_iterator_next(ctx, walk.o);
 
+        if ( ! error) {
             value.o = KOS_get_walk_value(walk.o);
 
             assert( ! IS_BAD_PTR(KOS_get_walk_key(walk.o)));
@@ -165,6 +166,8 @@ static KOS_OBJ_ID object_iterator(KOS_CONTEXT      ctx,
 
             ret = array.o;
         }
+        else if (error == KOS_ERROR_NOT_FOUND)
+            error = KOS_SUCCESS;
     }
 
 cleanup:

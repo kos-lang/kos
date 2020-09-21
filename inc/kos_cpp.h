@@ -1877,11 +1877,14 @@ class object::const_iterator {
 
         const_iterator& operator++() {
             context ctx(walk_.get_context());
-            if (KOS_iterator_next(ctx, walk_))
+            const int error = KOS_iterator_next(ctx, walk_);
+            if (error == KOS_ERROR_NOT_FOUND)
                 elem_ = value_type();
-            else
+            else {
+                ctx.check_error(error);
                 elem_ = std::make_pair<string, handle>(string(ctx, KOS_get_walk_key(walk_)),
                                                        handle(ctx, KOS_get_walk_value(walk_)));
+            }
             return *this;
         }
 

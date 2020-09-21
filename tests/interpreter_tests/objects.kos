@@ -1120,6 +1120,36 @@ do {
     expect_fail(fun { base.array.prototype.size = 0 })
 }
 
+# add elements to an object while iterating it
+do {
+    const elements = [ "abc", "def", "ghi", "jkl" ]
+
+    for const order in [ [0, 1, 2, 3], [3, 2, 1, 0] ] {
+
+        const obj = { }
+        for const idx in order {
+            obj[elements[idx]] = idx
+        }
+
+        var idx   = 0
+        var found = 0
+        for const k, v in obj {
+            assert ((v >= 0) && (v < elements.size)) || (v == 9)
+            if v < elements.size {
+                assert k == elements[v]
+                found |= 1 << v
+            }
+
+            if idx == 1 {
+                obj["zzz"] = 9
+            }
+            idx += 1
+        }
+
+        assert found == 0b1111
+    }
+}
+
 ##############################################################################
 # base.object
 

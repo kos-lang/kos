@@ -933,15 +933,14 @@ int KOS_has_prototype(KOS_CONTEXT ctx,
 
 KOS_OBJ_ID kos_new_object_walk(KOS_CONTEXT      ctx,
                                KOS_OBJ_ID       obj_id,
-                               enum KOS_DEPTH_E shallow)
+                               enum KOS_DEPTH_E depth)
 {
-    int       error         = KOS_SUCCESS;
-    KOS_LOCAL obj;
-    KOS_LOCAL key_table;
-    KOS_LOCAL prop_table;
-    KOS_LOCAL walk;
+    int                     error = KOS_SUCCESS;
+    KOS_LOCAL               obj;
+    KOS_LOCAL               walk;
+    KOS_ATOMIC(KOS_OBJ_ID) *props;
 
-    KOS_init_locals(ctx, 4, &obj, &key_table, &prop_table, &walk);
+    KOS_init_locals(ctx, 2, &obj, &walk);
     obj.o = obj_id;
 
     walk.o = OBJID(ITERATOR,
@@ -954,60 +953,22 @@ KOS_OBJ_ID kos_new_object_walk(KOS_CONTEXT      ctx,
 
     assert(READ_OBJ_TYPE(walk.o) == OBJ_ITERATOR);
 
-    OBJPTR(ITERATOR, walk.o)->obj        = obj.o;
-    OBJPTR(ITERATOR, walk.o)->key_table  = KOS_BADPTR;
-    OBJPTR(ITERATOR, walk.o)->index      = 0;
-    OBJPTR(ITERATOR, walk.o)->type       = OBJ_OBJECT;
-    OBJPTR(ITERATOR, walk.o)->last_key   = KOS_BADPTR;
-    OBJPTR(ITERATOR, walk.o)->last_value = KOS_BADPTR;
+    props = get_properties(obj.o);
 
-    key_table.o = KOS_new_object(ctx);
-    TRY_OBJID(key_table.o);
+    OBJPTR(ITERATOR, walk.o)->index         = 0;
+    OBJPTR(ITERATOR, walk.o)->depth         = depth;
+    OBJPTR(ITERATOR, walk.o)->type          = OBJ_OBJECT;
+    OBJPTR(ITERATOR, walk.o)->obj           = obj.o;
+    OBJPTR(ITERATOR, walk.o)->prop_obj      = obj.o;
+    OBJPTR(ITERATOR, walk.o)->key_table     = props ? read_props(props) : KOS_BADPTR;
+    OBJPTR(ITERATOR, walk.o)->returned_keys = KOS_BADPTR;
+    OBJPTR(ITERATOR, walk.o)->last_key      = KOS_BADPTR;
+    OBJPTR(ITERATOR, walk.o)->last_value    = KOS_BADPTR;
 
-    do {
-        uint32_t i;
-        uint32_t capacity;
-
-        KOS_ATOMIC(KOS_OBJ_ID) *props = get_properties(obj.o);
-
-        obj.o = KOS_get_prototype(ctx, obj.o);
-
-        if ( ! props)
-            continue;
-
-        prop_table.o = read_props(props);
-
-        if (IS_BAD_PTR(prop_table.o))
-            continue;
-
-        capacity = KOS_atomic_read_relaxed_u32(OBJPTR(OBJECT_STORAGE, prop_table.o)->capacity);
-
-        for (i = 0; i < capacity; i++) {
-            KOS_PITEM       *cur_item = OBJPTR(OBJECT_STORAGE, prop_table.o)->items + i;
-            const KOS_OBJ_ID key      = KOS_atomic_read_relaxed_obj(cur_item->key);
-            const KOS_OBJ_ID value    = KOS_atomic_read_acquire_obj(cur_item->value);
-
-            if (IS_BAD_PTR(key) || value == TOMBSTONE)
-                continue;
-
-            if (value == CLOSED) {
-                const KOS_OBJ_ID new_prop_table = KOS_atomic_read_relaxed_obj(
-                        OBJPTR(OBJECT_STORAGE, prop_table.o)->new_prop_table);
-                assert( ! IS_BAD_PTR(new_prop_table));
-
-                copy_table(ctx, obj.o, prop_table.o, new_prop_table);
-
-                prop_table.o = new_prop_table;
-                capacity     = KOS_atomic_read_relaxed_u32(OBJPTR(OBJECT_STORAGE, prop_table.o)->capacity);
-                continue;
-            }
-
-            TRY(KOS_set_property(ctx, key_table.o, key, KOS_VOID));
-        }
-    } while ( ! IS_BAD_PTR(obj.o) && ! shallow);
-
-    OBJPTR(ITERATOR, walk.o)->key_table =
-            read_props(get_properties(key_table.o));
+    if (depth == KOS_DEEP) {
+        KOS_atomic_write_relaxed_ptr(OBJPTR(ITERATOR, walk.o)->returned_keys, KOS_new_object(ctx));
+        TRY_OBJID(KOS_atomic_read_relaxed_obj(OBJPTR(ITERATOR, walk.o)->returned_keys));
+    }
 
 cleanup:
     walk.o = KOS_destroy_top_locals(ctx, &obj, &walk);
@@ -1019,31 +980,71 @@ cleanup:
 }
 
 int kos_object_walk(KOS_CONTEXT ctx,
-                    KOS_OBJ_ID  walk_id)
+                    KOS_OBJ_ID  iterator_id)
 {
-    int        error    = KOS_ERROR_INTERNAL;
-    uint32_t   capacity = 0;
-    KOS_LOCAL  walk;
-    KOS_LOCAL  table;
-    KOS_LOCAL  key;
+    int       error    = KOS_ERROR_INTERNAL;
+    uint32_t  capacity = 0;
+    KOS_LOCAL walk;
+    KOS_LOCAL table;
+    KOS_LOCAL returned_keys;
+    KOS_LOCAL key;
 
-    KOS_init_locals(ctx, 3, &walk, &table, &key);
-    walk.o = walk_id;
+    KOS_init_locals(ctx, 4, &walk, &table, &returned_keys, &key);
+    walk.o = iterator_id;
 
     assert(GET_OBJ_TYPE(walk.o) == OBJ_ITERATOR);
     assert(OBJPTR(ITERATOR, walk.o)->type == OBJ_OBJECT ||
            OBJPTR(ITERATOR, walk.o)->type == OBJ_CLASS);
 
-    if ( ! IS_BAD_PTR(OBJPTR(ITERATOR, walk.o)->key_table)) {
-        table.o  = OBJPTR(ITERATOR, walk.o)->key_table;
+    returned_keys.o = KOS_atomic_read_relaxed_obj(OBJPTR(ITERATOR, walk.o)->returned_keys);
+
+    table.o = KOS_atomic_read_relaxed_obj(OBJPTR(ITERATOR, walk.o)->key_table);
+    if ( ! IS_BAD_PTR(table.o))
         capacity = KOS_atomic_read_relaxed_u32(OBJPTR(OBJECT_STORAGE, table.o)->capacity);
-    }
 
     for (;;) {
 
+        KOS_OBJ_ID     value;
         const uint32_t index = KOS_atomic_add_u32(OBJPTR(ITERATOR, walk.o)->index, 1U);
 
         if (index >= capacity) {
+
+            if (OBJPTR(ITERATOR, walk.o)->depth == KOS_DEEP) {
+
+                KOS_OBJ_ID obj_id;
+
+                for (;;) {
+                    KOS_ATOMIC(KOS_OBJ_ID) *props;
+
+                    obj_id = KOS_atomic_read_relaxed_obj(OBJPTR(ITERATOR, walk.o)->prop_obj);
+                    if (IS_BAD_PTR(obj_id))
+                        break;
+
+                    obj_id = KOS_get_prototype(ctx, obj_id);
+                    if (IS_BAD_PTR(obj_id))
+                        break;
+
+                    KOS_atomic_write_relaxed_ptr(OBJPTR(ITERATOR, walk.o)->prop_obj, obj_id);
+
+                    props = get_properties(obj_id);
+                    if ( ! props)
+                        continue;
+
+                    table.o = read_props(props);
+                    if (IS_BAD_PTR(table.o))
+                        continue;
+
+                    capacity = KOS_atomic_read_relaxed_u32(OBJPTR(OBJECT_STORAGE, table.o)->capacity);
+
+                    KOS_atomic_write_relaxed_u32(OBJPTR(ITERATOR, walk.o)->index, 0U);
+                    KOS_atomic_write_release_ptr(OBJPTR(ITERATOR, walk.o)->key_table, table.o);
+                    break;
+                }
+
+                if ( ! IS_BAD_PTR(obj_id))
+                    continue;
+            }
+
             KOS_atomic_write_relaxed_ptr(OBJPTR(ITERATOR, walk.o)->last_key,   KOS_BADPTR);
             KOS_atomic_write_relaxed_ptr(OBJPTR(ITERATOR, walk.o)->last_value, KOS_BADPTR);
             error = KOS_ERROR_NOT_FOUND;
@@ -1052,21 +1053,46 @@ int kos_object_walk(KOS_CONTEXT ctx,
 
         key.o = KOS_atomic_read_relaxed_obj(OBJPTR(OBJECT_STORAGE, table.o)->items[index].key);
 
-        if ( ! IS_BAD_PTR(key.o)) {
+        if (IS_BAD_PTR(key.o))
+            continue;
 
-            const KOS_OBJ_ID value = KOS_get_property(ctx,
-                                                      OBJPTR(ITERATOR, walk.o)->obj,
-                                                      key.o);
+        if ( ! IS_BAD_PTR(returned_keys.o)) {
 
-            if (IS_BAD_PTR(value))
-                KOS_clear_exception(ctx);
-            else {
-                KOS_atomic_write_relaxed_ptr(OBJPTR(ITERATOR, walk.o)->last_key,   key.o);
-                KOS_atomic_write_relaxed_ptr(OBJPTR(ITERATOR, walk.o)->last_value, value);
-                error = KOS_SUCCESS;
+            if ( ! IS_BAD_PTR(KOS_get_property_shallow(ctx, returned_keys.o, key.o)))
+                continue;
+
+            KOS_clear_exception(ctx);
+
+            error = KOS_set_property(ctx, returned_keys.o, key.o, KOS_VOID);
+            if (error)
                 break;
-            }
         }
+
+        value = KOS_atomic_read_acquire_obj(OBJPTR(OBJECT_STORAGE, table.o)->items[index].value);
+
+        assert( ! IS_BAD_PTR(value));
+
+        if (value == TOMBSTONE)
+            continue;
+
+        if ((value != CLOSED) && (value != RESERVED)) {
+            KOS_atomic_write_relaxed_ptr(OBJPTR(ITERATOR, walk.o)->last_key,   key.o);
+            KOS_atomic_write_relaxed_ptr(OBJPTR(ITERATOR, walk.o)->last_value, value);
+            error = KOS_SUCCESS;
+            break;
+        }
+
+        value = KOS_get_property_shallow(ctx, OBJPTR(ITERATOR, walk.o)->prop_obj, key.o);
+
+        if (IS_BAD_PTR(value)) {
+            KOS_clear_exception(ctx);
+            continue;
+        }
+
+        KOS_atomic_write_relaxed_ptr(OBJPTR(ITERATOR, walk.o)->last_key,   key.o);
+        KOS_atomic_write_relaxed_ptr(OBJPTR(ITERATOR, walk.o)->last_value, value);
+        error = KOS_SUCCESS;
+        break;
     }
 
     KOS_destroy_top_locals(ctx, &walk, &key);

@@ -451,21 +451,24 @@ typedef struct KOS_DYNAMIC_PROP_S {
     KOS_OBJ_ID           setter;
 } KOS_DYNAMIC_PROP;
 
-typedef struct KOS_ITERATOR_S {
-    KOS_OBJ_HEADER         header;
-    KOS_ATOMIC(uint32_t)   index;
-    KOS_TYPE               type;
-    KOS_OBJ_ID             obj;
-    KOS_OBJ_ID             key_table;
-    KOS_ATOMIC(KOS_OBJ_ID) last_key;
-    KOS_ATOMIC(KOS_OBJ_ID) last_value;
-} KOS_ITERATOR;
-
 enum KOS_DEPTH_E {
     KOS_DEEP,    /* Iterate over properties of this object and prototypes        */
     KOS_SHALLOW, /* Iterate over properties of this object, but not prototypes   */
     KOS_CONTENTS /* Iterate over contents of the container (e.g. array elements) */
 };
+
+typedef struct KOS_ITERATOR_S {
+    KOS_OBJ_HEADER         header;
+    KOS_ATOMIC(uint32_t)   index;
+    uint8_t                type;
+    uint8_t                depth;
+    KOS_ATOMIC(KOS_OBJ_ID) obj;
+    KOS_ATOMIC(KOS_OBJ_ID) prop_obj;
+    KOS_ATOMIC(KOS_OBJ_ID) key_table;
+    KOS_ATOMIC(KOS_OBJ_ID) returned_keys;
+    KOS_ATOMIC(KOS_OBJ_ID) last_key;
+    KOS_ATOMIC(KOS_OBJ_ID) last_value;
+} KOS_ITERATOR;
 
 #ifdef __cplusplus
 extern "C" {
