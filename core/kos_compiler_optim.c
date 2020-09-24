@@ -96,7 +96,6 @@ static void promote(KOS_COMP_UNIT      *program,
     node->children     = child->children;
     node->last_child   = child->last_child;
     node->var          = child->var;
-    node->var_scope    = child->var_scope;
     node->token        = child->token;
     node->type         = child->type;
     node->is_local_var = child->is_local_var;

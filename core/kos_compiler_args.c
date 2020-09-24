@@ -63,9 +63,7 @@ static void lookup_var(KOS_COMP_UNIT      *program,
 
         assert(var->num_reads || var->num_assignments);
 
-        assert(node->var_scope);
-
-        update_scope_ref(program, var->type, node->var_scope);
+        update_scope_ref(program, var->type, var->scope);
     }
 
     *out_var = var;

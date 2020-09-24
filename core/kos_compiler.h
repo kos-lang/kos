@@ -39,8 +39,9 @@ enum KOS_VAR_ACTIVE_E {
 };
 
 typedef struct KOS_VAR_S {
-    KOS_RED_BLACK_NODE  rb_tree_node;
-    struct KOS_VAR_S   *next;
+    KOS_RED_BLACK_NODE  rb_tree_node;      /* Node for red-black tree holding variables in parent scope         */
+    struct KOS_VAR_S   *next;              /* Pointer to next variable on the list of variables in parent scope */
+    struct KOS_SCOPE_S *scope;             /* Parent scope where this variable was declared                     */
     const KOS_TOKEN    *token;
     KOS_REG            *reg;
     const KOS_AST_NODE *value;

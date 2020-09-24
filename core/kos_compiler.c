@@ -291,9 +291,7 @@ static int lookup_local_var_even_inactive(KOS_COMP_UNIT      *program,
 
         if (var->type & VAR_LOCAL) {
 
-            assert(node->var_scope);
-
-            if (var == node->var_scope->ellipsis) {
+            if (var == var->scope->ellipsis) {
                 assert(var->is_active);
                 assert(var->reg);
                 *reg = var->reg;
@@ -310,8 +308,7 @@ static int lookup_local_var_even_inactive(KOS_COMP_UNIT      *program,
             }
         }
         else if (var->type & VAR_ARGUMENT_IN_REG) {
-            assert(node->var_scope);
-            assert(node->var_scope->is_function);
+            assert(var->scope->is_function);
             assert(var->reg);
             *reg = var->reg;
         }
@@ -342,7 +339,7 @@ static int lookup_var(KOS_COMP_UNIT      *program,
         const int  is_arg_in_reg = var->type == VAR_INDEPENDENT_ARG_IN_REG;
         const int  is_local_arg  = node->is_local_var &&
                                    (var->type & (VAR_ARGUMENT | VAR_ARGUMENT_IN_REG));
-        KOS_SCOPE *scope         = node->var_scope;
+        KOS_SCOPE *scope         = var->scope;
         const int  is_global     = var->type == VAR_GLOBAL || var->type == VAR_MODULE;
 
         *out_var = var;

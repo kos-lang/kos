@@ -92,6 +92,7 @@ static KOS_VAR *alloc_var(KOS_COMP_UNIT      *program,
     if (var) {
         memset(var, 0, sizeof(*var));
 
+        var->scope        = program->scope_stack;
         var->token        = &node->token;
         var->type         = VAR_LOCAL;
         var->is_const     = is_const;
@@ -233,9 +234,9 @@ static int lookup_local_var(KOS_COMP_UNIT *program,
         KOS_VAR *var = kos_find_var(scope->vars, &node->token);
 
         if (var && var->is_active) {
+            assert(var->scope == scope);
             assert( ! node->var);
             node->var          = var;
-            node->var_scope    = scope;
             node->is_local_var = 1;
             *out_var           = var;
             error              = KOS_SUCCESS;
@@ -342,11 +343,11 @@ static int lookup_and_mark_var(KOS_COMP_UNIT *program,
         if (scope == local_fun_scope || var->type == VAR_GLOBAL || var->type == VAR_MODULE)
             node->is_local_var = 1;
 
+        assert(var->scope == scope);
         assert( ! node->var);
-        node->var       = var;
-        node->var_scope = scope;
-        *out_var        = var;
-        error           = KOS_SUCCESS;
+        node->var = var;
+        *out_var  = var;
+        error     = KOS_SUCCESS;
     }
     else {
         program->error_token = &node->token;
@@ -400,9 +401,9 @@ static int define_var(KOS_COMP_UNIT         *program,
     if (!var)
         RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
 
+    assert(var->scope == program->scope_stack);
     assert( ! node->var);
     node->var          = var;
-    node->var_scope    = program->scope_stack;
     node->is_local_var = 1;
     *out_var           = var;
 

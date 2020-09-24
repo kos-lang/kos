@@ -191,7 +191,6 @@ static int new_node(KOS_PARSER    *parser,
         ast_node->children     = 0;
         ast_node->last_child   = 0;
         ast_node->var          = 0;
-        ast_node->var_scope    = 0;
         ast_node->token        = parser->token;
         ast_node->type         = type;
         ast_node->is_local_var = 0;

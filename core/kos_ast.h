@@ -76,7 +76,6 @@ typedef struct KOS_AST_NODE_S {
     struct KOS_AST_NODE_S *children;
     struct KOS_AST_NODE_S *last_child;
     struct KOS_VAR_S      *var;
-    struct KOS_SCOPE_S    *var_scope;
     KOS_TOKEN              token;
     unsigned               type         : 8;
     unsigned               is_local_var : 1;
