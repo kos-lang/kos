@@ -86,7 +86,7 @@ typedef struct KOS_STACK_S {
     KOS_OBJ_HEADER         header;
     uint32_t               capacity;
     KOS_ATOMIC(uint32_t)   size;
-    uint8_t                flags;
+    KOS_ATOMIC(uint32_t)   flags;
     uint8_t                yield_reg; /* In a generator stack, this is the index of the yield register */
     KOS_ATOMIC(KOS_OBJ_ID) buf[1]; /* Actual stack */
 } KOS_STACK;

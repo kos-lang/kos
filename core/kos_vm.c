@@ -706,6 +706,30 @@ cleanup:
     return error;
 }
 
+static void set_stack_flag(KOS_CONTEXT ctx, uint32_t new_flag)
+{
+    KOS_OBJ_ID stack = ctx->stack;
+
+    for (;;) {
+        uint32_t flags = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->flags);
+
+        if (KOS_atomic_cas_weak_u32(OBJPTR(STACK, stack)->flags, flags, flags | new_flag))
+            break;
+    }
+}
+
+static void clear_stack_flag(KOS_CONTEXT ctx, uint32_t clear_flag)
+{
+    KOS_OBJ_ID stack = ctx->stack;
+
+    for (;;) {
+        uint32_t flags = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->flags);
+
+        if (KOS_atomic_cas_weak_u32(OBJPTR(STACK, stack)->flags, flags, flags & ~clear_flag))
+            break;
+    }
+}
+
 static void set_handler_reg(KOS_CONTEXT ctx,
                             KOS_OBJ_ID  obj_id)
 {
@@ -713,7 +737,7 @@ static void set_handler_reg(KOS_CONTEXT ctx,
     const KOS_OBJ_ID stack = ctx->stack;
 
     assert(GET_OBJ_TYPE(stack) == OBJ_STACK);
-    assert(OBJPTR(STACK, stack)->flags & KOS_REENTRANT_STACK);
+    assert(KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->flags) & KOS_REENTRANT_STACK);
 
     size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->size);
     assert(size > KOS_STACK_EXTRA);
@@ -728,7 +752,7 @@ static KOS_OBJ_ID get_handler_reg(KOS_CONTEXT ctx)
     const KOS_OBJ_ID stack = ctx->stack;
 
     assert(GET_OBJ_TYPE(stack) == OBJ_STACK);
-    assert(OBJPTR(STACK, stack)->flags & KOS_REENTRANT_STACK);
+    assert(KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->flags) & KOS_REENTRANT_STACK);
 
     size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->size);
     assert(size > KOS_STACK_EXTRA);
@@ -869,7 +893,7 @@ static int prepare_call(KOS_CONTEXT        ctx,
 
             OBJPTR(FUNCTION, func.o)->opts.min_args = 0;
 
-            OBJPTR(STACK, ctx->stack)->flags |= KOS_CAN_YIELD;
+            set_stack_flag(ctx, KOS_CAN_YIELD);
 
             kos_stack_pop(ctx);
 
@@ -913,7 +937,7 @@ static int prepare_call(KOS_CONTEXT        ctx,
             else
                 *this_obj = get_handler_reg(ctx);
 
-            OBJPTR(STACK, ctx->stack)->flags |= KOS_CAN_YIELD;
+            set_stack_flag(ctx, KOS_CAN_YIELD);
             break;
         }
 
@@ -947,7 +971,7 @@ static void finish_call(KOS_CONTEXT        ctx,
     if ( ! KOS_is_exception_pending(ctx)) {
 
         if (state >= KOS_GEN_INIT) {
-            if (OBJPTR(STACK, ctx->stack)->flags & KOS_CAN_YIELD) {
+            if (KOS_atomic_read_relaxed_u32(OBJPTR(STACK, ctx->stack)->flags) & KOS_CAN_YIELD) {
                 state = KOS_GEN_DONE;
                 if (instr != INSTR_NEXT_JUMP) {
                     KOS_LOCAL saved_func;
@@ -1037,7 +1061,7 @@ static KOS_OBJ_ID read_stack(KOS_CONTEXT ctx, KOS_OBJ_ID objptr, int idx)
     KOS_OBJ_ID ret = KOS_BADPTR;
 
     assert(GET_OBJ_TYPE(objptr) == OBJ_STACK);
-    assert(OBJPTR(STACK, objptr)->flags & KOS_REENTRANT_STACK);
+    assert(KOS_atomic_read_relaxed_u32(OBJPTR(STACK, objptr)->flags) & KOS_REENTRANT_STACK);
 
     size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, objptr)->size);
     assert(size >= 1 + KOS_STACK_EXTRA);
@@ -1064,7 +1088,7 @@ static int write_stack(KOS_CONTEXT ctx, KOS_OBJ_ID objptr, int idx, KOS_OBJ_ID v
     uint32_t size;
 
     assert(GET_OBJ_TYPE(objptr) == OBJ_STACK);
-    assert(OBJPTR(STACK, objptr)->flags & KOS_REENTRANT_STACK);
+    assert(KOS_atomic_read_relaxed_u32(OBJPTR(STACK, objptr)->flags) & KOS_REENTRANT_STACK);
 
     size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, objptr)->size);
     assert(size >= 1 + KOS_STACK_EXTRA);
@@ -1085,11 +1109,6 @@ static int write_stack(KOS_CONTEXT ctx, KOS_OBJ_ID objptr, int idx, KOS_OBJ_ID v
     return error;
 }
 
-static void finish_generator(KOS_CONTEXT ctx)
-{
-    OBJPTR(STACK, ctx->stack)->flags |= KOS_WILL_POP_STACK;
-}
-
 static void set_closure_stack_size(KOS_CONTEXT      ctx,
                                    KOS_OBJ_ID       stack,
                                    KOS_STACK_FRAME *stack_frame)
@@ -1098,13 +1117,13 @@ static void set_closure_stack_size(KOS_CONTEXT      ctx,
     assert(stack == ctx->stack);
     assert(get_current_stack_frame(ctx) == stack_frame);
 
-    if (OBJPTR(STACK, stack)->flags & KOS_REENTRANT_STACK) {
+    if (KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->flags) & KOS_REENTRANT_STACK) {
 
         const KOS_OBJ_ID func_obj = get_current_func(stack_frame);
 
         assert(ctx->regs_idx >= 3);
 
-        if (OBJPTR(STACK, stack)->flags & KOS_WILL_POP_STACK) {
+        if (KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->flags) & KOS_WILL_POP_STACK) {
 
             const uint32_t closure_size = OBJPTR(FUNCTION, func_obj)->opts.closure_size;
             const uint32_t size         = closure_size + 1U + KOS_STACK_EXTRA;
@@ -2876,7 +2895,7 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
                 }
                 else {
                     regs.o = ctx->stack;
-                    assert(OBJPTR(STACK, regs.o)->flags & KOS_REENTRANT_STACK);
+                    assert(KOS_atomic_read_relaxed_u32(OBJPTR(STACK, regs.o)->flags) & KOS_REENTRANT_STACK);
                 }
 
                 assert( ! IS_SMALL_INT(closures.o));
@@ -3302,7 +3321,7 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
                             if (state >= KOS_GEN_INIT) {
                                 /* Avoid detecting as end of iterator in finish_call() */
                                 if ( ! IS_BAD_PTR(ret.o))
-                                    OBJPTR(STACK, ctx->stack)->flags &= ~KOS_CAN_YIELD;
+                                    clear_stack_flag(ctx, KOS_CAN_YIELD);
 
                                 if (KOS_is_exception_pending(ctx))
                                     error = KOS_ERROR_EXCEPTION;
@@ -3347,7 +3366,7 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
                 assert( ! KOS_is_exception_pending(ctx));
 
                 if (tail_call) {
-                    finish_generator(ctx);
+                    set_stack_flag(ctx, KOS_WILL_POP_STACK);
 
                     assert(error == KOS_SUCCESS);
                     assert( ! IS_BAD_PTR(out));
@@ -3374,7 +3393,7 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
 
                 assert(GET_OBJ_TYPE(out) <= OBJ_LAST_TYPE);
 
-                finish_generator(ctx);
+                set_stack_flag(ctx, KOS_WILL_POP_STACK);
 
                 error = KOS_SUCCESS;
                 assert( ! IS_BAD_PTR(out));
@@ -3387,14 +3406,15 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
 
                 assert(rsrc < num_regs);
 
-                if ( ! (OBJPTR(STACK, ctx->stack)->flags & KOS_CAN_YIELD))
+                if ( ! (KOS_atomic_read_relaxed_u32(OBJPTR(STACK, ctx->stack)->flags) & KOS_CAN_YIELD))
                     RAISE_EXCEPTION_STR(str_err_cannot_yield);
 
                 out = read_reg(stack_frame, rsrc);
 
-                assert(OBJPTR(STACK, ctx->stack)->flags & KOS_REENTRANT_STACK);
-                OBJPTR(STACK, ctx->stack)->yield_reg =  rsrc;
-                OBJPTR(STACK, ctx->stack)->flags     &= ~KOS_CAN_YIELD;
+                assert(KOS_atomic_read_relaxed_u32(OBJPTR(STACK, ctx->stack)->flags) & KOS_REENTRANT_STACK);
+                OBJPTR(STACK, ctx->stack)->yield_reg = rsrc;
+
+                clear_stack_flag(ctx, KOS_CAN_YIELD);
 
                 bytecode += 2;
 
@@ -3464,7 +3484,7 @@ cleanup:
 
                 if (catch_offs == KOS_NO_CATCH) {
 
-                    finish_generator(ctx);
+                    set_stack_flag(ctx, KOS_WILL_POP_STACK);
 
                     error = KOS_ERROR_EXCEPTION;
                     out   = KOS_BADPTR;
@@ -3680,7 +3700,7 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
 
             /* Avoid detecting as end of iterator in finish_call() */
             if (state >= KOS_GEN_INIT && ! IS_BAD_PTR(ret.o))
-                OBJPTR(STACK, ctx->stack)->flags &= ~KOS_CAN_YIELD;
+                clear_stack_flag(ctx, KOS_CAN_YIELD);
 
             if (KOS_is_exception_pending(ctx)) {
                 assert(IS_BAD_PTR(ret.o));
