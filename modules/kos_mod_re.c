@@ -1005,7 +1005,7 @@ static void disassemble(struct RE *re, const char *re_cstr)
             bytes_remaining -= num_printed;
 
             if ( ! i_arg && desc->first_arg_is_offs) {
-                const unsigned target = (unsigned)offs + ((int)(int16_t)operand << 1);
+                const unsigned target = (unsigned)offs + ((int)(int16_t)operand * 2);
 
                 assert(target <= re->bytecode_size * 2U);
                 if (target == re->bytecode_size * 2U)
