@@ -1123,7 +1123,7 @@ static void set_closure_stack_size(KOS_CONTEXT      ctx,
 
         assert(ctx->regs_idx >= 3);
 
-        if (KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->flags) & KOS_WILL_POP_STACK) {
+        if (KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->flags) & KOS_GENERATOR_DONE) {
 
             const uint32_t closure_size = OBJPTR(FUNCTION, func_obj)->opts.closure_size;
             const uint32_t size         = closure_size + 1U + KOS_STACK_EXTRA;
@@ -3366,7 +3366,7 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
                 assert( ! KOS_is_exception_pending(ctx));
 
                 if (tail_call) {
-                    set_stack_flag(ctx, KOS_WILL_POP_STACK);
+                    set_stack_flag(ctx, KOS_GENERATOR_DONE);
 
                     assert(error == KOS_SUCCESS);
                     assert( ! IS_BAD_PTR(out));
@@ -3393,7 +3393,7 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
 
                 assert(GET_OBJ_TYPE(out) <= OBJ_LAST_TYPE);
 
-                set_stack_flag(ctx, KOS_WILL_POP_STACK);
+                set_stack_flag(ctx, KOS_GENERATOR_DONE);
 
                 error = KOS_SUCCESS;
                 assert( ! IS_BAD_PTR(out));
@@ -3484,7 +3484,7 @@ cleanup:
 
                 if (catch_offs == KOS_NO_CATCH) {
 
-                    set_stack_flag(ctx, KOS_WILL_POP_STACK);
+                    set_stack_flag(ctx, KOS_GENERATOR_DONE);
 
                     error = KOS_ERROR_EXCEPTION;
                     out   = KOS_BADPTR;

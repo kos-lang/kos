@@ -64,7 +64,7 @@ enum KOS_STACK_FLAGS_E {
     KOS_NORMAL_STACK    = 0U,
     KOS_REENTRANT_STACK = 1U,   /* Stack of a generator or closure      */
     KOS_CAN_YIELD       = 2U,   /* Indicates that a generator can yield */
-    KOS_WILL_POP_STACK  = 4U    /* Indicates that frame will be popped  */ /* TODO reuse KOS_CAN_YEILD */
+    KOS_GENERATOR_DONE  = 4U    /* Indicates that frame will be popped  */ /* TODO reuse KOS_CAN_YIELD? */
 };
 
 /* Stack management:
