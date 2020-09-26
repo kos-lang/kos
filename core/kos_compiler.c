@@ -4629,8 +4629,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
     assert(last_reg + 1 == scope->num_indep_vars);
 
     /* Generate registers for function arguments */
-    if (scope->num_args) {
-
+    {
         KOS_AST_NODE *arg_node  = fun_node->children;
         int           rest_used = 0;
         int           have_rest = 0;
@@ -4663,6 +4662,8 @@ static int gen_function(KOS_COMP_UNIT      *program,
             if (arg_node->type != NT_IDENTIFIER)
                 ++constant->num_def_args;
 
+            assert(var->num_reads || ! var->num_assignments);
+
             /* Process all args up to the last one which is being used,
              * effectively ignoring the tail of unused arguments. */
             if (i < scope->num_args) {
@@ -4682,7 +4683,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
 
                     assert(var->reg->reg == ++last_reg);
 
-                    if (var->num_reads || var->num_assignments)
+                    if (var->num_reads)
                         var->reg->tmp = 0;
 
                     var->array_idx = (var->type & VAR_INDEPENDENT) ? var->reg->reg : 0;
@@ -4691,13 +4692,12 @@ static int gen_function(KOS_COMP_UNIT      *program,
                     have_rest = 1;
                     assert(scope->have_rest);
 
-                    if (var->num_reads || var->num_assignments)
+                    if (var->num_reads)
                         rest_used = 1;
                 }
             }
             else {
                 assert( ! var->num_reads);
-                assert( ! var->num_assignments);
             }
         }
 
@@ -4799,8 +4799,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
         free_reg(program, frame->args_reg);
         frame->args_reg = 0;
     }
-    if (scope->num_args)
-        TRY(kos_red_black_walk(scope->vars, free_arg_regs, program));
+    TRY(kos_red_black_walk(scope->vars, free_arg_regs, program));
 
     /* Invoke super constructor if not invoked explicitly */
     if (needs_super_ctor && ! frame->uses_base_ctor)
@@ -4979,11 +4978,17 @@ static int function_literal(KOS_COMP_UNIT      *program,
         for (i = 0; node && node->type == NT_ASSIGNMENT; node = node->next, ++i) {
 
             const KOS_AST_NODE *def_node = node->children;
+            KOS_VAR            *var;
             KOS_REG            *arg      = 0;
-            const int           used     = i < num_used_def_args;
+            int                 used;
 
             assert(def_node);
             assert(def_node->type == NT_IDENTIFIER);
+            var = def_node->var;
+            assert(var);
+            used = var->num_reads;
+            assert(var->num_reads || ! var->num_assignments);
+
             def_node = def_node->next;
             assert(def_node);
             assert( ! def_node->next);

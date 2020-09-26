@@ -1116,6 +1116,52 @@ do {
     assert count == 12
 }
 
+# unused default arguments with side effects
+# use globals to avoid closures
+public var unused_default_counter = 0
+public fun add_to_unused_default_counter(x)
+{
+    unused_default_counter += x
+}
+do {
+    fun container1(incr_value)
+    {
+        fun unused1(x = 1, y = add_to_unused_default_counter(incr_value), z = 2)
+        {
+            return void
+        }
+
+        return unused1
+    }
+
+    assert unused_default_counter == 0
+    const f1 = container1(5)
+    assert unused_default_counter == 5
+    const a1 = f1("a", "b", "c", "d", "e", "f")
+    assert a1 == void
+}
+do {
+    fun container2(incr_value)
+    {
+        fun unused2(x = 1, y = add_to_unused_default_counter(incr_value * 2), z = 2, all...)
+        {
+            return [all...]
+        }
+
+        return unused2
+    }
+
+    assert unused_default_counter == 5
+    const f1 = container2(2)
+    assert unused_default_counter == 9
+    const a1 = f1("a", "b", "c", "d", "e", "f")
+    assert typeof a1 == "array"
+    assert a1.size == 3
+    assert a1[0] == "d"
+    assert a1[1] == "e"
+    assert a1[2] == "f"
+}
+
 # test correct placement of arguments for generator with independent variables
 do {
     fun args_and_indep_vars(input)
