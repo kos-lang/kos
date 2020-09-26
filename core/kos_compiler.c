@@ -4663,9 +4663,9 @@ static int gen_function(KOS_COMP_UNIT      *program,
              * even if these args will not be default-assigned in practice. */
             if (arg_node->type != NT_IDENTIFIER) {
                 ++num_def_args;
-                constant->num_decl_def_args = num_def_args;
+                constant->num_decl_def_args = (uint8_t)num_def_args;
                 if (var->num_reads || scope->ellipsis)
-                    constant->num_used_def_args = num_def_args;
+                    constant->num_used_def_args = (uint8_t)num_def_args;
             }
 
             /* Process all args up to the last one which is being used,
