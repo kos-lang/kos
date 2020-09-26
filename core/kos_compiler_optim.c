@@ -76,26 +76,23 @@ static void promote(KOS_COMP_UNIT      *program,
                     KOS_AST_NODE       *node,
                     const KOS_AST_NODE *child)
 {
-    KOS_SCOPE *scope = (KOS_SCOPE *)
-            kos_red_black_find(program->scopes, (void *)child, kos_scope_compare_item);
+    KOS_SCOPE *const scope = child->u.scope;
 
-    assert( ! kos_red_black_find(program->scopes, (void *)node, kos_scope_compare_item));
+    assert( ! node->is_scope);
 
-    if (scope) {
-
-        kos_red_black_delete(&program->scopes, (KOS_RED_BLACK_NODE *)scope);
-
+    if (child->is_scope) {
         assert(scope->scope_node == child);
         scope->scope_node = node;
-
-        kos_red_black_insert(&program->scopes,
-                             (KOS_RED_BLACK_NODE *)scope,
-                             kos_scope_compare_node);
+        node->u.scope     = scope;
+        node->is_scope    = 1;
+    }
+    else {
+        node->u.var    = child->u.var;
+        node->is_scope = 0;
     }
 
     node->children     = child->children;
     node->last_child   = child->last_child;
-    node->var          = child->var;
     node->token        = child->token;
     node->type         = child->type;
     node->is_local_var = child->is_local_var;
@@ -155,7 +152,9 @@ static void lookup_var(KOS_COMP_UNIT      *program,
                        KOS_VAR           **out_var,
                        int                *is_local)
 {
-    KOS_VAR *var = node->var;
+    KOS_VAR *var = node->u.var;
+
+    assert( ! node->is_scope);
 
     if (only_active) {
         assert(var->is_active);
@@ -254,9 +253,9 @@ static int reset_var_state(KOS_RED_BLACK_NODE *node,
 static KOS_SCOPE *push_scope(KOS_COMP_UNIT      *program,
                              const KOS_AST_NODE *node)
 {
-    KOS_SCOPE *scope = (KOS_SCOPE *)
-            kos_red_black_find(program->scopes, (void *)node, kos_scope_compare_item);
+    KOS_SCOPE *const scope = node->u.scope;
 
+    assert(node->is_scope);
     assert(scope);
 
     assert(scope->next == program->scope_stack);
@@ -744,9 +743,12 @@ static int for_in_stmt(KOS_COMP_UNIT *program,
 
 static int parameter_defaults(KOS_COMP_UNIT *program,
                               KOS_AST_NODE  *node,
-                              KOS_AST_NODE  *name_node)
+                              KOS_AST_NODE  *name_node,
+                              int           *out_num_def_used)
 {
-    int error = KOS_SUCCESS;
+    int error        = KOS_SUCCESS;
+    int num_def      = 0;
+    int num_def_used = 0;
 
     assert(node);
     assert(node->type == NT_PARAMETERS);
@@ -756,8 +758,10 @@ static int parameter_defaults(KOS_COMP_UNIT *program,
 
         if (node->type == NT_ASSIGNMENT) {
 
+            KOS_VAR      *var;
             KOS_AST_NODE *def_node = node->children;
             int           is_terminal;
+            int           is_local;
 
             assert(def_node);
             assert(def_node->type == NT_IDENTIFIER);
@@ -766,8 +770,20 @@ static int parameter_defaults(KOS_COMP_UNIT *program,
             assert( ! def_node->next);
 
             TRY(visit_node(program, def_node, &is_terminal));
+
+            lookup_var(program, node->children, 1, &var, &is_local);
+            assert(var);
+
+            ++num_def;
+
+            assert(var->num_reads || ! var->num_assignments);
+
+            if (var->num_reads)
+                num_def_used = num_def;
         }
     }
+
+    *out_num_def_used = num_def_used;
 
 cleanup:
     return error;
@@ -802,10 +818,13 @@ static int function_literal(KOS_COMP_UNIT *program,
     assert( ! node->next->next);
 
     do {
+        int        num_def_used = 0;
+        KOS_FRAME *frame;
 
         program->num_optimizations = 0;
 
-        push_scope(program, fun_node);
+        frame = (KOS_FRAME *)push_scope(program, fun_node);
+        assert(frame->scope.has_frame);
 
         kos_activate_self_ref_func(program, fun_var);
 
@@ -816,9 +835,14 @@ static int function_literal(KOS_COMP_UNIT *program,
         pop_scope(program);
 
         if ( ! error)
-            error = parameter_defaults(program, name_node->next, name_node);
+            error = parameter_defaults(program, name_node->next, name_node, &num_def_used);
 
         num_optimizations += program->num_optimizations;
+
+        if (num_def_used < frame->num_def_used)
+            ++num_optimizations;
+
+        frame->num_def_used = num_def_used;
 
     } while ( ! error && program->num_optimizations);
 
@@ -880,6 +904,32 @@ cleanup:
     return error;
 }
 
+int kos_is_const_fun(KOS_VAR *var)
+{
+    const KOS_AST_NODE *const fun_node = var->value;
+    KOS_FRAME                *frame;
+
+    assert(var->is_const);
+    assert(fun_node);
+    assert(fun_node->type == NT_FUNCTION_LITERAL ||
+           fun_node->type == NT_CONSTRUCTOR_LITERAL);
+
+    /* TODO Add support for constructors */
+    if (fun_node->type == NT_CONSTRUCTOR_LITERAL)
+        return 0;
+
+    /* Function requires binding defaults, must be passed through a closure */
+    assert(fun_node->is_scope);
+    frame = (KOS_FRAME *)fun_node->u.scope;
+    assert(frame);
+    assert(frame->scope.has_frame);
+
+    if (frame->num_def_used)
+        return 0;
+
+    return 0; /* TODO num_binds */
+}
+
 static void identifier(KOS_COMP_UNIT *program,
                        KOS_AST_NODE  *node)
 {
@@ -910,6 +960,13 @@ static void identifier(KOS_COMP_UNIT *program,
 
                 ++program->num_optimizations;
                 return;
+
+            case NT_FUNCTION_LITERAL:
+                /* fall through */
+            case NT_CONSTRUCTOR_LITERAL:
+                if (kos_is_const_fun(var))
+                    is_local = 1;
+                break;
 
             default:
                 break;
@@ -957,7 +1014,8 @@ static int assignment(KOS_COMP_UNIT *program,
 
     if (kos_is_self_ref_func(lhs_node)) {
 
-        KOS_VAR *fun_var = lhs_node->children->var;
+        KOS_VAR *fun_var = lhs_node->children->u.var;
+        assert( ! lhs_node->children->is_scope);
         assert(fun_var);
         assert( ! fun_var->is_active);
 

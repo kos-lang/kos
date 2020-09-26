@@ -21,15 +21,6 @@ static const char str_err_unexpected_yield[]       = "'yield' not allowed in glo
 static int visit_node(KOS_COMP_UNIT *program,
                       KOS_AST_NODE  *node);
 
-int kos_scope_compare_node(KOS_RED_BLACK_NODE *a,
-                           KOS_RED_BLACK_NODE *b)
-{
-    const KOS_SCOPE *scope_a = (const KOS_SCOPE *)a;
-    const KOS_SCOPE *scope_b = (const KOS_SCOPE *)b;
-
-    return (int)((intptr_t)scope_a->scope_node - (intptr_t)scope_b->scope_node);
-}
-
 static int compare_tokens(const KOS_TOKEN *token_a,
                           const KOS_TOKEN *token_b)
 {
@@ -97,7 +88,6 @@ static KOS_VAR *alloc_var(KOS_COMP_UNIT      *program,
         var->type         = VAR_LOCAL;
         var->is_const     = is_const;
         var->is_active    = VAR_ALWAYS_ACTIVE;
-        var->has_defaults = 0;
         var->num_reads    = -1;
 
         kos_red_black_insert(&program->scope_stack->vars,
@@ -135,16 +125,14 @@ static int init_global_scope(KOS_COMP_UNIT *program)
     return error;
 }
 
-static int push_scope(KOS_COMP_UNIT      *program,
-                      int                 alloc_frame,
-                      const KOS_AST_NODE *node)
+static int push_scope(KOS_COMP_UNIT *program,
+                      int            alloc_frame,
+                      KOS_AST_NODE  *node)
 {
     int          error = KOS_SUCCESS;
     const size_t size  = alloc_frame ? sizeof(KOS_FRAME) : sizeof(KOS_SCOPE);
 
-    KOS_SCOPE *const scope = (KOS_SCOPE *)
-        kos_mempool_alloc(&program->allocator, size);
-    KOS_FRAME *const frame = alloc_frame ? (KOS_FRAME *)scope : 0;
+    KOS_SCOPE *const scope = (KOS_SCOPE *)kos_mempool_alloc(&program->allocator, size);
 
     if ( ! scope)
         error = KOS_ERROR_OUT_OF_MEMORY;
@@ -153,15 +141,12 @@ static int push_scope(KOS_COMP_UNIT      *program,
 
         memset(scope, 0, size);
 
-        if (frame)
+        if (alloc_frame)
             scope->has_frame = 1;
 
-        scope->scope_node = node;
-
-        kos_red_black_insert(&program->scopes,
-                             (KOS_RED_BLACK_NODE *)scope,
-                             kos_scope_compare_node);
-
+        node->is_scope       = 1;
+        node->u.scope        = scope;
+        scope->scope_node    = node;
         scope->next          = program->scope_stack;
         program->scope_stack = scope;
 
@@ -177,8 +162,8 @@ static void pop_scope(KOS_COMP_UNIT *program)
     program->scope_stack = program->scope_stack->next;
 }
 
-static int push_function(KOS_COMP_UNIT      *program,
-                         const KOS_AST_NODE *node)
+static int push_function(KOS_COMP_UNIT *program,
+                         KOS_AST_NODE  *node)
 {
     int error = push_scope(program, 1, node);
 
@@ -235,8 +220,9 @@ static int lookup_local_var(KOS_COMP_UNIT *program,
 
         if (var && var->is_active) {
             assert(var->scope == scope);
-            assert( ! node->var);
-            node->var          = var;
+            assert( ! node->is_scope);
+            assert( ! node->u.var);
+            node->u.var        = var;
             node->is_local_var = 1;
             *out_var           = var;
             error              = KOS_SUCCESS;
@@ -270,8 +256,7 @@ static int add_scope_ref(KOS_COMP_UNIT *program,
 
     if ( ! ref) {
 
-        ref = (KOS_SCOPE_REF *)
-            kos_mempool_alloc(&program->allocator, sizeof(KOS_SCOPE_REF));
+        ref = (KOS_SCOPE_REF *)kos_mempool_alloc(&program->allocator, sizeof(KOS_SCOPE_REF));
 
         if (ref) {
 
@@ -344,10 +329,11 @@ static int lookup_and_mark_var(KOS_COMP_UNIT *program,
             node->is_local_var = 1;
 
         assert(var->scope == scope);
-        assert( ! node->var);
-        node->var = var;
-        *out_var  = var;
-        error     = KOS_SUCCESS;
+        assert( ! node->is_scope);
+        assert( ! node->u.var);
+        node->u.var = var;
+        *out_var    = var;
+        error       = KOS_SUCCESS;
     }
     else {
         program->error_token = &node->token;
@@ -402,8 +388,9 @@ static int define_var(KOS_COMP_UNIT         *program,
         RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
 
     assert(var->scope == program->scope_stack);
-    assert( ! node->var);
-    node->var          = var;
+    assert( ! node->is_scope);
+    assert( ! node->u.var);
+    node->u.var        = var;
     node->is_local_var = 1;
     *out_var           = var;
 
@@ -516,8 +503,9 @@ static int import(KOS_COMP_UNIT *program,
             var->next        = program->modules;
             program->modules = var;
         }
-        assert( ! node->var);
-        node->var = var;
+        assert( ! node->is_scope);
+        assert( ! node->u.var);
+        node->u.var = var;
     }
 
     node = node->next;
@@ -759,7 +747,8 @@ static int function_literal(KOS_COMP_UNIT *program,
         }
 
         TRY(define_var(program, VARIABLE, LOCAL, ident_node, &var));
-        assert(ident_node->var == var);
+        assert( ! ident_node->is_scope);
+        assert(ident_node->u.var == var);
 
         if (ellipsis)
             program->scope_stack->ellipsis = var;
@@ -864,7 +853,8 @@ static int catch_clause(KOS_COMP_UNIT *program,
     assert(node->children->type == NT_IDENTIFIER);
     assert( ! node->children->next);
 
-    var = node->children->var;
+    assert( ! node->children->is_scope);
+    var = node->children->u.var;
     assert(var);
     assert(var == kos_find_var(program->scope_stack->vars, &node->children->token));
 
@@ -936,7 +926,8 @@ static int assignment(KOS_COMP_UNIT *program,
 
         TRY(visit_node(program, node));
 
-        fun_var = node->children->var;
+        assert( ! node->children->is_scope);
+        fun_var = node->children->u.var;
         assert(fun_var);
         assert( ! fun_var->is_active);
 
@@ -1107,7 +1098,8 @@ void kos_activate_var(KOS_COMP_UNIT      *program,
 
     assert(node->type == NT_IDENTIFIER);
 
-    var = node->var;
+    assert( ! node->is_scope);
+    var = node->u.var;
     assert(var);
     assert(var == kos_find_var(program->scope_stack->vars, &node->token));
 

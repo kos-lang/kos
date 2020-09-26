@@ -287,7 +287,9 @@ static int lookup_local_var_even_inactive(KOS_COMP_UNIT      *program,
 
     if (node->is_local_var) {
 
-        KOS_VAR *var = node->var;
+        KOS_VAR *var = node->u.var;
+
+        assert( ! node->is_scope);
 
         if (var->type & VAR_LOCAL) {
 
@@ -329,7 +331,9 @@ static int lookup_var(KOS_COMP_UNIT      *program,
                       KOS_VAR           **out_var,
                       KOS_REG           **reg)
 {
-    KOS_VAR *var = node->var;
+    KOS_VAR *var = node->u.var;
+
+    assert( ! node->is_scope);
 
     if (var && ! var->is_active)
         var = 0;
@@ -910,21 +914,12 @@ static void remove_last_instr(KOS_COMP_UNIT *program,
     program->cur_offs = offs;
 }
 
-int kos_scope_compare_item(void               *what,
-                           KOS_RED_BLACK_NODE *node)
-{
-    const KOS_AST_NODE *scope_node = (const KOS_AST_NODE *)what;
-    const KOS_SCOPE    *scope      = (const KOS_SCOPE *)node;
-
-    return (int)((intptr_t)scope_node - (intptr_t)scope->scope_node);
-}
-
 static KOS_SCOPE *push_scope(KOS_COMP_UNIT      *program,
                              const KOS_AST_NODE *node)
 {
-    KOS_SCOPE *scope = (KOS_SCOPE *)
-            kos_red_black_find(program->scopes, (void *)node, kos_scope_compare_item);
+    KOS_SCOPE *const scope = node->u.scope;
 
+    assert(node->is_scope);
     assert(scope);
 
     assert(scope->next == program->scope_stack);
@@ -2343,7 +2338,8 @@ static int try_stmt(KOS_COMP_UNIT      *program,
         assert(!variable->children);
         assert(!variable->next);
 
-        except_var = variable->var;
+        assert( ! variable->is_scope);
+        except_var = variable->u.var;
         assert(except_var);
         assert(except_var == kos_find_var(program->scope_stack->vars, &variable->token));
 
@@ -4131,7 +4127,8 @@ static int assignment(KOS_COMP_UNIT      *program,
     }
 
     if (kos_is_self_ref_func(lhs_node)) {
-        KOS_VAR *fun_var = lhs_node->children->var;
+        KOS_VAR *fun_var = lhs_node->children->u.var;
+        assert( ! lhs_node->children->is_scope);
         assert(fun_var);
         assert( ! fun_var->is_active);
 
@@ -4592,7 +4589,8 @@ static int gen_function(KOS_COMP_UNIT      *program,
     const KOS_AST_NODE *name_node = fun_node->children;
     KOS_COMP_FUNCTION  *constant;
 
-    scope = (KOS_SCOPE *)kos_red_black_find(program->scopes, (void *)node, kos_scope_compare_item);
+    assert(node->is_scope);
+    scope = node->u.scope;
     frame = (KOS_FRAME *)scope;
 
     *out_scope = scope;
@@ -4630,9 +4628,10 @@ static int gen_function(KOS_COMP_UNIT      *program,
 
     /* Generate registers for function arguments */
     {
-        KOS_AST_NODE *arg_node  = fun_node->children;
-        int           rest_used = 0;
-        int           have_rest = 0;
+        KOS_AST_NODE *arg_node     = fun_node->children;
+        int           rest_used    = 0;
+        int           have_rest    = 0;
+        int           num_def_args = 0;
         int           i;
 
         assert(arg_node);
@@ -4652,17 +4651,22 @@ static int gen_function(KOS_COMP_UNIT      *program,
                 RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
             }
 
-            var = ident_node->var;
+            assert( ! ident_node->is_scope);
+            var = ident_node->u.var;
             assert(var);
             assert(var == kos_find_var(scope->vars, &ident_node->token));
+
+            assert(var->num_reads || ! var->num_assignments);
 
             /* Enumerate all args with default values, even if they are unused,
              * because we need to execute code used for initializing them,
              * even if these args will not be default-assigned in practice. */
-            if (arg_node->type != NT_IDENTIFIER)
-                ++constant->num_def_args;
-
-            assert(var->num_reads || ! var->num_assignments);
+            if (arg_node->type != NT_IDENTIFIER) {
+                ++num_def_args;
+                constant->num_decl_def_args = num_def_args;
+                if (var->num_reads || scope->ellipsis)
+                    constant->num_used_def_args = num_def_args;
+            }
 
             /* Process all args up to the last one which is being used,
              * effectively ignoring the tail of unused arguments. */
@@ -4816,7 +4820,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
     /* Set up constant template for LOAD.CONST */
     constant->closure_size = get_closure_size(program);
     constant->num_regs     = (uint8_t)frame->num_regs;
-    constant->args_reg     = ((uint32_t)constant->min_args + (uint32_t)constant->num_def_args)
+    constant->args_reg     = ((uint32_t)constant->min_args + (uint32_t)constant->num_used_def_args)
                              ? (uint8_t)scope->num_indep_vars : KOS_NO_REG;
     constant->flags        = scope->ellipsis ? KOS_COMP_FUN_ELLIPSIS : 0;
 
@@ -4939,7 +4943,7 @@ static int function_literal(KOS_COMP_UNIT      *program,
     }
 
     /* Find the first default arg */
-    if (constant->num_def_args) {
+    if (constant->num_decl_def_args) {
         node = fun_node->children;
         assert(node);
         node = node->next;
@@ -4954,15 +4958,21 @@ static int function_literal(KOS_COMP_UNIT      *program,
     }
 
     /* Generate array with default args and init code for unused default args */
-    if (constant->num_def_args) {
+    if (constant->num_decl_def_args) {
 
         int       i;
         const int num_used_def_args = scope->num_args - constant->min_args;
-        KOS_REG  *defaults_reg = 0;
+        KOS_REG  *defaults_reg      = 0;
 
-        assert(num_used_def_args <= (int)constant->num_def_args);
+        assert(num_used_def_args <= (int)constant->num_used_def_args);
         assert(num_used_def_args >= 0);
-        constant->num_def_args = (uint8_t)num_used_def_args;
+        if (scope->ellipsis) {
+            assert(num_used_def_args >= frame->num_def_used);
+        }
+        else {
+            assert(num_used_def_args == frame->num_def_used);
+        }
+        constant->num_used_def_args = (uint8_t)num_used_def_args;
 
         if (num_used_def_args > 0) {
 
@@ -4984,7 +4994,8 @@ static int function_literal(KOS_COMP_UNIT      *program,
 
             assert(def_node);
             assert(def_node->type == NT_IDENTIFIER);
-            var = def_node->var;
+            assert( ! def_node->is_scope);
+            var = def_node->u.var;
             assert(var);
             used = var->num_reads;
             assert(var->num_reads || ! var->num_assignments);
@@ -5032,6 +5043,9 @@ static int function_literal(KOS_COMP_UNIT      *program,
 
             free_reg(program, defaults_reg);
         }
+    }
+    else {
+        assert( ! frame->num_def_used);
     }
 
 cleanup:
@@ -5158,13 +5172,12 @@ cleanup:
 
 static int uses_base_proto(KOS_COMP_UNIT *program, const KOS_AST_NODE *node)
 {
-    KOS_SCOPE *scope;
-    KOS_FRAME *frame;
+    KOS_SCOPE *const scope = node->u.scope;
+    KOS_FRAME *const frame = (KOS_FRAME *)scope;
 
-    scope = (KOS_SCOPE *)kos_red_black_find(program->scopes, (void *)node, kos_scope_compare_item);
+    assert(node->is_scope);
     assert(scope);
     assert(scope->has_frame);
-    frame = (KOS_FRAME *)scope;
 
     return frame->uses_base_proto;
 }

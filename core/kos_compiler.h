@@ -39,9 +39,9 @@ enum KOS_VAR_ACTIVE_E {
 };
 
 typedef struct KOS_VAR_S {
-    KOS_RED_BLACK_NODE  rb_tree_node;      /* Node for red-black tree holding variables in parent scope         */
-    struct KOS_VAR_S   *next;              /* Pointer to next variable on the list of variables in parent scope */
-    struct KOS_SCOPE_S *scope;             /* Parent scope where this variable was declared                     */
+    KOS_RED_BLACK_NODE  rb_tree_node;      /* Node for red-black tree holding variables in parent scope        */
+    struct KOS_VAR_S   *next;              /* Pointer to next variable on the list of variables in frame scope */
+    struct KOS_SCOPE_S *scope;             /* Parent scope where this variable was declared                    */
     const KOS_TOKEN    *token;
     KOS_REG            *reg;
     const KOS_AST_NODE *value;
@@ -78,8 +78,6 @@ typedef struct KOS_CATCH_REF_S {
 } KOS_CATCH_REF;
 
 typedef struct KOS_SCOPE_S {
-    KOS_RED_BLACK_NODE  rb_tree_node;
-
     const KOS_AST_NODE *scope_node;
     struct KOS_SCOPE_S *next;
     KOS_RED_BLACK_NODE *vars;
@@ -112,6 +110,7 @@ typedef struct KOS_FRAME_S {
     KOS_SCOPE                  *last_try_scope;
     const KOS_TOKEN            *yield_token;
     struct KOS_COMP_FUNCTION_S *constant;         /* The template for the constant object, used with LOAD.CONST */
+    int                         num_def_used;     /* Number of used default args, for optimization              */
     int                         num_regs;
     uint32_t                    num_instr;
     unsigned                    uses_base_ctor  : 1;
@@ -171,24 +170,25 @@ typedef struct KOS_COMP_STRING_S {
 
 typedef struct KOS_COMP_FUNCTION_S {
     KOS_COMP_CONST header;
-    uint32_t       offset;       /* Function entry point offset in the module */
-    uint32_t       name_str_idx; /* Index of constant string with function's name */
-    uint8_t        flags;        /* KOS_COMP_FUN_* flags */
-    uint8_t        num_regs;     /* Number of registers used by the function */
-    uint8_t        closure_size; /* Number of registers preserved for a closure */
+    uint32_t       offset;              /* Function entry point offset in the module */
+    uint32_t       name_str_idx;        /* Index of constant string with function's name */
+    uint8_t        flags;               /* KOS_COMP_FUN_* flags */
+    uint8_t        num_regs;            /* Number of registers used by the function */
+    uint8_t        closure_size;        /* Number of registers preserved for a closure */
 
-    uint8_t        load_instr;   /* Instruction used for loading the function */
+    uint8_t        load_instr;          /* Instruction used for loading the function */
 
-    uint8_t        min_args;     /* Number of args without default values */
-    uint8_t        num_def_args; /* Number of args with default values */
+    uint8_t        min_args;            /* Number of args without default values */
+    uint8_t        num_decl_def_args;   /* Number of args with default values declared in source code */
+    uint8_t        num_used_def_args;   /* Number of args with default values allocated in function */
 
-    uint8_t        num_binds;    /* Number of binds */
+    uint8_t        num_binds;           /* Number of binds */
 
-    uint8_t        args_reg;     /* Register where first argument is stored */
-    uint8_t        rest_reg;     /* Register containing rest args */
-    uint8_t        ellipsis_reg; /* Register containing ellipsis */
-    uint8_t        this_reg;     /* Register containing 'this' */
-    uint8_t        bind_reg;     /* First bound register */
+    uint8_t        args_reg;            /* Register where first argument is stored */
+    uint8_t        rest_reg;            /* Register containing rest args */
+    uint8_t        ellipsis_reg;        /* Register containing ellipsis */
+    uint8_t        this_reg;            /* Register containing 'this' */
+    uint8_t        bind_reg;            /* First bound register */
 } KOS_COMP_FUNCTION;
 
 typedef struct KOS_PRE_GLOBAL_S {
@@ -232,7 +232,6 @@ typedef struct KOS_COMP_UNIT_S {
 
     KOS_REG             *unused_regs; /* Register objects reusable without allocating memory */
 
-    KOS_RED_BLACK_NODE  *scopes;
     KOS_SCOPE           *scope_stack;
 
     KOS_PRE_GLOBAL      *pre_globals;
@@ -318,12 +317,6 @@ void kos_deactivate_self_ref_func(KOS_COMP_UNIT *program,
                                   KOS_VAR       *fun_var);
 
 void kos_deactivate_vars(KOS_SCOPE *scope);
-
-int kos_scope_compare_node(KOS_RED_BLACK_NODE *a,
-                           KOS_RED_BLACK_NODE *b);
-
-int kos_scope_compare_item(void               *what,
-                           KOS_RED_BLACK_NODE *node);
 
 KOS_SCOPE_REF *kos_find_scope_ref(KOS_FRAME *frame,
                                   KOS_SCOPE *closure);

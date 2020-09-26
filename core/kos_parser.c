@@ -187,13 +187,10 @@ static int new_node(KOS_PARSER    *parser,
     ast_node = (KOS_AST_NODE *)kos_mempool_alloc(parser->ast_buf, sizeof(KOS_AST_NODE));
 
     if (ast_node) {
-        ast_node->next         = 0;
-        ast_node->children     = 0;
-        ast_node->last_child   = 0;
-        ast_node->var          = 0;
-        ast_node->token        = parser->token;
-        ast_node->type         = type;
-        ast_node->is_local_var = 0;
+        memset(ast_node, 0, sizeof(*ast_node));
+
+        ast_node->token = parser->token;
+        ast_node->type  = type;
 
         *node = ast_node;
     }

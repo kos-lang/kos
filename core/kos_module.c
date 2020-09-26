@@ -628,7 +628,7 @@ static int alloc_constants(KOS_CONTEXT    ctx,
                 func->opts.num_regs     = func_const->num_regs;
                 func->opts.closure_size = func_const->closure_size;
                 func->opts.min_args     = func_const->min_args;
-                func->opts.num_def_args = func_const->num_def_args;
+                func->opts.num_def_args = func_const->num_used_def_args;
                 func->opts.num_binds    = func_const->num_binds;
                 func->opts.args_reg     = func_const->args_reg;
                 func->opts.rest_reg     = func_const->rest_reg;

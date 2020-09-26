@@ -49,7 +49,9 @@ static void lookup_var(KOS_COMP_UNIT      *program,
                        int                 only_active,
                        KOS_VAR           **out_var)
 {
-    KOS_VAR *var = node->var;
+    KOS_VAR *var = node->u.var;
+
+    assert( ! node->is_scope);
 
     if (only_active) {
         assert(var->is_active);
@@ -72,9 +74,9 @@ static void lookup_var(KOS_COMP_UNIT      *program,
 static KOS_SCOPE *push_scope(KOS_COMP_UNIT      *program,
                              const KOS_AST_NODE *node)
 {
-    KOS_SCOPE *scope = (KOS_SCOPE *)
-            kos_red_black_find(program->scopes, (void *)node, kos_scope_compare_item);
+    KOS_SCOPE *const scope = node->u.scope;
 
+    assert(node->is_scope);
     assert(scope);
 
     assert(scope->next == program->scope_stack);
@@ -168,7 +170,8 @@ static void update_arguments(KOS_COMP_UNIT *program,
                 break;
         }
 
-        var = ident_node->var;
+        assert( ! ident_node->is_scope);
+        var = ident_node->u.var;
         assert(var);
         assert(var == kos_find_var(scope->vars, &ident_node->token));
 
@@ -189,8 +192,9 @@ static void update_arguments(KOS_COMP_UNIT *program,
     for (i = 0; arg_node && (arg_node->type != NT_ELLIPSIS); ++i) {
 
         KOS_AST_NODE *ident_node = arg_node->type == NT_IDENTIFIER ? arg_node : arg_node->children;
-        KOS_VAR      *var        = ident_node->var;
+        KOS_VAR      *var        = ident_node->u.var;
 
+        assert( !  ident_node->is_scope);
         assert(ident_node->type == NT_IDENTIFIER);
         assert(var);
         assert(var == kos_find_var(scope->vars, &ident_node->token));
@@ -382,7 +386,8 @@ static int assignment(KOS_COMP_UNIT *program,
 
     if (kos_is_self_ref_func(lhs_node)) {
 
-        KOS_VAR *fun_var = lhs_node->children->var;
+        KOS_VAR *fun_var = lhs_node->children->u.var;
+        assert( ! lhs_node->children->is_scope);
         assert(fun_var);
         assert( ! fun_var->is_active);
 

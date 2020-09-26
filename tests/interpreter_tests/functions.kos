@@ -1083,19 +1083,19 @@ do {
     assert defaults()     == 1
     assert defaults(void) == void
     assert defaults()     == 1
-    count = 10
     assert defaults()     == 1
+    assert count == 1
 
     fun unused_defaults(a, x = increment())
     {
         return a
     }
 
-    assert count == 11
+    assert count == 2
     assert unused_defaults(4) == 4
-    assert count == 11
+    assert count == 2
     assert unused_defaults(5) == 5
-    assert count == 11
+    assert count == 2
 
     fun lots_of_unused_defaults(a0,  a1,  a2,  a3,  a4,  a5,  a6,  a7,  a8,  a9,
                                 a10, a11, a12, a13, a14, a15, a16, a17, a18, a19,
@@ -1113,7 +1113,7 @@ do {
                    140, 141, 142, 143, 144, 145, 146, 147, 148, 149 ]
 
     assert lots_of_unused_defaults.apply(void, args) == 201
-    assert count == 12
+    assert count == 3
 }
 
 # unused default arguments with side effects
