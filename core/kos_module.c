@@ -1231,6 +1231,7 @@ static int compile_module(KOS_CONTEXT ctx,
         KOS_VECTOR *addr_to_line = &program.addr2line_buf;
         KOS_VECTOR *addr_to_func = &program.addr2func_buf;
         KOS_MODULE *module_ptr   = OBJPTR(MODULE, module.o);
+        KOS_FRAME  *frame;
 
         const uint32_t old_num_line_addrs = module_ptr->num_line_addrs;
         const uint32_t old_num_func_addrs = module_ptr->num_func_addrs;
@@ -1312,7 +1313,12 @@ static int compile_module(KOS_CONTEXT ctx,
             }
         }
 
-        module_ptr->main_idx = program.cur_frame->constant->header.index;
+        /* Get function's constant index corresponding to global scope */
+        assert(ast->is_scope);
+        frame = (KOS_FRAME *)ast->u.scope;
+        assert(frame->scope.has_frame);
+
+        module_ptr->main_idx = frame->constant->header.index;
     }
 
     /* Disassemble */

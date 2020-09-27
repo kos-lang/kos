@@ -269,6 +269,9 @@ static KOS_SCOPE *push_scope(KOS_COMP_UNIT      *program,
     scope->num_vars       = 0;
     scope->num_indep_vars = 0;
 
+    if (scope->has_frame)
+        program->cur_frame = (KOS_FRAME *)scope;
+
     return scope;
 }
 
@@ -378,6 +381,9 @@ static void pop_scope(KOS_COMP_UNIT *program)
     }
 
     program->scope_stack = scope->parent_scope;
+
+    if (scope->has_frame)
+        program->cur_frame = ((KOS_FRAME *)scope)->parent_frame;
 }
 
 static int process_scope(KOS_COMP_UNIT *program,

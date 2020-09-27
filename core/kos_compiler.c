@@ -930,6 +930,9 @@ static KOS_SCOPE *push_scope(KOS_COMP_UNIT      *program,
 
     program->scope_stack = scope;
 
+    if (scope->has_frame)
+        program->cur_frame = (KOS_FRAME *)scope;
+
     return scope;
 }
 
@@ -950,12 +953,17 @@ static int free_scope_regs(KOS_RED_BLACK_NODE *node,
 
 static void pop_scope(KOS_COMP_UNIT *program)
 {
-    assert(program->scope_stack);
+    KOS_SCOPE *const scope = program->scope_stack;
 
-    if (program->scope_stack->vars)
-        kos_red_black_walk(program->scope_stack->vars, free_scope_regs, (void *)program);
+    assert(scope);
 
-    program->scope_stack = program->scope_stack->parent_scope;
+    if (scope->vars)
+        kos_red_black_walk(scope->vars, free_scope_regs, (void *)program);
+
+    program->scope_stack = scope->parent_scope;
+
+    if (scope->has_frame)
+        program->cur_frame = ((KOS_FRAME *)scope)->parent_frame;
 }
 
 typedef struct KOS_IMPORT_INFO_S {
@@ -1273,8 +1281,8 @@ static int process_scope(KOS_COMP_UNIT      *program,
             int last_reg = -1;
 
             assert(program->scope_stack->has_frame);
-
-            program->cur_frame = (KOS_FRAME *)program->scope_stack;
+            assert(program->cur_frame);
+            assert( ! program->cur_frame->parent_frame);
 
             /* Generate registers for local (non-global) independent variables */
             TRY(gen_indep_vars(program, program->scope_stack, &last_reg));
@@ -4580,7 +4588,6 @@ static int gen_function(KOS_COMP_UNIT      *program,
     int        error        = KOS_SUCCESS;
     KOS_SCOPE *scope;
     KOS_FRAME *frame;
-    KOS_FRAME *last_frame   = program->cur_frame;
     KOS_VAR   *var;
     KOS_REG   *scope_reg    = 0;
     int        fun_start_offs;
@@ -4622,9 +4629,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
 
     push_scope(program, node);
 
-    frame->fun_token    = &fun_node->token;
-    frame->parent_frame = last_frame;
-    program->cur_frame  = frame;
+    frame->fun_token = &fun_node->token;
 
     /* Generate registers for local independent variables */
     TRY(gen_indep_vars(program, scope, &last_reg));
@@ -4866,13 +4871,9 @@ static int gen_function(KOS_COMP_UNIT      *program,
     /* Move the function code to final code_buf */
     TRY(append_frame(program, constant, fun_start_offs, addr2line_start_offs));
 
-    program->cur_frame = last_frame;
+    pop_scope(program);
 
     TRY(add_addr2line(program, &fun_node->token, KOS_FALSE_VALUE));
-
-    program->cur_frame = frame;
-    pop_scope(program);
-    program->cur_frame = last_frame;
 
     /* Free register objects */
     free_all_regs(program, frame->used_regs);

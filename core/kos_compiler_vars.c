@@ -141,6 +141,8 @@ static int push_scope(KOS_COMP_UNIT *program,
 
         memset(scope, 0, size);
 
+        assert(program->scope_stack || alloc_frame);
+
         if (alloc_frame)
             scope->has_frame = 1;
 
@@ -152,6 +154,11 @@ static int push_scope(KOS_COMP_UNIT *program,
 
         if ( ! scope->parent_scope)
             error = init_global_scope(program);
+
+        if (alloc_frame) {
+            ((KOS_FRAME *)scope)->parent_frame = program->cur_frame;
+            program->cur_frame = (KOS_FRAME *)scope;
+        }
     }
 
     return error;
@@ -159,7 +166,12 @@ static int push_scope(KOS_COMP_UNIT *program,
 
 static void pop_scope(KOS_COMP_UNIT *program)
 {
-    program->scope_stack = program->scope_stack->parent_scope;
+    KOS_SCOPE *const scope = program->scope_stack;
+
+    program->scope_stack = scope->parent_scope;
+
+    if (scope->has_frame)
+        program->cur_frame = ((KOS_FRAME *)scope)->parent_frame;
 }
 
 static int push_function(KOS_COMP_UNIT *program,
