@@ -260,7 +260,7 @@ static KOS_SCOPE *push_scope(KOS_COMP_UNIT      *program,
     assert(node->is_scope);
     assert(scope);
 
-    assert(scope->next == program->scope_stack);
+    assert(scope->parent_scope == program->scope_stack);
 
     kos_red_black_walk(scope->vars, reset_var_state, 0);
 
@@ -312,7 +312,7 @@ static int count_and_update_vars(KOS_RED_BLACK_NODE *node,
             ++scope->num_indep_vars;
     }
     else if (var->type & VAR_ARGUMENT) {
-        assert(scope->is_function || ! scope->next);
+        assert(scope->is_function || ! scope->parent_scope);
     }
 
     /* Trigger another optimization pass if variable is not needed */
@@ -372,12 +372,12 @@ static void pop_scope(KOS_COMP_UNIT *program)
 
     kos_red_black_walk(scope->vars, count_and_update_vars, &update_ctx);
 
-    if ( ! scope->is_function && scope->next) {
-        scope->next->num_vars       += scope->num_vars;
-        scope->next->num_indep_vars += scope->num_indep_vars;
+    if ( ! scope->is_function && scope->parent_scope) {
+        scope->parent_scope->num_vars       += scope->num_vars;
+        scope->parent_scope->num_indep_vars += scope->num_indep_vars;
     }
 
-    program->scope_stack = scope->next;
+    program->scope_stack = scope->parent_scope;
 }
 
 static int process_scope(KOS_COMP_UNIT *program,

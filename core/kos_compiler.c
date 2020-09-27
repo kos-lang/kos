@@ -364,8 +364,8 @@ static int lookup_var(KOS_COMP_UNIT      *program,
             assert(is_var ? ( ! scope->is_function || scope->ellipsis == var) : scope->is_function);
 
             /* Find function scope for this variable */
-            while (scope->next && ! scope->is_function)
-                scope = scope->next;
+            while (scope->parent_scope && ! scope->is_function)
+                scope = scope->parent_scope;
 
             ref = kos_find_scope_ref(program->cur_frame, scope);
 
@@ -924,7 +924,7 @@ static KOS_SCOPE *push_scope(KOS_COMP_UNIT      *program,
     assert(node->is_scope);
     assert(scope);
 
-    assert(scope->next == program->scope_stack);
+    assert(scope->parent_scope == program->scope_stack);
 
     kos_deactivate_vars(scope);
 
@@ -955,7 +955,7 @@ static void pop_scope(KOS_COMP_UNIT *program)
     if (program->scope_stack->vars)
         kos_red_black_walk(program->scope_stack->vars, free_scope_regs, (void *)program);
 
-    program->scope_stack = program->scope_stack->next;
+    program->scope_stack = program->scope_stack->parent_scope;
 }
 
 typedef struct KOS_IMPORT_INFO_S {
@@ -1384,7 +1384,7 @@ cleanup:
 static KOS_SCOPE *find_try_scope(KOS_SCOPE *scope)
 {
     while (scope && ! scope->is_function && ! scope->catch_ref.catch_reg)
-        scope = scope->next;
+        scope = scope->parent_scope;
 
     if (scope && (scope->is_function || ! scope->catch_ref.catch_reg))
         scope = 0;
@@ -1410,7 +1410,7 @@ static int gen_return(KOS_COMP_UNIT *program,
     KOS_SCOPE *scope = find_try_scope(program->scope_stack);
 
     while (scope && ! scope->catch_ref.finally_active)
-        scope = find_try_scope(scope->next);
+        scope = find_try_scope(scope->parent_scope);
 
     if (scope) {
 
@@ -2024,7 +2024,7 @@ static int restore_parent_scope_catch(KOS_COMP_UNIT *program)
 
     assert(scope && ! scope->is_function);
 
-    scope = find_try_scope(scope->next);
+    scope = find_try_scope(scope->parent_scope);
 
     return restore_catch(program, scope);
 }
@@ -2816,7 +2816,7 @@ static int is_var_used(KOS_COMP_UNIT      *program,
 
             KOS_SCOPE *scope;
 
-            for (scope = program->scope_stack; scope && scope->next; scope = scope->next) {
+            for (scope = program->scope_stack; scope && scope->parent_scope; scope = scope->parent_scope) {
 
                 const int error = kos_red_black_walk(scope->vars, find_var_by_reg, reg);
 

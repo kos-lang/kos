@@ -19,11 +19,11 @@ static void update_scope_ref(KOS_COMP_UNIT *program,
     KOS_SCOPE *scope;
 
     /* Find function owning the variable's scope */
-    while (closure->next && ! closure->is_function)
-        closure = closure->next;
+    while (closure->parent_scope && ! closure->is_function)
+        closure = closure->parent_scope;
 
     /* Reference the function in all inner scopes which use it */
-    for (scope = program->scope_stack; scope != closure; scope = scope->next)
+    for (scope = program->scope_stack; scope != closure; scope = scope->parent_scope)
         if (scope->is_function) {
 
             KOS_SCOPE_REF *ref;
@@ -81,7 +81,7 @@ static KOS_SCOPE *push_scope(KOS_COMP_UNIT      *program,
     assert(node->is_scope);
     assert(scope);
 
-    assert(scope->next == program->scope_stack);
+    assert(scope->parent_scope == program->scope_stack);
 
     kos_deactivate_vars(scope);
 
@@ -96,7 +96,7 @@ static void pop_scope(KOS_COMP_UNIT *program)
 
     assert(scope);
 
-    program->scope_stack = scope->next;
+    program->scope_stack = scope->parent_scope;
 }
 
 static int visit_child_nodes(KOS_COMP_UNIT *program,

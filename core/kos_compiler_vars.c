@@ -147,10 +147,10 @@ static int push_scope(KOS_COMP_UNIT *program,
         node->is_scope       = 1;
         node->u.scope        = scope;
         scope->scope_node    = node;
-        scope->next          = program->scope_stack;
+        scope->parent_scope  = program->scope_stack;
         program->scope_stack = scope;
 
-        if (!scope->next)
+        if ( ! scope->parent_scope)
             error = init_global_scope(program);
     }
 
@@ -159,7 +159,7 @@ static int push_scope(KOS_COMP_UNIT *program,
 
 static void pop_scope(KOS_COMP_UNIT *program)
 {
-    program->scope_stack = program->scope_stack->next;
+    program->scope_stack = program->scope_stack->parent_scope;
 }
 
 static int push_function(KOS_COMP_UNIT *program,
@@ -180,14 +180,19 @@ KOS_SCOPE *kos_get_frame_scope(KOS_COMP_UNIT *program)
     if (program->cur_frame)
         scope = &program->cur_frame->scope;
     else {
+        KOS_SCOPE *parent_scope;
+
         scope = program->scope_stack;
         assert(scope);
 
-        while (scope->next && ! scope->is_function)
-            scope = scope->next;
+        parent_scope = scope->parent_scope;
+        while (parent_scope && ! scope->is_function) {
+            scope        = parent_scope;
+            parent_scope = scope->parent_scope;
+        }
 
-        assert((scope->next && scope->is_function) ||
-               ( ! scope->next && ! scope->is_function));
+        assert((scope->parent_scope && scope->is_function) ||
+               ( ! scope->parent_scope && ! scope->is_function));
 
         assert(scope->has_frame || ! scope->is_function);
     }
@@ -207,14 +212,16 @@ static int lookup_local_var(KOS_COMP_UNIT *program,
 {
     int        error = KOS_ERROR_INTERNAL;
     KOS_SCOPE *scope = program->scope_stack;
+    KOS_SCOPE *parent_scope;
 
     assert(scope);
+    parent_scope = scope->parent_scope;
 
     /* Stop at function and global scope.
      * Function scope contains arguments, not variables.
      * Function and global scopes are handled by lookup_and_mark_var(). */
 
-    for (scope = program->scope_stack; scope->next && ! scope->is_function; scope = scope->next) {
+    for ( ; parent_scope && ! scope->is_function; parent_scope = scope->parent_scope, scope = parent_scope) {
 
         KOS_VAR *var = kos_find_var(scope->vars, &node->token);
 
@@ -290,7 +297,7 @@ static int lookup_and_mark_var(KOS_COMP_UNIT *program,
     assert(scope);
 
     /* Browse outer scopes (closures, global) to find the variable */
-    for ( ; scope; scope = scope->next) {
+    for ( ; scope; scope = scope->parent_scope) {
         var = kos_find_var(scope->vars, &node->token);
         if (var && var->is_active)
             break;
@@ -315,11 +322,11 @@ static int lookup_and_mark_var(KOS_COMP_UNIT *program,
                 }
 
                 /* Find function owning the variable's scope */
-                while (closure->next && ! closure->is_function)
-                    closure = closure->next;
+                while (closure->parent_scope && ! closure->is_function)
+                    closure = closure->parent_scope;
 
                 /* Reference the function in all inner scopes which use it */
-                for (inner = program->scope_stack; inner != closure; inner = inner->next)
+                for (inner = program->scope_stack; inner != closure; inner = inner->parent_scope)
                     if (inner->is_function)
                         TRY(add_scope_ref(program, var->type, inner, closure));
             }
@@ -372,11 +379,11 @@ static int define_var(KOS_COMP_UNIT         *program,
     if (node->children) {
         assert(node->children->type == NT_EXPORT);
         assert( ! node->children->next);
-        assert( ! program->scope_stack->next);
+        assert( ! program->scope_stack->parent_scope);
         global = GLOBAL;
     }
 
-    if (program->is_interactive && ! program->scope_stack->next)
+    if (program->is_interactive && ! program->scope_stack->parent_scope)
         global = GLOBAL;
 
     if (kos_find_var(program->scope_stack->vars, &node->token)) {
@@ -474,7 +481,7 @@ static int import(KOS_COMP_UNIT *program,
     int module_idx;
 
     assert(program->scope_stack);
-    assert(!program->scope_stack->next);
+    assert( ! program->scope_stack->parent_scope);
 
     node = node->children;
     assert(node);
@@ -484,7 +491,7 @@ static int import(KOS_COMP_UNIT *program,
                                node->token.length,
                                &module_idx));
 
-    if (!node->next) {
+    if ( ! node->next) {
 
         KOS_VAR *var = kos_find_var(program->scope_stack->vars, &node->token);
 

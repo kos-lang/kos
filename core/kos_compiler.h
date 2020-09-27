@@ -79,7 +79,7 @@ typedef struct KOS_CATCH_REF_S {
 
 typedef struct KOS_SCOPE_S {
     const KOS_AST_NODE *scope_node;
-    struct KOS_SCOPE_S *next;
+    struct KOS_SCOPE_S *parent_scope;
     KOS_RED_BLACK_NODE *vars;
     KOS_VAR            *fun_vars_list;
     KOS_VAR            *ellipsis;
