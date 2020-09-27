@@ -221,8 +221,9 @@ static int lookup_local_var(KOS_COMP_UNIT *program,
         if (var && var->is_active) {
             assert(var->scope == scope);
             assert( ! node->is_scope);
-            assert( ! node->u.var);
+            assert( ! node->is_var);
             node->u.var        = var;
+            node->is_var       = 1;
             node->is_local_var = 1;
             *out_var           = var;
             error              = KOS_SUCCESS;
@@ -330,10 +331,11 @@ static int lookup_and_mark_var(KOS_COMP_UNIT *program,
 
         assert(var->scope == scope);
         assert( ! node->is_scope);
-        assert( ! node->u.var);
-        node->u.var = var;
-        *out_var    = var;
-        error       = KOS_SUCCESS;
+        assert( ! node->is_var);
+        node->is_var = 1;
+        node->u.var  = var;
+        *out_var     = var;
+        error        = KOS_SUCCESS;
     }
     else {
         program->error_token = &node->token;
@@ -389,8 +391,9 @@ static int define_var(KOS_COMP_UNIT         *program,
 
     assert(var->scope == program->scope_stack);
     assert( ! node->is_scope);
-    assert( ! node->u.var);
+    assert( ! node->is_var);
     node->u.var        = var;
+    node->is_var       = 1;
     node->is_local_var = 1;
     *out_var           = var;
 
@@ -504,8 +507,9 @@ static int import(KOS_COMP_UNIT *program,
             program->modules = var;
         }
         assert( ! node->is_scope);
-        assert( ! node->u.var);
-        node->u.var = var;
+        assert( ! node->is_var);
+        node->u.var  = var;
+        node->is_var = 1;
     }
 
     node = node->next;
@@ -748,6 +752,7 @@ static int function_literal(KOS_COMP_UNIT *program,
 
         TRY(define_var(program, VARIABLE, LOCAL, ident_node, &var));
         assert( ! ident_node->is_scope);
+        assert(ident_node->is_var);
         assert(ident_node->u.var == var);
 
         if (ellipsis)
@@ -854,6 +859,7 @@ static int catch_clause(KOS_COMP_UNIT *program,
     assert( ! node->children->next);
 
     assert( ! node->children->is_scope);
+    assert(node->children->is_var);
     var = node->children->u.var;
     assert(var);
     assert(var == kos_find_var(program->scope_stack->vars, &node->children->token));
@@ -927,6 +933,7 @@ static int assignment(KOS_COMP_UNIT *program,
         TRY(visit_node(program, node));
 
         assert( ! node->children->is_scope);
+        assert(node->children->is_var);
         fun_var = node->children->u.var;
         assert(fun_var);
         assert( ! fun_var->is_active);
@@ -1099,6 +1106,7 @@ void kos_activate_var(KOS_COMP_UNIT      *program,
     assert(node->type == NT_IDENTIFIER);
 
     assert( ! node->is_scope);
+    assert(node->is_var);
     var = node->u.var;
     assert(var);
     assert(var == kos_find_var(program->scope_stack->vars, &node->token));

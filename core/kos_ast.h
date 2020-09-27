@@ -72,17 +72,18 @@ struct KOS_VAR_S;
 struct KOS_SCOPE_S;
 
 typedef struct KOS_AST_NODE_S {
-    struct KOS_AST_NODE_S  *next;
-    struct KOS_AST_NODE_S  *children;
-    struct KOS_AST_NODE_S  *last_child;
+    struct KOS_AST_NODE_S     *next;
+    struct KOS_AST_NODE_S     *children;
     union {
-        struct KOS_VAR_S   *var;
-        struct KOS_SCOPE_S *scope;
-    }                       u;
-    KOS_TOKEN               token;
-    unsigned                type         : 8;
-    unsigned                is_local_var : 1;
-    unsigned                is_scope     : 1;
+        struct KOS_VAR_S      *var;
+        struct KOS_SCOPE_S    *scope;
+        struct KOS_AST_NODE_S *last_child;
+    }                          u;
+    KOS_TOKEN                  token;
+    unsigned                   type         : 8;
+    unsigned                   is_var       : 1;
+    unsigned                   is_local_var : 1;
+    unsigned                   is_scope     : 1;
 } KOS_AST_NODE;
 
 #endif

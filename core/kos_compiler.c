@@ -290,6 +290,8 @@ static int lookup_local_var_even_inactive(KOS_COMP_UNIT      *program,
         KOS_VAR *var = node->u.var;
 
         assert( ! node->is_scope);
+        assert(node->is_var);
+        assert(var);
 
         if (var->type & VAR_LOCAL) {
 
@@ -331,7 +333,7 @@ static int lookup_var(KOS_COMP_UNIT      *program,
                       KOS_VAR           **out_var,
                       KOS_REG           **reg)
 {
-    KOS_VAR *var = node->u.var;
+    KOS_VAR *var = node->is_var ? node->u.var : 0;
 
     assert( ! node->is_scope);
 
@@ -2339,6 +2341,7 @@ static int try_stmt(KOS_COMP_UNIT      *program,
         assert(!variable->next);
 
         assert( ! variable->is_scope);
+        assert(variable->is_var);
         except_var = variable->u.var;
         assert(except_var);
         assert(except_var == kos_find_var(program->scope_stack->vars, &variable->token));
@@ -4129,6 +4132,7 @@ static int assignment(KOS_COMP_UNIT      *program,
     if (kos_is_self_ref_func(lhs_node)) {
         KOS_VAR *fun_var = lhs_node->children->u.var;
         assert( ! lhs_node->children->is_scope);
+        assert(lhs_node->children->is_var);
         assert(fun_var);
         assert( ! fun_var->is_active);
 
@@ -4652,6 +4656,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
             }
 
             assert( ! ident_node->is_scope);
+            assert(ident_node->is_var);
             var = ident_node->u.var;
             assert(var);
             assert(var == kos_find_var(scope->vars, &ident_node->token));
@@ -4995,6 +5000,7 @@ static int function_literal(KOS_COMP_UNIT      *program,
             assert(def_node);
             assert(def_node->type == NT_IDENTIFIER);
             assert( ! def_node->is_scope);
+            assert(def_node->is_var);
             var = def_node->u.var;
             assert(var);
             used = var->num_reads;

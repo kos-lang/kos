@@ -52,12 +52,14 @@ static void lookup_var(KOS_COMP_UNIT      *program,
     KOS_VAR *var = node->u.var;
 
     assert( ! node->is_scope);
+    assert(node->is_var);
+    assert(var);
 
-    if (only_active) {
-        assert(var->is_active);
-    }
+    if ( ! node->is_local_var) {
 
-    if (var && ! node->is_local_var) {
+        if (only_active) {
+            assert(var->is_active);
+        }
 
         assert(var->type == VAR_INDEPENDENT_LOCAL    ||
                var->type == VAR_INDEPENDENT_ARGUMENT ||
@@ -171,6 +173,7 @@ static void update_arguments(KOS_COMP_UNIT *program,
         }
 
         assert( ! ident_node->is_scope);
+        assert(ident_node->is_var);
         var = ident_node->u.var;
         assert(var);
         assert(var == kos_find_var(scope->vars, &ident_node->token));
@@ -195,6 +198,7 @@ static void update_arguments(KOS_COMP_UNIT *program,
         KOS_VAR      *var        = ident_node->u.var;
 
         assert( !  ident_node->is_scope);
+        assert(ident_node->is_var);
         assert(ident_node->type == NT_IDENTIFIER);
         assert(var);
         assert(var == kos_find_var(scope->vars, &ident_node->token));
@@ -388,6 +392,7 @@ static int assignment(KOS_COMP_UNIT *program,
 
         KOS_VAR *fun_var = lhs_node->children->u.var;
         assert( ! lhs_node->children->is_scope);
+        assert(lhs_node->children->is_var);
         assert(fun_var);
         assert( ! fun_var->is_active);
 

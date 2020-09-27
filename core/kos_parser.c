@@ -202,11 +202,11 @@ static int new_node(KOS_PARSER    *parser,
 
 static void ast_push(KOS_AST_NODE *parent, KOS_AST_NODE *child)
 {
-    if (parent->last_child)
-        parent->last_child->next = child;
+    if (parent->u.last_child)
+        parent->u.last_child->next = child;
     else
         parent->children = child;
-    parent->last_child = child;
+    parent->u.last_child = child;
 }
 
 static int push_node(KOS_PARSER    *parser,

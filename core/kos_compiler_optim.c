@@ -85,14 +85,15 @@ static void promote(KOS_COMP_UNIT      *program,
         scope->scope_node = node;
         node->u.scope     = scope;
         node->is_scope    = 1;
+        node->is_var      = 0;
     }
     else {
         node->u.var    = child->u.var;
         node->is_scope = 0;
+        node->is_var   = 1;
     }
 
     node->children     = child->children;
-    node->last_child   = child->last_child;
     node->token        = child->token;
     node->type         = child->type;
     node->is_local_var = child->is_local_var;
@@ -155,6 +156,7 @@ static void lookup_var(KOS_COMP_UNIT      *program,
     KOS_VAR *var = node->u.var;
 
     assert( ! node->is_scope);
+    assert(node->is_var);
 
     if (only_active) {
         assert(var->is_active);
@@ -1016,6 +1018,7 @@ static int assignment(KOS_COMP_UNIT *program,
 
         KOS_VAR *fun_var = lhs_node->children->u.var;
         assert( ! lhs_node->children->is_scope);
+        assert(lhs_node->children->is_var);
         assert(fun_var);
         assert( ! fun_var->is_active);
 
