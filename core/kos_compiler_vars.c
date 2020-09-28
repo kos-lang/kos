@@ -185,33 +185,6 @@ static int push_function(KOS_COMP_UNIT *program,
     return error;
 }
 
-KOS_SCOPE *kos_get_frame_scope(KOS_COMP_UNIT *program)
-{
-    KOS_SCOPE *scope;
-
-    if (program->cur_frame)
-        scope = &program->cur_frame->scope;
-    else {
-        KOS_SCOPE *parent_scope;
-
-        scope = program->scope_stack;
-        assert(scope);
-
-        parent_scope = scope->parent_scope;
-        while (parent_scope && ! scope->is_function) {
-            scope        = parent_scope;
-            parent_scope = scope->parent_scope;
-        }
-
-        assert((scope->parent_scope && scope->is_function) ||
-               ( ! scope->parent_scope && ! scope->is_function));
-
-        assert(scope->has_frame || ! scope->is_function);
-    }
-
-    return scope;
-}
-
 KOS_VAR *kos_find_var(KOS_RED_BLACK_NODE *rb_root,
                       const KOS_TOKEN    *token)
 {
@@ -303,7 +276,7 @@ static int lookup_and_mark_var(KOS_COMP_UNIT *program,
 {
     int        error;
     KOS_VAR   *var             = 0;
-    KOS_SCOPE *scope           = kos_get_frame_scope(program);
+    KOS_SCOPE *scope           = &program->cur_frame->scope;
     KOS_SCOPE *local_fun_scope = scope;
 
     assert(scope);
@@ -423,7 +396,7 @@ static int define_var(KOS_COMP_UNIT         *program,
         program->globals = var;
     }
     else {
-        KOS_SCOPE *scope = kos_get_frame_scope(program);
+        KOS_SCOPE *scope = &program->cur_frame->scope;
 
         var->next            = scope->fun_vars_list;
         scope->fun_vars_list = var;
@@ -580,7 +553,7 @@ static int yield(KOS_COMP_UNIT *program,
                  KOS_AST_NODE  *node)
 {
     int        error;
-    KOS_SCOPE *scope = kos_get_frame_scope(program);
+    KOS_SCOPE *scope = &program->cur_frame->scope;
 
     if (scope->is_function) {
         if ( ! ((KOS_FRAME *)scope)->yield_token)
@@ -664,7 +637,7 @@ static int this_literal(KOS_COMP_UNIT      *program,
                         const KOS_AST_NODE *node)
 {
     int        error;
-    KOS_SCOPE *scope = kos_get_frame_scope(program);
+    KOS_SCOPE *scope = &program->cur_frame->scope;
 
     if (scope->is_function) {
         scope->uses_this = 1;
@@ -681,7 +654,7 @@ static int this_literal(KOS_COMP_UNIT      *program,
 
 static void super_ctor_literal(KOS_COMP_UNIT *program)
 {
-    KOS_SCOPE *const scope = kos_get_frame_scope(program);
+    KOS_SCOPE *const scope = &program->cur_frame->scope;
 
     assert(scope && scope->is_function);
 
@@ -690,7 +663,7 @@ static void super_ctor_literal(KOS_COMP_UNIT *program)
 
 static void super_proto_literal(KOS_COMP_UNIT *program)
 {
-    KOS_SCOPE *const scope = kos_get_frame_scope(program);
+    KOS_SCOPE *const scope = &program->cur_frame->scope;
 
     assert(scope && scope->is_function);
 

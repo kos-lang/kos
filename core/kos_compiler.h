@@ -297,8 +297,6 @@ int kos_optimize(KOS_COMP_UNIT *program,
 int kos_allocate_args(KOS_COMP_UNIT *program,
                       KOS_AST_NODE  *ast);
 
-KOS_SCOPE *kos_get_frame_scope(KOS_COMP_UNIT *program);
-
 KOS_VAR *kos_find_var(KOS_RED_BLACK_NODE *rb_root,
                       const KOS_TOKEN    *token);
 

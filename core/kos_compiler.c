@@ -1403,7 +1403,7 @@ static KOS_SCOPE *find_try_scope(KOS_SCOPE *scope)
 static uint8_t get_closure_size(KOS_COMP_UNIT *program)
 {
     int        closure_size;
-    KOS_SCOPE *scope = kos_get_frame_scope(program);
+    KOS_SCOPE *scope = &program->cur_frame->scope;
 
     closure_size = scope->num_indep_vars + scope->num_indep_args;
 
@@ -1448,7 +1448,7 @@ cleanup:
 
 static int is_generator(KOS_COMP_UNIT *program)
 {
-    KOS_SCOPE *const scope = kos_get_frame_scope(program);
+    KOS_SCOPE *const scope = &program->cur_frame->scope;
 
     assert(scope);
 
