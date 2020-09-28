@@ -80,6 +80,7 @@ typedef struct KOS_CATCH_REF_S {
 typedef struct KOS_SCOPE_S {
     const KOS_AST_NODE *scope_node;
     struct KOS_SCOPE_S *parent_scope;
+    struct KOS_FRAME_S *owning_frame;
     KOS_RED_BLACK_NODE *vars;
     KOS_VAR            *fun_vars_list;
     KOS_VAR            *ellipsis;
@@ -111,6 +112,7 @@ typedef struct KOS_FRAME_S {
     const KOS_TOKEN            *yield_token;
     struct KOS_COMP_FUNCTION_S *constant;         /* The template for the constant object, used with LOAD.CONST */
     int                         num_def_used;     /* Number of used default args, for optimization              */
+    int                         num_binds;        /* Number of closure accesses, for optimization               */
     int                         num_regs;
     uint32_t                    num_instr;
     unsigned                    uses_base_ctor  : 1;

@@ -269,8 +269,10 @@ static KOS_SCOPE *push_scope(KOS_COMP_UNIT      *program,
     scope->num_vars       = 0;
     scope->num_indep_vars = 0;
 
-    if (scope->has_frame)
+    if (scope->has_frame) {
         program->cur_frame = (KOS_FRAME *)scope;
+        ((KOS_FRAME *)scope)->num_binds = 0;
+    }
 
     return scope;
 }
@@ -926,7 +928,7 @@ int kos_is_const_fun(KOS_VAR *var)
     if (fun_node->type == NT_CONSTRUCTOR_LITERAL)
         return 0;
 
-    /* Function requires binding defaults, must be passed through a closure */
+    /* Function which requires binding defaults must be passed through a closure */
     assert(fun_node->is_scope);
     frame = (KOS_FRAME *)fun_node->u.scope;
     assert(frame);
@@ -935,7 +937,36 @@ int kos_is_const_fun(KOS_VAR *var)
     if (frame->num_def_used)
         return 0;
 
-    return 0; /* TODO num_binds */
+    /* Function which uses independent variables from outer scopes must be passed
+     * through a closure */
+    if (frame->num_binds)
+        return 0;
+
+    return 0; /* TODO return 1 if compiler.c supports it */
+}
+
+static void mark_binds(KOS_COMP_UNIT *program,
+                       KOS_VAR       *var)
+{
+    assert((var->type != VAR_LOCAL) && (var->type != VAR_ARGUMENT));
+    assert(var->scope);
+
+    if (var->type & VAR_INDEPENDENT) {
+
+        KOS_FRAME       *frame        = program->cur_frame;
+        KOS_FRAME *const target_frame = var->scope->owning_frame;
+
+        assert(frame != target_frame);
+        assert(frame);
+        assert(target_frame);
+
+        do {
+            ++frame->num_binds;
+
+            frame = frame->parent_frame;
+            assert(frame);
+        } while (frame != target_frame);
+    }
 }
 
 static void identifier(KOS_COMP_UNIT *program,
@@ -985,6 +1016,8 @@ static void identifier(KOS_COMP_UNIT *program,
 
     if (is_local)
         ++var->local_reads;
+    else
+        mark_binds(program, var);
 }
 
 static int assignment(KOS_COMP_UNIT *program,
@@ -1078,6 +1111,8 @@ static int assignment(KOS_COMP_UNIT *program,
                         if (assg_op != OT_SET)
                             ++var->local_reads;
                     }
+                    else
+                        mark_binds(program, var);
                 }
             }
         }

@@ -4526,6 +4526,8 @@ static int gen_binds(KOS_RED_BLACK_NODE *node,
             KOS_SCOPE_REF *other_ref =
                     kos_find_scope_ref(args->parent_frame, ref->closure);
 
+            assert(args->parent_frame->num_binds);
+
             TRY(gen_instr3(program,
                            INSTR_BIND,
                            args->func_reg->reg,
@@ -4550,6 +4552,8 @@ static int gen_binds(KOS_RED_BLACK_NODE *node,
 
             KOS_SCOPE_REF *other_ref =
                     kos_find_scope_ref(args->parent_frame, ref->closure);
+
+            assert(args->parent_frame->num_binds);
 
             src_reg = other_ref->args_reg_idx;
         }

@@ -157,8 +157,11 @@ static int push_scope(KOS_COMP_UNIT *program,
 
         if (alloc_frame) {
             ((KOS_FRAME *)scope)->parent_frame = program->cur_frame;
-            program->cur_frame = (KOS_FRAME *)scope;
+            program->cur_frame  = (KOS_FRAME *)scope;
+            scope->owning_frame = (KOS_FRAME *)scope;
         }
+        else
+            scope->owning_frame = program->cur_frame;
     }
 
     return error;
