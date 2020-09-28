@@ -207,7 +207,7 @@ static int walk_tree(const KOS_AST_NODE *node,
     int              i;
     int              indent_shift = 4;
 
-    assert(level<50);
+    assert(level < 128);
 
     append_str_len(&out, end, indent, (unsigned)(level * indent_shift));
     append_str_len(&out, end, "(", 1);
@@ -397,6 +397,7 @@ int main(int argc, char *argv[])
 
     while (buf < file_end) {
 
+        const int   invalid_file = 1024; /* Not a valid error code */
         int         expected_error;
         int         line   = 0;
         int         column = 0;
@@ -412,19 +413,23 @@ int main(int argc, char *argv[])
 
         ++end;
 
-        error = scan_int(&end, file_end, &expected_error);
-        if (error)
-            break;
-
-        if (expected_error) {
-
-            error = scan_int(&end, file_end, &line);
+        if (end >= file_end)
+            expected_error = invalid_file;
+        else {
+            error = scan_int(&end, file_end, &expected_error);
             if (error)
                 break;
 
-            error = scan_int(&end, file_end, &column);
-            if (error)
-                break;
+            if (expected_error) {
+
+                error = scan_int(&end, file_end, &line);
+                if (error)
+                    break;
+
+                error = scan_int(&end, file_end, &column);
+                if (error)
+                    break;
+            }
         }
 
         scan_until_eol(&end, file_end);
