@@ -81,9 +81,10 @@ typedef struct KOS_AST_NODE_S {
     }                          u;
     KOS_TOKEN                  token;
     unsigned                   type         : 8;
-    unsigned                   is_var       : 1;
-    unsigned                   is_local_var : 1;
-    unsigned                   is_scope     : 1;
+    unsigned                   is_var       : 1; /* u.var is a valid pointer to variable                 */
+    unsigned                   is_local_var : 1; /* Node if an identifier referencing local variable/arg */
+    unsigned                   is_scope     : 1; /* u.scope is a valid pointer to scope                  */
+    unsigned                   is_const_fun : 1; /* u.var is a function declared in outer scope          */
 } KOS_AST_NODE;
 
 #endif

@@ -779,3 +779,44 @@ do {
 
     check(shadowed_and_unused, { registers: 1, instructions: 2, size: 5 })
 }
+
+#============================================================================#
+
+do {
+    var constant = 7
+
+    fun the_test
+    {
+        class base {
+        }
+        base.prototype.x = 123
+        class some_class extends base {
+            constructor {
+                this.x += 1
+            }
+            uses_super {
+                return super.x
+            }
+            unused_super {
+                if constant {
+                    return this.x
+                }
+                else {
+                    return super.x
+                }
+            }
+        }
+
+        var obj = some_class()
+        assert obj.x              == 124
+        assert obj.uses_super()   == 123
+        assert obj.unused_super() == 124
+
+        return [obj.uses_super, obj.unused_super]
+    }
+
+    const uses_super, unused_super = the_test()
+
+    check(uses_super,   { registers: 2, instructions: 2, size: 6 })
+    check(unused_super, { registers: 2, instructions: 2, size: 6 })
+}

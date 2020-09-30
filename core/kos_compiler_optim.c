@@ -97,6 +97,7 @@ static void promote(KOS_COMP_UNIT      *program,
     node->token        = child->token;
     node->type         = child->type;
     node->is_local_var = child->is_local_var;
+    node->is_const_fun = child->is_const_fun;
 }
 
 static int get_nonzero(const KOS_TOKEN *token, int *non_zero)
@@ -162,20 +163,20 @@ static void lookup_var(KOS_COMP_UNIT      *program,
         assert(var->is_active);
     }
 
-    *out_var  = var;
-    *is_local = node->is_local_var;
+    *out_var = var;
+    if (is_local)
+        *is_local = node->is_local_var;
 }
 
 const KOS_AST_NODE *kos_get_const(KOS_COMP_UNIT      *program,
                                   const KOS_AST_NODE *node)
 {
     KOS_VAR *var = 0;
-    int      is_local;
 
     if ( ! node || node->type != NT_IDENTIFIER)
         return node;
 
-    lookup_var(program, node, 1, &var, &is_local);
+    lookup_var(program, node, 1, &var, 0);
 
     return var->is_const ? var->value : 0;
 }
@@ -270,8 +271,10 @@ static KOS_SCOPE *push_scope(KOS_COMP_UNIT      *program,
     scope->num_indep_vars = 0;
 
     if (scope->has_frame) {
-        program->cur_frame = (KOS_FRAME *)scope;
-        ((KOS_FRAME *)scope)->num_binds = 0;
+        KOS_FRAME *const frame = (KOS_FRAME *)scope;
+        program->cur_frame     = frame;
+        frame->num_binds       = 0;
+        frame->uses_base_proto = 0;
     }
 
     return scope;
@@ -600,7 +603,6 @@ static int try_stmt(KOS_COMP_UNIT *program,
         KOS_AST_NODE *var_node = node->children;
         KOS_AST_NODE *scope_node;
         KOS_VAR      *var;
-        int           is_local;
 
         assert(node->type == NT_CATCH);
 
@@ -618,7 +620,7 @@ static int try_stmt(KOS_COMP_UNIT *program,
         assert( ! var_node->next);
         assert(var_node->type == NT_IDENTIFIER);
 
-        lookup_var(program, var_node, 0, &var, &is_local);
+        lookup_var(program, var_node, 0, &var, 0);
 
         assert(var);
         assert(var->is_active == VAR_INACTIVE);
@@ -771,7 +773,6 @@ static int parameter_defaults(KOS_COMP_UNIT *program,
             KOS_VAR      *var;
             KOS_AST_NODE *def_node = node->children;
             int           is_terminal;
-            int           is_local;
 
             assert(def_node);
             assert(def_node->type == NT_IDENTIFIER);
@@ -781,7 +782,7 @@ static int parameter_defaults(KOS_COMP_UNIT *program,
 
             TRY(visit_node(program, def_node, &is_terminal));
 
-            lookup_var(program, node->children, 1, &var, &is_local);
+            lookup_var(program, node->children, 1, &var, 0);
             assert(var);
 
             ++num_def;
@@ -791,6 +792,19 @@ static int parameter_defaults(KOS_COMP_UNIT *program,
             if (var->num_reads)
                 num_def_used = num_def;
         }
+    }
+
+    if (node && (node->type == NT_ELLIPSIS)) {
+
+        KOS_VAR *var;
+
+        lookup_var(program, node->children, 1, &var, 0);
+        assert(var);
+
+        assert(var->num_reads || ! var->num_assignments);
+
+        if (var->num_reads)
+            num_def_used = num_def;
     }
 
     *out_num_def_used = num_def_used;
@@ -942,7 +956,7 @@ int kos_is_const_fun(KOS_VAR *var)
     if (frame->num_binds)
         return 0;
 
-    return 0; /* TODO return 1 if compiler.c supports it */
+    return 1;
 }
 
 static void mark_binds(KOS_COMP_UNIT *program,
@@ -1003,8 +1017,13 @@ static void identifier(KOS_COMP_UNIT *program,
             case NT_FUNCTION_LITERAL:
                 /* fall through */
             case NT_CONSTRUCTOR_LITERAL:
-                if (kos_is_const_fun(var))
-                    is_local = 1;
+                if (kos_is_const_fun(var)) {
+                    if ( ! node->is_const_fun) {
+                        node->is_const_fun = 1;
+                        ++program->num_optimizations;
+                    }
+                    is_local = 1; /* Treat as local variable */
+                }
                 break;
 
             default:
@@ -1902,6 +1921,16 @@ static int line(KOS_COMP_UNIT *program,
     return collapse_numeric(program, node, &numeric);
 }
 
+static void super_proto_literal(KOS_COMP_UNIT *program)
+{
+    KOS_FRAME *const frame = program->cur_frame;
+
+    assert(frame && frame->scope.is_function);
+
+    frame->uses_base_proto = 1;
+    ++frame->num_binds;
+}
+
 static int visit_node(KOS_COMP_UNIT *program,
                       KOS_AST_NODE  *node,
                       int           *is_terminal)
@@ -1993,6 +2022,11 @@ static int visit_node(KOS_COMP_UNIT *program,
             error = line(program, node);
             break;
 
+        case NT_SUPER_PROTO_LITERAL:
+            super_proto_literal(program);
+            error = KOS_SUCCESS;
+            break;
+
         case NT_EMPTY:
             /* fall through */
         case NT_FALLTHROUGH:
@@ -2006,8 +2040,6 @@ static int visit_node(KOS_COMP_UNIT *program,
         case NT_THIS_LITERAL:
             /* fall through */
         case NT_SUPER_CTOR_LITERAL:
-            /* fall through */
-        case NT_SUPER_PROTO_LITERAL:
             /* fall through */
         case NT_BOOL_LITERAL:
             /* fall through */

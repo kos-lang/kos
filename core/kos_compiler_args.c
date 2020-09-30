@@ -55,7 +55,7 @@ static void lookup_var(KOS_COMP_UNIT      *program,
     assert(node->is_var);
     assert(var);
 
-    if ( ! node->is_local_var) {
+    if ( ! node->is_local_var && ! node->is_const_fun) {
 
         if (only_active) {
             assert(var->is_active);

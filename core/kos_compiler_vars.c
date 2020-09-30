@@ -657,20 +657,20 @@ static int this_literal(KOS_COMP_UNIT      *program,
 
 static void super_ctor_literal(KOS_COMP_UNIT *program)
 {
-    KOS_SCOPE *const scope = &program->cur_frame->scope;
+    KOS_FRAME *const frame = program->cur_frame;
 
-    assert(scope && scope->is_function);
+    assert(frame && frame->scope.is_function);
 
-    ((KOS_FRAME *)scope)->uses_base_ctor = 1;
+    frame->uses_base_ctor = 1;
 }
 
 static void super_proto_literal(KOS_COMP_UNIT *program)
 {
-    KOS_SCOPE *const scope = &program->cur_frame->scope;
+    KOS_FRAME *const frame = program->cur_frame;
 
-    assert(scope && scope->is_function);
+    assert(frame && frame->scope.is_function);
 
-    ((KOS_FRAME *)scope)->uses_base_proto = 1;
+    frame->uses_base_proto = 1;
 }
 
 static int parameter_defaults(KOS_COMP_UNIT      *program,

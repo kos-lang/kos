@@ -7,7 +7,7 @@
  - minimum args : 0
  - default args : 0
 @disasm.kos:7:
-00000000: 82 00 02                          LOAD.CONST8    r0, 2 # "My String"
+00000000: 82 00 03                          LOAD.CONST8    r0, 3 # "My String"
 00000003: C0 00                             RETURN         r0
 
 -- <global>() --
@@ -21,7 +21,7 @@
 0000000F: 82 01 00                          LOAD.CONST8    r1, 0 # "x*y{1,2}?"
 00000012: BF 01 00 01 01                    CALL.FUN       r1, r0, r1, 1
 @disasm.kos:5:
-00000017: 82 00 03                          LOAD.CONST8    r0, 3 # <function fun @ 0x0>
+00000017: 82 00 02                          LOAD.CONST8    r0, 2 # <function fun @ 0x0>
 0000001A: C0 00                             RETURN         r0
 
 ==============================================================================

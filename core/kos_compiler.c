@@ -346,7 +346,7 @@ static int lookup_var(KOS_COMP_UNIT      *program,
         const int  is_local_arg  = node->is_local_var &&
                                    (var->type & (VAR_ARGUMENT | VAR_ARGUMENT_IN_REG));
         KOS_SCOPE *scope         = var->scope;
-        const int  is_global     = var->type == VAR_GLOBAL || var->type == VAR_MODULE;
+        const int  skip_reg      = var->type == VAR_GLOBAL || var->type == VAR_MODULE || node->is_const_fun;
 
         *out_var = var;
 
@@ -357,7 +357,7 @@ static int lookup_var(KOS_COMP_UNIT      *program,
                 *reg = program->cur_frame->args_reg;
             }
         }
-        else if (!is_global) {
+        else if ( ! skip_reg) {
 
             KOS_SCOPE_REF *ref;
 
@@ -4287,7 +4287,33 @@ static int identifier(KOS_COMP_UNIT      *program,
 
     if (src_reg)
         *reg = src_reg;
+    else if (node->is_const_fun) {
+        KOS_FRAME         *fun_frame;
+        KOS_COMP_FUNCTION *constant;
+        KOS_VAR           *var = node->u.var;
+        assert(node->is_var);
+        assert(var);
+        assert(var->is_const);
 
+        node = var->value;
+        assert(node->type == NT_FUNCTION_LITERAL);
+        assert(node->is_scope);
+        fun_frame = (KOS_FRAME *)node->u.scope;
+        assert(fun_frame->scope.has_frame);
+
+        constant = fun_frame->constant;
+        assert(constant);
+        assert(constant->header.type == KOS_COMP_CONST_FUNCTION);
+        assert((constant->load_instr == INSTR_LOAD_CONST) ||
+               (constant->load_instr == INSTR_LOAD_CONST8));
+
+        TRY(gen_reg(program, reg));
+
+        TRY(gen_instr2(program,
+                       constant->load_instr,
+                       (*reg)->reg,
+                       (int32_t)constant->header.index));
+    }
     else {
 
         KOS_VAR *var           = 0;
@@ -4631,6 +4657,30 @@ static int gen_function(KOS_COMP_UNIT      *program,
     if ( ! constant)
         RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
 
+    frame->constant = constant;
+
+    add_constant(program, &constant->header);
+
+    /* Create constant placeholder for class prototype */
+    if (fun_node->type == NT_CONSTRUCTOR_LITERAL) {
+
+        KOS_COMP_CONST *proto_const = (KOS_COMP_CONST *)
+                kos_mempool_alloc(&program->allocator, sizeof(KOS_COMP_CONST));
+
+        if ( ! proto_const)
+            RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
+
+        proto_const->type = KOS_COMP_CONST_PROTOTYPE;
+
+        add_constant(program, proto_const);
+    }
+
+    /* Choose instruction for loading the function */
+    constant->load_instr = (uint8_t)
+        (((fun_node->type == NT_CONSTRUCTOR_LITERAL) || frame->num_def_used || frame->num_binds)
+             ? (constant->header.index < 256 ? INSTR_LOAD_FUN8   : INSTR_LOAD_FUN)
+             : (constant->header.index < 256 ? INSTR_LOAD_CONST8 : INSTR_LOAD_CONST));
+
     push_scope(program, node);
 
     frame->fun_token = &fun_node->token;
@@ -4846,31 +4896,10 @@ static int gen_function(KOS_COMP_UNIT      *program,
     if (scope->num_indep_vars || scope->num_indep_args)
         constant->flags |= KOS_COMP_FUN_CLOSURE;
 
-    add_constant(program, &constant->header);
-
-    frame->constant = constant;
-
-    /* Create constant placeholder for class prototype */
-    if (fun_node->type == NT_CONSTRUCTOR_LITERAL) {
-
-        KOS_COMP_CONST *proto_const = (KOS_COMP_CONST *)
-                kos_mempool_alloc(&program->allocator, sizeof(KOS_COMP_CONST));
-
-        if ( ! proto_const)
-            RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
-
-        proto_const->type = KOS_COMP_CONST_PROTOTYPE;
-
-        add_constant(program, proto_const);
-    }
-
-    /* Choose instruction for loading the function */
-    constant->load_instr = (uint8_t)
-        ((fun_node->type == NT_CONSTRUCTOR_LITERAL ||
-          scope->num_args > constant->min_args     ||
-          constant->num_binds)
-             ? (constant->header.index < 256 ? INSTR_LOAD_FUN8   : INSTR_LOAD_FUN)
-             : (constant->header.index < 256 ? INSTR_LOAD_CONST8 : INSTR_LOAD_CONST));
+    /* Check if instruction choice was correct */
+    assert(constant->num_binds || ! frame->num_binds);
+    assert((fun_node->type == NT_CONSTRUCTOR_LITERAL) || ! constant->num_binds || frame->num_binds);
+    assert(scope->num_args - constant->min_args == frame->num_def_used);
 
     /* Move the function code to final code_buf */
     TRY(append_frame(program, constant, fun_start_offs, addr2line_start_offs));
@@ -4976,12 +5005,7 @@ static int function_literal(KOS_COMP_UNIT      *program,
 
         assert(num_used_def_args <= (int)constant->num_used_def_args);
         assert(num_used_def_args >= 0);
-        if (scope->ellipsis) {
-            assert(num_used_def_args >= frame->num_def_used);
-        }
-        else {
-            assert(num_used_def_args == frame->num_def_used);
-        }
+        assert(num_used_def_args == frame->num_def_used);
         constant->num_used_def_args = (uint8_t)num_used_def_args;
 
         if (num_used_def_args > 0) {
