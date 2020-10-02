@@ -199,7 +199,7 @@ static const RE_INSTR_DESC re_instr_descs[] = {
     { "LAZY.JUMP",        4, 1 }
 };
 
-struct RE_CTX {
+struct RE_PARSE_CTX {
     KOS_CONTEXT     ctx; /* For error reporting */
     KOS_STRING_ITER iter;
     int             idx;
@@ -222,7 +222,7 @@ struct RE_CLASS_RANGE {
     uint32_t end_code;
 };
 
-struct RE {
+struct RE_OBJ {
     uint16_t num_groups;
     uint16_t num_counts;
     uint16_t bytecode_size;
@@ -230,7 +230,7 @@ struct RE {
 };
 
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_string, "object is not a string");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_not_re,      "object is not a regular expression");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_re,     "object is not a regular expression");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_too_long,   "regular expression too long");
 
 /* End of regular expression */
@@ -253,16 +253,16 @@ static uint32_t peek_prev_char(KOS_STRING_ITER *iter)
     return kos_string_iter_peek_next_code(&prev_iter);
 }
 
-static void consume_next_char(struct RE_CTX *re_ctx)
+static void consume_next_char(struct RE_PARSE_CTX *re_ctx)
 {
     kos_string_iter_advance(&re_ctx->iter);
 
     ++re_ctx->idx;
 }
 
-static int emit_instr(struct RE_CTX *re_ctx,
-                      enum RE_INSTR  code,
-                      int            num_args,
+static int emit_instr(struct RE_PARSE_CTX *re_ctx,
+                      enum RE_INSTR        code,
+                      int                  num_args,
                       ...)
 {
     const size_t pos   = re_ctx->buf.size;
@@ -299,28 +299,28 @@ static int emit_instr(struct RE_CTX *re_ctx,
     return KOS_SUCCESS;
 }
 
-static int emit_instr0(struct RE_CTX *re_ctx, enum RE_INSTR code)
+static int emit_instr0(struct RE_PARSE_CTX *re_ctx, enum RE_INSTR code)
 {
     return emit_instr(re_ctx, code, 0);
 }
 
-static int emit_instr1(struct RE_CTX *re_ctx, enum RE_INSTR code, uint32_t arg)
+static int emit_instr1(struct RE_PARSE_CTX *re_ctx, enum RE_INSTR code, uint32_t arg)
 {
     return emit_instr(re_ctx, code, 1, arg);
 }
 
-static int emit_instr2(struct RE_CTX *re_ctx, enum RE_INSTR code, uint32_t arg1, uint32_t arg2)
+static int emit_instr2(struct RE_PARSE_CTX *re_ctx, enum RE_INSTR code, uint32_t arg1, uint32_t arg2)
 {
     return emit_instr(re_ctx, code, 2, arg1, arg2);
 }
 
-static int emit_instr3(struct RE_CTX *re_ctx, enum RE_INSTR code,
+static int emit_instr3(struct RE_PARSE_CTX *re_ctx, enum RE_INSTR code,
                        uint32_t arg1, uint32_t arg2, uint32_t arg3)
 {
     return emit_instr(re_ctx, code, 3, arg1, arg2, arg3);
 }
 
-static int emit_instr4(struct RE_CTX *re_ctx, enum RE_INSTR code,
+static int emit_instr4(struct RE_PARSE_CTX *re_ctx, enum RE_INSTR code,
                        uint32_t arg1, uint32_t arg2, uint32_t arg3, uint32_t arg4)
 {
     return emit_instr(re_ctx, code, 4, arg1, arg2, arg3, arg4);
@@ -335,7 +335,7 @@ static void encode_utf8(uint32_t code, char *buf, size_t buf_size)
     buf[len] = 0;
 }
 
-static int expect_char(struct RE_CTX *re_ctx, char c)
+static int expect_char(struct RE_PARSE_CTX *re_ctx, char c)
 {
     const uint32_t next_char = peek_next_char(&re_ctx->iter);
 
@@ -361,7 +361,7 @@ static int expect_char(struct RE_CTX *re_ctx, char c)
     return KOS_SUCCESS;
 }
 
-static void rotate_instr(struct RE_CTX *re_ctx, uint32_t begin, uint32_t mid)
+static void rotate_instr(struct RE_PARSE_CTX *re_ctx, uint32_t begin, uint32_t mid)
 {
     char        *tmp[5];
     const size_t size1     = mid - begin;
@@ -377,7 +377,7 @@ static void rotate_instr(struct RE_CTX *re_ctx, uint32_t begin, uint32_t mid)
     memcpy(begin_ptr, tmp, size2);
 }
 
-static void patch_jump_offs(struct RE_CTX *re_ctx, uint32_t instr_offs, uint32_t target_offs)
+static void patch_jump_offs(struct RE_PARSE_CTX *re_ctx, uint32_t instr_offs, uint32_t target_offs)
 {
     const int32_t delta_offs = (int32_t)target_offs - (int32_t)instr_offs;
 
@@ -388,9 +388,9 @@ static void patch_jump_offs(struct RE_CTX *re_ctx, uint32_t instr_offs, uint32_t
     *offs_ptr = (uint16_t)(int16_t)(delta_offs >> 1);
 }
 
-static int parse_alternative_match_seq(struct RE_CTX *re_ctx);
+static int parse_alternative_match_seq(struct RE_PARSE_CTX *re_ctx);
 
-static int parse_number(struct RE_CTX *re_ctx, uint32_t* number)
+static int parse_number(struct RE_PARSE_CTX *re_ctx, uint32_t* number)
 {
     uint32_t  value = 0;
     uint32_t  code  = peek_next_char(&re_ctx->iter);
@@ -430,14 +430,14 @@ static int parse_number(struct RE_CTX *re_ctx, uint32_t* number)
     return KOS_SUCCESS;
 }
 
-static int parse_escape_seq(struct RE_CTX *re_ctx)
+static int parse_escape_seq(struct RE_PARSE_CTX *re_ctx)
 {
     /* TODO */
     KOS_raise_printf(re_ctx->ctx, "escape sequences not implemented yet");
     return KOS_ERROR_EXCEPTION;
 }
 
-static int parse_class_char(struct RE_CTX *re_ctx, uint32_t *out_code)
+static int parse_class_char(struct RE_PARSE_CTX *re_ctx, uint32_t *out_code)
 {
     uint32_t code = peek_next_char(&re_ctx->iter);
 
@@ -468,7 +468,7 @@ static int parse_class_char(struct RE_CTX *re_ctx, uint32_t *out_code)
     return KOS_SUCCESS;
 }
 
-static uint16_t generate_class(struct RE_CTX *re_ctx)
+static uint16_t generate_class(struct RE_PARSE_CTX *re_ctx)
 {
     struct RE_CLASS_DESC *desc;
     uint16_t              class_id;
@@ -492,10 +492,10 @@ static uint16_t generate_class(struct RE_CTX *re_ctx)
     return class_id;
 }
 
-static int add_class_range(struct RE_CTX *re_ctx,
-                           uint16_t       class_id,
-                           uint32_t       begin_code,
-                           uint32_t       end_code)
+static int add_class_range(struct RE_PARSE_CTX *re_ctx,
+                           uint16_t             class_id,
+                           uint32_t             begin_code,
+                           uint32_t             end_code)
 {
     struct RE_CLASS_DESC  *desc = (struct RE_CLASS_DESC *)re_ctx->class_descs.buffer + class_id;
     struct RE_CLASS_RANGE *range;
@@ -616,7 +616,7 @@ static int add_class_range(struct RE_CTX *re_ctx,
     return KOS_SUCCESS;
 }
 
-static int parse_class(struct RE_CTX *re_ctx)
+static int parse_class(struct RE_PARSE_CTX *re_ctx)
 {
     uint32_t      code     = peek_next_char(&re_ctx->iter);
     enum RE_INSTR instr    = INSTR_MATCH_CLASS;
@@ -680,7 +680,7 @@ static int parse_class(struct RE_CTX *re_ctx)
     return emit_instr1(re_ctx, instr, class_id);
 }
 
-static int parse_group(struct RE_CTX *re_ctx)
+static int parse_group(struct RE_PARSE_CTX *re_ctx)
 {
     int      error;
     unsigned group_id = re_ctx->num_groups++;
@@ -704,7 +704,7 @@ static int parse_group(struct RE_CTX *re_ctx)
     return error;
 }
 
-static int parse_single_match(struct RE_CTX *re_ctx)
+static int parse_single_match(struct RE_PARSE_CTX *re_ctx)
 {
     int      error = KOS_SUCCESS;
     uint32_t code  = peek_next_char(&re_ctx->iter);
@@ -768,10 +768,10 @@ static int parse_single_match(struct RE_CTX *re_ctx)
     return error;
 }
 
-static int emit_multiplicity(struct RE_CTX *re_ctx,
-                             uint32_t       begin_offs,
-                             uint32_t       min_count,
-                             uint32_t       max_count)
+static int emit_multiplicity(struct RE_PARSE_CTX *re_ctx,
+                             uint32_t             begin_offs,
+                             uint32_t             min_count,
+                             uint32_t             max_count)
 {
     int            error;
     const uint32_t pivot    = (uint32_t)re_ctx->buf.size;
@@ -805,7 +805,7 @@ cleanup:
     return error;
 }
 
-static int parse_optional_multiplicity(struct RE_CTX *re_ctx, uint32_t begin)
+static int parse_optional_multiplicity(struct RE_PARSE_CTX *re_ctx, uint32_t begin)
 {
     int            error = KOS_SUCCESS;
     const uint32_t code  = peek_next_char(&re_ctx->iter);
@@ -885,7 +885,7 @@ static int parse_optional_multiplicity(struct RE_CTX *re_ctx, uint32_t begin)
     return error;
 }
 
-static int parse_match_seq(struct RE_CTX *re_ctx)
+static int parse_match_seq(struct RE_PARSE_CTX *re_ctx)
 {
     int error = KOS_SUCCESS;
 
@@ -907,7 +907,7 @@ static int parse_match_seq(struct RE_CTX *re_ctx)
     return error;
 }
 
-static int parse_alternative_match_seq(struct RE_CTX *re_ctx)
+static int parse_alternative_match_seq(struct RE_PARSE_CTX *re_ctx)
 {
     uint32_t fork_offs = (uint32_t)re_ctx->buf.size;
     uint32_t jump_offs = ~0U;
@@ -963,7 +963,7 @@ cleanup:
     return error;
 }
 
-static void disassemble(struct RE *re, const char *re_cstr)
+static void disassemble(struct RE_OBJ *re, const char *re_cstr)
 {
     const uint16_t       *ptr = re->bytecode;
     const uint16_t *const end = ptr + re->bytecode_size;
@@ -1046,9 +1046,9 @@ static void finalize(KOS_CONTEXT ctx, void *priv)
 
 static int parse_re(KOS_CONTEXT ctx, KOS_OBJ_ID regex_str, KOS_OBJ_ID regex)
 {
-    int           error;
-    struct RE_CTX re_ctx;
-    struct RE    *re;
+    int                 error;
+    struct RE_PARSE_CTX re_ctx;
+    struct RE_OBJ      *re;
 
     kos_init_string_iter(&re_ctx.iter, regex_str);
 
@@ -1067,7 +1067,7 @@ static int parse_re(KOS_CONTEXT ctx, KOS_OBJ_ID regex_str, KOS_OBJ_ID regex)
 
     TRY(parse_alternative_match_seq(&re_ctx));
 
-    re = (struct RE *)kos_malloc(sizeof(struct RE) + re_ctx.buf.size - sizeof(uint16_t));
+    re = (struct RE_OBJ *)kos_malloc(sizeof(struct RE_OBJ) + re_ctx.buf.size - sizeof(uint16_t));
     if ( ! re) {
         KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
@@ -1100,27 +1100,59 @@ cleanup:
     return error;
 }
 
-enum POSS_STATE {
-    STATE_INACTIVE,
-    STATE_ACTIVE
-};
-
 struct RE_POSS_STACK_ITEM {
     uint16_t instr_idx;
     uint16_t str_end_offs; /* char idx in the string, from the end of the string */
-    unsigned count  : 15;
-    unsigned active : 1;
+    uint16_t counts_and_groups[1];
 };
 
 struct RE_POSS_STACK {
     KOS_VECTOR                 buffer;
-    struct RE_POSS_STACK_ITEM *top;
+    struct RE_POSS_STACK_ITEM *current;
 };
 
-static void init_possibility_stack(struct RE_POSS_STACK *poss_stack)
+static int get_num_slots(const struct RE_OBJ *re)
 {
+    return (re->num_groups * 2) + re->num_counts;
+}
+
+static int get_item_size(const struct RE_OBJ *re)
+{
+    const size_t num_slots = get_num_slots(re);
+    return sizeof(struct RE_POSS_STACK_ITEM) + sizeof(uint16_t) * (num_slots - 1);
+}
+
+static struct RE_POSS_STACK_ITEM *push_item(struct RE_POSS_STACK *poss_stack,
+                                            KOS_CONTEXT           ctx,
+                                            size_t                item_size)
+{
+    const size_t old_size = poss_stack->buffer.size;
+
+    if (kos_vector_resize(&poss_stack->buffer, old_size + item_size)) {
+        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+        return 0;
+    }
+
+    poss_stack->current = (struct RE_POSS_STACK_ITEM *)poss_stack->buffer.buffer;
+
+    return (struct RE_POSS_STACK_ITEM *)(poss_stack->buffer.buffer + old_size);
+}
+
+static int init_possibility_stack(struct RE_POSS_STACK *poss_stack,
+                                  KOS_CONTEXT           ctx,
+                                  const struct RE_OBJ  *re)
+{
+    const size_t item_size = get_item_size(re);
+
     kos_vector_init(&poss_stack->buffer);
-    poss_stack->top = 0;
+    poss_stack->current = 0;
+
+    if ( ! push_item(poss_stack, ctx, item_size))
+        return KOS_ERROR_EXCEPTION;
+
+    memset(poss_stack->current, 0, item_size);
+
+    return KOS_SUCCESS;
 }
 
 static void destroy_possibility_stack(struct RE_POSS_STACK *poss_stack)
@@ -1128,89 +1160,78 @@ static void destroy_possibility_stack(struct RE_POSS_STACK *poss_stack)
     kos_vector_destroy(&poss_stack->buffer);
 }
 
-static void set_iter(struct RE_POSS_STACK *poss_stack,
-                     KOS_STRING_ITER      *iter)
-{
-    struct RE_POSS_STACK_ITEM *const item = poss_stack->top;
-
-    item->str_end_offs = (uint16_t)((iter->end - iter->ptr) >> iter->elem_size);
-}
-
 static int push_possibility(struct RE_POSS_STACK *poss_stack,
                             KOS_CONTEXT           ctx,
-                            struct RE            *re,
+                            const struct RE_OBJ  *re,
                             const uint16_t       *target_ptr,
-                            KOS_STRING_ITER      *iter,
-                            enum POSS_STATE       state)
+                            KOS_STRING_ITER      *iter)
 {
-    const size_t               old_size = poss_stack->buffer.size;
-    struct RE_POSS_STACK_ITEM *item;
+    struct RE_POSS_STACK_ITEM *saved_item;
+    const size_t               item_size = get_item_size(re);
 
-    if (kos_vector_resize(&poss_stack->buffer, old_size + sizeof(struct RE_POSS_STACK_ITEM))) {
-        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+    assert(poss_stack->current);
+    assert(poss_stack->buffer.size);
+
+    saved_item = push_item(poss_stack, ctx, item_size);
+    if ( ! saved_item)
         return KOS_ERROR_EXCEPTION;
-    }
 
-    item = (struct RE_POSS_STACK_ITEM *)(poss_stack->buffer.buffer + old_size);
+    memcpy(saved_item, poss_stack->current, item_size);
 
-    item->instr_idx = (uint16_t)(target_ptr - &re->bytecode[0]);
-    item->count     = 0;
-    item->active    = state;
-
-    poss_stack->top = item;
-
-    set_iter(poss_stack, iter);
+    saved_item->instr_idx    = (uint16_t)(target_ptr - &re->bytecode[0]);
+    saved_item->str_end_offs = (uint16_t)((iter->end - iter->ptr) >> iter->elem_size);
 
     return KOS_SUCCESS;
 }
 
-static void pop_possibility(struct RE_POSS_STACK *poss_stack)
+static void pop_possibility(struct RE_POSS_STACK *poss_stack,
+                            const struct RE_OBJ  *re)
 {
-    size_t new_size;
+    struct RE_POSS_STACK_ITEM *saved_item;
+    const size_t               item_size = get_item_size(re);
 
-    assert(poss_stack->buffer.size >= sizeof(struct RE_POSS_STACK_ITEM));
+    assert(poss_stack->buffer.size >= item_size);
 
-    new_size = poss_stack->buffer.size - sizeof(struct RE_POSS_STACK_ITEM);
+    saved_item = (struct RE_POSS_STACK_ITEM *)(poss_stack->buffer.buffer + poss_stack->buffer.size - item_size);
 
-    poss_stack->buffer.size = new_size;
+    if (saved_item > poss_stack->current) {
 
-    if (new_size)
-        poss_stack->top = (struct RE_POSS_STACK_ITEM *)(poss_stack->buffer.buffer + new_size - sizeof(struct RE_POSS_STACK_ITEM));
-    else
-        poss_stack->top = 0;
+        memcpy(poss_stack->current, saved_item, item_size);
+
+        poss_stack->buffer.size -= item_size;
+    }
+    else {
+        poss_stack->buffer.size = 0;
+        poss_stack->current     = 0;
+    }
 }
 
-static int duplicate_possibility(struct RE_POSS_STACK *poss_stack,
-                                 KOS_CONTEXT           ctx)
+static uint16_t get_iter_pos(KOS_OBJ_ID str_obj, KOS_STRING_ITER *iter)
 {
-    const size_t               old_size = poss_stack->buffer.size;
-    struct RE_POSS_STACK_ITEM *old_item;
-    struct RE_POSS_STACK_ITEM *new_item;
+    KOS_STRING_ITER iter0;
+    uintptr_t       pos;
 
-    if (kos_vector_resize(&poss_stack->buffer, old_size + sizeof(struct RE_POSS_STACK_ITEM))) {
-        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
-        return KOS_ERROR_EXCEPTION;
-    }
+    kos_init_string_iter(&iter0, str_obj);
 
-    new_item = (struct RE_POSS_STACK_ITEM *)(poss_stack->buffer.buffer + old_size);
-    old_item = new_item - 1;
+    pos = ((uintptr_t)iter->ptr - (uintptr_t)iter0.ptr) >> iter0.elem_size;
 
-    *new_item = *old_item;
+    return (uint16_t)pos;
+}
 
-    poss_stack->top = new_item;
-
-    return KOS_SUCCESS;
+static uint16_t *get_group(struct RE_POSS_STACK *poss_stack, uint16_t num_counts, uint16_t group_id)
+{
+    return &poss_stack->current->counts_and_groups[num_counts + group_id * 2];
 }
 
 #define BEGIN_INSTRUCTION(instr) case INSTR_ ## instr
 #define NEXT_INSTRUCTION         break
 
-static KOS_OBJ_ID match_string(KOS_CONTEXT ctx,
-                               struct RE  *re,
-                               KOS_OBJ_ID  str_obj,
-                               uint32_t    begin_pos,
-                               uint32_t    pos,
-                               uint32_t    end_pos)
+static KOS_OBJ_ID match_string(KOS_CONTEXT          ctx,
+                               const struct RE_OBJ *re,
+                               KOS_OBJ_ID           str_obj,
+                               uint32_t             begin_pos,
+                               uint32_t             pos,
+                               uint32_t             end_pos)
 {
     const uint16_t       *bytecode     = &re->bytecode[0];
     const uint16_t *const bytecode_end = bytecode + re->bytecode_size;
@@ -1221,7 +1242,7 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT ctx,
     int                   error        = KOS_SUCCESS;
 
     KOS_init_local(ctx, &ret);
-    init_possibility_stack(&poss_stack);
+    TRY(init_possibility_stack(&poss_stack, ctx, re));
 
     kos_init_string_iter(&iter, str_obj);
     iter.end = iter.ptr + ((uintptr_t)end_pos << iter.elem_size);
@@ -1300,13 +1321,19 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT ctx,
             }
 
             BEGIN_INSTRUCTION(BEGIN_GROUP): {
-                /* TODO */
+                const uint16_t group_id = bytecode[1];
+
+                get_group(&poss_stack, re->num_counts, group_id)[0] = get_iter_pos(str_obj, &iter);
+
                 bytecode += 2;
                 NEXT_INSTRUCTION;
             }
 
             BEGIN_INSTRUCTION(END_GROUP): {
-                /* TODO */
+                const uint16_t group_id = bytecode[1];
+
+                get_group(&poss_stack, re->num_counts, group_id)[1] = get_iter_pos(str_obj, &iter);
+
                 bytecode += 2;
                 NEXT_INSTRUCTION;
             }
@@ -1316,7 +1343,7 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT ctx,
 
                 assert(delta);
 
-                TRY(push_possibility(&poss_stack, ctx, re, bytecode + delta, &iter, STATE_ACTIVE));
+                TRY(push_possibility(&poss_stack, ctx, re, bytecode + delta, &iter));
 
                 bytecode += 2;
                 NEXT_INSTRUCTION;
@@ -1333,97 +1360,87 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT ctx,
             }
 
             BEGIN_INSTRUCTION(GREEDY_COUNT): {
-                const int16_t         delta     = (int16_t)bytecode[1];
-#if 0
-                const uint16_t        count_id  = bytecode[2];
-#endif
-                const uint16_t        min_count = bytecode[3];
-                const enum POSS_STATE active    = min_count ? STATE_INACTIVE : STATE_ACTIVE;
+                const int16_t  delta     = (int16_t)bytecode[1];
+                const uint16_t count_id  = bytecode[2];
+                const uint16_t min_count = bytecode[3];
 
                 assert(delta);
 
-                TRY(push_possibility(&poss_stack, ctx, re, bytecode + delta, &iter, active));
+                poss_stack.current->counts_and_groups[count_id] = 0;
+
+                if (min_count == 0)
+                    TRY(push_possibility(&poss_stack, ctx, re, bytecode + delta, &iter));
 
                 bytecode += 4;
                 NEXT_INSTRUCTION;
             }
 
             BEGIN_INSTRUCTION(LAZY_COUNT): {
-                const int16_t         delta     = (int16_t)bytecode[1];
-#if 0
-                const uint16_t        count_id  = bytecode[2];
-#endif
-                const uint16_t        min_count = bytecode[3];
-                const enum POSS_STATE active    = min_count ? STATE_INACTIVE : STATE_ACTIVE;
+                const int16_t  delta     = (int16_t)bytecode[1];
+                const uint16_t count_id  = bytecode[2];
+                const uint16_t min_count = bytecode[3];
 
                 assert(delta);
 
-                TRY(push_possibility(&poss_stack, ctx, re, bytecode + 4, &iter, active));
+                poss_stack.current->counts_and_groups[count_id] = 0;
 
-                bytecode += active ? delta : 4;
+                if (min_count)
+                    bytecode += 4;
+                else {
+                    TRY(push_possibility(&poss_stack, ctx, re, bytecode + 4, &iter));
+
+                    bytecode += delta;
+                }
                 NEXT_INSTRUCTION;
             }
 
             BEGIN_INSTRUCTION(GREEDY_JUMP): {
                 const int16_t  delta     = (int16_t)bytecode[1];
-#if 0
                 const uint16_t count_id  = bytecode[2];
-#endif
                 const uint16_t min_count = bytecode[3];
                 const uint16_t max_count = bytecode[4];
                 unsigned       count;
 
                 assert(delta);
-                assert(poss_stack.top);
+                assert(poss_stack.current);
 
-                if ( ! poss_stack.top)
+                if ( ! poss_stack.current)
                     RAISE_ERROR(KOS_ERROR_INTERNAL);
 
-                count = ++poss_stack.top->count;
+                count = ++poss_stack.current->counts_and_groups[count_id];
 
                 if (count < min_count)
                     bytecode += delta;
-                else {
-                    if (count == min_count) {
-                        poss_stack.top->active = STATE_ACTIVE;
-                        set_iter(&poss_stack, &iter);
-                    }
-                    else if (count < max_count) {
-                        TRY(duplicate_possibility(&poss_stack, ctx));
-                        set_iter(&poss_stack, &iter);
-                    }
-                    bytecode += (count < max_count) ? delta : 5;
+                else if (count < max_count) {
+                    TRY(push_possibility(&poss_stack, ctx, re, bytecode + 5, &iter));
+                    bytecode += delta;
                 }
+                else
+                    bytecode += 5;
 
                 NEXT_INSTRUCTION;
             }
 
             BEGIN_INSTRUCTION(LAZY_JUMP): {
                 const int16_t  delta     = (int16_t)bytecode[1];
-#if 0
                 const uint16_t count_id  = bytecode[2];
-#endif
                 const uint16_t min_count = bytecode[3];
                 const uint16_t max_count = bytecode[4];
                 unsigned       count;
 
                 assert(delta);
-                assert(poss_stack.top);
+                assert(poss_stack.current);
 
-                if ( ! poss_stack.top)
+                if ( ! poss_stack.current)
                     RAISE_ERROR(KOS_ERROR_INTERNAL);
 
-                count = ++poss_stack.top->count;
+                count = ++poss_stack.current->counts_and_groups[count_id];
 
                 if (count < min_count)
                     bytecode += delta;
                 else {
-                    if (count == max_count)
-                        pop_possibility(&poss_stack);
-                    else {
-                        poss_stack.top->active = STATE_ACTIVE;
-                        set_iter(&poss_stack, &iter);
-                    }
+                    if (count < max_count)
+                        TRY(push_possibility(&poss_stack, ctx, re, bytecode + delta, &iter));
                     bytecode += 5;
                 }
 
@@ -1435,16 +1452,15 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT ctx,
                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
 
             try_other_possibility: {
-                while (poss_stack.top && ! poss_stack.top->active)
-                    pop_possibility(&poss_stack);
+                assert(poss_stack.current);
 
-                if (poss_stack.top) {
-                    poss_stack.top->active = STATE_INACTIVE;
-                    bytecode = &re->bytecode[poss_stack.top->instr_idx];
-                    iter.ptr = iter.end - ((unsigned)poss_stack.top->str_end_offs << iter.elem_size);
-                }
-                else
+                pop_possibility(&poss_stack, re);
+
+                if ( ! poss_stack.current)
                     goto cleanup;
+
+                bytecode = &re->bytecode[poss_stack.current->instr_idx];
+                iter.ptr = iter.end - ((unsigned)poss_stack.current->str_end_offs << iter.elem_size);
             }
         }
     }
@@ -1544,13 +1560,13 @@ static KOS_OBJ_ID re_search(KOS_CONTEXT ctx,
                             KOS_OBJ_ID  this_obj,
                             KOS_OBJ_ID  args_obj)
 {
-    int        error     = KOS_SUCCESS;
-    uint32_t   begin_pos = 0;
-    uint32_t   end_pos;
-    uint32_t   pos;
-    KOS_LOCAL  str;
-    KOS_OBJ_ID match_obj = KOS_BADPTR;
-    struct RE *re;
+    int            error     = KOS_SUCCESS;
+    uint32_t       begin_pos = 0;
+    uint32_t       end_pos;
+    uint32_t       pos;
+    KOS_LOCAL      str;
+    KOS_OBJ_ID     match_obj = KOS_BADPTR;
+    struct RE_OBJ *re;
 
     assert(KOS_get_array_size(args_obj) > 0);
 
@@ -1562,7 +1578,7 @@ static KOS_OBJ_ID re_search(KOS_CONTEXT ctx,
 
     end_pos = KOS_get_string_length(str.o);
 
-    re = (struct RE *)KOS_object_get_private_ptr(this_obj);
+    re = (struct RE_OBJ *)KOS_object_get_private_ptr(this_obj);
     if ( ! re)
         RAISE_EXCEPTION_STR(str_err_not_re);
 

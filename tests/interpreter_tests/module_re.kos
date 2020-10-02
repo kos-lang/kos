@@ -266,6 +266,6 @@ do {
 do {
     const lazy   = re.re("a(b|c)+?c")
     const greedy = re.re("a(b|c)+c")
-    #assert check(lazy.search("aaabbcccd"), 2, 6)
-    #assert check(greedy.search("aaabbcccd"), 2, 8)
+    assert check(lazy.search("aaabbcccd"), 2, 6)
+    assert check(greedy.search("aaabbcccd"), 2, 8)
 }
