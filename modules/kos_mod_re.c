@@ -1116,7 +1116,7 @@ static int get_num_slots(const struct RE_OBJ *re)
     return (re->num_groups * 2) + re->num_counts;
 }
 
-static int get_item_size(const struct RE_OBJ *re)
+static size_t get_item_size(const struct RE_OBJ *re)
 {
     const size_t num_slots = get_num_slots(re);
     return sizeof(struct RE_POSS_STACK_ITEM) + sizeof(uint16_t) * (num_slots - 1);
