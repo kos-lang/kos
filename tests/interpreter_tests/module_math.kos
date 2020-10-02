@@ -16,6 +16,12 @@ fun expect_fail(function)
     assert failed
 }
 
+fun close_to(value, target)
+{
+    const epsilon = 1.0 / 16384
+    return (value > target - epsilon) && (value < target + epsilon)
+}
+
 # math constants
 do {
     assert math.pi == 3.141592653589793238
@@ -215,4 +221,102 @@ do {
     assert math.max(1, 2, -2, 3) == 3
     assert math.max("bcd", "efg", "az", "hij") == "hij"
     assert math.max("hij", "bcd", "efg", "az") == "hij"
+}
+
+# math.sin
+do {
+    assert close_to(math.sin(math.pi), 0)
+    assert close_to(math.sin(-math.pi), 0)
+    assert math.sin(0) == 0
+    assert math.sin(math.pi / 2) == 1
+    assert math.is_nan(math.sin(math.infinity))
+    assert math.is_nan(math.sin(-math.infinity))
+}
+
+# math.cos
+do {
+    assert math.cos(math.pi) == -1
+    assert math.cos(-math.pi) == -1
+    assert math.cos(0) == 1
+    assert close_to(math.cos(math.pi / 2), 0)
+    assert math.is_nan(math.cos(math.infinity))
+    assert math.is_nan(math.cos(-math.infinity))
+}
+
+# math.tan
+do {
+    assert math.tan(0) == 0
+    assert math.is_nan(math.tan(math.infinity))
+    assert math.is_nan(math.tan(-math.infinity))
+}
+
+# math.asin
+do {
+    assert math.asin(0) == 0
+    assert math.asin(1) == math.pi / 2
+    assert math.asin(-1) == -math.pi / 2
+    expect_fail(()=>math.asin(-1.25))
+    expect_fail(()=>math.asin(1.25))
+    expect_fail(()=>math.asin(-math.infinity))
+    expect_fail(()=>math.asin(math.infinity))
+}
+
+# math.acos
+do {
+    assert math.acos(0) == math.pi / 2
+    assert math.acos(1) == 0
+    assert math.acos(-1) == math.pi
+    expect_fail(()=>math.acos(-1.25))
+    expect_fail(()=>math.acos(1.25))
+    expect_fail(()=>math.acos(-math.infinity))
+    expect_fail(()=>math.acos(math.infinity))
+}
+
+# math.atan
+do {
+    assert math.atan(0) == 0
+    assert math.atan(1)  > 0
+    assert math.atan(-1) < 0
+    assert math.atan(math.infinity)  == math.pi / 2
+    assert math.atan(-math.infinity) == -math.pi / 2
+}
+
+# math.log
+do {
+    assert math.log(1)  == 0
+    assert math.log(2)   > 0
+    assert math.log(0.5) < 0
+    assert math.log(math.infinity) == math.infinity
+    expect_fail(()=>math.log(0))
+    expect_fail(()=>math.log(-0.5))
+    expect_fail(()=>math.log(-1))
+    expect_fail(()=>math.log(-2))
+    expect_fail(()=>math.log(-math.infinity))
+}
+
+# math.log10
+do {
+    assert math.log10(1)    == 0
+    assert math.log10(10)   == 1
+    assert math.log10(1000) == 3
+    assert math.log10(0.01) == -2
+    assert math.log10(math.infinity) == math.infinity
+    expect_fail(()=>math.log10(0))
+    expect_fail(()=>math.log10(-0.5))
+    expect_fail(()=>math.log10(-1))
+    expect_fail(()=>math.log10(-2))
+    expect_fail(()=>math.log10(-math.infinity))
+}
+
+# math.log1p
+do {
+    assert math.log1p(0)   == 0
+    assert math.log1p(1)    > 0
+    assert math.log1p(-0.5) < 0
+    assert math.log1p(math.infinity) == math.infinity
+    expect_fail(()=>math.log1p(-1))
+    expect_fail(()=>math.log1p(-1.5))
+    expect_fail(()=>math.log1p(-2))
+    expect_fail(()=>math.log1p(-3))
+    expect_fail(()=>math.log1p(-math.infinity))
 }

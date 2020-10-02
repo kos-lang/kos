@@ -14,9 +14,12 @@
 #include <math.h>
 
 static const char str_err_abs_minus_max[] = "cannot calculate abs of the lowest integer value";
+static const char str_err_m1_or_less[]    = "value is not greater than -1";
 static const char str_err_negative_root[] = "invalid base";
 static const char str_err_not_number[]    = "object is not a number";
+static const char str_err_outside_m1_1[]  = "value outside of [-1, 1] range";
 static const char str_err_pow_0_0[]       = "0 to the power of 0";
+static const char str_err_zero_or_less[]  = "value is not positive";
 
 /* @item math abs()
  *
@@ -61,6 +64,132 @@ static KOS_OBJ_ID kos_abs(KOS_CONTEXT ctx,
     }
 
     return ret;
+}
+
+/* @item math acos()
+ *
+ *     acos(number)
+ *
+ * Returns principal value of the arc cosine of `number`.
+ *
+ * The returned value is always a float.
+ *
+ * Throws an exception if `number` is outside of the [-1, 1] range.
+ *
+ * Example:
+ *
+ *     > math.acos(1)
+ *     0.0
+ */
+static KOS_OBJ_ID kos_acos(KOS_CONTEXT ctx,
+                           KOS_OBJ_ID  this_obj,
+                           KOS_OBJ_ID  args_obj)
+{
+    int         error = KOS_SUCCESS;
+    KOS_OBJ_ID  ret   = KOS_BADPTR;
+    KOS_NUMERIC numeric;
+    double      value;
+
+    TRY(KOS_get_numeric_arg(ctx, args_obj, 0, &numeric));
+
+    if (numeric.type == KOS_INTEGER_VALUE) {
+        if ((numeric.u.i < -1) || (numeric.u.i > 1))
+            RAISE_EXCEPTION(str_err_outside_m1_1);
+        value = (double)numeric.u.i;
+    }
+    else {
+        assert(numeric.type == KOS_FLOAT_VALUE);
+        value = numeric.u.d;
+        if ((value < -1) || (value > 1))
+            RAISE_EXCEPTION(str_err_outside_m1_1);
+    }
+
+    ret = KOS_new_float(ctx, acos(value));
+
+cleanup:
+    return error ? KOS_BADPTR : ret;
+}
+
+/* @item math asin()
+ *
+ *     asin(number)
+ *
+ * Returns principal value of the arc sine of `number`.
+ *
+ * The returned value is always a float.
+ *
+ * Throws an exception if `number` is outside of the [-1, 1] range.
+ *
+ * Example:
+ *
+ *     > math.asin(-1)
+ *     0.0
+ */
+static KOS_OBJ_ID kos_asin(KOS_CONTEXT ctx,
+                           KOS_OBJ_ID  this_obj,
+                           KOS_OBJ_ID  args_obj)
+{
+    int         error = KOS_SUCCESS;
+    KOS_OBJ_ID  ret   = KOS_BADPTR;
+    KOS_NUMERIC numeric;
+    double      value;
+
+    TRY(KOS_get_numeric_arg(ctx, args_obj, 0, &numeric));
+
+    if (numeric.type == KOS_INTEGER_VALUE) {
+        if ((numeric.u.i < -1) || (numeric.u.i > 1))
+            RAISE_EXCEPTION(str_err_outside_m1_1);
+        value = (double)numeric.u.i;
+    }
+    else {
+        assert(numeric.type == KOS_FLOAT_VALUE);
+        value = numeric.u.d;
+        if ((value < -1) || (value > 1))
+            RAISE_EXCEPTION(str_err_outside_m1_1);
+    }
+
+    ret = KOS_new_float(ctx, asin(value));
+
+cleanup:
+    return error ? KOS_BADPTR : ret;
+}
+
+/* @item math atan()
+ *
+ *     atan(number)
+ *
+ * Returns principal value of the arc tangent of `number`.
+ *
+ * The returned value is always a float.
+ *
+ * Example:
+ *
+ *     > math.atan(math.infinity)
+ *     1.570796326794897
+ */
+static KOS_OBJ_ID kos_atan(KOS_CONTEXT ctx,
+                           KOS_OBJ_ID  this_obj,
+                           KOS_OBJ_ID  args_obj)
+{
+    int         error = KOS_SUCCESS;
+    KOS_OBJ_ID  ret   = KOS_BADPTR;
+    KOS_NUMERIC numeric;
+    double      value;
+
+    TRY(KOS_get_numeric_arg(ctx, args_obj, 0, &numeric));
+
+    if (numeric.type == KOS_INTEGER_VALUE) {
+        value = (double)numeric.u.i;
+    }
+    else {
+        assert(numeric.type == KOS_FLOAT_VALUE);
+        value = numeric.u.d;
+    }
+
+    ret = KOS_new_float(ctx, atan(value));
+
+cleanup:
+    return error ? KOS_BADPTR : ret;
 }
 
 /* @item math ceil()
@@ -109,6 +238,43 @@ static KOS_OBJ_ID kos_ceil(KOS_CONTEXT ctx,
     return ret;
 }
 
+/* @item math cos()
+ *
+ *     cos(number)
+ *
+ * Returns cosine of `number`.
+ *
+ * The returned value is always a float.
+ *
+ * Example:
+ *
+ *     > math.cos(math.pi / 2)
+ *     0.0
+ */
+static KOS_OBJ_ID kos_cos(KOS_CONTEXT ctx,
+                          KOS_OBJ_ID  this_obj,
+                          KOS_OBJ_ID  args_obj)
+{
+    int         error = KOS_SUCCESS;
+    KOS_OBJ_ID  ret   = KOS_BADPTR;
+    KOS_NUMERIC numeric;
+    double      value;
+
+    TRY(KOS_get_numeric_arg(ctx, args_obj, 0, &numeric));
+
+    if (numeric.type == KOS_INTEGER_VALUE)
+        value = (double)numeric.u.i;
+    else {
+        assert(numeric.type == KOS_FLOAT_VALUE);
+        value = numeric.u.d;
+    }
+
+    ret = KOS_new_float(ctx, cos(value));
+
+cleanup:
+    return error ? KOS_BADPTR : ret;
+}
+
 /* @item math exp()
  *
  *     exp(number)
@@ -152,7 +318,7 @@ static KOS_OBJ_ID kos_exp(KOS_CONTEXT ctx,
  *
  *     expm1(number)
  *
- * Returns Eulers number *e* raised to the power of `number` and subtracts `1`.
+ * Returns Euler's number *e* raised to the power of `number` and subtracts `1`.
  *
  * The returned value returned is always a float.
  *
@@ -231,6 +397,142 @@ static KOS_OBJ_ID kos_floor(KOS_CONTEXT ctx,
     }
 
     return ret;
+}
+
+/* @item math log()
+ *
+ *     log(number)
+ *
+ * Returns natural (base *e*) logarithm of `number`.
+ *
+ * The value returned is always a float.
+ *
+ * Throws an exception if `number` is 0 or less.
+ *
+ * Examples:
+ *
+ *     > math.log(1)
+ *     0.0
+ */
+static KOS_OBJ_ID kos_log(KOS_CONTEXT ctx,
+                          KOS_OBJ_ID  this_obj,
+                          KOS_OBJ_ID  args_obj)
+{
+    int         error = KOS_SUCCESS;
+    KOS_OBJ_ID  ret   = KOS_BADPTR;
+    KOS_NUMERIC numeric;
+    double      value;
+
+    TRY(KOS_get_numeric_arg(ctx, args_obj, 0, &numeric));
+
+    if (numeric.type == KOS_INTEGER_VALUE) {
+        if (numeric.u.i <= 0)
+            RAISE_EXCEPTION(str_err_zero_or_less);
+        value = (double)numeric.u.i;
+    }
+    else {
+        assert(numeric.type == KOS_FLOAT_VALUE);
+        value = numeric.u.d;
+        if (value <= 0)
+            RAISE_EXCEPTION(str_err_zero_or_less);
+    }
+
+    ret = KOS_new_float(ctx, log(value));
+
+cleanup:
+    return error ? KOS_BADPTR : ret;
+}
+
+/* @item math log10()
+ *
+ *     log10(number)
+ *
+ * Returns base 10 logarithm of `number`.
+ *
+ * The value returned is always a float.
+ *
+ * Throws an exception if `number` is 0 or less.
+ *
+ * Examples:
+ *
+ *     > math.log10(1)
+ *     0.0
+ *     > math.log10(100)
+ *     2.0
+ */
+static KOS_OBJ_ID kos_log10(KOS_CONTEXT ctx,
+                            KOS_OBJ_ID  this_obj,
+                            KOS_OBJ_ID  args_obj)
+{
+    int         error = KOS_SUCCESS;
+    KOS_OBJ_ID  ret   = KOS_BADPTR;
+    KOS_NUMERIC numeric;
+    double      value;
+
+    TRY(KOS_get_numeric_arg(ctx, args_obj, 0, &numeric));
+
+    if (numeric.type == KOS_INTEGER_VALUE) {
+        if (numeric.u.i <= 0)
+            RAISE_EXCEPTION(str_err_zero_or_less);
+        value = (double)numeric.u.i;
+    }
+    else {
+        assert(numeric.type == KOS_FLOAT_VALUE);
+        value = numeric.u.d;
+        if (value <= 0)
+            RAISE_EXCEPTION(str_err_zero_or_less);
+    }
+
+    ret = KOS_new_float(ctx, log10(value));
+
+cleanup:
+    return error ? KOS_BADPTR : ret;
+}
+
+/* @item math log1p()
+ *
+ *     log1p(number)
+ *
+ * Returns natural (base *e*) logarithm of `1 + number`.
+ *
+ * The value returned is always a float.
+ *
+ * The returned value has a higher precision than `math.log(number + 1)`.
+ *
+ * Throws an exception if `number` is -1 or less.
+ *
+ * Examples:
+ *
+ *     > math.log1p(0)
+ *     0.0
+ */
+static KOS_OBJ_ID kos_log1p(KOS_CONTEXT ctx,
+                            KOS_OBJ_ID  this_obj,
+                            KOS_OBJ_ID  args_obj)
+{
+    int         error = KOS_SUCCESS;
+    KOS_OBJ_ID  ret   = KOS_BADPTR;
+    KOS_NUMERIC numeric;
+    double      value;
+
+    TRY(KOS_get_numeric_arg(ctx, args_obj, 0, &numeric));
+
+    if (numeric.type == KOS_INTEGER_VALUE) {
+        if (numeric.u.i <= -1)
+            RAISE_EXCEPTION(str_err_m1_or_less);
+        value = (double)numeric.u.i;
+    }
+    else {
+        assert(numeric.type == KOS_FLOAT_VALUE);
+        value = numeric.u.d;
+        if (value <= -1)
+            RAISE_EXCEPTION(str_err_m1_or_less);
+    }
+
+    ret = KOS_new_float(ctx, log1p(value));
+
+cleanup:
+    return error ? KOS_BADPTR : ret;
 }
 
 /* @item math is_infinity()
@@ -373,6 +675,43 @@ cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
+/* @item math sin()
+ *
+ *     sin(number)
+ *
+ * Returns sine of `number`.
+ *
+ * The returned value is always a float.
+ *
+ * Example:
+ *
+ *     > math.sin(math.pi / 2)
+ *     1.0
+ */
+static KOS_OBJ_ID kos_sin(KOS_CONTEXT ctx,
+                          KOS_OBJ_ID  this_obj,
+                          KOS_OBJ_ID  args_obj)
+{
+    int         error = KOS_SUCCESS;
+    KOS_OBJ_ID  ret   = KOS_BADPTR;
+    KOS_NUMERIC numeric;
+    double      value;
+
+    TRY(KOS_get_numeric_arg(ctx, args_obj, 0, &numeric));
+
+    if (numeric.type == KOS_INTEGER_VALUE)
+        value = (double)numeric.u.i;
+    else {
+        assert(numeric.type == KOS_FLOAT_VALUE);
+        value = numeric.u.d;
+    }
+
+    ret = KOS_new_float(ctx, sin(value));
+
+cleanup:
+    return error ? KOS_BADPTR : ret;
+}
+
 /* @item math sqrt()
  *
  *     sqrt(number)
@@ -412,6 +751,43 @@ static KOS_OBJ_ID kos_sqrt(KOS_CONTEXT ctx,
     }
 
     ret = KOS_new_float(ctx, sqrt(value));
+
+cleanup:
+    return error ? KOS_BADPTR : ret;
+}
+
+/* @item math tan()
+ *
+ *     tan(number)
+ *
+ * Returns tangent of `number`.
+ *
+ * The returned value is always a float.
+ *
+ * Example:
+ *
+ *     > math.tan(math.pi / 4)
+ *     1.0
+ */
+static KOS_OBJ_ID kos_tan(KOS_CONTEXT ctx,
+                          KOS_OBJ_ID  this_obj,
+                          KOS_OBJ_ID  args_obj)
+{
+    int         error = KOS_SUCCESS;
+    KOS_OBJ_ID  ret   = KOS_BADPTR;
+    KOS_NUMERIC numeric;
+    double      value;
+
+    TRY(KOS_get_numeric_arg(ctx, args_obj, 0, &numeric));
+
+    if (numeric.type == KOS_INTEGER_VALUE)
+        value = (double)numeric.u.i;
+    else {
+        assert(numeric.type == KOS_FLOAT_VALUE);
+        value = numeric.u.d;
+    }
+
+    ret = KOS_new_float(ctx, tan(value));
 
 cleanup:
     return error ? KOS_BADPTR : ret;
@@ -461,14 +837,23 @@ KOS_INIT_MODULE(math)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     }
 
     TRY_ADD_FUNCTION(ctx, module.o, "abs",         kos_abs,         1);
+    TRY_ADD_FUNCTION(ctx, module.o, "acos",        kos_acos,        1);
+    TRY_ADD_FUNCTION(ctx, module.o, "asin",        kos_asin,        1);
+    TRY_ADD_FUNCTION(ctx, module.o, "atan",        kos_atan,        1);
     TRY_ADD_FUNCTION(ctx, module.o, "ceil",        kos_ceil,        1);
+    TRY_ADD_FUNCTION(ctx, module.o, "cos",         kos_cos,         1);
     TRY_ADD_FUNCTION(ctx, module.o, "exp",         kos_exp,         1);
     TRY_ADD_FUNCTION(ctx, module.o, "expm1",       kos_expm1,       1);
     TRY_ADD_FUNCTION(ctx, module.o, "floor",       kos_floor,       1);
+    TRY_ADD_FUNCTION(ctx, module.o, "log",         kos_log,         1);
+    TRY_ADD_FUNCTION(ctx, module.o, "log10",       kos_log10,       1);
+    TRY_ADD_FUNCTION(ctx, module.o, "log1p",       kos_log1p,       1);
     TRY_ADD_FUNCTION(ctx, module.o, "is_infinity", kos_is_infinity, 1);
     TRY_ADD_FUNCTION(ctx, module.o, "is_nan",      kos_is_nan,      1);
     TRY_ADD_FUNCTION(ctx, module.o, "pow",         kos_pow,         2);
+    TRY_ADD_FUNCTION(ctx, module.o, "sin",         kos_sin,         1);
     TRY_ADD_FUNCTION(ctx, module.o, "sqrt",        kos_sqrt,        1);
+    TRY_ADD_FUNCTION(ctx, module.o, "tan",         kos_tan,         1);
 
 cleanup:
     KOS_destroy_top_local(ctx, &module);

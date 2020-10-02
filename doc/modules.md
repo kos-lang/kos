@@ -159,7 +159,11 @@ Table of Contents
     * [reverse()](#reverse)
   * [math](#math)
     * [abs()](#abs)
+    * [acos()](#acos)
+    * [asin()](#asin)
+    * [atan()](#atan)
     * [ceil()](#ceil)
+    * [cos()](#cos)
     * [e](#e)
     * [exp()](#exp)
     * [expm1()](#expm1)
@@ -167,12 +171,17 @@ Table of Contents
     * [infinity](#infinity)
     * [is\_infinity()](#is_infinity)
     * [is\_nan()](#is_nan)
+    * [log()](#log)
+    * [log10()](#log10)
+    * [log1p()](#log1p)
     * [max()](#max)
     * [min()](#min)
     * [nan](#nan)
     * [pi](#pi)
     * [pow()](#pow)
+    * [sin()](#sin)
     * [sqrt()](#sqrt)
+    * [tan()](#tan)
   * [random](#random)
     * [rand\_float()](#rand_float)
     * [rand\_integer()](#rand_integer)
@@ -3436,6 +3445,52 @@ Examples:
     > math.abs(-math.infinity)
     infinity
 
+acos()
+------
+
+    acos(number)
+
+Returns principal value of the arc cosine of `number`.
+
+The returned value is always a float.
+
+Throws an exception if `number` is outside of the [-1, 1] range.
+
+Example:
+
+    > math.acos(1)
+    0.0
+
+asin()
+------
+
+    asin(number)
+
+Returns principal value of the arc sine of `number`.
+
+The returned value is always a float.
+
+Throws an exception if `number` is outside of the [-1, 1] range.
+
+Example:
+
+    > math.asin(-1)
+    0.0
+
+atan()
+------
+
+    atan(number)
+
+Returns principal value of the arc tangent of `number`.
+
+The returned value is always a float.
+
+Example:
+
+    > math.atan(math.infinity)
+    1.570796326794897
+
 ceil()
 ------
 
@@ -3452,6 +3507,20 @@ Examples:
     11.0
     > math.ceil(-0.1)
     -0.0
+
+cos()
+-----
+
+    cos(number)
+
+Returns cosine of `number`.
+
+The returned value is always a float.
+
+Example:
+
+    > math.cos(math.pi / 2)
+    0.0
 
 e
 -
@@ -3481,7 +3550,7 @@ expm1()
 
     expm1(number)
 
-Returns Eulers number *e* raised to the power of `number` and subtracts `1`.
+Returns Euler's number *e* raised to the power of `number` and subtracts `1`.
 
 The returned value returned is always a float.
 
@@ -3550,6 +3619,58 @@ Examples:
     > math.is_nan([])
     false
 
+log()
+-----
+
+    log(number)
+
+Returns natural (base *e*) logarithm of `number`.
+
+The value returned is always a float.
+
+Throws an exception if `number` is 0 or less.
+
+Examples:
+
+    > math.log(1)
+    0.0
+
+log10()
+-------
+
+    log10(number)
+
+Returns base 10 logarithm of `number`.
+
+The value returned is always a float.
+
+Throws an exception if `number` is 0 or less.
+
+Examples:
+
+    > math.log10(1)
+    0.0
+    > math.log10(100)
+    2.0
+
+log1p()
+-------
+
+    log1p(number)
+
+Returns natural (base *e*) logarithm of `1 + number`.
+
+The value returned is always a float.
+
+The returned value has a higher precision than `math.log(number + 1)`.
+
+Throws an exception if `number` is -1 or less.
+
+Examples:
+
+    > math.log1p(0)
+    0.0
+
 max()
 -----
 
@@ -3614,6 +3735,20 @@ Examples:
     > math.pow(10, -2)
     0.01
 
+sin()
+-----
+
+    sin(number)
+
+Returns sine of `number`.
+
+The returned value is always a float.
+
+Example:
+
+    > math.sin(math.pi / 2)
+    1.0
+
 sqrt()
 ------
 
@@ -3629,6 +3764,20 @@ Example:
 
     > math.sqrt(4)
     2.0
+
+tan()
+-----
+
+    tan(number)
+
+Returns tangent of `number`.
+
+The returned value is always a float.
+
+Example:
+
+    > math.tan(math.pi / 4)
+    1.0
 
 random
 ======
