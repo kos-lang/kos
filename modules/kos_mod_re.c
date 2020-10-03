@@ -1138,19 +1138,36 @@ static struct RE_POSS_STACK_ITEM *push_item(struct RE_POSS_STACK *poss_stack,
     return (struct RE_POSS_STACK_ITEM *)(poss_stack->buffer.buffer + old_size);
 }
 
-static int init_possibility_stack(struct RE_POSS_STACK *poss_stack,
-                                  KOS_CONTEXT           ctx,
-                                  const struct RE_OBJ  *re)
+static void init_possibility_stack(struct RE_POSS_STACK *poss_stack)
 {
-    const size_t item_size = get_item_size(re);
-
     kos_vector_init(&poss_stack->buffer);
-    poss_stack->current = 0;
+}
+
+static int reset_possibility_stack(struct RE_POSS_STACK *poss_stack,
+                                   KOS_CONTEXT           ctx,
+                                   const struct RE_OBJ  *re)
+{
+    const size_t item_size  = get_item_size(re);
+    const size_t group_size = re->num_groups * 2 * sizeof(uint16_t);
+
+    poss_stack->buffer.size = 0;
+    poss_stack->current     = 0;
 
     if ( ! push_item(poss_stack, ctx, item_size))
         return KOS_ERROR_EXCEPTION;
 
-    memset(poss_stack->current, 0, item_size);
+    memset(poss_stack->current, 0, item_size - group_size);
+
+    if (group_size) {
+        memset(&poss_stack->current->counts_and_groups[re->num_counts], 0xFFU, group_size);
+
+        if (re->num_counts) {
+            assert(poss_stack->current->counts_and_groups[0] == 0);
+            assert(poss_stack->current->counts_and_groups[re->num_counts - 1] == 0);
+        }
+        assert(poss_stack->current->counts_and_groups[re->num_counts] == 0xFFFFU);
+        assert(poss_stack->current->counts_and_groups[re->num_counts + re->num_groups * 2 - 1] == 0xFFFFU);
+    }
 
     return KOS_SUCCESS;
 }
@@ -1226,23 +1243,23 @@ static uint16_t *get_group(struct RE_POSS_STACK *poss_stack, uint16_t num_counts
 #define BEGIN_INSTRUCTION(instr) case INSTR_ ## instr
 #define NEXT_INSTRUCTION         break
 
-static KOS_OBJ_ID match_string(KOS_CONTEXT          ctx,
-                               const struct RE_OBJ *re,
-                               KOS_OBJ_ID           str_obj,
-                               uint32_t             begin_pos,
-                               uint32_t             pos,
-                               uint32_t             end_pos)
+static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
+                               const struct RE_OBJ  *re,
+                               KOS_OBJ_ID            str_obj,
+                               uint32_t              begin_pos,
+                               uint32_t              pos,
+                               uint32_t              end_pos,
+                               struct RE_POSS_STACK *poss_stack)
 {
     const uint16_t       *bytecode     = &re->bytecode[0];
     const uint16_t *const bytecode_end = bytecode + re->bytecode_size;
     KOS_OBJ_ID            retval       = KOS_VOID;
     KOS_LOCAL             ret;
     KOS_STRING_ITER       iter;
-    struct RE_POSS_STACK  poss_stack;
     int                   error        = KOS_SUCCESS;
 
     KOS_init_local(ctx, &ret);
-    TRY(init_possibility_stack(&poss_stack, ctx, re));
+    TRY(reset_possibility_stack(poss_stack, ctx, re));
 
     kos_init_string_iter(&iter, str_obj);
     iter.end = iter.ptr + ((uintptr_t)end_pos << iter.elem_size);
@@ -1323,7 +1340,7 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT          ctx,
             BEGIN_INSTRUCTION(BEGIN_GROUP): {
                 const uint16_t group_id = bytecode[1];
 
-                get_group(&poss_stack, re->num_counts, group_id)[0] = get_iter_pos(str_obj, &iter);
+                get_group(poss_stack, re->num_counts, group_id)[0] = get_iter_pos(str_obj, &iter);
 
                 bytecode += 2;
                 NEXT_INSTRUCTION;
@@ -1332,7 +1349,7 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT          ctx,
             BEGIN_INSTRUCTION(END_GROUP): {
                 const uint16_t group_id = bytecode[1];
 
-                get_group(&poss_stack, re->num_counts, group_id)[1] = get_iter_pos(str_obj, &iter);
+                get_group(poss_stack, re->num_counts, group_id)[1] = get_iter_pos(str_obj, &iter);
 
                 bytecode += 2;
                 NEXT_INSTRUCTION;
@@ -1343,7 +1360,7 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT          ctx,
 
                 assert(delta);
 
-                TRY(push_possibility(&poss_stack, ctx, re, bytecode + delta, &iter));
+                TRY(push_possibility(poss_stack, ctx, re, bytecode + delta, &iter));
 
                 bytecode += 2;
                 NEXT_INSTRUCTION;
@@ -1366,10 +1383,10 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT          ctx,
 
                 assert(delta);
 
-                poss_stack.current->counts_and_groups[count_id] = 0;
+                poss_stack->current->counts_and_groups[count_id] = 0;
 
                 if (min_count == 0)
-                    TRY(push_possibility(&poss_stack, ctx, re, bytecode + delta, &iter));
+                    TRY(push_possibility(poss_stack, ctx, re, bytecode + delta, &iter));
 
                 bytecode += 4;
                 NEXT_INSTRUCTION;
@@ -1382,12 +1399,12 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT          ctx,
 
                 assert(delta);
 
-                poss_stack.current->counts_and_groups[count_id] = 0;
+                poss_stack->current->counts_and_groups[count_id] = 0;
 
                 if (min_count)
                     bytecode += 4;
                 else {
-                    TRY(push_possibility(&poss_stack, ctx, re, bytecode + 4, &iter));
+                    TRY(push_possibility(poss_stack, ctx, re, bytecode + 4, &iter));
 
                     bytecode += delta;
                 }
@@ -1402,17 +1419,17 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT          ctx,
                 unsigned       count;
 
                 assert(delta);
-                assert(poss_stack.current);
+                assert(poss_stack->current);
 
-                if ( ! poss_stack.current)
+                if ( ! poss_stack->current)
                     RAISE_ERROR(KOS_ERROR_INTERNAL);
 
-                count = ++poss_stack.current->counts_and_groups[count_id];
+                count = ++poss_stack->current->counts_and_groups[count_id];
 
                 if (count < min_count)
                     bytecode += delta;
                 else if (count < max_count) {
-                    TRY(push_possibility(&poss_stack, ctx, re, bytecode + 5, &iter));
+                    TRY(push_possibility(poss_stack, ctx, re, bytecode + 5, &iter));
                     bytecode += delta;
                 }
                 else
@@ -1429,18 +1446,18 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT          ctx,
                 unsigned       count;
 
                 assert(delta);
-                assert(poss_stack.current);
+                assert(poss_stack->current);
 
-                if ( ! poss_stack.current)
+                if ( ! poss_stack->current)
                     RAISE_ERROR(KOS_ERROR_INTERNAL);
 
-                count = ++poss_stack.current->counts_and_groups[count_id];
+                count = ++poss_stack->current->counts_and_groups[count_id];
 
                 if (count < min_count)
                     bytecode += delta;
                 else {
                     if (count < max_count)
-                        TRY(push_possibility(&poss_stack, ctx, re, bytecode + delta, &iter));
+                        TRY(push_possibility(poss_stack, ctx, re, bytecode + delta, &iter));
                     bytecode += 5;
                 }
 
@@ -1452,15 +1469,15 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT          ctx,
                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
 
             try_other_possibility: {
-                assert(poss_stack.current);
+                assert(poss_stack->current);
 
-                pop_possibility(&poss_stack, re);
+                pop_possibility(poss_stack, re);
 
-                if ( ! poss_stack.current)
+                if ( ! poss_stack->current)
                     goto cleanup;
 
-                bytecode = &re->bytecode[poss_stack.current->instr_idx];
-                iter.ptr = iter.end - ((unsigned)poss_stack.current->str_end_offs << iter.elem_size);
+                bytecode = &re->bytecode[poss_stack->current->instr_idx];
+                iter.ptr = iter.end - ((unsigned)poss_stack->current->str_end_offs << iter.elem_size);
             }
         }
     }
@@ -1476,7 +1493,6 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT          ctx,
     retval = ret.o;
 
 cleanup:
-    destroy_possibility_stack(&poss_stack);
     KOS_destroy_top_local(ctx, &ret);
 
     return error ? KOS_BADPTR : retval;
@@ -1560,15 +1576,18 @@ static KOS_OBJ_ID re_search(KOS_CONTEXT ctx,
                             KOS_OBJ_ID  this_obj,
                             KOS_OBJ_ID  args_obj)
 {
-    int            error     = KOS_SUCCESS;
-    uint32_t       begin_pos = 0;
-    uint32_t       end_pos;
-    uint32_t       pos;
-    KOS_LOCAL      str;
-    KOS_OBJ_ID     match_obj = KOS_BADPTR;
-    struct RE_OBJ *re;
+    int                  error     = KOS_SUCCESS;
+    uint32_t             begin_pos = 0;
+    uint32_t             end_pos;
+    uint32_t             pos;
+    KOS_LOCAL            str;
+    KOS_OBJ_ID           match_obj = KOS_BADPTR;
+    struct RE_POSS_STACK poss_stack;
+    struct RE_OBJ       *re;
 
     assert(KOS_get_array_size(args_obj) > 0);
+
+    init_possibility_stack(&poss_stack);
 
     KOS_init_local_with(ctx, &str, KOS_array_read(ctx, args_obj, 0));
     TRY_OBJID(str.o);
@@ -1608,13 +1627,15 @@ static KOS_OBJ_ID re_search(KOS_CONTEXT ctx,
     }
 
     for (pos = begin_pos; pos <= end_pos; pos++) {
-        match_obj = match_string(ctx, re, str.o, begin_pos, pos, end_pos);
+        /* TODO optimize the case when the re begins with ^: don't look beyond begin_pos */
+        match_obj = match_string(ctx, re, str.o, begin_pos, pos, end_pos, &poss_stack);
         if (match_obj != KOS_VOID)
             break;
     }
 
 cleanup:
     KOS_destroy_top_local(ctx, &str);
+    destroy_possibility_stack(&poss_stack);
 
     return error ? KOS_BADPTR : match_obj;
 }
