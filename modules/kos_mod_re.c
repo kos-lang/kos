@@ -22,6 +22,7 @@
 KOS_DECLARE_STATIC_CONST_STRING(str_err_regex_not_a_string, "regular expression is not a string");
 KOS_DECLARE_STATIC_CONST_STRING(str_begin,                  "begin");
 KOS_DECLARE_STATIC_CONST_STRING(str_end,                    "end");
+KOS_DECLARE_STATIC_CONST_STRING(str_groups,                 "groups");
 KOS_DECLARE_STATIC_CONST_STRING(str_string,                 "string");
 
 /*
@@ -1223,6 +1224,49 @@ static void pop_possibility(struct RE_POSS_STACK *poss_stack,
     }
 }
 
+static int create_found_groups(KOS_CONTEXT                      ctx,
+                               KOS_OBJ_ID                       groups_obj,
+                               const struct RE_OBJ             *re,
+                               const struct RE_POSS_STACK_ITEM *found)
+{
+    KOS_LOCAL       groups;
+    KOS_LOCAL       group;
+    const uint16_t *group_ptr;
+    const uint16_t *end_ptr;
+    unsigned        i     = 0;
+    int             error = KOS_SUCCESS;
+
+    KOS_init_local_with(ctx, &groups, groups_obj);
+    KOS_init_local(ctx, &group);
+
+    group_ptr = &found->counts_and_groups[re->num_counts];
+    end_ptr   = group_ptr + 2 * re->num_groups;
+
+    for ( ; group_ptr < end_ptr; group_ptr += 2, ++i) {
+
+        const int begin = (int)(unsigned int)group_ptr[0];
+        const int end   = (int)(unsigned int)group_ptr[1];
+
+        group.o = KOS_VOID;
+
+        if ((begin != 0xFFFFU) && (end != 0xFFFFU)) {
+
+            group.o = KOS_new_object(ctx);
+            TRY_OBJID(group.o);
+
+            TRY(KOS_set_property(ctx, group.o, KOS_CONST_ID(str_begin), TO_SMALL_INT(begin)));
+            TRY(KOS_set_property(ctx, group.o, KOS_CONST_ID(str_end),   TO_SMALL_INT(end)));
+        }
+
+        TRY(KOS_array_write(ctx, groups.o, i, group.o));
+    }
+
+cleanup:
+    KOS_destroy_top_locals(ctx, &group, &groups);
+
+    return error;
+}
+
 static uint16_t get_iter_pos(KOS_OBJ_ID str_obj, KOS_STRING_ITER *iter)
 {
     KOS_STRING_ITER iter0;
@@ -1255,10 +1299,11 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
     const uint16_t *const bytecode_end = bytecode + re->bytecode_size;
     KOS_OBJ_ID            retval       = KOS_VOID;
     KOS_LOCAL             ret;
+    KOS_LOCAL             groups;
     KOS_STRING_ITER       iter;
     int                   error        = KOS_SUCCESS;
 
-    KOS_init_local(ctx, &ret);
+    KOS_init_locals(ctx, 2, &groups, &ret);
     TRY(reset_possibility_stack(poss_stack, ctx, re));
 
     kos_init_string_iter(&iter, str_obj);
@@ -1490,10 +1535,18 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
     TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_begin), TO_SMALL_INT(pos)));
     TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_end),   TO_SMALL_INT(end_pos)));
 
+    groups.o = KOS_new_array(ctx, re->num_groups);
+    TRY_OBJID(groups.o);
+    TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_groups), groups.o));
+
+    assert(poss_stack->current);
+    if (re->num_groups)
+        TRY(create_found_groups(ctx, groups.o, re, poss_stack->current));
+
     retval = ret.o;
 
 cleanup:
-    KOS_destroy_top_local(ctx, &ret);
+    KOS_destroy_top_locals(ctx, &groups, &ret);
 
     return error ? KOS_BADPTR : retval;
 }

@@ -269,3 +269,52 @@ do {
     assert check(lazy.search("aaabbcccd"), 2, 6)
     assert check(greedy.search("aaabbcccd"), 2, 8)
 }
+
+do {
+    const rg = re.re("(ab)|(cd)e|(x|yz|w)")
+
+    const a1 = rg.search("1234ab56")
+    assert a1.begin == 4
+    assert a1.end   == 6
+    assert a1.groups.size == 3
+    assert a1.groups[0]   != void
+    assert a1.groups[1]   == void
+    assert a1.groups[2]   == void
+    assert a1.groups[0].begin == 4
+    assert a1.groups[0].end   == 6
+
+    const a2 = rg.search("12acdef56")
+    assert a2.begin == 3
+    assert a2.end   == 6
+    assert a2.groups.size == 3
+    assert a2.groups[0]   == void
+    assert a2.groups[1]   != void
+    assert a2.groups[2]   == void
+    assert a2.groups[1].begin == 3
+    assert a2.groups[1].end   == 5
+
+    const a3 = rg.search("12acdfyz56")
+    assert a3.begin == 6
+    assert a3.end   == 8
+    assert a3.groups.size == 3
+    assert a3.groups[0]   == void
+    assert a3.groups[1]   == void
+    assert a3.groups[2]   != void
+    assert a3.groups[2].begin == 6
+    assert a3.groups[2].end   == 8
+}
+
+do {
+    const rg = re.re("(a(b|c|d)*e)f")
+
+    const a = rg.search("0123aaabcbdbcefgh")
+    assert a.begin == 6
+    assert a.end   == 15
+    assert a.groups.size     == 2
+    assert a.groups[0]       != void
+    assert a.groups[1]       != void
+    assert a.groups[0].begin == 6
+    assert a.groups[0].end   == 14
+    assert a.groups[1].begin == 12
+    assert a.groups[1].end   == 13
+}
