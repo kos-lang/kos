@@ -5068,10 +5068,8 @@ static int function_literal(KOS_COMP_UNIT      *program,
             TRY(visit_node(program, def_node, &arg));
             assert(arg);
 
-            if (used) {
-                assert(defaults_reg);
+            if (used && defaults_reg)
                 TRY(gen_instr3(program, INSTR_SET_ELEM, defaults_reg->reg, i, arg->reg));
-            }
 
             free_reg(program, arg);
         }
