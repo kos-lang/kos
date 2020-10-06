@@ -166,8 +166,6 @@ static KOS_OBJ_ID object_iterator(KOS_CONTEXT      ctx,
 
             ret = array.o;
         }
-        else if (error == KOS_ERROR_NOT_FOUND)
-            error = KOS_SUCCESS;
     }
 
 cleanup:
