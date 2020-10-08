@@ -47,6 +47,8 @@ syn keyword kosException        throw assert try catch
 syn keyword kosReserved         set get static
 syn keyword kosClass            class
 
+syn match   kosLambda           "=>"
+
 if exists("kos_fold")
     syn match   kosFunction     "\<fun\>\|\<constructor\>"
     syn region  kosFunctionFold start="\(\<fun\>\|\<constructor\>\).*[^};]$" end="^\z1}.*$" transparent fold keepend
@@ -91,6 +93,7 @@ if version >= 508 || !exists("did_kos_syn_inits")
     HiLink kosOperator            Operator
     HiLink kosStatement           Statement
     HiLink kosFunction            Function
+    HiLink kosLambda              Function
     HiLink kosBraces              Function
     HiLink kosClass               Structure
     HiLink kosTab                 Error
