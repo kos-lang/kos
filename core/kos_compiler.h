@@ -113,10 +113,13 @@ typedef struct KOS_FRAME_S {
     struct KOS_COMP_FUNCTION_S *constant;         /* The template for the constant object, used with LOAD.CONST */
     int                         num_def_used;     /* Number of used default args, for optimization              */
     int                         num_binds;        /* Number of closure accesses, for optimization               */
+    int                         num_binds_prev;   /* Number of closure accesses in previous optimization cycle  */
+    int                         num_self_refs;    /* Number of function's self-references                       */
     int                         num_regs;
     uint32_t                    num_instr;
     unsigned                    uses_base_ctor  : 1;
     unsigned                    uses_base_proto : 1;
+    unsigned                    is_open         : 1; /* Set to 1 when processing this frame */
 } KOS_FRAME;
 
 typedef struct KOS_SCOPE_REF_S {

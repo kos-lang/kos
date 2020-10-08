@@ -275,6 +275,7 @@ static KOS_SCOPE *push_scope(KOS_COMP_UNIT      *program,
         program->cur_frame     = frame;
         frame->num_binds       = 0;
         frame->uses_base_proto = 0;
+        frame->is_open         = 1;
     }
 
     return scope;
@@ -387,8 +388,22 @@ static void pop_scope(KOS_COMP_UNIT *program)
 
     program->scope_stack = scope->parent_scope;
 
-    if (scope->has_frame)
+    if (scope->has_frame) {
+        KOS_FRAME *const frame = program->cur_frame;
+        assert(frame);
+
+        /* Record a potential for optimizing a function load for self-referencing function */
+        if (frame->num_self_refs && ! frame->num_binds && frame->num_binds_prev)
+            ++program->num_optimizations;
+
+        frame->is_open        =  0;
+        frame->num_binds_prev =  frame->num_binds;
+
+        if (frame->num_binds)
+            frame->num_binds += frame->num_self_refs;
+
         program->cur_frame = ((KOS_FRAME *)scope)->parent_frame;
+    }
 }
 
 static int process_scope(KOS_COMP_UNIT *program,
@@ -928,7 +943,7 @@ cleanup:
     return error;
 }
 
-int kos_is_const_fun(KOS_VAR *var)
+static int is_const_fun(KOS_VAR *var)
 {
     const KOS_AST_NODE *const fun_node = var->value;
     KOS_FRAME                *frame;
@@ -956,7 +971,32 @@ int kos_is_const_fun(KOS_VAR *var)
     if (frame->num_binds)
         return 0;
 
+    /* For self-referencing functions, make sure that there are no independent variable
+     * references after referencing the function. */
+    if (frame->is_open && frame->num_binds_prev)
+        return 0;
+
     return 1;
+}
+
+static int check_self_ref_fun(KOS_VAR *var)
+{
+    const KOS_AST_NODE *const fun_node = var->value;
+    KOS_FRAME                *frame;
+
+    if ( ! var->is_const || ! fun_node)
+        return 0;
+
+    if (fun_node->type != NT_FUNCTION_LITERAL &&
+        fun_node->type != NT_CONSTRUCTOR_LITERAL)
+        return 0;
+
+    assert(fun_node->is_scope);
+    frame = (KOS_FRAME *)fun_node->u.scope;
+    assert(frame);
+    assert(frame->scope.has_frame);
+
+    return frame->is_open;
 }
 
 static void mark_binds(KOS_COMP_UNIT *program,
@@ -967,15 +1007,19 @@ static void mark_binds(KOS_COMP_UNIT *program,
 
     if (var->type & VAR_INDEPENDENT) {
 
-        KOS_FRAME       *frame        = program->cur_frame;
-        KOS_FRAME *const target_frame = var->scope->owning_frame;
+        KOS_FRAME       *frame           = program->cur_frame;
+        KOS_FRAME *const target_frame    = var->scope->owning_frame;
+        const int        is_self_ref_fun = check_self_ref_fun(var);
 
         assert(frame != target_frame);
         assert(frame);
         assert(target_frame);
 
         do {
-            ++frame->num_binds;
+            if (is_self_ref_fun)
+                ++frame->num_self_refs;
+            else
+                ++frame->num_binds;
 
             frame = frame->parent_frame;
             assert(frame);
@@ -1017,7 +1061,7 @@ static void identifier(KOS_COMP_UNIT *program,
             case NT_FUNCTION_LITERAL:
                 /* fall through */
             case NT_CONSTRUCTOR_LITERAL:
-                if (kos_is_const_fun(var)) {
+                if (is_const_fun(var)) {
                     if ( ! node->is_const_fun) {
                         node->is_const_fun = 1;
                         ++program->num_optimizations;

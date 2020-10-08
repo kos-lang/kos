@@ -156,9 +156,13 @@ static int push_scope(KOS_COMP_UNIT *program,
             error = init_global_scope(program);
 
         if (alloc_frame) {
-            ((KOS_FRAME *)scope)->parent_frame = program->cur_frame;
-            program->cur_frame  = (KOS_FRAME *)scope;
-            scope->owning_frame = (KOS_FRAME *)scope;
+            KOS_FRAME *const frame = (KOS_FRAME *)scope;
+
+            frame->parent_frame   = program->cur_frame;
+            frame->num_binds_prev = 1; /* Updated during optimization */
+            frame->num_def_used   = 1; /* Updated during optimization */
+            program->cur_frame    = frame;
+            scope->owning_frame   = frame;
         }
         else
             scope->owning_frame = program->cur_frame;
