@@ -966,8 +966,9 @@ KOS_OBJ_ID kos_new_object_walk(KOS_CONTEXT      ctx,
     OBJPTR(ITERATOR, walk.o)->last_value    = KOS_BADPTR;
 
     if (depth == KOS_DEEP) {
-        KOS_atomic_write_relaxed_ptr(OBJPTR(ITERATOR, walk.o)->returned_keys, KOS_new_object(ctx));
-        TRY_OBJID(KOS_atomic_read_relaxed_obj(OBJPTR(ITERATOR, walk.o)->returned_keys));
+        const KOS_OBJ_ID keys = KOS_new_object(ctx);
+        TRY_OBJID(keys);
+        KOS_atomic_write_relaxed_ptr(OBJPTR(ITERATOR, walk.o)->returned_keys, keys);
     }
 
 cleanup:
