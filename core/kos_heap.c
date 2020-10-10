@@ -1315,33 +1315,34 @@ static void apply_mask(KOS_ATOMIC(uint32_t) *bitmap, uint32_t mask)
 
 static void clear_mark_state(KOS_OBJ_ID obj_id, uint32_t size)
 {
-    struct KOS_MARK_LOC_S mark_lock = get_mark_location(obj_id);
+    struct KOS_MARK_LOC_S mark_loc = get_mark_location(obj_id);
 
     uint32_t num_slots = size >> KOS_OBJ_ALIGN_BITS;
 
-    uint32_t mask = ~0U << mark_lock.mask_idx;
+    uint32_t mask = ~0U << mark_loc.mask_idx;
 
-    if (mark_lock.mask_idx + num_slots * 2 <= 32) {
+    if (mark_loc.mask_idx + num_slots * 2 <= 32) {
 
         mask &= ~(mask << (num_slots * 2));
 
-        apply_mask(mark_lock.bitmap, ~mask);
+        apply_mask(mark_loc.bitmap, ~mask);
 
         return;
     }
 
-    apply_mask(mark_lock.bitmap, ~mask);
-    num_slots -= (32U - mark_lock.mask_idx) >> 1;
+    apply_mask(mark_loc.bitmap, ~mask);
+    num_slots -= (32U - mark_loc.mask_idx) >> 1;
 
-    ++mark_lock.bitmap;
+    ++mark_loc.bitmap;
 
     while (num_slots >= 16U) {
-        KOS_atomic_write_relaxed_u32(*mark_lock.bitmap, 0U);
+        KOS_atomic_write_relaxed_u32(*mark_loc.bitmap, 0U);
 
+        ++mark_loc.bitmap;
         num_slots -= 16U;
     }
 
-    apply_mask(mark_lock.bitmap, ~0U << (num_slots * 2));
+    apply_mask(mark_loc.bitmap, ~0U << (num_slots * 2));
 }
 
 static uint32_t set_mark_state(KOS_OBJ_ID            obj_id,
@@ -2397,6 +2398,7 @@ static uint32_t get_num_slots_used(KOS_PAGE *page, uint32_t num_allocated)
         const uint32_t        slots = size >> KOS_OBJ_ALIGN_BITS;
 
         assert(color & BLACK);
+        assert((uint8_t *)ptr + size <= (uint8_t *)end);
 
         num_used += slots;
 
