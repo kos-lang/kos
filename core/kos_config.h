@@ -23,11 +23,11 @@
 #ifdef CONFIG_FUZZ
 #   define KOS_MAX_HEAP_SIZE    (2U * KOS_POOL_SIZE)
 #elif defined(CONFIG_MAD_GC)
-#   define KOS_MAX_HEAP_SIZE    (16U * 1024U * 1024U)
+#   define KOS_MAX_HEAP_SIZE    (4U * 1024U * 1024U)
 #else
 #   define KOS_MAX_HEAP_SIZE    (64U * 1024U * 1024U)
 #endif
-#define KOS_GC_STEP             (2U * 1024U * 1024U)
+#define KOS_GC_THRESHOLD        75U /* Percentage of max heap size at which to collect garbage */
 #define KOS_MAX_HEAP_OBJ_SIZE   512U
 #define KOS_STACK_OBJ_SIZE      4096U
 

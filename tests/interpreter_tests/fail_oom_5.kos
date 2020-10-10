@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2014-2020 Chris Dragan
+
+import base.array
+
+var head = void
+
+loop {
+    const new_head = array(64)
+    const next     = array(64)
+    next[0]        = head
+    new_head[0]    = next
+    head           = new_head
+}

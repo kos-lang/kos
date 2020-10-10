@@ -66,6 +66,19 @@ struct KOS_LOCKED_PAGES_S {
 };
 #endif
 
+struct KOS_MARK_GROUP_S {
+    uint32_t                     num_objs;
+    KOS_ATOMIC(KOS_MARK_GROUP *) next;
+    KOS_OBJ_ID                   objs[62];
+};
+
+struct KOS_MARK_CONTEXT_S {
+    KOS_MARK_GROUP *current;
+    KOS_HEAP       *heap;
+};
+
+typedef struct KOS_MARK_CONTEXT_S KOS_MARK_CONTEXT;
+
 static int is_page_full(KOS_PAGE *page)
 {
     return KOS_atomic_read_relaxed_u32(page->num_allocated) == KOS_SLOTS_PER_PAGE;
@@ -149,7 +162,7 @@ int kos_heap_init(KOS_INSTANCE *inst)
     heap->malloc_size     = 0;
     heap->max_heap_size   = KOS_MAX_HEAP_SIZE;
     heap->max_malloc_size = KOS_MAX_HEAP_SIZE;
-    heap->gc_threshold    = KOS_GC_STEP;
+    heap->gc_threshold    = KOS_MAX_HEAP_SIZE * KOS_GC_THRESHOLD / 100U;
     heap->free_pages      = 0;
     heap->used_pages.head = 0;
     heap->used_pages.tail = 0;
@@ -158,8 +171,9 @@ int kos_heap_init(KOS_INSTANCE *inst)
     heap->threads_to_stop = 0U;
     heap->gc_cycles       = 0U;
 
-    KOS_atomic_write_relaxed_u32(heap->gray_marked, 0U);
-    KOS_atomic_write_relaxed_ptr(heap->walk_pages,  (KOS_PAGE *)0);
+    KOS_atomic_write_relaxed_ptr(heap->walk_pages,       (KOS_PAGE *)0);
+    KOS_atomic_write_relaxed_ptr(heap->objects_to_mark,  (KOS_MARK_GROUP *)0);
+    KOS_atomic_write_relaxed_ptr(heap->free_mark_groups, (KOS_MARK_GROUP *)0);
 
 #ifdef CONFIG_MAD_GC
     heap->locked_pages_first = 0;
@@ -340,6 +354,17 @@ void kos_heap_destroy(KOS_INSTANCE *inst)
 #endif
 
     finalize_objects(&inst->threads.main_thread, &inst->heap);
+
+    assert( ! KOS_atomic_read_relaxed_ptr(inst->heap.objects_to_mark));
+    while (KOS_atomic_read_relaxed_ptr(inst->heap.free_mark_groups)) {
+
+        KOS_MARK_GROUP *const to_delete = KOS_atomic_read_relaxed_ptr(inst->heap.free_mark_groups);
+        KOS_MARK_GROUP *const next      = KOS_atomic_read_relaxed_ptr(to_delete->next);
+
+        KOS_atomic_write_relaxed_ptr(inst->heap.free_mark_groups, next);
+
+        kos_free(to_delete);
+    }
 
     for (;;) {
         void     *memory;
@@ -581,7 +606,6 @@ static KOS_PAGE *alloc_page(KOS_HEAP *heap)
 
     KOS_PERF_CNT(alloc_free_page);
 
-    KOS_atomic_write_relaxed_u32(page->num_used, 0U);
     page->next = 0;
     return page;
 }
@@ -692,8 +716,6 @@ static void release_current_page_locked(KOS_CONTEXT ctx)
         assert(heap->gc_state == GC_INACTIVE ||
                heap->gc_state == GC_INIT     ||
                KOS_atomic_read_relaxed_u32(ctx->gc_state) == GC_ENGAGED);
-
-        assert(KOS_atomic_read_relaxed_u32(page->num_used) == 0U);
 
         gc_trace(("release cur page %p ctx=%p\n", (void *)page, (void *)ctx));
 
@@ -835,7 +857,6 @@ static void *alloc_object(KOS_CONTEXT ctx,
                 push_page_with_objects(heap, page);
             }
 
-            KOS_atomic_write_relaxed_u32(old_page->num_used, 0U);
             old_page->next = 0;
             ctx->cur_page  = old_page;
         }
@@ -1040,12 +1061,11 @@ static void print_heap_locked(KOS_HEAP *heap, KOS_PAGE *cur_page)
         }
 
         ++used_pages;
-        printf("%s page %p, %u/%u slots allocated, %u slots used\n",
+        printf("%s page %p, %u/%u slots allocated\n",
                page == cur_page ? "cur" : "used",
                (void *)page,
                KOS_atomic_read_relaxed_u32(page->num_allocated),
-               (unsigned)KOS_SLOTS_PER_PAGE,
-               KOS_atomic_read_relaxed_u32(page->num_used));
+               (unsigned)KOS_SLOTS_PER_PAGE);
 
         if (page == cur_page)
             break;
@@ -1121,7 +1141,7 @@ enum KOS_MARK_STATE_E {
 
 static void set_marking_in_pages(KOS_PAGE             *page,
                                  enum KOS_MARK_STATE_E state,
-                                 uint32_t              num_used)
+                                 uint32_t              flags)
 {
     while (page) {
 
@@ -1129,7 +1149,7 @@ static void set_marking_in_pages(KOS_PAGE             *page,
 
         memset(bitmap, state * 0x55, KOS_BITMAP_SIZE);
 
-        KOS_atomic_write_relaxed_u32(page->num_used, num_used);
+        KOS_atomic_write_relaxed_u32(page->flags, flags);
 
         page = page->next;
     }
@@ -1272,9 +1292,8 @@ static uint32_t get_marking(const struct KOS_MARK_LOC_S *mark_loc)
 static uint32_t set_mark_state_loc(struct KOS_MARK_LOC_S mark_loc,
                                    enum KOS_MARK_STATE_E state)
 {
-    const uint32_t mask   = (uint32_t)state << mark_loc.mask_idx;
-
-    uint32_t value = KOS_atomic_read_relaxed_u32(*mark_loc.bitmap);
+    const uint32_t mask  = (uint32_t)state << mark_loc.mask_idx;
+    uint32_t       value = KOS_atomic_read_relaxed_u32(*mark_loc.bitmap);
 
     while ( ! (value & mask)) {
 
@@ -1357,11 +1376,167 @@ static uint32_t set_mark_state(KOS_OBJ_ID            obj_id,
     return marked;
 }
 
-static uint32_t mark_object_black(KOS_OBJ_ID obj_id);
-
-static uint32_t mark_children_gray(KOS_OBJ_ID obj_id)
+static void push_scheduled(KOS_MARK_CONTEXT *mark_ctx)
 {
-    uint32_t marked = 0;
+    KOS_HEAP       *const heap    = mark_ctx->heap;
+    KOS_MARK_GROUP *const current = mark_ctx->current;
+
+    if (current) {
+
+        mark_ctx->current = 0;
+
+        for (;;) {
+            KOS_MARK_GROUP *const next = KOS_atomic_read_relaxed_ptr(heap->objects_to_mark);
+
+            KOS_atomic_write_relaxed_ptr(current->next, next);
+
+            if (KOS_atomic_cas_weak_ptr(heap->objects_to_mark, next, current))
+                break;
+        }
+    }
+}
+
+static int schedule_for_marking(KOS_MARK_CONTEXT *mark_ctx,
+                                KOS_OBJ_ID        obj_id)
+{
+    KOS_HEAP *const heap    = mark_ctx->heap;
+    KOS_MARK_GROUP *current = mark_ctx->current;
+    uint32_t        idx;
+
+    if ( ! current) {
+
+        for (;;) {
+            KOS_MARK_GROUP *next;
+
+            current = KOS_atomic_read_relaxed_ptr(heap->free_mark_groups);
+
+            if ( ! current)
+                break;
+
+            next = KOS_atomic_read_relaxed_ptr(current->next);
+
+            if (KOS_atomic_cas_weak_ptr(heap->free_mark_groups, current, next))
+                break;
+        }
+
+        if ( ! current) {
+            current = (KOS_MARK_GROUP *)kos_malloc(sizeof(KOS_MARK_GROUP));
+            if ( ! current)
+                return KOS_ERROR_OUT_OF_MEMORY;
+        }
+
+        current->num_objs = 0;
+        mark_ctx->current = current;
+    }
+
+    assert(current->num_objs < sizeof(current->objs) / sizeof(current->objs[0]));
+
+    idx = current->num_objs++;
+
+    current->objs[idx] = obj_id;
+
+    if (idx == (sizeof(current->objs) / sizeof(current->objs[0])) - 1)
+        push_scheduled(mark_ctx);
+
+    return KOS_SUCCESS;
+}
+
+static KOS_MARK_GROUP *get_next_scheduled_mark_group(KOS_MARK_CONTEXT *mark_ctx)
+{
+    KOS_HEAP *const heap = mark_ctx->heap;
+    KOS_MARK_GROUP *group;
+
+    for (;;) {
+        KOS_MARK_GROUP *next;
+
+        group = KOS_atomic_read_relaxed_ptr(heap->objects_to_mark);
+
+        if ( ! group) {
+            group = mark_ctx->current;
+            mark_ctx->current = 0;
+            break;
+        }
+
+        next = KOS_atomic_read_relaxed_ptr(group->next);
+
+        if (KOS_atomic_cas_weak_ptr(heap->objects_to_mark, group, next))
+            break;
+    }
+
+    return group;
+}
+
+static void free_mark_group(KOS_MARK_CONTEXT *mark_ctx, KOS_MARK_GROUP *group)
+{
+    KOS_HEAP *const heap = mark_ctx->heap;
+    for (;;) {
+        KOS_MARK_GROUP *const next = KOS_atomic_read_relaxed_ptr(heap->free_mark_groups);
+
+        KOS_atomic_write_relaxed_ptr(group->next, next);
+
+        if (KOS_atomic_cas_weak_ptr(heap->free_mark_groups, next, group))
+            break;
+    }
+}
+
+static int mark_object_gray(KOS_MARK_CONTEXT *mark_ctx, KOS_OBJ_ID obj_id)
+{
+    int error = KOS_SUCCESS;
+
+    if (set_mark_state(obj_id, GRAY))
+        error = schedule_for_marking(mark_ctx, obj_id);
+
+    return error;
+}
+
+static int mark_object_black(KOS_MARK_CONTEXT *mark_ctx,
+                             KOS_OBJ_ID        obj_id);
+
+static void init_mark_context(KOS_MARK_CONTEXT *mark_ctx, KOS_HEAP *heap)
+{
+    mark_ctx->current = 0;
+    mark_ctx->heap    = heap;
+}
+
+static int perform_gray_to_black_marking(KOS_MARK_CONTEXT *mark_ctx)
+{
+    KOS_MARK_GROUP *group = get_next_scheduled_mark_group(mark_ctx);
+
+    for ( ; group; group = get_next_scheduled_mark_group(mark_ctx)) {
+
+        KOS_OBJ_ID       *ptr = &group->objs[0];
+        KOS_OBJ_ID *const end = ptr + group->num_objs;
+
+        while (ptr != end) {
+
+            const KOS_OBJ_ID obj_id = *(ptr++);
+
+            const int error = mark_object_black(mark_ctx, obj_id);
+
+            if (error) {
+                free_mark_group(mark_ctx, group);
+
+                group = mark_ctx->current;
+
+                if ( ! group) {
+                    mark_ctx->current = 0;
+                    free_mark_group(mark_ctx, group);
+                }
+
+                return error;
+            }
+        }
+
+        free_mark_group(mark_ctx, group);
+    }
+
+    return KOS_SUCCESS;
+}
+
+static int mark_children_gray(KOS_MARK_CONTEXT *mark_ctx,
+                              KOS_OBJ_ID        obj_id)
+{
+    int error = KOS_SUCCESS;
 
     switch (READ_OBJ_TYPE(obj_id)) {
 
@@ -1376,17 +1551,17 @@ static uint32_t mark_children_gray(KOS_OBJ_ID obj_id)
 
         case OBJ_STRING:
             if (OBJPTR(STRING, obj_id)->header.flags & KOS_STRING_REF)
-                marked += set_mark_state(OBJPTR(STRING, obj_id)->ref.obj_id, GRAY);
+                TRY(mark_object_gray(mark_ctx, OBJPTR(STRING, obj_id)->ref.obj_id));
             break;
 
         default:
             assert(READ_OBJ_TYPE(obj_id) == OBJ_OBJECT);
-            marked += mark_object_black(KOS_atomic_read_relaxed_obj(OBJPTR(OBJECT, obj_id)->props));
-            marked += set_mark_state(OBJPTR(OBJECT, obj_id)->prototype, GRAY);
+            TRY(mark_object_black(mark_ctx, KOS_atomic_read_relaxed_obj(OBJPTR(OBJECT, obj_id)->props)));
+            TRY(mark_object_gray(mark_ctx, OBJPTR(OBJECT, obj_id)->prototype));
             break;
 
         case OBJ_ARRAY:
-            marked += mark_object_black(KOS_atomic_read_relaxed_obj(OBJPTR(ARRAY, obj_id)->data));
+            TRY(mark_object_black(mark_ctx, KOS_atomic_read_relaxed_obj(OBJPTR(ARRAY, obj_id)->data)));
             break;
 
         case OBJ_BUFFER:
@@ -1395,32 +1570,32 @@ static uint32_t mark_children_gray(KOS_OBJ_ID obj_id)
 
         case OBJ_FUNCTION:
             /* TODO make these atomic */
-            marked += set_mark_state(OBJPTR(FUNCTION, obj_id)->module,   GRAY);
-            marked += set_mark_state(OBJPTR(FUNCTION, obj_id)->name,     GRAY);
-            marked += set_mark_state(OBJPTR(FUNCTION, obj_id)->closures, GRAY);
-            marked += set_mark_state(OBJPTR(FUNCTION, obj_id)->defaults, GRAY);
-            marked += set_mark_state(OBJPTR(FUNCTION, obj_id)->generator_stack_frame, GRAY);
+            TRY(mark_object_gray(mark_ctx, OBJPTR(FUNCTION, obj_id)->module));
+            TRY(mark_object_gray(mark_ctx, OBJPTR(FUNCTION, obj_id)->name));
+            TRY(mark_object_gray(mark_ctx, OBJPTR(FUNCTION, obj_id)->closures));
+            TRY(mark_object_gray(mark_ctx, OBJPTR(FUNCTION, obj_id)->defaults));
+            TRY(mark_object_gray(mark_ctx, OBJPTR(FUNCTION, obj_id)->generator_stack_frame));
             break;
 
         case OBJ_CLASS:
-            marked += set_mark_state(KOS_atomic_read_relaxed_obj(OBJPTR(CLASS, obj_id)->prototype), GRAY);
-            marked += mark_object_black(KOS_atomic_read_relaxed_obj(OBJPTR(CLASS, obj_id)->props));
+            TRY(mark_object_gray(mark_ctx, KOS_atomic_read_relaxed_obj(OBJPTR(CLASS, obj_id)->prototype)));
+            TRY(mark_object_black(mark_ctx, KOS_atomic_read_relaxed_obj(OBJPTR(CLASS, obj_id)->props)));
             /* TODO make these atomic */
-            marked += set_mark_state(OBJPTR(CLASS, obj_id)->module,   GRAY);
-            marked += set_mark_state(OBJPTR(CLASS, obj_id)->name,     GRAY);
-            marked += set_mark_state(OBJPTR(CLASS, obj_id)->closures, GRAY);
-            marked += set_mark_state(OBJPTR(CLASS, obj_id)->defaults, GRAY);
+            TRY(mark_object_gray(mark_ctx, OBJPTR(CLASS, obj_id)->module));
+            TRY(mark_object_gray(mark_ctx, OBJPTR(CLASS, obj_id)->name));
+            TRY(mark_object_gray(mark_ctx, OBJPTR(CLASS, obj_id)->closures));
+            TRY(mark_object_gray(mark_ctx, OBJPTR(CLASS, obj_id)->defaults));
             break;
 
         case OBJ_OBJECT_STORAGE: {
             KOS_PITEM *item = &OBJPTR(OBJECT_STORAGE, obj_id)->items[0];
             KOS_PITEM *end  = item + OBJPTR(OBJECT_STORAGE, obj_id)->capacity;
             for ( ; item < end; ++item) {
-                marked += set_mark_state(KOS_atomic_read_relaxed_obj(item->key), GRAY);
-                marked += set_mark_state(KOS_atomic_read_relaxed_obj(item->value), GRAY);
+                TRY(mark_object_gray(mark_ctx, KOS_atomic_read_relaxed_obj(item->key)));
+                TRY(mark_object_gray(mark_ctx, KOS_atomic_read_relaxed_obj(item->value)));
             }
 
-            marked += set_mark_state(KOS_atomic_read_relaxed_obj(OBJPTR(OBJECT_STORAGE, obj_id)->new_prop_table), GRAY);
+            TRY(mark_object_gray(mark_ctx, KOS_atomic_read_relaxed_obj(OBJPTR(OBJECT_STORAGE, obj_id)->new_prop_table)));
             break;
         }
 
@@ -1428,48 +1603,42 @@ static uint32_t mark_children_gray(KOS_OBJ_ID obj_id)
             KOS_ATOMIC(KOS_OBJ_ID) *item = &OBJPTR(ARRAY_STORAGE, obj_id)->buf[0];
             KOS_ATOMIC(KOS_OBJ_ID) *end  = item + OBJPTR(ARRAY_STORAGE, obj_id)->capacity;
             for ( ; item < end; ++item)
-                marked += set_mark_state(KOS_atomic_read_relaxed_obj(*item), GRAY);
+                TRY(mark_object_gray(mark_ctx, KOS_atomic_read_relaxed_obj(*item)));
 
-            marked += set_mark_state(KOS_atomic_read_relaxed_obj(OBJPTR(ARRAY_STORAGE, obj_id)->next), GRAY);
+            TRY(mark_object_gray(mark_ctx, KOS_atomic_read_relaxed_obj(OBJPTR(ARRAY_STORAGE, obj_id)->next)));
             break;
         }
 
         case OBJ_DYNAMIC_PROP:
             /* TODO make these atomic */
-            marked += mark_object_black(OBJPTR(DYNAMIC_PROP, obj_id)->getter);
-            marked += mark_object_black(OBJPTR(DYNAMIC_PROP, obj_id)->setter);
+            TRY(mark_object_black(mark_ctx, OBJPTR(DYNAMIC_PROP, obj_id)->getter));
+            TRY(mark_object_black(mark_ctx, OBJPTR(DYNAMIC_PROP, obj_id)->setter));
             break;
 
         case OBJ_ITERATOR:
-            marked += set_mark_state(KOS_atomic_read_relaxed_obj(
-                                     OBJPTR(ITERATOR, obj_id)->obj),           GRAY);
-            marked += set_mark_state(KOS_atomic_read_relaxed_obj(
-                                     OBJPTR(ITERATOR, obj_id)->prop_obj),      GRAY);
-            marked += set_mark_state(KOS_atomic_read_relaxed_obj(
-                                     OBJPTR(ITERATOR, obj_id)->key_table),     GRAY);
-            marked += set_mark_state(KOS_atomic_read_relaxed_obj(
-                                     OBJPTR(ITERATOR, obj_id)->returned_keys), GRAY);
-            marked += set_mark_state(KOS_atomic_read_relaxed_obj(
-                                     OBJPTR(ITERATOR, obj_id)->last_key),      GRAY);
-            marked += set_mark_state(KOS_atomic_read_relaxed_obj(
-                                     OBJPTR(ITERATOR, obj_id)->last_value),    GRAY);
+            TRY(mark_object_gray(mark_ctx, OBJPTR(ITERATOR, obj_id)->obj));
+            TRY(mark_object_gray(mark_ctx, OBJPTR(ITERATOR, obj_id)->prop_obj));
+            TRY(mark_object_gray(mark_ctx, OBJPTR(ITERATOR, obj_id)->key_table));
+            TRY(mark_object_gray(mark_ctx, OBJPTR(ITERATOR, obj_id)->returned_keys));
+            TRY(mark_object_gray(mark_ctx, OBJPTR(ITERATOR, obj_id)->last_key));
+            TRY(mark_object_gray(mark_ctx, OBJPTR(ITERATOR, obj_id)->last_value));
             break;
 
         case OBJ_MODULE:
             /* TODO lock gc during module setup */
-            marked += mark_object_black(OBJPTR(MODULE, obj_id)->name);
-            marked += mark_object_black(OBJPTR(MODULE, obj_id)->path);
-            marked += mark_object_black(OBJPTR(MODULE, obj_id)->constants);
-            marked += mark_object_black(OBJPTR(MODULE, obj_id)->global_names);
-            marked += mark_object_black(OBJPTR(MODULE, obj_id)->globals);
-            marked += mark_object_black(OBJPTR(MODULE, obj_id)->module_names);
+            TRY(mark_object_black(mark_ctx, OBJPTR(MODULE, obj_id)->name));
+            TRY(mark_object_black(mark_ctx, OBJPTR(MODULE, obj_id)->path));
+            TRY(mark_object_black(mark_ctx, OBJPTR(MODULE, obj_id)->constants));
+            TRY(mark_object_black(mark_ctx, OBJPTR(MODULE, obj_id)->global_names));
+            TRY(mark_object_black(mark_ctx, OBJPTR(MODULE, obj_id)->globals));
+            TRY(mark_object_black(mark_ctx, OBJPTR(MODULE, obj_id)->module_names));
             break;
 
         case OBJ_STACK: {
             KOS_ATOMIC(KOS_OBJ_ID) *item = &OBJPTR(STACK, obj_id)->buf[0];
             KOS_ATOMIC(KOS_OBJ_ID) *end  = item + OBJPTR(STACK, obj_id)->size;
             for ( ; item < end; ++item)
-                marked += set_mark_state(KOS_atomic_read_relaxed_obj(*item), GRAY);
+                TRY(mark_object_gray(mark_ctx, KOS_atomic_read_relaxed_obj(*item)));
             break;
         }
 
@@ -1479,124 +1648,64 @@ static uint32_t mark_children_gray(KOS_OBJ_ID obj_id)
             if ( ! IS_BAD_PTR(object)) {
                 assert(kos_is_tracked_object(object));
                 assert( ! kos_is_heap_object(object));
-                marked += mark_children_gray(object);
+                TRY(mark_children_gray(mark_ctx, object));
             }
             break;
         }
     }
 
-    return marked;
+cleanup:
+    return error;
 }
 
-static uint32_t mark_object_black(KOS_OBJ_ID obj_id)
+static int mark_object_black(KOS_MARK_CONTEXT *mark_ctx,
+                             KOS_OBJ_ID        obj_id)
 {
-    uint32_t marked = 0;
+    int error = KOS_SUCCESS;
 
     set_mark_state(obj_id, BLACK);
 
     if ( ! IS_BAD_PTR(obj_id) && kos_is_tracked_object(obj_id))
-        marked += mark_children_gray(obj_id);
+        error = mark_children_gray(mark_ctx, obj_id);
 
-    return marked;
+    return error;
 }
 
-static void gray_to_black_in_pages(KOS_HEAP *heap, enum WALK_THREAD_TYPE_E helper)
-{
-    uint32_t  marked = 0;
-    KOS_PAGE *page;
-
-    if ( ! begin_page_walk(heap, helper))
-        return;
-
-    page = get_next_page(heap);
-
-    for ( ; page; page = get_next_page(heap)) {
-
-        uint32_t       color;
-        uint32_t       num_slots_used = 0;
-        const uint32_t num_allocated  = KOS_atomic_read_relaxed_u32(page->num_allocated);
-        KOS_SLOT      *ptr;
-        KOS_SLOT      *end;
-
-        struct KOS_MARK_LOC_S mark_loc = { 0, 0 };
-
-        /* Skip page if all objects are already marked black */
-        if (KOS_atomic_read_relaxed_u32(page->num_used) == num_allocated)
-            continue;
-
-        ptr = get_slots(page);
-        end = ptr + num_allocated;
-
-        mark_loc.bitmap = get_bitmap(page);
-
-        color = skip_white(&ptr, end, &mark_loc);
-
-        while (color) {
-
-            KOS_OBJ_HEADER *const hdr   = (KOS_OBJ_HEADER *)ptr;
-            const uint32_t        size  = kos_get_object_size(*hdr);
-            const uint32_t        slots = size >> KOS_OBJ_ALIGN_BITS;
-
-            if (color == GRAY) {
-                set_mark_state_loc(mark_loc, BLACK);
-
-                marked += mark_children_gray((KOS_OBJ_ID)((intptr_t)hdr + 1));
-            }
-
-            num_slots_used += slots;
-
-            advance_marking(&mark_loc, slots);
-
-            ptr = (KOS_SLOT *)((uint8_t *)ptr + size);
-
-            color = skip_white(&ptr, end, &mark_loc);
-        }
-
-        assert(num_slots_used <= num_allocated);
-        assert(num_slots_used >= KOS_atomic_read_relaxed_u32(page->num_used));
-
-        KOS_atomic_write_relaxed_u32(page->num_used, num_slots_used);
-    }
-
-    KOS_atomic_add_u32(heap->gray_marked, marked);
-
-    end_page_walk(heap, helper);
-}
-
-static uint32_t gray_to_black(KOS_HEAP *heap)
+static void gray_to_black(KOS_MARK_CONTEXT *mark_ctx, KOS_HEAP *heap)
 {
     PROF_ZONE(GC)
 
     assert(heap->walk_threads == 0);
-    assert(KOS_atomic_read_relaxed_ptr(heap->walk_pages) == 0);
 
-    KOS_atomic_write_relaxed_u32(heap->gray_marked, 0);
-    KOS_atomic_write_release_ptr(heap->walk_pages,  heap->used_pages.head);
+    perform_gray_to_black_marking(mark_ctx);
 
-    gray_to_black_in_pages(heap, WALK_MAIN_THREAD);
-
-    return KOS_atomic_read_relaxed_u32(heap->gray_marked);
+    /* TODO wait for other threads to finish */
 }
 
-static void mark_roots_in_context(KOS_CONTEXT ctx)
+static int mark_roots_in_context(KOS_MARK_CONTEXT *mark_ctx, KOS_CONTEXT ctx)
 {
+    uint32_t   error = KOS_SUCCESS;
     KOS_LOCAL *local;
 
     assert(KOS_atomic_read_relaxed_u32(ctx->gc_state) != GC_INACTIVE);
 
-    mark_object_black(ctx->exception);
-    mark_object_black(ctx->stack);
+    TRY(mark_object_black(mark_ctx, ctx->exception));
+    TRY(mark_object_black(mark_ctx, ctx->stack));
 
     for (local = ctx->local_list; local; local = local->next)
-        mark_object_black(local->o);
+        TRY(mark_object_black(mark_ctx, local->o));
 
     for (local = (KOS_LOCAL *)ctx->ulocal_list; local; local = local->next)
-        mark_object_black(local->o);
+        TRY(mark_object_black(mark_ctx, local->o));
+
+cleanup:
+    return error;
 }
 
-static void mark_roots_in_threads(KOS_INSTANCE *inst)
+static int mark_roots_in_threads(KOS_MARK_CONTEXT *mark_ctx, KOS_INSTANCE *inst)
 {
     uint32_t       i;
+    uint32_t       error       = KOS_SUCCESS;
     const uint32_t max_threads = inst->threads.max_threads;
 
     kos_lock_mutex(&inst->threads.new_mutex);
@@ -1608,55 +1717,65 @@ static void mark_roots_in_threads(KOS_INSTANCE *inst)
         if ( ! thread)
             continue;
 
-        set_mark_state(thread->thread_func, GRAY);
-        set_mark_state(thread->this_obj,    GRAY);
-        set_mark_state(thread->args_obj,    GRAY);
-        set_mark_state(thread->retval,      GRAY);
-        set_mark_state(thread->exception,   GRAY);
+        TRY(mark_object_gray(mark_ctx, thread->thread_func));
+        TRY(mark_object_gray(mark_ctx, thread->this_obj));
+        TRY(mark_object_gray(mark_ctx, thread->args_obj));
+        TRY(mark_object_gray(mark_ctx, thread->retval));
+        TRY(mark_object_gray(mark_ctx, thread->exception));
     }
 
+cleanup:
     kos_unlock_mutex(&inst->threads.new_mutex);
+
+    return error;
 }
 
-static void mark_roots(KOS_CONTEXT ctx)
+static int mark_roots(KOS_CONTEXT ctx, KOS_MARK_CONTEXT *mark_ctx)
 {
     PROF_ZONE(GC)
 
-    KOS_INSTANCE *const inst = ctx->inst;
+    int                 error = KOS_SUCCESS;
+    KOS_INSTANCE *const inst  = ctx->inst;
 
-    mark_object_black(inst->prototypes.object_proto);
-    mark_object_black(inst->prototypes.number_proto);
-    mark_object_black(inst->prototypes.integer_proto);
-    mark_object_black(inst->prototypes.float_proto);
-    mark_object_black(inst->prototypes.string_proto);
-    mark_object_black(inst->prototypes.boolean_proto);
-    mark_object_black(inst->prototypes.array_proto);
-    mark_object_black(inst->prototypes.buffer_proto);
-    mark_object_black(inst->prototypes.function_proto);
-    mark_object_black(inst->prototypes.class_proto);
-    mark_object_black(inst->prototypes.generator_proto);
-    mark_object_black(inst->prototypes.exception_proto);
-    mark_object_black(inst->prototypes.generator_end_proto);
-    mark_object_black(inst->prototypes.thread_proto);
+    TRY(mark_object_black(mark_ctx, inst->prototypes.object_proto));
+    TRY(mark_object_black(mark_ctx, inst->prototypes.number_proto));
+    TRY(mark_object_black(mark_ctx, inst->prototypes.integer_proto));
+    TRY(mark_object_black(mark_ctx, inst->prototypes.float_proto));
+    TRY(mark_object_black(mark_ctx, inst->prototypes.string_proto));
+    TRY(mark_object_black(mark_ctx, inst->prototypes.boolean_proto));
+    TRY(mark_object_black(mark_ctx, inst->prototypes.array_proto));
+    TRY(mark_object_black(mark_ctx, inst->prototypes.buffer_proto));
+    TRY(mark_object_black(mark_ctx, inst->prototypes.function_proto));
+    TRY(mark_object_black(mark_ctx, inst->prototypes.class_proto));
+    TRY(mark_object_black(mark_ctx, inst->prototypes.generator_proto));
+    TRY(mark_object_black(mark_ctx, inst->prototypes.exception_proto));
+    TRY(mark_object_black(mark_ctx, inst->prototypes.generator_end_proto));
+    TRY(mark_object_black(mark_ctx, inst->prototypes.thread_proto));
 
-    mark_object_black(inst->modules.init_module);
-    mark_object_black(inst->modules.search_paths);
-    mark_object_black(inst->modules.module_names);
-    mark_object_black(inst->modules.modules);
-    mark_object_black(inst->modules.module_inits);
+    TRY(mark_object_black(mark_ctx, inst->modules.init_module));
+    TRY(mark_object_black(mark_ctx, inst->modules.search_paths));
+    TRY(mark_object_black(mark_ctx, inst->modules.module_names));
+    TRY(mark_object_black(mark_ctx, inst->modules.modules));
+    TRY(mark_object_black(mark_ctx, inst->modules.module_inits));
 
-    mark_roots_in_threads(inst);
+    TRY(mark_roots_in_threads(mark_ctx, inst));
 
-    mark_object_black(inst->args);
+    TRY(mark_object_black(mark_ctx, inst->args));
 
     kos_lock_mutex(&inst->threads.ctx_mutex);
 
     ctx = &inst->threads.main_thread;
 
-    for ( ; ctx; ctx = ctx->next)
-        mark_roots_in_context(ctx);
+    for ( ; ctx; ctx = ctx->next) {
+        error = mark_roots_in_context(mark_ctx, ctx);
+        if (error)
+            break;
+    }
 
     kos_unlock_mutex(&inst->threads.ctx_mutex);
+
+cleanup:
+    return error;
 }
 
 #ifdef CONFIG_MAD_GC
@@ -2257,7 +2376,41 @@ static void update_after_evacuation(KOS_CONTEXT ctx)
     kos_unlock_mutex(&inst->threads.ctx_mutex);
 }
 
-#define PAGE_ALREADY_EVACED 0xF00DBA5E
+static uint32_t get_num_slots_used(KOS_PAGE *page, uint32_t num_allocated)
+{
+    uint32_t              color;
+    uint32_t              num_used = 0;
+    KOS_SLOT             *ptr      = get_slots(page);
+    KOS_SLOT       *const end      = ptr + num_allocated;
+    struct KOS_MARK_LOC_S mark_loc = { 0, 0 };
+
+    mark_loc.bitmap = get_bitmap(page);
+
+    assert(num_allocated == KOS_atomic_read_relaxed_u32(page->num_allocated));
+
+    color = skip_white(&ptr, end, &mark_loc);
+
+    while (color) {
+
+        KOS_OBJ_HEADER *const hdr   = (KOS_OBJ_HEADER *)ptr;
+        const uint32_t        size  = kos_get_object_size(*hdr);
+        const uint32_t        slots = size >> KOS_OBJ_ALIGN_BITS;
+
+        assert(color & BLACK);
+
+        num_used += slots;
+
+        advance_marking(&mark_loc, slots);
+
+        ptr = (KOS_SLOT *)((uint8_t *)ptr + size);
+
+        color = skip_white(&ptr, end, &mark_loc);
+    }
+
+    return num_used;
+}
+
+#define PAGE_ALREADY_EVACED 1U
 
 static int evacuate(KOS_CONTEXT              ctx,
                     KOS_PAGE_LIST           *free_pages,
@@ -2283,7 +2436,9 @@ static int evacuate(KOS_CONTEXT              ctx,
 
         unsigned       num_evac       = 0;
         const uint32_t num_allocated  = KOS_atomic_read_relaxed_u32(page->num_allocated);
-        const uint32_t num_slots_used = KOS_atomic_read_relaxed_u32(page->num_used);
+        const uint32_t page_flags     = KOS_atomic_read_relaxed_u32(page->flags);
+        const uint32_t num_slots_used = (page_flags == PAGE_ALREADY_EVACED) ? num_allocated :
+                                        get_num_slots_used(page, num_allocated);
         KOS_SLOT      *ptr            = get_slots(page);
         KOS_SLOT      *end            = ptr + num_allocated;
 
@@ -2297,9 +2452,11 @@ static int evacuate(KOS_CONTEXT              ctx,
          * exempt from evacuation. */
         #define UNUSED_SLOTS ((KOS_SLOTS_PER_PAGE * (100U - KOS_MIGRATION_THRESH)) / 100U)
 
-        if (num_slots_used == PAGE_ALREADY_EVACED
-#ifndef CONFIG_MAD_GC
-            || (num_allocated - num_slots_used < UNUSED_SLOTS)
+        if (
+#ifdef CONFIG_MAD_GC
+            page_flags == PAGE_ALREADY_EVACED
+#else
+            num_allocated - num_slots_used < UNUSED_SLOTS
 #endif
             ) {
 
@@ -2315,7 +2472,7 @@ static int evacuate(KOS_CONTEXT              ctx,
             if (num_slots_used != PAGE_ALREADY_EVACED) {
                 ++stats.num_pages_kept;
                 stats.size_kept += num_slots_used << KOS_OBJ_ALIGN_BITS;
-                KOS_atomic_write_relaxed_u32(page->num_used, PAGE_ALREADY_EVACED);
+                KOS_atomic_write_relaxed_u32(page->flags, PAGE_ALREADY_EVACED);
             }
             continue;
         }
@@ -2423,7 +2580,10 @@ cleanup:
 
 static void update_gc_threshold(KOS_HEAP *heap)
 {
-    heap->gc_threshold = heap->used_heap_size + KOS_GC_STEP;
+    if (heap->used_heap_size >= heap->gc_threshold)
+        heap->gc_threshold = heap->max_heap_size;
+    else
+        heap->gc_threshold = heap->max_heap_size * KOS_GC_THRESHOLD / 100U;
 }
 
 static void engage_in_gc(KOS_CONTEXT ctx, enum GC_STATE_E new_state)
@@ -2443,7 +2603,7 @@ static void engage_in_gc(KOS_CONTEXT ctx, enum GC_STATE_E new_state)
 
 static void help_gc(KOS_CONTEXT ctx)
 {
-    KOS_HEAP *const heap    = get_heap(ctx);
+    KOS_HEAP *const heap = get_heap(ctx);
     enum GC_STATE_E gc_state;
 
     assert(KOS_atomic_read_relaxed_u32(ctx->gc_state) == GC_INACTIVE);
@@ -2466,9 +2626,13 @@ static void help_gc(KOS_CONTEXT ctx)
 
         switch (gc_state) {
 
-            case GC_MARK:
-                gray_to_black_in_pages(heap, WALK_HELPER_THREAD);
+            case GC_MARK: {
+                KOS_MARK_CONTEXT mark_ctx;
+                init_mark_context(&mark_ctx, heap);
+                perform_gray_to_black_marking(&mark_ctx);
+                /* TODO signal that helper thread is done */
                 break;
+            }
 
             /* TODO help with evac */
 
@@ -2578,13 +2742,13 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
 {
     PROF_ZONE(GC)
 
-    uint64_t      time_0;
-    uint64_t      time_1;
-    KOS_HEAP     *heap            = get_heap(ctx);
-    KOS_PAGE_LIST free_pages      = { 0, 0 };
-    KOS_GC_STATS  stats           = KOS_GC_STATS_INIT(0U);
-    unsigned      num_gray_passes = 0U;
-    int           error           = KOS_SUCCESS;
+    uint64_t         time_0;
+    uint64_t         time_1;
+    KOS_HEAP        *heap       = get_heap(ctx);
+    KOS_MARK_CONTEXT mark_ctx;
+    KOS_PAGE_LIST    free_pages = { 0, 0 };
+    KOS_GC_STATS     stats      = KOS_GC_STATS_INIT(0U);
+    int              error      = KOS_SUCCESS;
 
     /***********************************************************************/
     /* Initialize GC */
@@ -2632,15 +2796,15 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
 
     clear_marking(heap);
 
-    mark_roots(ctx);
+    init_mark_context(&mark_ctx, heap);
+    mark_roots(ctx, &mark_ctx); /* TODO check error */
 
     heap->gc_state = GC_MARK;
 
     /***********************************************************************/
     /* Phase 2: Perform marking */
 
-    do ++num_gray_passes;
-    while (gray_to_black(heap));
+    gray_to_black(&mark_ctx, heap); /* TODO check error */
 
     /***********************************************************************/
     /* Phase 3: Evacuate and reclaim free pages */
@@ -2689,10 +2853,9 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
 
     update_gc_threshold(heap);
 
-    stats.num_gray_passes = num_gray_passes;
-    stats.heap_size       = heap->heap_size;
-    stats.used_heap_size  = heap->used_heap_size;
-    stats.malloc_size     = heap->malloc_size;
+    stats.heap_size      = heap->heap_size;
+    stats.used_heap_size = heap->used_heap_size;
+    stats.malloc_size    = heap->malloc_size;
 
     verify_heap_used_size(heap);
 
@@ -2718,11 +2881,11 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
     stats.time_us = (unsigned)(time_1 - time_0);
 
     if (ctx->inst->flags & KOS_INST_DEBUG) {
-        printf("GC used/total [B] %x/%x -> %x/%x | malloc [B] %x -> %x : time %u us : gray passes %u\n",
+        printf("GC used/total [B] %x/%x -> %x/%x | malloc [B] %x -> %x : retained %u : time %u us\n",
                stats.initial_used_heap_size, stats.initial_heap_size,
                stats.used_heap_size, stats.heap_size,
                stats.initial_malloc_size, stats.malloc_size,
-               stats.time_us, stats.num_gray_passes);
+               stats.num_pages_kept, stats.time_us);
     }
 
     if (out_stats)

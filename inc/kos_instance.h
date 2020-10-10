@@ -14,11 +14,13 @@ struct KOS_LIB_LIST_S;
 struct KOS_MODULE_LOAD_CHAIN_S;
 struct KOS_PAGE_HEADER_S;
 struct KOS_POOL_HEADER_S;
+struct KOS_MARK_GROUP_S;
 
 typedef struct KOS_LIB_LIST_S          KOS_LIB_LIST;
 typedef struct KOS_MODULE_LOAD_CHAIN_S KOS_MODULE_LOAD_CHAIN;
 typedef struct KOS_PAGE_HEADER_S       KOS_PAGE;
 typedef struct KOS_POOL_HEADER_S       KOS_POOL;
+typedef struct KOS_MARK_GROUP_S        KOS_MARK_GROUP;
 
 typedef struct KOS_PAGE_LIST_S {
     KOS_PAGE *head;
@@ -26,27 +28,28 @@ typedef struct KOS_PAGE_LIST_S {
 } KOS_PAGE_LIST;
 
 typedef struct KOS_HEAP_S {
-    KOS_MUTEX              mutex;
-    uint32_t               gc_state;       /* Says what the GC is doing                      */
-    uint32_t               heap_size;      /* Total num bytes allocated for the heap         */
-    uint32_t               used_heap_size; /* Num bytes allocated for objects on heap        */
-    uint32_t               malloc_size;    /* Num bytes allocated for objs with malloc       */
-    uint32_t               max_heap_size;  /* Maximum allowed heap size                      */
-    uint32_t               max_malloc_size;/* Maximum allowed bytes allocated with malloc    */
-    uint32_t               gc_threshold;   /* Next value of used_heap_size which triggers GC */
-    KOS_PAGE              *free_pages;     /* Pages which are currently unused               */
-    KOS_PAGE_LIST          used_pages;     /* Pages which contain objects                    */
-    KOS_POOL              *pools;          /* Allocated memory for heap, in page pools       */
+    KOS_MUTEX                    mutex;
+    uint32_t                     gc_state;        /* Says what the GC is doing                      */
+    uint32_t                     heap_size;       /* Total num bytes allocated for the heap         */
+    uint32_t                     used_heap_size;  /* Num bytes allocated for objects on heap        */
+    uint32_t                     malloc_size;     /* Num bytes allocated for objs with malloc       */
+    uint32_t                     max_heap_size;   /* Maximum allowed heap size                      */
+    uint32_t                     max_malloc_size; /* Maximum allowed bytes allocated with malloc    */
+    uint32_t                     gc_threshold;    /* Next value of used_heap_size which triggers GC */
+    KOS_PAGE                    *free_pages;      /* Pages which are currently unused               */
+    KOS_PAGE_LIST                used_pages;      /* Pages which contain objects                    */
+    KOS_POOL                    *pools;           /* Allocated memory for heap, in page pools       */
 
-    KOS_ATOMIC(KOS_PAGE *) walk_pages;     /* Multi-threaded page marking/updating           */
-    KOS_ATOMIC(uint32_t)   gray_marked;    /* Number of objects marked                       */
-    uint32_t               walk_threads;   /* Number of threads helping with page walking    */
-    uint32_t               threads_to_stop;/* Number of threads on which GC is waiting       */
-    uint32_t               gc_cycles;      /* Number of GC cycles started                    */
+    KOS_ATOMIC(KOS_PAGE *)       walk_pages;      /* Multi-threaded page updating                   */
+    KOS_ATOMIC(KOS_MARK_GROUP *) objects_to_mark; /* Objects being marked during GC                 */
+    KOS_ATOMIC(KOS_MARK_GROUP *) free_mark_groups;/* Unused mark group containers                   */
+    uint32_t                     walk_threads;    /* Number of threads helping with page walking    */
+    uint32_t                     threads_to_stop; /* Number of threads on which GC is waiting       */
+    uint32_t                     gc_cycles;       /* Number of GC cycles started                    */
 
-    KOS_COND_VAR           engagement_cond;
-    KOS_COND_VAR           walk_cond;
-    KOS_COND_VAR           helper_cond;
+    KOS_COND_VAR                 engagement_cond;
+    KOS_COND_VAR                 walk_cond;
+    KOS_COND_VAR                 helper_cond;
 
 #ifdef CONFIG_MAD_GC
     struct KOS_LOCKED_PAGES_S *locked_pages_first;
@@ -316,7 +319,6 @@ typedef struct KOS_GC_STATS_S {
     unsigned size_evacuated;
     unsigned size_freed;
     unsigned size_kept;
-    unsigned num_gray_passes;
     unsigned initial_heap_size;
     unsigned initial_used_heap_size;
     unsigned initial_malloc_size;
@@ -328,7 +330,7 @@ typedef struct KOS_GC_STATS_S {
 
 #define KOS_GC_STATS_INIT(val) \
     { (val), (val), (val), (val), (val), (val), (val), (val), (val), (val), \
-      (val), (val), (val), (val), (val), (val) }
+      (val), (val), (val), (val), (val) }
 
 KOS_API
 int KOS_collect_garbage(KOS_CONTEXT   ctx,

@@ -372,8 +372,8 @@ KOS_OBJ_ID kos_register_module_init(KOS_CONTEXT      ctx,
  */
 struct KOS_PAGE_HEADER_S {
     KOS_PAGE            *next;
-    KOS_ATOMIC(uint32_t) num_allocated;   /* Number of slots allocated          */
-    KOS_ATOMIC(uint32_t) num_used;        /* Number of slots used, only for GC  */
+    KOS_ATOMIC(uint32_t) num_allocated;   /* Number of slots allocated */
+    KOS_ATOMIC(uint32_t) flags;           /* Flags for GC              */
 
     /* TODO
      * - Distinguish between old pages and new page.  New objects should never

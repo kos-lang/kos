@@ -118,7 +118,15 @@ endef
 
 $(foreach test, $(interpreter_test_list), $(eval $(call INTERPRETER_TEST,$(test))))
 
-interpreter_fail_test_list = $(filter interpreter_tests/fail_%, $(wildcard interpreter_tests/*.kos))
+all_interpreter_fail_test_list = $(filter interpreter_tests/fail_%, $(wildcard interpreter_tests/*.kos))
+
+exclude_mad_gc_list =
+
+ifeq ($(mad_gc), 1)
+exclude_mad_gc_list = fail_oom_5.kos
+endif
+
+interpreter_fail_test_list = $(filter-out $(addprefix interpreter_tests/, $(exclude_mad_gc_list)), $(all_interpreter_fail_test_list))
 
 define INTERPRETER_FAIL_TEST
 $1:

@@ -5,7 +5,7 @@ import base.print
 do {
     var head = []
 
-    head.reserve(1024 * 1024)
+    head.reserve(256 * 1024)
 
     var idx   = 0
     var size  = 1024 * 1024
@@ -20,7 +20,8 @@ do {
         }
         catch const e {
             if size <= 128 {
-                if total > 512 * 1024 {
+                if total > 128 * 1024 {
+                    #print("Allocated \(head.size + 1) arrays, total \(total) bytes")
                     break
                 }
                 else {

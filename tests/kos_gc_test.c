@@ -2137,7 +2137,7 @@ int main(void)
             TEST(stats.num_objs_evacuated == 4);
             TEST(stats.num_objs_freed     == 9);
             TEST(stats.num_objs_finalized == 0);
-            TEST(stats.num_pages_kept     == num_pages + 1U);
+            TEST(stats.num_pages_kept     >= num_pages + 1U);
             TEST(stats.num_pages_freed    == test_pages);
             TEST(stats.malloc_size        == MODULE_SIZE + off_heap_array_size(ballast.o));
 #endif
