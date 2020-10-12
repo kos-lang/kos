@@ -154,6 +154,7 @@ Table of Contents
     * [cycle()](#cycle)
     * [empty()](#empty)
     * [generator()](#generator)
+    * [iota()](#iota)
     * [iproduct()](#iproduct)
     * [product()](#product)
     * [reverse()](#reverse)
@@ -3359,6 +3360,26 @@ in parallel, the behavior is undefined.
 If `iterable` is not a function, the behavior of the returned
 generator upon instantiation will be equivalent to calling
 `iterable.iterator()`.
+
+iota()
+------
+
+    iota(init = 0)
+
+A generator which produces subsequent integer numbers
+
+`init` is the first integer produced by the generator.
+`init` is optional and defaults to 0.
+
+The generator ends after the last integer is returned, which is when
+incrementing the integer would result in an overflow.
+
+Examples:
+
+    > iter.iota()[0:10] -> array
+    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    > iter.iota(10)[0:4] -> array
+    [10, 11, 12, 13]
 
 iproduct()
 ----------

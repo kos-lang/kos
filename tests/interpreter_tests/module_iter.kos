@@ -46,12 +46,12 @@ do {
         const it1 = g()
         assert it1() == 1
         assert it1() == 2
-        expect_fail(()=>it1())
+        expect_fail(it1)
 
         const it2 = g()
         assert it2() == 1
         assert it2() == 2
-        expect_fail(()=>it2())
+        expect_fail(it2)
     }
 
     do {
@@ -62,13 +62,31 @@ do {
 
         assert it1() == 1
         assert it2() == 2
-        expect_fail(()=>it1())
-        expect_fail(()=>it2())
+        expect_fail(it1)
+        expect_fail(it2)
 
         const it3 = g()
         assert it3() == 1
         assert it3() == 2
-        expect_fail(()=>it3())
+        expect_fail(it3)
+    }
+
+    do {
+        const abc = iter.generator("abc")
+        assert typeof abc == "function"
+        assert typeof abc() == "function"
+
+        const it1 = abc()
+        const it2 = abc()
+
+        assert it1() == "a"
+        assert it2() == "a"
+        assert it1() == "b"
+        assert it2() == "b"
+        assert it1() == "c"
+        assert it2() == "c"
+        expect_fail(it1)
+        expect_fail(it2)
     }
 }
 
@@ -159,7 +177,7 @@ do {
 }
 
 ##############################################################################
-# base.reverse
+# iter.reverse
 
 do {
     const a = iter.reverse([1, 2, 3, 4])
@@ -184,4 +202,27 @@ do {
     assert f() == 3
     assert f() == 2
     expect_fail(f)
+}
+
+##############################################################################
+# iter.iota
+
+do {
+    const next = iter.iota()
+    assert next() == 0
+    assert next() == 1
+    assert next() == 2
+    assert next() == 3
+}
+
+do {
+    const next = iter.iota(0x7FFF_FFFF_FFFF_FFFE)
+    assert next() == 0x7FFF_FFFF_FFFF_FFFE
+    assert next() == 0x7FFF_FFFF_FFFF_FFFF
+    expect_fail(next)
+
+    const a = [ iter.iota(0x7FFF_FFFF_FFFF_FFFE) ... ]
+    assert a.size == 2
+    assert a[0] == 0x7FFF_FFFF_FFFF_FFFE
+    assert a[1] == 0x7FFF_FFFF_FFFF_FFFF
 }
