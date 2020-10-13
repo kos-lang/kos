@@ -11,6 +11,7 @@
 #include "../core/kos_const_strings.h"
 #include "../core/kos_object_internal.h"
 #include "../core/kos_malloc.h"
+#include "../core/kos_math.h"
 #include "../core/kos_memory.h"
 #include "../core/kos_misc.h"
 #include "../core/kos_try.h"
@@ -224,8 +225,12 @@ struct RE_CLASS_RANGE {
 };
 
 struct RE_OBJ {
+    struct RE_CLASS_DESC  *class_descs;
+    struct RE_CLASS_RANGE *class_data;
+
     uint16_t num_groups;
     uint16_t num_counts;
+    uint16_t num_classes;
     uint16_t bytecode_size;
     uint16_t bytecode[1];
 };
@@ -548,7 +553,8 @@ static int add_class_range(struct RE_PARSE_CTX *re_ctx,
 
         if (desc->num_ranges && (begin_code <= range->end_code + 1)) {
 
-            range->end_code = end_code;
+            if (end_code > range->end_code)
+                range->end_code = end_code;
 
             return kos_vector_resize(&re_ctx->class_data, old_size);
         }
@@ -605,8 +611,8 @@ static int add_class_range(struct RE_PARSE_CTX *re_ctx,
 
     range += begin;
 
-    memmove((void *)range,
-            (void *)(range + 1),
+    memmove((void *)(range + 1),
+            (void *)range,
             (desc->num_ranges - end) * sizeof(struct RE_CLASS_RANGE));
 
     range->begin_code = begin_code;
@@ -852,9 +858,13 @@ static int parse_optional_multiplicity(struct RE_PARSE_CTX *re_ctx, uint32_t beg
                 if (peek_next_char(&re_ctx->iter) == ',') {
                     consume_next_char(re_ctx);
 
-                    error = parse_number(re_ctx, &max_count);
-                    if (error)
-                        break;
+                    if (peek_next_char(&re_ctx->iter) == '}')
+                        max_count = ~0U;
+                    else {
+                        error = parse_number(re_ctx, &max_count);
+                        if (error)
+                            break;
+                    }
 
                     if (max_count < min_count) {
                         KOS_raise_printf(re_ctx->ctx, "error parsing regular expression: "
@@ -1050,6 +1060,9 @@ static int parse_re(KOS_CONTEXT ctx, KOS_OBJ_ID regex_str, KOS_OBJ_ID regex)
     int                 error;
     struct RE_PARSE_CTX re_ctx;
     struct RE_OBJ      *re;
+    uint32_t            hdr_and_bytecode_size;
+    uint32_t            class_descs_size;
+    uint32_t            class_data_size;
 
     kos_init_string_iter(&re_ctx.iter, regex_str);
 
@@ -1068,16 +1081,30 @@ static int parse_re(KOS_CONTEXT ctx, KOS_OBJ_ID regex_str, KOS_OBJ_ID regex)
 
     TRY(parse_alternative_match_seq(&re_ctx));
 
-    re = (struct RE_OBJ *)kos_malloc(sizeof(struct RE_OBJ) + re_ctx.buf.size - sizeof(uint16_t));
+    hdr_and_bytecode_size = KOS_align_up(sizeof(struct RE_OBJ) + re_ctx.buf.size - sizeof(uint16_t), sizeof(uint32_t));
+    class_descs_size      = KOS_align_up(re_ctx.class_descs.size, sizeof(uint32_t));
+    class_data_size       = KOS_align_up(re_ctx.class_data.size, sizeof(uint32_t));
+
+    re = (struct RE_OBJ *)kos_malloc(hdr_and_bytecode_size + class_descs_size + class_data_size);
     if ( ! re) {
         KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
+    re->class_descs   = 0;
+    re->class_data    = 0;
     re->num_groups    = (uint16_t)re_ctx.num_groups;
     re->num_counts    = (uint16_t)re_ctx.num_counts;
+    re->num_classes   = (class_descs_size && class_data_size) ? (class_descs_size / sizeof(struct RE_CLASS_DESC)) : 0;
     re->bytecode_size = (uint16_t)(re_ctx.buf.size / sizeof(uint16_t));
     memcpy(re->bytecode, re_ctx.buf.buffer, re_ctx.buf.size);
+
+    if (class_descs_size && class_data_size) {
+        re->class_descs = (struct RE_CLASS_DESC *)((uint8_t *)re + hdr_and_bytecode_size);
+        re->class_data  = (struct RE_CLASS_RANGE *)((uint8_t *)re + hdr_and_bytecode_size + class_descs_size);
+        memcpy(re->class_descs, re_ctx.class_descs.buffer, re_ctx.class_descs.size);
+        memcpy(re->class_data,  re_ctx.class_data.buffer,  re_ctx.class_data.size);
+    }
 
     if (ctx->inst->flags & KOS_INST_DISASM) {
         const char *re_cstr = "?";
@@ -1224,6 +1251,40 @@ static void pop_possibility(struct RE_POSS_STACK *poss_stack,
     }
 }
 
+static int match_class(uint32_t             code,
+                       uint16_t             class_id,
+                       const struct RE_OBJ *re)
+{
+    struct RE_CLASS_DESC   class_desc;
+    struct RE_CLASS_RANGE *range;
+    uint32_t               begin = 0;
+    uint32_t               end;
+
+    assert(class_id < re->num_classes);
+
+    class_desc = re->class_descs[class_id];
+
+    range = re->class_data + class_desc.begin_idx;
+    end   = class_desc.num_ranges;
+
+    assert(end);
+
+    do {
+        const uint32_t mid = (begin + end) / 2;
+
+        assert(mid < end);
+
+        if (code < range[mid].begin_code)
+            end = mid;
+        else if (code > range[mid].end_code)
+            begin = mid + 1;
+        else
+            return 1;
+    } while (begin < end);
+
+    return 0;
+}
+
 static int create_found_groups(KOS_CONTEXT                      ctx,
                                KOS_OBJ_ID                       groups_obj,
                                const struct RE_OBJ             *re,
@@ -1352,9 +1413,35 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
                 NEXT_INSTRUCTION;
             }
 
-            /* TODO BEGIN_INSTRUCTION(MATCH_CLASS) */
+            BEGIN_INSTRUCTION(MATCH_CLASS): {
+                const uint16_t class_id = bytecode[1];
+                const uint32_t code     = peek_next_char(&iter);
 
-            /* TODO BEGIN_INSTRUCTION(MATCH_NOT_CLASS) */
+                if (code == END_OF_STR)
+                    goto try_other_possibility;
+
+                if ( ! match_class(code, class_id, re))
+                    goto try_other_possibility;
+
+                kos_string_iter_advance(&iter);
+                bytecode += 2;
+                NEXT_INSTRUCTION;
+            }
+
+            BEGIN_INSTRUCTION(MATCH_NOT_CLASS): {
+                const uint16_t class_id = bytecode[1];
+                const uint32_t code     = peek_next_char(&iter);
+
+                if (code == END_OF_STR)
+                    goto try_other_possibility;
+
+                if (match_class(code, class_id, re))
+                    goto try_other_possibility;
+
+                kos_string_iter_advance(&iter);
+                bytecode += 2;
+                NEXT_INSTRUCTION;
+            }
 
             BEGIN_INSTRUCTION(MATCH_LINE_BEGIN): {
                 KOS_STRING_ITER iter0;

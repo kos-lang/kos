@@ -18,6 +18,23 @@ fun check(result, begin, end)
     return true
 }
 
+fun find_all(regex, str)
+{
+    const found = []
+    var pos = 0
+    loop {
+        const match = regex.search(str, pos)
+        if ! match {
+            break
+        }
+
+        found.push(str[match.begin : match.end])
+        pos = match.end
+    }
+
+    return found
+}
+
 do {
     expect_fail(re.re)
 }
@@ -317,4 +334,101 @@ do {
     assert a.groups[0].end   == 14
     assert a.groups[1].begin == 12
     assert a.groups[1].end   == 13
+}
+
+do {
+    const r = re.re("[a]")
+
+    const a = r.search("ABCbcdefg01234")
+    assert a == void
+
+    assert check(r.search("xyzabcabc"), 3, 4)
+}
+
+do {
+    const r = re.re("[a-cb-ed-fb-c]*")
+
+    assert check(r.search("this afabac dab"), 0, 0)
+    assert check(r.search("afabac dab"), 0, 6)
+}
+
+do {
+    const r = re.re("[a-cb-ed-fb-c]+")
+
+    assert check(r.search("this afabac dab"), 5, 11)
+}
+
+do {
+    const r = re.re("[^a-cb-ed-fb-c]+")
+
+    assert check(r.search("afabac this bac"), 6, 12)
+}
+
+do {
+    const r = re.re("[s-zm-pg-jea-c]+")
+    const result = find_all(r, "this is `{NOT a rtest")
+    assert result.size == 4
+    assert result[0] == "this"
+    assert result[1] == "is"
+    assert result[2] == "a"
+    assert result[3] == "test"
+
+    const result2 = find_all(r, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+    assert result2.size == 5
+    assert result2[0] == "abc"
+    assert result2[1] == "e"
+    assert result2[2] == "ghij"
+    assert result2[3] == "mnop"
+    assert result2[4] == "stuvwxyz"
+}
+
+do {
+    const r = re.re("[^s-zm-pg-jea-c ]{2,}")
+    const result = find_all(r, "this N is NOT df rtest")
+    assert result.size == 2
+    assert result[0] == "NOT"
+    assert result[1] == "df"
+
+    const result2 = find_all(r, "0123456789abddcdefghijklmnopqrstuvwxyz")
+    assert result2.size == 4
+    assert result2[0] == "0123456789"
+    assert result2[1] == "dd"
+    assert result2[2] == "kl"
+    assert result2[3] == "qr"
+}
+
+do {
+    const r = re.re("[zaybxcwdveuftgshriqjpkolnm]+")
+    const result = find_all(r, "wait a `{1 minutez")
+    assert result.size == 3
+    assert result[0] == "wait"
+    assert result[1] == "a"
+    assert result[2] == "minutez"
+}
+
+do {
+    const r = re.re("[^zaybxcwdveuftgshriqjpkolnm]+")
+    const result = find_all(r, "wait a `{1 minutez")
+    assert result.size == 2
+    assert result[0] == " "
+    assert result[1] == " `{1 "
+}
+
+do {
+    const r = re.re("[A-BE-FI-JM-NQ-RU-VY-ZC-DG-HK-LO-PS-TW-X]+")
+    const result = find_all(r, "THIS IS A @[big TEST")
+    assert result.size == 4
+    assert result[0] == "THIS"
+    assert result[1] == "IS"
+    assert result[2] == "A"
+    assert result[3] == "TEST"
+}
+
+do {
+    const r = re.re("[^A-BE-FI-JM-NQ-RU-VY-ZC-DG-HK-LO-PS-TW-X]+")
+    const result = find_all(r, "THIS IS @[A big TEST")
+    assert result.size == 3
+    assert result[0] == " "
+    assert result[1] == " @["
+    assert result[2] == " big "
 }
