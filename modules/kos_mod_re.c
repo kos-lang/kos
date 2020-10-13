@@ -1095,7 +1095,7 @@ static int parse_re(KOS_CONTEXT ctx, KOS_OBJ_ID regex_str, KOS_OBJ_ID regex)
     re->class_data    = 0;
     re->num_groups    = (uint16_t)re_ctx.num_groups;
     re->num_counts    = (uint16_t)re_ctx.num_counts;
-    re->num_classes   = (class_descs_size && class_data_size) ? (class_descs_size / sizeof(struct RE_CLASS_DESC)) : 0;
+    re->num_classes   = (class_descs_size && class_data_size) ? (uint16_t)(class_descs_size / sizeof(struct RE_CLASS_DESC)) : 0;
     re->bytecode_size = (uint16_t)(re_ctx.buf.size / sizeof(uint16_t));
     memcpy(re->bytecode, re_ctx.buf.buffer, re_ctx.buf.size);
 
