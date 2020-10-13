@@ -1081,9 +1081,9 @@ static int parse_re(KOS_CONTEXT ctx, KOS_OBJ_ID regex_str, KOS_OBJ_ID regex)
 
     TRY(parse_alternative_match_seq(&re_ctx));
 
-    hdr_and_bytecode_size = KOS_align_up(sizeof(struct RE_OBJ) + re_ctx.buf.size - sizeof(uint16_t), sizeof(uint32_t));
-    class_descs_size      = KOS_align_up(re_ctx.class_descs.size, sizeof(uint32_t));
-    class_data_size       = KOS_align_up(re_ctx.class_data.size, sizeof(uint32_t));
+    hdr_and_bytecode_size = (uint32_t)KOS_align_up(sizeof(struct RE_OBJ) + re_ctx.buf.size - sizeof(uint16_t), sizeof(uint32_t));
+    class_descs_size      = (uint32_t)KOS_align_up(re_ctx.class_descs.size, sizeof(uint32_t));
+    class_data_size       = (uint32_t)KOS_align_up(re_ctx.class_data.size, sizeof(uint32_t));
 
     re = (struct RE_OBJ *)kos_malloc(hdr_and_bytecode_size + class_descs_size + class_data_size);
     if ( ! re) {
