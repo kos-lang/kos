@@ -212,7 +212,7 @@ int kos_heap_init(KOS_INSTANCE *inst)
     return KOS_SUCCESS;
 }
 
-#if !defined(NDEBUG) || defined(CONFIG_MAD_GC)
+#if defined(CONFIG_MAD_GC)
 int kos_gc_active(KOS_CONTEXT ctx)
 {
     int ret = 0;
