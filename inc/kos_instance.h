@@ -46,6 +46,7 @@ typedef struct KOS_HEAP_S {
     uint32_t                     walk_threads;    /* Number of threads helping with page walking    */
     uint32_t                     threads_to_stop; /* Number of threads on which GC is waiting       */
     uint32_t                     gc_cycles;       /* Number of GC cycles started                    */
+    int                          mark_error;      /* Error occurred on helper thread during marking */
 
     KOS_COND_VAR                 engagement_cond;
     KOS_COND_VAR                 walk_cond;

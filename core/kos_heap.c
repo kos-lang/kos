@@ -441,24 +441,19 @@ static void release_helper_threads(KOS_HEAP *heap)
     kos_broadcast_cond_var(&heap->helper_cond);
 }
 
-static int begin_page_walk(KOS_HEAP               *heap,
-                           enum WALK_THREAD_TYPE_E helper)
+static void begin_walk(KOS_HEAP               *heap,
+                       enum WALK_THREAD_TYPE_E helper)
 {
-    if ( ! KOS_atomic_read_relaxed_ptr(heap->walk_pages))
-        return 0;
-
     ++heap->walk_threads;
 
     if ( ! helper)
         release_helper_threads(heap);
 
     kos_unlock_mutex(&heap->mutex);
-
-    return 1;
 }
 
-static void end_page_walk(KOS_HEAP               *heap,
-                          enum WALK_THREAD_TYPE_E helper)
+static void end_walk(KOS_HEAP               *heap,
+                     enum WALK_THREAD_TYPE_E helper)
 {
     kos_lock_mutex(&heap->mutex);
 
@@ -1160,6 +1155,8 @@ static void clear_marking(KOS_HEAP *heap)
     PROF_ZONE(GC)
 
     set_marking_in_pages(heap->used_pages.head, WHITE, 0);
+
+    heap->mark_error = KOS_SUCCESS;
 }
 
 struct KOS_MARK_LOC_S {
@@ -1480,6 +1477,18 @@ static void free_mark_group(KOS_MARK_CONTEXT *mark_ctx, KOS_MARK_GROUP *group)
     }
 }
 
+static void free_all_mark_groups(KOS_MARK_CONTEXT *mark_ctx)
+{
+    for (;;) {
+        KOS_MARK_GROUP *const group = get_next_scheduled_mark_group(mark_ctx);
+
+        if ( ! group)
+            break;
+
+        free_mark_group(mark_ctx, group);
+    }
+}
+
 static int mark_object_gray(KOS_MARK_CONTEXT *mark_ctx, KOS_OBJ_ID obj_id)
 {
     int error = KOS_SUCCESS;
@@ -1499,36 +1508,48 @@ static void init_mark_context(KOS_MARK_CONTEXT *mark_ctx, KOS_HEAP *heap)
     mark_ctx->heap    = heap;
 }
 
-static int perform_gray_to_black_marking(KOS_MARK_CONTEXT *mark_ctx)
+static int perform_gray_to_black_marking(KOS_MARK_CONTEXT       *mark_ctx,
+                                         enum WALK_THREAD_TYPE_E helper)
 {
-    KOS_MARK_GROUP *group = get_next_scheduled_mark_group(mark_ctx);
+    if (KOS_atomic_read_relaxed_ptr(mark_ctx->heap->objects_to_mark) || mark_ctx->current) {
 
-    for ( ; group; group = get_next_scheduled_mark_group(mark_ctx)) {
+        KOS_MARK_GROUP *group;
 
-        KOS_OBJ_ID       *ptr = &group->objs[0];
-        KOS_OBJ_ID *const end = ptr + group->num_objs;
+        begin_walk(mark_ctx->heap, helper);
 
-        while (ptr != end) {
+        group = get_next_scheduled_mark_group(mark_ctx);
 
-            const KOS_OBJ_ID obj_id = *(ptr++);
+        for ( ; group; group = get_next_scheduled_mark_group(mark_ctx)) {
 
-            const int error = mark_object_black(mark_ctx, obj_id);
+            KOS_OBJ_ID       *ptr = &group->objs[0];
+            KOS_OBJ_ID *const end = ptr + group->num_objs;
 
-            if (error) {
-                free_mark_group(mark_ctx, group);
+            while (ptr != end) {
 
-                group = mark_ctx->current;
+                const KOS_OBJ_ID obj_id = *(ptr++);
 
-                if ( ! group) {
-                    mark_ctx->current = 0;
+                const int error = mark_object_black(mark_ctx, obj_id);
+
+                if (error) {
                     free_mark_group(mark_ctx, group);
-                }
 
-                return error;
+                    group = mark_ctx->current;
+
+                    if (group) {
+                        mark_ctx->current = 0;
+                        free_mark_group(mark_ctx, group);
+                    }
+
+                    end_walk(mark_ctx->heap, helper);
+
+                    return error;
+                }
             }
+
+            free_mark_group(mark_ctx, group);
         }
 
-        free_mark_group(mark_ctx, group);
+        end_walk(mark_ctx->heap, helper);
     }
 
     return KOS_SUCCESS;
@@ -1672,15 +1693,20 @@ static int mark_object_black(KOS_MARK_CONTEXT *mark_ctx,
     return error;
 }
 
-static void gray_to_black(KOS_MARK_CONTEXT *mark_ctx, KOS_HEAP *heap)
+static int gray_to_black(KOS_MARK_CONTEXT *mark_ctx, KOS_HEAP *heap)
 {
     PROF_ZONE(GC)
 
+    int error;
+
     assert(heap->walk_threads == 0);
 
-    perform_gray_to_black_marking(mark_ctx);
+    error = perform_gray_to_black_marking(mark_ctx, WALK_MAIN_THREAD);
 
-    /* TODO wait for other threads to finish */
+    if ( ! error)
+        error = heap->mark_error;
+
+    return error;
 }
 
 static int mark_roots_in_context(KOS_MARK_CONTEXT *mark_ctx, KOS_CONTEXT ctx)
@@ -2266,17 +2292,17 @@ static int save_incomplete_page(KOS_OBJ_HEADER          *hdr,
 static void update_pages_after_evacuation(KOS_HEAP               *heap,
                                           enum WALK_THREAD_TYPE_E helper)
 {
-    KOS_PAGE *page;
+    if (KOS_atomic_read_relaxed_ptr(heap->walk_pages)) {
 
-    if ( ! begin_page_walk(heap, helper))
-        return;
+        KOS_PAGE *page;
 
-    page = get_next_page(heap);
+        begin_walk(heap, helper);
 
-    for ( ; page; page = get_next_page(heap))
-        update_page_after_evacuation(page, 0);
+        for (page = get_next_page(heap); page; page = get_next_page(heap))
+            update_page_after_evacuation(page, 0);
 
-    end_page_walk(heap, helper);
+        end_walk(heap, helper);
+    }
 }
 
 static void update_threads_after_evacuation(KOS_INSTANCE *inst)
@@ -2629,10 +2655,15 @@ static void help_gc(KOS_CONTEXT ctx)
         switch (gc_state) {
 
             case GC_MARK: {
+
                 KOS_MARK_CONTEXT mark_ctx;
+                int              error;
+
                 init_mark_context(&mark_ctx, heap);
-                perform_gray_to_black_marking(&mark_ctx);
-                /* TODO signal that helper thread is done */
+                error = perform_gray_to_black_marking(&mark_ctx, WALK_HELPER_THREAD);
+
+                if (error)
+                    heap->mark_error = error;
                 break;
             }
 
@@ -2799,56 +2830,66 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
     clear_marking(heap);
 
     init_mark_context(&mark_ctx, heap);
-    mark_roots(ctx, &mark_ctx); /* TODO check error */
-
-    heap->gc_state = GC_MARK;
+    error = mark_roots(ctx, &mark_ctx);
 
     /***********************************************************************/
     /* Phase 2: Perform marking */
 
-    gray_to_black(&mark_ctx, heap); /* TODO check error */
+    if ( ! error) {
+        heap->gc_state = GC_MARK;
+
+        error = gray_to_black(&mark_ctx, heap);
+    }
+
+    assert( ! error || (error == KOS_ERROR_OUT_OF_MEMORY));
 
     /***********************************************************************/
     /* Phase 3: Evacuate and reclaim free pages */
 
-    do {
-        uint32_t                prev_num_freed;
-        struct KOS_INCOMPLETE_S incomplete = { 0, 0 };
+    if ( ! error) {
+        do {
+            uint32_t                prev_num_freed;
+            struct KOS_INCOMPLETE_S incomplete = { 0, 0 };
 
-        heap->gc_state = GC_EVACUATE;
+            heap->gc_state = GC_EVACUATE;
 
-        /* Evacuation performs heap allocations and will lock the mutex again */
-        kos_unlock_mutex(&heap->mutex);
+            /* Evacuation performs heap allocations and will lock the mutex again */
+            kos_unlock_mutex(&heap->mutex);
 
-        error = evacuate(ctx, &free_pages, &stats, &incomplete);
+            error = evacuate(ctx, &free_pages, &stats, &incomplete);
 
-        kos_lock_mutex(&heap->mutex);
+            kos_lock_mutex(&heap->mutex);
 
-        heap->gc_state = GC_UPDATE;
+            heap->gc_state = GC_UPDATE;
 
-        assert( ! incomplete.page || error);
+            assert( ! incomplete.page || error);
 
-        update_after_evacuation(ctx);
+            update_after_evacuation(ctx);
 
-        update_incomplete_page(heap, &incomplete);
+            update_incomplete_page(heap, &incomplete);
 
-        prev_num_freed = stats.num_pages_freed;
+            prev_num_freed = stats.num_pages_freed;
 
-        reclaim_free_pages(heap, &free_pages, &stats);
+            reclaim_free_pages(heap, &free_pages, &stats);
 
-        /* If there was an error during evacuation and we cannot
-         * reclaim any freed pages, throw OOM exception. */
-        if (error && prev_num_freed == stats.num_pages_freed) {
-            assert(error == KOS_ERROR_OUT_OF_MEMORY);
+            /* If there was an error during evacuation and we cannot
+             * reclaim any freed pages, throw OOM exception. */
+            if (error && (prev_num_freed == stats.num_pages_freed)) {
+                assert(error == KOS_ERROR_OUT_OF_MEMORY);
+                break;
+            }
+        } while (error);
+    }
 
-            if (ctx->inst->flags & KOS_INST_VERBOSE)
-                printf("GC ran out of memory\n");
+    if (error == KOS_ERROR_OUT_OF_MEMORY) {
+        free_all_mark_groups(&mark_ctx);
 
-            KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
-            error = KOS_ERROR_EXCEPTION;
-            break;
-        }
-    } while (error);
+        if (ctx->inst->flags & KOS_INST_VERBOSE)
+            printf("GC ran out of memory\n");
+
+        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+        error = KOS_ERROR_EXCEPTION;
+    }
 
     /***********************************************************************/
     /* Done, finish GC */
