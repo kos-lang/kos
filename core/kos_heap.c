@@ -1332,12 +1332,14 @@ static void clear_mark_state(KOS_OBJ_ID obj_id, uint32_t size)
 
     ++mark_loc.bitmap;
 
+#if KOS_MAX_HEAP_OBJ_SIZE > (16 << KOS_OBJ_ALIGN_BITS)
     while (num_slots >= 16U) {
         KOS_atomic_write_relaxed_u32(*mark_loc.bitmap, 0U);
 
         ++mark_loc.bitmap;
         num_slots -= 16U;
     }
+#endif
 
     apply_mask(mark_loc.bitmap, ~0U << (num_slots * 2));
 }
@@ -1381,16 +1383,16 @@ static void push_scheduled(KOS_MARK_CONTEXT *mark_ctx)
 
     if (current) {
 
+        KOS_MARK_GROUP *next;
+
         mark_ctx->current = 0;
 
-        for (;;) {
-            KOS_MARK_GROUP *const next = KOS_atomic_read_relaxed_ptr(heap->objects_to_mark);
+        do {
+            next = KOS_atomic_read_relaxed_ptr(heap->objects_to_mark);
 
             KOS_atomic_write_relaxed_ptr(current->next, next);
 
-            if (KOS_atomic_cas_weak_ptr(heap->objects_to_mark, next, current))
-                break;
-        }
+        } while ( ! KOS_atomic_cas_weak_ptr(heap->objects_to_mark, next, current));
     }
 }
 
@@ -1403,9 +1405,9 @@ static int schedule_for_marking(KOS_MARK_CONTEXT *mark_ctx,
 
     if ( ! current) {
 
-        for (;;) {
-            KOS_MARK_GROUP *next;
+        KOS_MARK_GROUP *next;
 
+        do {
             current = KOS_atomic_read_relaxed_ptr(heap->free_mark_groups);
 
             if ( ! current)
@@ -1413,9 +1415,7 @@ static int schedule_for_marking(KOS_MARK_CONTEXT *mark_ctx,
 
             next = KOS_atomic_read_relaxed_ptr(current->next);
 
-            if (KOS_atomic_cas_weak_ptr(heap->free_mark_groups, current, next))
-                break;
-        }
+        } while ( ! KOS_atomic_cas_weak_ptr(heap->free_mark_groups, current, next));
 
         if ( ! current) {
             current = (KOS_MARK_GROUP *)kos_malloc(sizeof(KOS_MARK_GROUP));
@@ -1443,10 +1443,9 @@ static KOS_MARK_GROUP *get_next_scheduled_mark_group(KOS_MARK_CONTEXT *mark_ctx)
 {
     KOS_HEAP *const heap = mark_ctx->heap;
     KOS_MARK_GROUP *group;
+    KOS_MARK_GROUP *next;
 
-    for (;;) {
-        KOS_MARK_GROUP *next;
-
+    do {
         group = KOS_atomic_read_relaxed_ptr(heap->objects_to_mark);
 
         if ( ! group) {
@@ -1457,9 +1456,7 @@ static KOS_MARK_GROUP *get_next_scheduled_mark_group(KOS_MARK_CONTEXT *mark_ctx)
 
         next = KOS_atomic_read_relaxed_ptr(group->next);
 
-        if (KOS_atomic_cas_weak_ptr(heap->objects_to_mark, group, next))
-            break;
-    }
+    } while ( ! KOS_atomic_cas_weak_ptr(heap->objects_to_mark, group, next));
 
     return group;
 }
@@ -1467,26 +1464,22 @@ static KOS_MARK_GROUP *get_next_scheduled_mark_group(KOS_MARK_CONTEXT *mark_ctx)
 static void free_mark_group(KOS_MARK_CONTEXT *mark_ctx, KOS_MARK_GROUP *group)
 {
     KOS_HEAP *const heap = mark_ctx->heap;
-    for (;;) {
-        KOS_MARK_GROUP *const next = KOS_atomic_read_relaxed_ptr(heap->free_mark_groups);
+    KOS_MARK_GROUP *next;
+
+    do {
+        next = KOS_atomic_read_relaxed_ptr(heap->free_mark_groups);
 
         KOS_atomic_write_relaxed_ptr(group->next, next);
 
-        if (KOS_atomic_cas_weak_ptr(heap->free_mark_groups, next, group))
-            break;
-    }
+    } while ( ! KOS_atomic_cas_weak_ptr(heap->free_mark_groups, next, group));
 }
 
 static void free_all_mark_groups(KOS_MARK_CONTEXT *mark_ctx)
 {
-    for (;;) {
-        KOS_MARK_GROUP *const group = get_next_scheduled_mark_group(mark_ctx);
+    KOS_MARK_GROUP *group = get_next_scheduled_mark_group(mark_ctx);
 
-        if ( ! group)
-            break;
-
+    for ( ; group; group = get_next_scheduled_mark_group(mark_ctx))
         free_mark_group(mark_ctx, group);
-    }
 }
 
 static int mark_object_gray(KOS_MARK_CONTEXT *mark_ctx, KOS_OBJ_ID obj_id)
