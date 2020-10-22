@@ -177,7 +177,7 @@ void KOS_atomic_write_relaxed_ptr(KOS_ATOMIC(T*)& dest, T* value)
 template<typename T>
 void KOS_atomic_write_release_ptr(KOS_ATOMIC(T*)& dest, T* value)
 {
-    dest.store(value, std::memory_order_relaxed);
+    dest.store(value, std::memory_order_release);
 }
 
 static inline bool KOS_atomic_cas_strong_u32(KOS_ATOMIC(uint32_t)& dest, uint32_t oldv, uint32_t newv)
@@ -251,19 +251,19 @@ T* KOS_atomic_swap_ptr(KOS_ATOMIC(T*)& dest, T* value)
 
 #define KOS_atomic_read_relaxed_u64(src) atomic_load_explicit(&(src), memory_order_relaxed)
 
-#define KOS_atomic_read_acquire_u32(src) atomic_load_explicit(&(src), memory_order_relaxed)
+#define KOS_atomic_read_acquire_u32(src) atomic_load_explicit(&(src), memory_order_acquire)
 
 #define KOS_atomic_read_relaxed_ptr(src) atomic_load_explicit(&(src), memory_order_relaxed)
 
-#define KOS_atomic_read_acquire_ptr(src) atomic_load_explicit(&(src), memory_order_relaxed)
+#define KOS_atomic_read_acquire_ptr(src) atomic_load_explicit(&(src), memory_order_acquire)
 
 #define KOS_atomic_write_relaxed_u32(dest, value) atomic_store_explicit(&(dest), (value), memory_order_relaxed)
 
-#define KOS_atomic_write_release_u32(dest, value) atomic_store_explicit(&(dest), (value), memory_order_relaxed)
+#define KOS_atomic_write_release_u32(dest, value) atomic_store_explicit(&(dest), (value), memory_order_release)
 
 #define KOS_atomic_write_relaxed_ptr(dest, value) atomic_store_explicit(&(dest), (value), memory_order_relaxed)
 
-#define KOS_atomic_write_release_ptr(dest, value) atomic_store_explicit(&(dest), (value), memory_order_relaxed)
+#define KOS_atomic_write_release_ptr(dest, value) atomic_store_explicit(&(dest), (value), memory_order_release)
 
 #define KOS_atomic_cas_strong_u32(dest, oldv, newv) kos_atomic_cas_strong_u32(&(dest), (oldv), (newv))
 
