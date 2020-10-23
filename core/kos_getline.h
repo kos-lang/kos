@@ -5,13 +5,24 @@
 #ifndef KOS_GETLINE_H_INCLUDED
 #define KOS_GETLINE_H_INCLUDED
 
-#ifdef CONFIG_READLINE
+#ifndef _WIN32
+#   define CONFIG_EXPERIMENTAL_GETLINE
+#endif
+
+#ifdef CONFIG_EXPERIMENTAL_GETLINE
+
+typedef struct KOS_GETLINE_S {
+    /* TODO history */
+    char dummy;
+} KOS_GETLINE;
+
+void kos_getline_destroy(KOS_GETLINE *state);
+
+#elif defined(CONFIG_READLINE)
 
 typedef struct KOS_GETLINE_S {
     char dummy;
 } KOS_GETLINE;
-
-int kos_getline_init(KOS_GETLINE *state);
 
 #define kos_getline_destroy(state) ((void)0)
 
@@ -25,8 +36,6 @@ typedef struct KOS_GETLINE_S {
     HistEvent ev;
 } KOS_GETLINE;
 
-int kos_getline_init(KOS_GETLINE *state);
-
 void kos_getline_destroy(KOS_GETLINE *state);
 
 #else
@@ -34,8 +43,6 @@ void kos_getline_destroy(KOS_GETLINE *state);
 typedef struct KOS_GETLINE_S {
     int interactive;
 } KOS_GETLINE;
-
-int kos_getline_init(KOS_GETLINE *state);
 
 #define kos_getline_destroy(state) ((void)0)
 
@@ -47,6 +54,8 @@ enum KOS_PROMPT_E {
 };
 
 struct KOS_VECTOR_S;
+
+int kos_getline_init(KOS_GETLINE *state);
 
 int kos_getline(KOS_GETLINE         *state,
                 enum KOS_PROMPT_E    prompt,

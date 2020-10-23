@@ -13,7 +13,8 @@ enum KOS_ESCAPE_TYPE_E {
     KOS_ET_HEX         = 120
 };
 
-extern const char kos_escape_sequence_map[256];
+extern const uint8_t kos_utf8_len[32];
+extern const char    kos_escape_sequence_map[256];
 
 typedef enum KOS_UTF8_ESCAPE_E {
     KOS_UTF8_NO_ESCAPE,

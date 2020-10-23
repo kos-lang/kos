@@ -6,7 +6,7 @@
 #include "../inc/kos_error.h"
 #include <assert.h>
 
-static const uint8_t utf8_len[32] = {
+const uint8_t kos_utf8_len[32] = {
     /* 0 .. 127 */
     1, 1,
     1, 1,
@@ -206,7 +206,7 @@ unsigned kos_utf8_get_len(const char     *str,
             code = c;
         else {
 
-            unsigned code_len = utf8_len[c >> 3];
+            unsigned code_len = kos_utf8_len[c >> 3];
 
             if (code_len == 0 || code_len - 1 > length) {
                 count = ~0U;
@@ -262,7 +262,7 @@ int kos_utf8_decode_8(const char *str, unsigned length, KOS_UTF8_ESCAPE escape, 
         uint8_t c = (uint8_t)*(str++);
 
         if (c > 0x7F) {
-            int code_len = utf8_len[c >> 3];
+            int code_len = kos_utf8_len[c >> 3];
 
             c &= (0x80U >> code_len) - 1;
             --code_len;
@@ -299,7 +299,7 @@ int kos_utf8_decode_16(const char *str, unsigned length, KOS_UTF8_ESCAPE escape,
         uint16_t c = (uint8_t)*(str++);
 
         if (c > 0x7F) {
-            int code_len = utf8_len[c >> 3];
+            int code_len = kos_utf8_len[c >> 3];
 
             c &= (0x80U >> code_len) - 1;
             --code_len;
@@ -336,7 +336,7 @@ int kos_utf8_decode_32(const char *str, unsigned length, KOS_UTF8_ESCAPE escape,
         uint32_t c = (uint8_t)*(str++);
 
         if (c > 0x7F) {
-            int code_len = utf8_len[c >> 3];
+            int code_len = kos_utf8_len[c >> 3];
 
             c &= (0x80U >> code_len) - 1;
             --code_len;

@@ -43,7 +43,7 @@ SIGNATURE="^Kos .* interactive interpreter"
 CONTENTS=`cat "$OUTPUT"`
 
 if [ "$CONTENTS" != "Hello, Kos" ]; then
-    echo "Expected output to contain: \"Hello, Kos\", but it is different" >&2
+    echo "$LINENO: Error: Expected output to contain: \"Hello, Kos\", but it is different" >&2
     cat "$OUTPUT"
     exit 1
 fi
@@ -64,7 +64,7 @@ find_in_output "Kos loading module base from"
 CONTENTS=`cat "$OUTPUT"`
 
 if [ "$CONTENTS" != "15" ]; then
-    echo "Expected output to contain: \"15\", but it is different" >&2
+    echo "$LINENO: Error: Expected output to contain: \"15\", but it is different" >&2
     cat "$OUTPUT"
     exit 1
 fi
@@ -88,7 +88,7 @@ fi
 CONTENTS=`cat "$OUTPUT"`
 
 if [ -n "$CONTENTS" ]; then
-    echo "Expected empty output, but it is different" >&2
+    echo "$LINENO: Error: Expected empty output, but it is different" >&2
     cat "$OUTPUT"
     cat "$OUTPUT.err"
     exit 1
@@ -122,7 +122,7 @@ fi
 CONTENTS=`cat "$OUTPUT"`
 
 if [ -n "$CONTENTS" ]; then
-    echo "Expected empty output, but it is different" >&2
+    echo "$LINENO: Error: Expected empty output, but it is different" >&2
     cat "$OUTPUT"
     cat "$OUTPUT.err"
     exit 1
@@ -138,7 +138,7 @@ echo 'print("From stdin")' | "$KOS" | remove_cr > "$OUTPUT"
 CONTENTS=`cat "$OUTPUT"`
 
 if [ "$CONTENTS" != "From stdin" ]; then
-    echo "Expected output to contain: \"From stdin\", but it is different" >&2
+    echo "$LINENO: Error: Expected output to contain: \"From stdin\", but it is different" >&2
     cat "$OUTPUT"
     exit 1
 fi
@@ -148,7 +148,7 @@ echo 'print(args.size)' | "$KOS" - | remove_cr > "$OUTPUT"
 CONTENTS=`cat "$OUTPUT"`
 
 if [ "$CONTENTS" != "1" ]; then
-    echo "Expected output to contain: \"1\", but it is different" >&2
+    echo "$LINENO: Error: Expected output to contain: \"1\", but it is different" >&2
     cat "$OUTPUT"
     exit 1
 fi
@@ -158,7 +158,7 @@ echo 'print(integer(args[1]) + 1)' | "$KOS" - 17 | remove_cr > "$OUTPUT"
 CONTENTS=`cat "$OUTPUT"`
 
 if [ "$CONTENTS" != "18" ]; then
-    echo "Expected output to contain: \"18\", but it is different" >&2
+    echo "$LINENO: Error: Expected output to contain: \"18\", but it is different" >&2
     cat "$OUTPUT"
     exit 1
 fi
@@ -169,7 +169,7 @@ fi
 "$KOS" -c 'print("print(true)")' | KOSINTERACTIVE=1 "$KOS" | remove_prompt | remove_cr > "$OUTPUT"
 
 if ! head -n 1 "$OUTPUT" | grep -q "$SIGNATURE"; then
-    echo "Expected first line to have interactive interpreter signature" >&2
+    echo "$LINENO: Error: Expected first line to have interactive interpreter signature" >&2
     head -n "$OUTPUT"
     exit 1
 fi
@@ -177,7 +177,7 @@ fi
 CONTENTS=`sed "1 d" "$OUTPUT"`
 
 if [ "$CONTENTS" != "true" ]; then
-    echo "Expected output to contain: \"true\", but it is different" >&2
+    echo "$LINENO: Error: Expected output to contain: \"true\", but it is different" >&2
     cat "$OUTPUT"
     exit 1
 fi
@@ -188,7 +188,7 @@ fi
 "$KOS" -c 'print("import io"); print("io.stdout.print(123) ; void")' | KOSINTERACTIVE=1 "$KOS" | remove_prompt | remove_cr > "$OUTPUT"
 
 if ! head -n 1 "$OUTPUT" | grep -q "$SIGNATURE"; then
-    echo "Expected first line to have interactive interpreter signature" >&2
+    echo "$LINENO: Error: Expected first line to have interactive interpreter signature" >&2
     head -n "$OUTPUT"
     exit 1
 fi
@@ -196,7 +196,7 @@ fi
 CONTENTS=`sed "1 d" "$OUTPUT"`
 
 if [ "$CONTENTS" != "123" ]; then
-    echo "Expected output to contain: \"123\", but it is different" >&2
+    echo "$LINENO: Error: Expected output to contain: \"123\", but it is different" >&2
     cat "$OUTPUT"
     exit 1
 fi
@@ -207,7 +207,7 @@ fi
 "$KOS" -c 'print() ; print("print(true)") ; print() ; print("print(void)")' | KOSINTERACTIVE=1 "$KOS" | remove_prompt | remove_cr > "$OUTPUT"
 
 if ! head -n 1 "$OUTPUT" | grep -q "$SIGNATURE"; then
-    echo "Expected first line to have interactive interpreter signature" >&2
+    echo "$LINENO: Error: Expected first line to have interactive interpreter signature" >&2
     head -n "$OUTPUT"
     exit 1
 fi
@@ -215,7 +215,7 @@ fi
 CONTENTS=`sed -n "2 p" "$OUTPUT"`
 
 if [ "$CONTENTS" != "true" ]; then
-    echo "Expected second line of output to contain: \"true\", but it is different" >&2
+    echo "$LINENO: Error: Expected second line of output to contain: \"true\", but it is different" >&2
     cat "$OUTPUT"
     exit 1
 fi
@@ -223,7 +223,7 @@ fi
 CONTENTS=`sed -n "3 p" "$OUTPUT"`
 
 if [ "$CONTENTS" != "void" ]; then
-    echo "Expected third line of output to contain: \"void\", but it is different" >&2
+    echo "$LINENO: Error: Expected third line of output to contain: \"void\", but it is different" >&2
     cat "$OUTPUT"
     exit 1
 fi
@@ -234,7 +234,7 @@ fi
 "$KOS" -c 'print("\"a\\xffb\"")' | KOSINTERACTIVE=1 "$KOS" | remove_prompt | remove_cr > "$OUTPUT"
 
 if ! head -n 1 "$OUTPUT" | grep -q "$SIGNATURE"; then
-    echo "Expected first line to have interactive interpreter signature" >&2
+    echo "$LINENO: Error: Expected first line to have interactive interpreter signature" >&2
     head -n "$OUTPUT"
     exit 1
 fi
@@ -242,7 +242,7 @@ fi
 CONTENTS=`sed -n "2 p" "$OUTPUT"`
 
 if [ "$CONTENTS" != "\"a\\xffb\"" ]; then
-    echo 'Expected second line of output to contain: ""a\\xffb"", but it is different' >&2
+    echo "$LINENO"': Error: Expected second line of output to contain: ""a\\xffb"", but it is different' >&2
     cat "$OUTPUT"
     exit 1
 fi
@@ -253,7 +253,7 @@ fi
 "$KOS" -c 'print("true") ; print("void") ; print("1") ; print("\"\\x7F\\x{0FF}\\x{100}\\x{fffff}\"") ; print("\"\"") ; print("\"x\"")' | KOSINTERACTIVE=1 "$KOS" | remove_prompt | remove_cr > "$OUTPUT"
 
 if ! head -n 1 "$OUTPUT" | grep -q "$SIGNATURE"; then
-    echo "Expected first line to have interactive interpreter signature" >&2
+    echo "$LINENO: Error: Expected first line to have interactive interpreter signature" >&2
     head -n "$OUTPUT"
     exit 1
 fi
@@ -261,7 +261,7 @@ fi
 CONTENTS=`sed -n "2 p" "$OUTPUT"`
 
 if [ "$CONTENTS" != "true" ]; then
-    echo "Expected line 2 of output to contain: \"true\", but it is different" >&2
+    echo "$LINENO: Error: Expected line 2 of output to contain: \"true\", but it is different" >&2
     cat "$OUTPUT"
     exit 1
 fi
@@ -269,7 +269,7 @@ fi
 CONTENTS=`sed -n "3 p" "$OUTPUT"`
 
 if [ "$CONTENTS" != "1" ]; then
-    echo "Expected line 3 of output to contain: \"1\", but it is different" >&2
+    echo "$LINENO: Error: Expected line 3 of output to contain: \"1\", but it is different" >&2
     cat "$OUTPUT"
     exit 1
 fi
@@ -277,7 +277,7 @@ fi
 CONTENTS=`sed -n "4 p" "$OUTPUT"`
 
 if [ "$CONTENTS" != "\"\\x7f\\xff\\x{100}\\x{fffff}\"" ]; then
-    echo "Expected line 4 of output to contain: \"\"\\\x7f\\\xff\\\x{100}\\\x{fffff}\"\", but it is different" >&2
+    echo "$LINENO: Error: Expected line 4 of output to contain: \"\"\\\x7f\\\xff\\\x{100}\\\x{fffff}\"\", but it is different" >&2
     cat "$OUTPUT"
     exit 1
 fi
@@ -285,7 +285,7 @@ fi
 CONTENTS=`sed -n "5 p" "$OUTPUT"`
 
 if [ "$CONTENTS" != "\"\"" ]; then
-    echo "Expected line 5 of output to contain: \"\"\"\", but it is different" >&2
+    echo "$LINENO: Error: Expected line 5 of output to contain: \"\"\"\", but it is different" >&2
     cat "$OUTPUT"
     exit 1
 fi
@@ -293,7 +293,7 @@ fi
 CONTENTS=`sed -n "6 p" "$OUTPUT"`
 
 if [ "$CONTENTS" != "\"x\"" ]; then
-    echo "Expected line 6 of output to contain: \"\"x\"\", but it is different" >&2
+    echo "$LINENO: Error: Expected line 6 of output to contain: \"\"x\"\", but it is different" >&2
     cat "$OUTPUT"
     exit 1
 fi
@@ -306,13 +306,13 @@ fi
 COUNT=$(wc -l < "$OUTPUT")
 
 if [ $COUNT -ne 2 ]; then
-    echo "Expected one line of output" >&2
+    echo "$LINENO: Error: Expected one line of output" >&2
     cat "$OUTPUT"
     exit 1
 fi
 
 if ! head -n 1 "$OUTPUT" | grep -q "$SIGNATURE"; then
-    echo "Expected first line to have interactive interpreter signature" >&2
+    echo "$LINENO: Error: Expected first line to have interactive interpreter signature" >&2
     head -n "$OUTPUT"
     exit 1
 fi
@@ -320,7 +320,7 @@ fi
 CONTENTS=`sed -n "2 p" "$OUTPUT"`
 
 if [ "$CONTENTS" != "42" ]; then
-    echo "Expected second line of output to contain: \"42\", but it is different" >&2
+    echo "$LINENO: Error: Expected second line of output to contain: \"42\", but it is different" >&2
     cat "$OUTPUT"
     exit 1
 fi
@@ -331,7 +331,7 @@ fi
 "$KOS" -c 'print("fun f(a) { print(\"arg: \\(a)\") }") ; print("f(10)")' | KOSINTERACTIVE=1 "$KOS" | remove_prompt | remove_cr > "$OUTPUT"
 
 if ! head -n 1 "$OUTPUT" | grep -q "$SIGNATURE"; then
-    echo "Expected first line to have interactive interpreter signature" >&2
+    echo "$LINENO: Error: Expected first line to have interactive interpreter signature" >&2
     head -n "$OUTPUT"
     exit 1
 fi
@@ -339,7 +339,7 @@ fi
 CONTENTS=`sed -n "2 p" "$OUTPUT"`
 
 if [ "$CONTENTS" != "arg: 10" ]; then
-    echo "Expected line 2 of output to contain: \"arg: 10\", but it is different" >&2
+    echo "$LINENO: Error: Expected line 2 of output to contain: \"arg: 10\", but it is different" >&2
     cat "$OUTPUT"
     exit 1
 fi
@@ -352,13 +352,13 @@ fi
 COUNT=$(wc -l < "$OUTPUT")
 
 if [ $COUNT -ne 1 ]; then
-    echo "Expected one line of output" >&2
+    echo "$LINENO: Error: Expected one line of output" >&2
     cat "$OUTPUT"
     exit 1
 fi
 
 if ! sed -n "1 p" "$OUTPUT" | grep -q "$SIGNATURE"; then
-    echo "Expected first line to have interactive interpreter signature" >&2
+    echo "$LINENO: Error: Expected first line to have interactive interpreter signature" >&2
     cat "$OUTPUT"
     exit 1
 fi
@@ -371,7 +371,7 @@ fi
 COUNT=$(wc -l < "$OUTPUT")
 
 if [ $COUNT -ne 0 ]; then
-    echo "Expected zero lines of output" >&2
+    echo "$LINENO: Error: Expected zero lines of output" >&2
     cat "$OUTPUT"
     exit 1
 fi
@@ -384,7 +384,7 @@ fi
 COUNT=$(wc -l < "$OUTPUT")
 
 if [ $COUNT -ne 6 ]; then
-    echo "Expected 6 lines of output" >&2
+    echo "$LINENO: Error: Expected 6 lines of output" >&2
     cat "$OUTPUT"
     exit 1
 fi
@@ -399,7 +399,7 @@ find_in_output "^Usage: kos"
 COUNT=$(wc -l < "$OUTPUT")
 
 if [ $COUNT -ne 1 ]; then
-    echo "Expected one line of output" >&2
+    echo "$LINENO: Error: Expected one line of output" >&2
     cat "$OUTPUT"
     exit 1
 fi
@@ -416,7 +416,7 @@ rm -f "$OUTPUT.data"
 COUNT=$(wc -l < "$OUTPUT")
 
 if [ $COUNT -ne 3 ]; then
-    echo "Expected 3 lines of output" >&2
+    echo "$LINENO: Error: Expected 3 lines of output" >&2
     cat "$OUTPUT"
     exit 1
 fi
@@ -434,7 +434,7 @@ rm -f "$OUTPUT.data"
 COUNT=$(wc -l < "$OUTPUT")
 
 if [ $COUNT -lt 7 ]; then
-    echo "Expected at least 7 lines of output" >&2
+    echo "$LINENO: Error: Expected at least 7 lines of output" >&2
     cat "$OUTPUT"
     exit 1
 fi
