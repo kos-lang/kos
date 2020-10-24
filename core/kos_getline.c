@@ -423,7 +423,7 @@ static void increment_scroll_pos(struct TERM_EDIT *edit)
     edit->last_visible_column = edit->scroll_pos.logical + edit->num_columns - edit->prompt_size;
 }
 
-static int esc_left(struct TERM_EDIT *edit)
+static int key_left(struct TERM_EDIT *edit)
 {
     if ( ! edit->cursor_pos.physical) {
         assert( ! edit->cursor_pos.logical);
@@ -440,7 +440,7 @@ static int esc_left(struct TERM_EDIT *edit)
     return move_cursor_left(1);
 }
 
-static int esc_right(struct TERM_EDIT *edit)
+static int key_right(struct TERM_EDIT *edit)
 {
     if (edit->cursor_pos.logical >= edit->line_size) {
         assert(edit->cursor_pos.logical == edit->line_size);
@@ -457,7 +457,7 @@ static int esc_right(struct TERM_EDIT *edit)
     return move_cursor_right(1);
 }
 
-static int esc_home(struct TERM_EDIT *edit)
+static int key_home(struct TERM_EDIT *edit)
 {
     if ( ! edit->cursor_pos.logical) {
         assert( ! edit->cursor_pos.logical);
@@ -472,7 +472,7 @@ static int esc_home(struct TERM_EDIT *edit)
     return clear_and_redraw(edit);
 }
 
-static int esc_end(struct TERM_EDIT *edit)
+static int key_end(struct TERM_EDIT *edit)
 {
     if (edit->cursor_pos.logical == edit->line_size) {
         assert(edit->cursor_pos.physical == edit->line->size);
@@ -495,19 +495,19 @@ static int esc_end(struct TERM_EDIT *edit)
     return clear_and_redraw(edit);
 }
 
-static int esc_up(struct TERM_EDIT *edit)
+static int key_up(struct TERM_EDIT *edit)
 {
     /* TODO */
     return send_char(KEY_BELL);
 }
 
-static int esc_down(struct TERM_EDIT *edit)
+static int key_down(struct TERM_EDIT *edit)
 {
     /* TODO */
     return send_char(KEY_BELL);
 }
 
-static int backspace(struct TERM_EDIT *edit)
+static int key_backspace(struct TERM_EDIT *edit)
 {
     struct TERM_POS old_pos;
     unsigned        num_del_bytes;
@@ -534,14 +534,14 @@ static int backspace(struct TERM_EDIT *edit)
     return clear_and_redraw(edit);
 }
 
-static int esc_delete(struct TERM_EDIT *edit)
+static int key_delete(struct TERM_EDIT *edit)
 {
     if (edit->cursor_pos.physical == edit->line->size)
         return send_char(KEY_BELL);
 
     increment_cursor_pos(edit);
 
-    return backspace(edit);
+    return key_backspace(edit);
 }
 
 static int insert_char(struct TERM_EDIT *edit, char c)
@@ -581,7 +581,7 @@ static int insert_char(struct TERM_EDIT *edit, char c)
     return send_char(c);
 }
 
-static int tab_complete(struct TERM_EDIT *edit)
+static int key_tab(struct TERM_EDIT *edit)
 {
     /* TODO */
     return send_char(KEY_BELL);
@@ -602,8 +602,8 @@ static int dispatch_esc(struct TERM_EDIT *edit)
 
             switch (c) {
                 case EOF: return check_error(stdin);
-                case 'F': return esc_end(edit);
-                case 'H': return esc_home(edit);
+                case 'F': return key_end(edit);
+                case 'H': return key_home(edit);
                 default:  break;
             }
 
@@ -649,23 +649,23 @@ static int dispatch_esc(struct TERM_EDIT *edit)
                     } while (c != '~');
 
                     switch (code) {
-                        case 1:  return esc_home(edit);
-                        case 3:  return esc_delete(edit);
-                        case 4:  return esc_end(edit);
-                        case 7:  return esc_home(edit);
-                        case 8:  return esc_end(edit);
+                        case 1:  return key_home(edit);
+                        case 3:  return key_delete(edit);
+                        case 4:  return key_end(edit);
+                        case 7:  return key_home(edit);
+                        case 8:  return key_end(edit);
                         default: break;
                     }
                     break;
                 }
 
                 case EOF: return check_error(stdin);
-                case 'A': return esc_up(edit);
-                case 'B': return esc_down(edit);
-                case 'C': return esc_right(edit);
-                case 'D': return esc_left(edit);
-                case 'F': return esc_end(edit);
-                case 'H': return esc_home(edit);
+                case 'A': return key_up(edit);
+                case 'B': return key_down(edit);
+                case 'C': return key_right(edit);
+                case 'D': return key_left(edit);
+                case 'F': return key_end(edit);
+                case 'H': return key_home(edit);
                 default:  break;
             }
             break;
@@ -696,17 +696,17 @@ static int dispatch_key(struct TERM_EDIT *edit, int *key)
 
         case EOF:           return check_error(stdin);
         case KEY_ESC:       return dispatch_esc(edit);
-        case KEY_BACKSPACE: return backspace(edit);
-        case KEY_CTRL_A:    return esc_home(edit);
-        case KEY_CTRL_B:    return esc_left(edit);
-        case KEY_CTRL_D:    return edit->line->size ? esc_delete(edit) : check_error(stdin);
-        case KEY_CTRL_E:    return esc_end(edit);
-        case KEY_CTRL_F:    return esc_right(edit);
+        case KEY_BACKSPACE: return key_backspace(edit);
+        case KEY_CTRL_A:    return key_home(edit);
+        case KEY_CTRL_B:    return key_left(edit);
+        case KEY_CTRL_D:    return edit->line->size ? key_delete(edit) : check_error(stdin);
+        case KEY_CTRL_E:    return key_end(edit);
+        case KEY_CTRL_F:    return key_right(edit);
         case KEY_BELL:      return send_char(KEY_BELL);
-        case KEY_CTRL_H:    return backspace(edit);
-        case KEY_TAB:       return tab_complete(edit);
-        case KEY_CTRL_N:    return esc_down(edit);
-        case KEY_CTRL_P:    return esc_up(edit);
+        case KEY_CTRL_H:    return key_backspace(edit);
+        case KEY_TAB:       return key_tab(edit);
+        case KEY_CTRL_N:    return key_down(edit);
+        case KEY_CTRL_P:    return key_up(edit);
         default:            return insert_char(edit, (char)*key);
     }
 }
