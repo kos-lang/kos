@@ -55,7 +55,7 @@ static int install_signal(int sig, signal_handler handler, signal_handler *old_a
 {
     *old_action = signal(sig, handler);
 
-    return ((*old_action == SIGERR) || kos_seq_fail()) ? KOS_ERROR_ERRNO : KOS_SUCCESS;
+    return ((*old_action == SIG_ERR) || kos_seq_fail()) ? KOS_ERROR_ERRNO : KOS_SUCCESS;
 }
 
 static void restore_signal(int sig, signal_handler *old_action)
@@ -715,8 +715,8 @@ int kos_getline(KOS_GETLINE      *state,
                 enum KOS_PROMPT_E prompt,
                 KOS_VECTOR       *buf)
 {
-    int              error       = KOS_SUCCESS;
-    int              key;
+    int              error = KOS_SUCCESS;
+    int              key   = 0;
     signal_handler   old_sig_winch;
     TERM_INFO        old_term_info;
     struct TERM_EDIT edit;
