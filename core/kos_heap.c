@@ -1332,14 +1332,12 @@ static void clear_mark_state(KOS_OBJ_ID obj_id, uint32_t size)
 
     ++mark_loc.bitmap;
 
-#if KOS_MAX_HEAP_OBJ_SIZE > (16 << KOS_OBJ_ALIGN_BITS)
     while (num_slots >= 16U) {
         KOS_atomic_write_relaxed_u32(*mark_loc.bitmap, 0U);
 
         ++mark_loc.bitmap;
         num_slots -= 16U;
     }
-#endif
 
     apply_mask(mark_loc.bitmap, ~0U << (num_slots * 2));
 }
