@@ -63,7 +63,19 @@ static int errno_to_error(void)
 int kos_is_stdin_interactive(void)
 {
 #ifdef _WIN32
-    return _isatty(_fileno(stdin));
+    const int fd = _fileno(stdin);
+
+    if (_isatty(fd)) {
+        const HANDLE handle = (HANDLE)_get_osfhandle(fd);
+
+        if (handle != INVALID_HANDLE_VALUE) {
+            DWORD mode = 0;
+
+            return GetConsoleMode(handle, &mode) != 0;
+        }
+    }
+
+    return 0;
 #else
     return isatty(fileno(stdin));
 #endif
