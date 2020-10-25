@@ -806,12 +806,14 @@ static int dispatch_esc(struct TERM_EDIT *edit)
             break;
         }
 
-        case 'b': return action_word_begin(edit);
-        case 'c': return action_capitalize_to_word_end(edit);
-        case 'd': return action_delete_to_word_end(edit);
-        case 'f': return action_word_end(edit);
-        case 'l': return action_lowercase_to_word_end(edit);
-        case 'u': return action_uppercase_to_word_end(edit);
+        case 'b':           return action_word_begin(edit);
+        case 'c':           return action_capitalize_to_word_end(edit);
+        case 'd':           return action_delete_to_word_end(edit);
+        case 'f':           return action_word_end(edit);
+        case 'l':           return action_lowercase_to_word_end(edit);
+        case 'u':           return action_uppercase_to_word_end(edit);
+        case KEY_CTRL_H:    return action_delete_previous_word(edit);
+        case KEY_BACKSPACE: return action_delete_previous_word(edit);
 
         default:
             break;
