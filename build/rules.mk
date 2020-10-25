@@ -204,18 +204,6 @@ else
         EXE_LDFLAGS += -lpthread -lrt -ldl
     endif
 
-    ifeq ($(UNAME), Darwin)
-        ifneq ($(target), ios)
-            CFLAGS      += -DCONFIG_EDITLINE
-            EXE_LDFLAGS += -ledit -ltermcap
-        endif
-    else
-        ifeq (true,$(shell $(kos_dir)build/have_readline $(CC)))
-            CFLAGS      += -DCONFIG_READLINE
-            EXE_LDFLAGS += -lreadline
-        endif
-    endif
-
     ifneq (,$(filter FreeBSD OpenBSD NetBSD DragonFly,$(UNAME)))
         EXE_LDFLAGS += -lpthread
     endif

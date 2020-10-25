@@ -5,11 +5,15 @@
 #ifndef KOS_GETLINE_H_INCLUDED
 #define KOS_GETLINE_H_INCLUDED
 
-#ifndef _WIN32
-#   define CONFIG_EXPERIMENTAL_GETLINE
-#endif
+#ifdef _WIN32
 
-#ifdef CONFIG_EXPERIMENTAL_GETLINE
+typedef struct KOS_GETLINE_S {
+    int interactive;
+} KOS_GETLINE;
+
+#define kos_getline_destroy(state) ((void)0)
+
+#else
 
 typedef struct KOS_GETLINE_S {
     /* TODO history */
@@ -17,34 +21,6 @@ typedef struct KOS_GETLINE_S {
 } KOS_GETLINE;
 
 void kos_getline_destroy(KOS_GETLINE *state);
-
-#elif defined(CONFIG_READLINE)
-
-typedef struct KOS_GETLINE_S {
-    char dummy;
-} KOS_GETLINE;
-
-#define kos_getline_destroy(state) ((void)0)
-
-#elif defined(CONFIG_EDITLINE)
-
-#include <histedit.h>
-
-typedef struct KOS_GETLINE_S {
-    EditLine *e;
-    History  *h;
-    HistEvent ev;
-} KOS_GETLINE;
-
-void kos_getline_destroy(KOS_GETLINE *state);
-
-#else
-
-typedef struct KOS_GETLINE_S {
-    int interactive;
-} KOS_GETLINE;
-
-#define kos_getline_destroy(state) ((void)0)
 
 #endif
 
