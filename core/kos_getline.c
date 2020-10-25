@@ -17,8 +17,9 @@
 
 #ifdef CONFIG_EXPERIMENTAL_GETLINE
 #   include <errno.h>
-#   include <termios.h>
 #   include <sys/ioctl.h>
+#   include <termios.h>
+#   include <unistd.h>
 #elif defined(CONFIG_READLINE)
 #   include <readline/readline.h>
 #   include <readline/history.h>
@@ -203,8 +204,14 @@ static unsigned get_num_columns()
 
 typedef struct termios TERM_INFO;
 
+static TERM_INFO old_term_info;
+
+static signal_handler old_sig_winch;
+
 static int init_terminal(TERM_INFO *old_info)
 {
+    int error;
+
     struct termios new_attrs;
 
     if (tcgetattr(fileno(stdin), &new_attrs))
@@ -219,11 +226,20 @@ static int init_terminal(TERM_INFO *old_info)
     new_attrs.c_cc[VMIN]  = 1;
     new_attrs.c_cc[VTIME] = 0;
 
-    return (tcsetattr(fileno(stdin), TCSAFLUSH, &new_attrs) == 0) ? KOS_SUCCESS : KOS_ERROR_ERRNO;
+    if (tcsetattr(fileno(stdin), TCSAFLUSH, &new_attrs) != 0)
+        return KOS_ERROR_ERRNO;
+
+    error = install_signal(SIGWINCH, sig_winch, &old_sig_winch);
+    if (error)
+        (void)tcsetattr(fileno(stdin), TCSANOW, old_info);
+
+    return error;
 }
 
 static void restore_terminal(TERM_INFO *old_info)
 {
+    restore_signal(SIGWINCH, &old_sig_winch);
+
     (void)tcsetattr(fileno(stdin), TCSANOW, old_info);
 }
 
@@ -423,7 +439,7 @@ static void increment_scroll_pos(struct TERM_EDIT *edit)
     edit->last_visible_column = edit->scroll_pos.logical + edit->num_columns - edit->prompt_size;
 }
 
-static int key_left(struct TERM_EDIT *edit)
+static int action_left(struct TERM_EDIT *edit)
 {
     if ( ! edit->cursor_pos.physical) {
         assert( ! edit->cursor_pos.logical);
@@ -440,7 +456,7 @@ static int key_left(struct TERM_EDIT *edit)
     return move_cursor_left(1);
 }
 
-static int key_right(struct TERM_EDIT *edit)
+static int action_right(struct TERM_EDIT *edit)
 {
     if (edit->cursor_pos.logical >= edit->line_size) {
         assert(edit->cursor_pos.logical == edit->line_size);
@@ -457,7 +473,20 @@ static int key_right(struct TERM_EDIT *edit)
     return move_cursor_right(1);
 }
 
-static int key_home(struct TERM_EDIT *edit)
+static int action_word_begin(struct TERM_EDIT *edit)
+{
+    /* TODO move back to the beginning of previous word */
+    return send_char(KEY_BELL);
+}
+
+static int action_word_end(struct TERM_EDIT *edit)
+{
+    /* TODO move forward to the end of current or next word */
+    return send_char(KEY_BELL);
+}
+
+
+static int action_home(struct TERM_EDIT *edit)
 {
     if ( ! edit->cursor_pos.logical) {
         assert( ! edit->cursor_pos.logical);
@@ -472,7 +501,7 @@ static int key_home(struct TERM_EDIT *edit)
     return clear_and_redraw(edit);
 }
 
-static int key_end(struct TERM_EDIT *edit)
+static int action_end(struct TERM_EDIT *edit)
 {
     if (edit->cursor_pos.logical == edit->line_size) {
         assert(edit->cursor_pos.physical == edit->line->size);
@@ -495,19 +524,25 @@ static int key_end(struct TERM_EDIT *edit)
     return clear_and_redraw(edit);
 }
 
-static int key_up(struct TERM_EDIT *edit)
+static int action_up(struct TERM_EDIT *edit)
 {
     /* TODO */
     return send_char(KEY_BELL);
 }
 
-static int key_down(struct TERM_EDIT *edit)
+static int action_down(struct TERM_EDIT *edit)
 {
     /* TODO */
     return send_char(KEY_BELL);
 }
 
-static int key_backspace(struct TERM_EDIT *edit)
+static int action_reverse_search(struct TERM_EDIT *edit)
+{
+    /* TODO */
+    return send_char(KEY_BELL);
+}
+
+static int action_backspace(struct TERM_EDIT *edit)
 {
     struct TERM_POS old_pos;
     unsigned        num_del_bytes;
@@ -534,14 +569,86 @@ static int key_backspace(struct TERM_EDIT *edit)
     return clear_and_redraw(edit);
 }
 
-static int key_delete(struct TERM_EDIT *edit)
+static int action_delete(struct TERM_EDIT *edit)
 {
     if (edit->cursor_pos.physical == edit->line->size)
         return send_char(KEY_BELL);
 
     increment_cursor_pos(edit);
 
-    return key_backspace(edit);
+    return action_backspace(edit);
+}
+
+static int action_delete_previous_word(struct TERM_EDIT *edit)
+{
+    /* TODO delete back up to the beginning of previous word, chars at current cursor position ignored */
+    return send_char(KEY_BELL);
+}
+
+static int action_delete_to_word_end(struct TERM_EDIT *edit)
+{
+    /* TODO delete up to the end of next word */
+    return send_char(KEY_BELL);
+}
+
+static int action_capitalize_to_word_end(struct TERM_EDIT *edit)
+{
+    /* TODO capitalize up to the end of next word */
+    return send_char(KEY_BELL);
+}
+
+static int action_lowercase_to_word_end(struct TERM_EDIT *edit)
+{
+    /* TODO lowercase up to the end of next word */
+    return send_char(KEY_BELL);
+}
+
+static int action_uppercase_to_word_end(struct TERM_EDIT *edit)
+{
+    /* TODO uppercase up to the end of next word */
+    return send_char(KEY_BELL);
+}
+
+static int action_clear_after_cursor(struct TERM_EDIT *edit)
+{
+    if (edit->cursor_pos.physical == edit->line->size)
+        return KOS_SUCCESS;
+
+    edit->line->size = edit->cursor_pos.physical;
+    edit->line_size  = edit->cursor_pos.logical;
+
+    return send_escape(0, 'K');
+}
+
+static int action_clear_line(struct TERM_EDIT *edit)
+{
+    if ( ! edit->line_size)
+        return KOS_SUCCESS;
+
+    edit->line->size          = 0;
+    edit->line_size           = 0;
+    edit->cursor_pos.physical = 0;
+    edit->cursor_pos.logical  = 0;
+    edit->scroll_pos.physical = 0;
+    edit->scroll_pos.logical  = 0;
+
+    return clear_and_redraw(edit);
+}
+
+static int action_clear_screen(struct TERM_EDIT *edit)
+{
+    static const char clear_escape[] = "\x1B[H\x1B[2J";
+
+    if (fwrite(clear_escape, 1, sizeof(clear_escape) - 1, stdout) != sizeof(clear_escape) - 1)
+        return check_error(stdout);
+
+    return clear_and_redraw(edit);
+}
+
+static int action_swap_chars(struct TERM_EDIT *edit)
+{
+    /* TODO swap char at cursor with previous char, then move cursor right */
+    return send_char(KEY_BELL);
 }
 
 static int insert_char(struct TERM_EDIT *edit, char c)
@@ -581,7 +688,31 @@ static int insert_char(struct TERM_EDIT *edit, char c)
     return send_char(c);
 }
 
-static int key_tab(struct TERM_EDIT *edit)
+static int action_stop_process(struct TERM_EDIT *edit)
+{
+    int error;
+
+    if (edit->interactive)
+        restore_terminal(&old_term_info);
+
+    error = kill(getpid(), SIGTSTP);
+
+    if (error) {
+        error = send_char(KEY_BELL);
+        if (error)
+            return error;
+    }
+
+    if (edit->interactive) {
+        error = init_terminal(&old_term_info);
+        if (error)
+            return error;
+    }
+
+    return clear_and_redraw(edit);
+}
+
+static int action_tab_complete(struct TERM_EDIT *edit)
 {
     /* TODO */
     return send_char(KEY_BELL);
@@ -602,8 +733,12 @@ static int dispatch_esc(struct TERM_EDIT *edit)
 
             switch (c) {
                 case EOF: return check_error(stdin);
-                case 'F': return key_end(edit);
-                case 'H': return key_home(edit);
+                case 'A': return action_up(edit);
+                case 'B': return action_down(edit);
+                case 'C': return action_right(edit);
+                case 'D': return action_left(edit);
+                case 'F': return action_end(edit);
+                case 'H': return action_home(edit);
                 default:  break;
             }
 
@@ -649,32 +784,36 @@ static int dispatch_esc(struct TERM_EDIT *edit)
                     } while (c != '~');
 
                     switch (code) {
-                        case 1:  return key_home(edit);
-                        case 3:  return key_delete(edit);
-                        case 4:  return key_end(edit);
-                        case 7:  return key_home(edit);
-                        case 8:  return key_end(edit);
+                        case 1:  return action_home(edit);
+                        case 3:  return action_delete(edit);
+                        case 4:  return action_end(edit);
+                        case 7:  return action_home(edit);
+                        case 8:  return action_end(edit);
                         default: break;
                     }
                     break;
                 }
 
                 case EOF: return check_error(stdin);
-                case 'A': return key_up(edit);
-                case 'B': return key_down(edit);
-                case 'C': return key_right(edit);
-                case 'D': return key_left(edit);
-                case 'F': return key_end(edit);
-                case 'H': return key_home(edit);
+                case 'A': return action_up(edit);
+                case 'B': return action_down(edit);
+                case 'C': return action_right(edit);
+                case 'D': return action_left(edit);
+                case 'F': return action_end(edit);
+                case 'H': return action_home(edit);
                 default:  break;
             }
             break;
         }
 
-        /* TODO Alt-key */
+        case 'b': return action_word_begin(edit);
+        case 'c': return action_capitalize_to_word_end(edit);
+        case 'd': return action_delete_to_word_end(edit);
+        case 'f': return action_word_end(edit);
+        case 'l': return action_lowercase_to_word_end(edit);
+        case 'u': return action_uppercase_to_word_end(edit);
 
         default:
-            insert_char(edit, (char)c); /* TODO debug only - remove this */
             break;
     }
 
@@ -696,18 +835,25 @@ static int dispatch_key(struct TERM_EDIT *edit, int *key)
 
         case EOF:           return check_error(stdin);
         case KEY_ESC:       return dispatch_esc(edit);
-        case KEY_BACKSPACE: return key_backspace(edit);
-        case KEY_CTRL_A:    return key_home(edit);
-        case KEY_CTRL_B:    return key_left(edit);
-        case KEY_CTRL_D:    return edit->line->size ? key_delete(edit) : check_error(stdin);
-        case KEY_CTRL_E:    return key_end(edit);
-        case KEY_CTRL_F:    return key_right(edit);
+        case KEY_BACKSPACE: return action_backspace(edit);
+        case KEY_CTRL_A:    return action_home(edit);
+        case KEY_CTRL_B:    return action_left(edit);
+        case KEY_CTRL_D:    return edit->line->size ? action_delete(edit) : check_error(stdin);
+        case KEY_CTRL_E:    return action_end(edit);
+        case KEY_CTRL_F:    return action_right(edit);
         case KEY_BELL:      return send_char(KEY_BELL);
-        case KEY_CTRL_H:    return key_backspace(edit);
-        case KEY_TAB:       return key_tab(edit);
-        case KEY_CTRL_N:    return key_down(edit);
-        case KEY_CTRL_P:    return key_up(edit);
-        default:            return insert_char(edit, (char)*key);
+        case KEY_CTRL_H:    return action_backspace(edit);
+        case KEY_TAB:       return action_tab_complete(edit);
+        case KEY_CTRL_K:    return action_clear_after_cursor(edit);
+        case KEY_CTRL_L:    return action_clear_screen(edit);
+        case KEY_CTRL_N:    return action_down(edit);
+        case KEY_CTRL_P:    return action_up(edit);
+        case KEY_CTRL_R:    return action_reverse_search(edit);
+        case KEY_CTRL_T:    return action_swap_chars(edit);
+        case KEY_CTRL_U:    return action_clear_line(edit);
+        case KEY_CTRL_W:    return action_delete_previous_word(edit);
+        case KEY_CTRL_Z:    return action_stop_process(edit);
+        default:            return (*key < 0x20) ? send_char(KEY_BELL) : insert_char(edit, (char)*key);
     }
 }
 
@@ -717,8 +863,6 @@ int kos_getline(KOS_GETLINE      *state,
 {
     int              error = KOS_SUCCESS;
     int              key   = 0;
-    signal_handler   old_sig_winch;
-    TERM_INFO        old_term_info;
     struct TERM_EDIT edit;
 
     memset(&edit, 0, sizeof(edit));
@@ -742,12 +886,6 @@ int kos_getline(KOS_GETLINE      *state,
         error = init_terminal(&old_term_info);
         if (error)
             return error;
-
-        error = install_signal(SIGWINCH, sig_winch, &old_sig_winch);
-        if (error) {
-            restore_terminal(&old_term_info);
-            return error;
-        }
     }
 
     KOS_atomic_write_relaxed_u32(window_dimensions_changed, 1);
@@ -776,10 +914,8 @@ int kos_getline(KOS_GETLINE      *state,
 
     } while ( ! error && (key != KEY_ENTER));
 
-    if (edit.interactive) {
-        restore_signal(SIGWINCH, &old_sig_winch);
+    if (edit.interactive)
         restore_terminal(&old_term_info);
-    }
 
     return error;
 }
