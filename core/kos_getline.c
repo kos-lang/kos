@@ -76,7 +76,7 @@ static void restore_signal(int sig, signal_handler *old_action)
     (void)sigaction(sig, old_action, NULL);
 }
 
-#endif /* !_WIN32 */
+#endif
 
 #ifdef _WIN32
 
@@ -361,7 +361,24 @@ enum KEY_CODE_E {
 
 static int is_utf8_tail(char c)
 {
-    return ! (((unsigned char)c ^ 0x80U) & 0x3FU);
+    return ! (((unsigned char)c ^ 0x80U) & 0xC0U);
+}
+
+static int is_utf8_finished(const char *buf, int pos)
+{
+    unsigned num = 0;
+    unsigned code_len;
+    char     c;
+
+    do {
+        c = buf[pos];
+        --pos;
+        ++num;
+    } while (is_utf8_tail(c) && (pos >= 0));
+
+    code_len = kos_utf8_len[(unsigned char)c >> 3];
+
+    return num >= code_len;
 }
 
 static int clear_and_redraw(struct TERM_EDIT *edit)
@@ -422,23 +439,6 @@ static int clear_and_redraw(struct TERM_EDIT *edit)
     return edit->interactive ? send_escape(0, 'K') : KOS_SUCCESS;
 }
 
-static int is_utf8_finished(const char *buf, int pos)
-{
-    unsigned num = 0;
-    unsigned code_len;
-    char     c;
-
-    do {
-        c = buf[pos];
-        --pos;
-        ++num;
-    } while (is_utf8_tail(c) && (pos >= 0));
-
-    code_len = kos_utf8_len[(unsigned char)c >> 3];
-
-    return num >= code_len;
-}
-
 static void decrement_pos(struct TERM_EDIT *edit, struct TERM_POS *pos)
 {
     unsigned i = pos->physical;
@@ -461,113 +461,175 @@ static void increment_pos(struct TERM_EDIT *edit, struct TERM_POS *pos)
     ++pos->logical;
 }
 
-static void decrement_cursor_pos(struct TERM_EDIT *edit)
+static int move_cursor_to(struct TERM_EDIT *edit, struct TERM_POS pos)
 {
-    decrement_pos(edit, &edit->cursor_pos);
-}
+    if (pos.logical == edit->cursor_pos.logical)
+        return KOS_SUCCESS;
 
-static void increment_cursor_pos(struct TERM_EDIT *edit)
-{
-    increment_pos(edit, &edit->cursor_pos);
-}
+    if ((pos.logical >= edit->scroll_pos.logical) && (pos.logical <= edit->last_visible_column)) {
 
-static void decrement_scroll_pos(struct TERM_EDIT *edit)
-{
-    decrement_pos(edit, &edit->scroll_pos);
+        int error;
 
-    edit->last_visible_column = edit->scroll_pos.logical + edit->num_columns - edit->prompt_size;
-}
+        if (pos.logical > edit->cursor_pos.logical)
+            error = move_cursor_right(pos.logical - edit->cursor_pos.logical);
+        else
+            error = move_cursor_left(edit->cursor_pos.logical - pos.logical);
 
-static void increment_scroll_pos(struct TERM_EDIT *edit)
-{
-    increment_pos(edit, &edit->scroll_pos);
+        edit->cursor_pos = pos;
 
-    edit->last_visible_column = edit->scroll_pos.logical + edit->num_columns - edit->prompt_size;
+        return error;
+    }
+    else {
+
+        edit->cursor_pos = pos;
+
+        if (pos.logical > edit->scroll_pos.logical) {
+
+            const unsigned scroll_target = pos.logical - edit->num_columns + edit->prompt_size;
+
+            while (pos.logical > scroll_target)
+                decrement_pos(edit, &pos);
+        }
+
+        edit->scroll_pos = pos;
+
+        return clear_and_redraw(edit);
+    }
 }
 
 static int action_left(struct TERM_EDIT *edit)
 {
-    if ( ! edit->cursor_pos.physical) {
-        assert( ! edit->cursor_pos.logical);
+    struct TERM_POS pos = edit->cursor_pos;
+
+    if ( ! pos.physical) {
+        assert( ! pos.logical);
         return send_char(KEY_BELL);
     }
 
-    decrement_cursor_pos(edit);
+    decrement_pos(edit, &pos);
 
-    if (edit->cursor_pos.logical < edit->scroll_pos.logical) {
-        decrement_scroll_pos(edit);
-        return clear_and_redraw(edit);
-    }
-
-    return move_cursor_left(1);
+    return move_cursor_to(edit, pos);
 }
 
 static int action_right(struct TERM_EDIT *edit)
 {
-    if (edit->cursor_pos.logical >= edit->line_size) {
-        assert(edit->cursor_pos.logical == edit->line_size);
+    struct TERM_POS pos = edit->cursor_pos;
+
+    if (pos.logical >= edit->line_size) {
+        assert(pos.logical == edit->line_size);
         return send_char(KEY_BELL);
     }
 
-    increment_cursor_pos(edit);
+    increment_pos(edit, &pos);
 
-    if (edit->cursor_pos.logical > edit->last_visible_column) {
-        increment_scroll_pos(edit);
-        return clear_and_redraw(edit);
+    return move_cursor_to(edit, pos);
+}
+
+enum TRANSITION_E {
+    NO_TRANSITION,
+    WORD_BEGIN,
+    WORD_END
+};
+
+static enum TRANSITION_E get_char_type(struct TERM_EDIT *edit, unsigned physical)
+{
+    char c;
+
+    assert(physical < edit->line->size);
+
+    c = edit->line->buffer[physical];
+
+    return (((c >= 'a') && (c <= 'z')) ||
+            ((c >= 'A') && (c <= 'Z')) ||
+            ((c >= '0') && (c <= '9')) ||
+            (c == '_'))
+           ? WORD_BEGIN : WORD_END;
+}
+
+static int is_transition(struct TERM_EDIT *edit, unsigned pos1, unsigned pos2)
+{
+    enum TRANSITION_E first;
+    enum TRANSITION_E second;
+
+    assert(pos1 < pos2);
+
+    first  = get_char_type(edit, pos1);
+    second = (pos2 < edit->line->size) ? get_char_type(edit, pos2) : WORD_END;
+
+    return (first == second) ? NO_TRANSITION : second;
+}
+
+static struct TERM_POS find_word_begin(struct TERM_EDIT *edit)
+{
+    struct TERM_POS pos = edit->cursor_pos;
+
+    if (pos.logical) {
+        struct TERM_POS prev = pos;
+
+        decrement_pos(edit, &prev);
+
+        do {
+            pos = prev;
+            if ( ! pos.logical)
+                break;
+
+            decrement_pos(edit, &prev);
+
+        } while (is_transition(edit, prev.physical, pos.physical) != WORD_BEGIN);
     }
 
-    return move_cursor_right(1);
+    return pos;
+}
+
+static struct TERM_POS find_word_end(struct TERM_EDIT *edit)
+{
+    struct TERM_POS pos = edit->cursor_pos;
+
+    if (pos.logical < edit->line_size) {
+
+        struct TERM_POS prev;
+
+        do {
+            prev = pos;
+
+            increment_pos(edit, &pos);
+
+        } while ((pos.logical < edit->line_size) &&
+                 (is_transition(edit, prev.physical, pos.physical) != WORD_END));
+    }
+
+    return pos;
 }
 
 static int action_word_begin(struct TERM_EDIT *edit)
 {
-    /* TODO move back to the beginning of previous word */
-    return send_char(KEY_BELL);
+    struct TERM_POS pos = find_word_begin(edit);
+
+    return move_cursor_to(edit, pos);
 }
 
 static int action_word_end(struct TERM_EDIT *edit)
 {
-    /* TODO move forward to the end of current or next word */
-    return send_char(KEY_BELL);
-}
+    struct TERM_POS pos = find_word_end(edit);
 
+    return move_cursor_to(edit, pos);
+}
 
 static int action_home(struct TERM_EDIT *edit)
 {
-    if ( ! edit->cursor_pos.logical) {
-        assert( ! edit->cursor_pos.logical);
-        return KOS_SUCCESS;
-    }
+    struct TERM_POS pos = { 0, 0 };
 
-    edit->cursor_pos.logical  = 0;
-    edit->cursor_pos.physical = 0;
-    edit->scroll_pos.logical  = 0;
-    edit->scroll_pos.physical = 0;
-
-    return clear_and_redraw(edit);
+    return move_cursor_to(edit, pos);
 }
 
 static int action_end(struct TERM_EDIT *edit)
 {
-    if (edit->cursor_pos.logical == edit->line_size) {
-        assert(edit->cursor_pos.physical == edit->line->size);
-        return KOS_SUCCESS;
-    }
+    struct TERM_POS pos;
 
-    edit->cursor_pos.logical  = edit->line_size;
-    edit->cursor_pos.physical = edit->line->size;
+    pos.logical  = edit->line_size;
+    pos.physical = edit->line->size;
 
-    if (edit->cursor_pos.logical > edit->last_visible_column) {
-        const unsigned scroll_target = edit->line_size - edit->num_columns + edit->prompt_size;
-
-        edit->last_visible_column = edit->line_size;
-        edit->scroll_pos          = edit->cursor_pos;
-
-        while (edit->scroll_pos.logical > scroll_target)
-            decrement_pos(edit, &edit->scroll_pos);
-    }
-
-    return clear_and_redraw(edit);
+    return move_cursor_to(edit, pos);
 }
 
 static int action_up(struct TERM_EDIT *edit)
@@ -588,53 +650,90 @@ static int action_reverse_search(struct TERM_EDIT *edit)
     return send_char(KEY_BELL);
 }
 
+static int delete_range(struct TERM_EDIT *edit, struct TERM_POS begin, struct TERM_POS end)
+{
+    const unsigned phys_delta = end.physical - begin.physical;
+    const unsigned log_delta  = end.logical  - begin.logical;
+
+    assert(begin.logical <= end.logical);
+
+    if ( ! log_delta)
+        return move_cursor_to(edit, begin);
+
+    if (end.logical < edit->line_size)
+        memmove(&edit->line->buffer[begin.physical],
+                &edit->line->buffer[end.physical],
+                edit->line->size - end.physical);
+
+    edit->line->size -= phys_delta;
+    edit->line_size  -= log_delta;
+
+    if ((begin.logical >= edit->scroll_pos.logical) && (begin.logical <= edit->last_visible_column)) {
+
+        edit->cursor_pos = begin;
+
+        return clear_and_redraw(edit);
+    }
+    else
+        return move_cursor_to(edit, begin);
+}
+
 static int action_backspace(struct TERM_EDIT *edit)
 {
-    struct TERM_POS old_pos;
-    unsigned        num_del_bytes;
+    struct TERM_POS begin;
+    struct TERM_POS end;
 
     if ( ! edit->cursor_pos.physical) {
         assert( ! edit->cursor_pos.logical);
         return send_char(KEY_BELL);
     }
 
-    old_pos = edit->cursor_pos;
+    begin = edit->cursor_pos;
+    end   = begin;
+    decrement_pos(edit, &begin);
 
-    decrement_cursor_pos(edit);
-
-    num_del_bytes = old_pos.physical - edit->cursor_pos.physical;
-    memmove(&edit->line->buffer[edit->cursor_pos.physical],
-            &edit->line->buffer[edit->cursor_pos.physical + num_del_bytes],
-            edit->line->size - old_pos.physical);
-    edit->line->size -= num_del_bytes;
-    --edit->line_size;
-
-    if (edit->cursor_pos.logical < edit->scroll_pos.logical)
-        decrement_cursor_pos(edit);
-
-    return clear_and_redraw(edit);
+    return delete_range(edit, begin, end);
 }
 
 static int action_delete(struct TERM_EDIT *edit)
 {
+    struct TERM_POS begin;
+    struct TERM_POS end;
+
     if (edit->cursor_pos.physical == edit->line->size)
         return send_char(KEY_BELL);
 
-    increment_cursor_pos(edit);
+    begin = edit->cursor_pos;
+    end   = begin;
+    increment_pos(edit, &end);
 
-    return action_backspace(edit);
+    return delete_range(edit, begin, end);
 }
 
-static int action_delete_previous_word(struct TERM_EDIT *edit)
+static int action_delete_to_word_begin(struct TERM_EDIT *edit)
 {
-    /* TODO delete back up to the beginning of previous word, chars at current cursor position ignored */
-    return send_char(KEY_BELL);
+    struct TERM_POS begin;
+    struct TERM_POS end = edit->cursor_pos;
+
+    if ( ! end.logical)
+        return KOS_SUCCESS;
+
+    begin = find_word_begin(edit);
+
+    return delete_range(edit, begin, end);
 }
 
 static int action_delete_to_word_end(struct TERM_EDIT *edit)
 {
-    /* TODO delete up to the end of next word */
-    return send_char(KEY_BELL);
+    struct TERM_POS begin = edit->cursor_pos;
+    struct TERM_POS end;
+
+    if (begin.logical == edit->line_size)
+        return KOS_SUCCESS;
+
+    end = find_word_end(edit);
+
+    return delete_range(edit, begin, end);
 }
 
 static int action_capitalize_to_word_end(struct TERM_EDIT *edit)
@@ -724,7 +823,7 @@ static int insert_char(struct TERM_EDIT *edit, char c)
     ++edit->line_size;
 
     if (edit->cursor_pos.logical > edit->last_visible_column) {
-        increment_scroll_pos(edit);
+        increment_pos(edit, &edit->scroll_pos);
         return clear_and_redraw(edit);
     }
 
@@ -858,8 +957,8 @@ static int dispatch_esc(struct TERM_EDIT *edit)
         case 'f':           return action_word_end(edit);
         case 'l':           return action_lowercase_to_word_end(edit);
         case 'u':           return action_uppercase_to_word_end(edit);
-        case KEY_CTRL_H:    return action_delete_previous_word(edit);
-        case KEY_BACKSPACE: return action_delete_previous_word(edit);
+        case KEY_CTRL_H:    return action_delete_to_word_begin(edit);
+        case KEY_BACKSPACE: return action_delete_to_word_begin(edit);
 
         default:
             break;
@@ -899,7 +998,7 @@ static int dispatch_key(struct TERM_EDIT *edit, int *key)
         case KEY_CTRL_R:    return action_reverse_search(edit);
         case KEY_CTRL_T:    return action_swap_chars(edit);
         case KEY_CTRL_U:    return action_clear_line(edit);
-        case KEY_CTRL_W:    return action_delete_previous_word(edit);
+        case KEY_CTRL_W:    return action_delete_to_word_begin(edit);
         case KEY_CTRL_Z:    return action_stop_process(edit);
         default:            return (*key < 0x20) ? send_char(KEY_BELL) : insert_char(edit, (char)*key);
     }
