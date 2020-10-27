@@ -14,6 +14,7 @@
 #include <setjmp.h>
 #include <signal.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #ifndef _WIN32
@@ -196,13 +197,13 @@ static int get_cursor_pos_via_esc(unsigned *pos)
     if (error)
         return error;
 
-    do {
-        c = getchar();
+    c = getchar();
 
-        if (c == EOF)
-            return check_error(stdin);
+    if (c == EOF)
+        return check_error(stdin);
 
-    } while (c != 0x1B);
+    if (c != 0x1B)
+        return KOS_ERROR_ERRNO;
 
     do {
         c = getchar();
@@ -232,6 +233,11 @@ static unsigned get_num_columns()
     int            error;
 
     error = ioctl(fileno(stdout), TIOCGWINSZ, &ws);
+
+    if ((error != -1) && (ws.ws_col != 0) && ! kos_seq_fail())
+        return ws.ws_col;
+
+    error = ioctl(fileno(stdin), TIOCGWINSZ, &ws);
 
     if ((error != -1) && (ws.ws_col != 0) && ! kos_seq_fail())
         return ws.ws_col;
@@ -1209,7 +1215,7 @@ int kos_getline(KOS_GETLINE      *state,
         edit.prompt_size = sizeof(str_prompt) - 1;
     }
 
-    if (kos_is_stdin_interactive()) {
+    if (kos_is_stdin_interactive() && getenv("TERM")) {
 
         edit.interactive = 1;
 
