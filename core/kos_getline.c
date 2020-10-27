@@ -7,8 +7,9 @@
 #include "kos_config.h"
 #include "kos_debug.h"
 #include "kos_system.h"
+#include "kos_malloc.h"
+#include "kos_math.h"
 #include "kos_memory.h"
-#include "kos_try.h"
 #include "kos_utf8.h"
 #include <setjmp.h>
 #include <signal.h>
@@ -289,16 +290,7 @@ static void restore_terminal(TERM_INFO *old_info)
     (void)tcsetattr(fileno(stdin), TCSANOW, old_info);
 }
 
-int kos_getline_init(KOS_GETLINE *state)
-{
-    /* TODO history */
-    return KOS_SUCCESS;
-}
-
-void kos_getline_destroy(KOS_GETLINE *state)
-{
-    /* TODO history */
-}
+typedef struct KOS_GETLINE_HISTORY_NODE_S HIST_NODE;
 
 struct TERM_POS {
     /* Logical, in visible characters */
@@ -309,23 +301,27 @@ struct TERM_POS {
 
 struct TERM_EDIT {
     /* Line of text being edited, actual bytes */
-    KOS_VECTOR     *line;
+    KOS_VECTOR          *line;
     /* Prompt string (ASCII) */
-    const char     *prompt;
+    const char          *prompt;
     /* Number of logical characters in line (for UTF-8 this is less than bytes in line) */
-    unsigned        line_size;
+    unsigned             line_size;
     /* Number of visible (logical) columns, i.e. terminal width */
-    unsigned        num_columns;
+    unsigned             num_columns;
     /* Number of logical characters in prompt (same as number of bytes) */
-    unsigned        prompt_size;
+    unsigned             prompt_size;
     /* Maximum index of a visible column */
-    unsigned        last_visible_column;
+    unsigned             last_visible_column;
     /* First character drawn (0-based) */
-    struct TERM_POS scroll_pos;
+    struct TERM_POS      scroll_pos;
     /* First char shown (0-based, from the beginning of actual line) */
-    struct TERM_POS cursor_pos;
+    struct TERM_POS      cursor_pos;
     /* Indicates whether the terminal is interactive */
-    int             interactive;
+    int                  interactive;
+    /* Allocator for temporary history nodes */
+    struct KOS_MEMPOOL_S temp_allocator;
+    /* Currently selected history node */
+    HIST_NODE           *cur_hist_node;
 };
 
 enum KEY_CODE_E {
@@ -409,7 +405,7 @@ static int clear_and_redraw(struct TERM_EDIT *edit)
             ++cur;
     }
 
-    num_to_write = cur - begin;
+    num_to_write = (unsigned)(cur - begin);
 
     if (num_to_write) {
         const unsigned cursor_rel = edit->cursor_pos.logical - edit->scroll_pos.logical;
@@ -627,21 +623,202 @@ static int action_end(struct TERM_EDIT *edit)
     struct TERM_POS pos;
 
     pos.logical  = edit->line_size;
-    pos.physical = edit->line->size;
+    pos.physical = (unsigned)edit->line->size;
 
     return move_cursor_to(edit, pos);
 }
 
+struct KOS_GETLINE_HISTORY_NODE_S {
+    /* Uni-directional list of nodes which are persistent across kos_getline() invocations */
+    HIST_NODE *persistent_prev;
+
+    /* Bi-directional list of nodes used during editing of a single command */
+    HIST_NODE *next;
+    HIST_NODE *prev;
+
+    uint16_t capacity;   /* Capacity of buffer, in bytes  */
+    uint16_t size;       /* Command length, in bytes      */
+    uint16_t line_size;  /* Command length, in characters */
+    uint8_t  persistent; /* 1 if the node is persistent   */
+    char     buffer[1];  /* The command (bytes)           */
+};
+
+int kos_getline_init(KOS_GETLINE *state)
+{
+    kos_mempool_init(&state->allocator);
+
+    state->head = 0;
+
+    return KOS_SUCCESS;
+}
+
+void kos_getline_destroy(KOS_GETLINE *state)
+{
+    kos_mempool_destroy(&state->allocator);
+
+    state->head = 0;
+}
+
+static HIST_NODE *alloc_history_node(struct KOS_MEMPOOL_S *allocator,
+                                     const char           *str,
+                                     size_t                size,
+                                     size_t                num_chars)
+{
+    const size_t capacity   = KOS_align_up(size, (size_t)16);
+    const size_t alloc_size = sizeof(HIST_NODE) - 1 + capacity;
+
+    HIST_NODE *node = kos_mempool_alloc(allocator, alloc_size);
+
+    if (node) {
+
+        if (size)
+            memcpy(node->buffer, str, size);
+
+        node->capacity        = (uint16_t)capacity;
+        node->size            = (uint16_t)size;
+        node->line_size       = (uint16_t)num_chars;
+        node->persistent      = 0;
+        node->persistent_prev = 0;
+        node->next            = 0;
+        node->prev            = 0;
+    }
+
+    return node;
+}
+
+static int add_to_persistent_history(KOS_GETLINE *state,
+                                     const char  *str,
+                                     size_t       size,
+                                     size_t       num_chars)
+{
+    HIST_NODE *node = alloc_history_node(&state->allocator, str, size, num_chars);
+
+    if (node) {
+        node->persistent      = 1;
+        node->persistent_prev = state->head;
+        state->head           = node;
+
+        return KOS_SUCCESS;
+    }
+    else
+        return KOS_ERROR_OUT_OF_MEMORY;
+}
+
+static int init_history(struct TERM_EDIT *edit, HIST_NODE *node)
+{
+    HIST_NODE *next_node = alloc_history_node(&edit->temp_allocator, 0, 0, 0);
+
+    if ( ! next_node)
+        return KOS_ERROR_OUT_OF_MEMORY;
+
+    edit->cur_hist_node = next_node;
+
+    while (node) {
+        next_node->prev = node;
+        node->next      = next_node;
+        next_node       = node;
+        node            = node->persistent_prev;
+    }
+
+    next_node->prev = 0;
+
+    return KOS_SUCCESS;
+}
+
+static int save_to_temp_history(struct TERM_EDIT *edit)
+{
+    HIST_NODE *node = edit->cur_hist_node;
+
+    assert(node);
+
+    if ((edit->line->size == node->size) &&
+        ( ! node->size || ! memcmp(edit->line->buffer, &node->buffer, node->size)))
+        return KOS_SUCCESS;
+
+    if ((edit->line->size > node->capacity) || node->persistent) {
+        HIST_NODE *new_node = alloc_history_node(&edit->temp_allocator,
+                                                 edit->line->buffer,
+                                                 edit->line->size,
+                                                 edit->line_size);
+
+        if ( ! new_node)
+            return KOS_ERROR_OUT_OF_MEMORY;
+
+        new_node->next      = node->next;
+        new_node->prev      = node->prev;
+        edit->cur_hist_node = new_node;
+        node                = new_node;
+        if (new_node->next)
+            new_node->next->prev = new_node;
+        if (new_node->prev)
+            new_node->prev->next = new_node;
+    }
+
+    node->size      = edit->line->size;
+    node->line_size = edit->line_size;
+
+    memcpy(&node->buffer[0], edit->line->buffer, edit->line->size);
+
+    return KOS_SUCCESS;
+}
+
+static int restore_from_temp_history(struct TERM_EDIT *edit)
+{
+    HIST_NODE *node = edit->cur_hist_node;
+    int        error;
+
+    assert(node);
+
+    error = kos_vector_resize(edit->line, node->size);
+    if (error)
+        return error;
+
+    memcpy(edit->line->buffer, &node->buffer[0], node->size);
+
+    edit->line_size = node->line_size;
+
+    edit->cursor_pos.logical  = 0;
+    edit->cursor_pos.physical = 0;
+    edit->scroll_pos.logical  = 0;
+    edit->scroll_pos.physical = 0;
+
+    return clear_and_redraw(edit);
+}
+
 static int action_up(struct TERM_EDIT *edit)
 {
-    /* TODO */
-    return send_char(KEY_BELL);
+    int error;
+
+    assert(edit->cur_hist_node);
+
+    if ( ! edit->cur_hist_node->prev)
+        return send_char(KEY_BELL);
+
+    error = save_to_temp_history(edit);
+    if (error)
+        return error;
+
+    edit->cur_hist_node = edit->cur_hist_node->prev;
+
+    return restore_from_temp_history(edit);
 }
 
 static int action_down(struct TERM_EDIT *edit)
 {
-    /* TODO */
-    return send_char(KEY_BELL);
+    int error;
+
+    assert(edit->cur_hist_node);
+
+    if ( ! edit->cur_hist_node->next)
+        return send_char(KEY_BELL);
+
+    error = save_to_temp_history(edit);
+    if (error)
+        return error;
+
+    edit->cur_hist_node = edit->cur_hist_node->next;
+
+    return restore_from_temp_history(edit);
 }
 
 static int action_reverse_search(struct TERM_EDIT *edit)
@@ -800,7 +977,7 @@ static int insert_char(struct TERM_EDIT *edit, char c)
 {
     const size_t   init_size  = edit->line->size;
     const unsigned insert_pos = edit->cursor_pos.physical;
-    const unsigned tail_size  = init_size - insert_pos;
+    const unsigned tail_size  = (unsigned)(init_size - insert_pos);
     int            error      = kos_vector_resize(edit->line, init_size + 1);
 
     if (error)
@@ -1014,6 +1191,12 @@ int kos_getline(KOS_GETLINE      *state,
 
     memset(&edit, 0, sizeof(edit));
     edit.line = buf;
+    kos_mempool_init(&edit.temp_allocator);
+    error = init_history(&edit, state->head);
+    if (error) {
+        kos_mempool_destroy(&edit.temp_allocator);
+        return error;
+    }
 
     if (prompt == PROMPT_FIRST_LINE) {
         static const char str_prompt[] = "\r> ";
@@ -1031,8 +1214,10 @@ int kos_getline(KOS_GETLINE      *state,
         edit.interactive = 1;
 
         error = init_terminal(&old_term_info);
-        if (error)
+        if (error) {
+            kos_mempool_destroy(&edit.temp_allocator);
             return error;
+        }
     }
 
     KOS_atomic_write_relaxed_u32(window_dimensions_changed, 1);
@@ -1063,6 +1248,11 @@ int kos_getline(KOS_GETLINE      *state,
 
     if (edit.interactive)
         restore_terminal(&old_term_info);
+
+    if ( ! error && buf->size)
+        error = add_to_persistent_history(state, buf->buffer, buf->size, edit.line_size);
+
+    kos_mempool_destroy(&edit.temp_allocator);
 
     return error;
 }

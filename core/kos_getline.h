@@ -15,9 +15,11 @@ typedef struct KOS_GETLINE_S {
 
 #else
 
+#include "kos_memory.h"
+
 typedef struct KOS_GETLINE_S {
-    /* TODO history */
-    char dummy;
+    struct KOS_GETLINE_HISTORY_NODE_S *head;
+    struct KOS_MEMPOOL_S               allocator;
 } KOS_GETLINE;
 
 void kos_getline_destroy(KOS_GETLINE *state);
