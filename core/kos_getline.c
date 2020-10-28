@@ -10,6 +10,7 @@
 #include "kos_malloc.h"
 #include "kos_math.h"
 #include "kos_memory.h"
+#include "kos_misc.h"
 #include "kos_utf8.h"
 #include <setjmp.h>
 #include <signal.h>
@@ -227,32 +228,53 @@ static int get_cursor_pos_via_esc(unsigned *pos)
 
 static unsigned get_num_columns()
 {
-    unsigned       orig_pos;
-    unsigned       rightmost_pos;
+    static int     esc_cursor_failed = 0;
     struct winsize ws;
     int            error;
+    unsigned       cols = 80; /* If all attempts fail, default to 80 columns */
 
+    /* First, try to get terminal width via ioctl */
     error = ioctl(fileno(stdout), TIOCGWINSZ, &ws);
 
     if ((error != -1) && (ws.ws_col != 0) && ! kos_seq_fail())
-        return ws.ws_col;
+        cols = ws.ws_col;
+    else {
 
-    error = ioctl(fileno(stdin), TIOCGWINSZ, &ws);
+        /* Second, fall back to reading via escape code, but attempt this only once */
+        if ( ! esc_cursor_failed) {
+            unsigned orig_pos;
+            unsigned rightmost_pos;
 
-    if ((error != -1) && (ws.ws_col != 0) && ! kos_seq_fail())
-        return ws.ws_col;
+            if ( ! get_cursor_pos_via_esc(&orig_pos) &&
+                 ! move_cursor_right(999) &&
+                 ! get_cursor_pos_via_esc(&rightmost_pos)) {
 
-    if ( ! get_cursor_pos_via_esc(&orig_pos) &&
-         ! move_cursor_right(999) &&
-         ! get_cursor_pos_via_esc(&rightmost_pos)) {
+                if (rightmost_pos > orig_pos)
+                    (void)move_cursor_left(rightmost_pos - orig_pos);
 
-        if (rightmost_pos > orig_pos)
-            (void)move_cursor_left(rightmost_pos - orig_pos);
+                cols = rightmost_pos;
+            }
+            else
+                esc_cursor_failed = 1;
+        }
 
-        return rightmost_pos;
+        /* Third, see if we can read it from environment */
+        if (esc_cursor_failed) {
+            const char *const env_cols = getenv("COLUMNS");
+
+            if (env_cols && env_cols[0]) {
+
+                const char *const end   = env_cols + strlen(env_cols);
+                int64_t           value = 0;
+
+                if ((kos_parse_int(env_cols, end, &value) == KOS_SUCCESS) &&
+                    (value > 0) && (value < 0x7FFFFFFF))
+                    cols = (unsigned)value;
+            }
+        }
     }
 
-    return 80;
+    return cols;
 }
 
 typedef struct termios TERM_INFO;
