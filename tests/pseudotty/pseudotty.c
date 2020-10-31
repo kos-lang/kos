@@ -110,9 +110,8 @@ static size_t handle_escape(int tty_fd, char *buf, size_t max_size, int *handled
                         const int len = snprintf(esc_buf, sizeof(esc_buf), "\x1B[1;%dR", cursor_pos);
 
                         if ((len > 5) && ((unsigned)len < sizeof(esc_buf)))
-                            write(tty_fd, esc_buf, len);
-
-                        *handled = 1;
+                            if (write(tty_fd, esc_buf, len) == len)
+                                *handled = 1;
                     }
                     break;
                 }
