@@ -811,10 +811,22 @@ static int restore_from_temp_history(struct TERM_EDIT *edit)
 
     edit->line_size = node->line_size;
 
-    edit->cursor_pos.logical  = 0;
-    edit->cursor_pos.physical = 0;
+    edit->cursor_pos.logical  = node->line_size;
+    edit->cursor_pos.physical = edit->line->size;
     edit->scroll_pos.logical  = 0;
     edit->scroll_pos.physical = 0;
+
+    if (node->line_size + edit->prompt_size > edit->num_columns) {
+
+        struct TERM_POS pos = edit->cursor_pos;
+
+        const unsigned scroll_target = pos.logical - edit->num_columns + edit->prompt_size;
+
+        while (pos.logical > scroll_target)
+            decrement_pos(edit, &pos);
+
+        edit->scroll_pos = pos;
+    }
 
     return clear_and_redraw(edit);
 }
