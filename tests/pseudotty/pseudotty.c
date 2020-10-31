@@ -2,6 +2,7 @@
  * Copyright (c) 2014-2020 Chris Dragan
  */
 
+#include <assert.h>
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -18,6 +19,8 @@ static int console_width = 20; /* Number of columns in the simulated console */
 static int cursor_pos    = 1;  /* Simulated cursor position                  */
 static int enable_esc_6n = 1;  /* Enable support for "get cursor pos" escape */
 static int saw_prompt    = 0;  /* Prompt has been detected from client       */
+
+extern char **environ;
 
 static int is_input_pending(int fd, int timeout_ms)
 {
@@ -409,10 +412,13 @@ int main(int argc, char *argv[])
 
     /* In the child process run the target program specified by args */
     if (child_pid == 0) {
-        const char *program = argv[1];
-        int         input_fd;
-        int         output_fd;
-        int         i;
+        int          input_fd;
+        int          output_fd;
+        size_t       srci;
+        size_t       dsti;
+        static char *env[128];
+        static char  term[] = "TERM=test";
+        static char  cols[] = "COLUMNS=20";
 
         /* Open the slave tty as stdin/stdout */
         input_fd = open(term_tty_name, O_RDONLY);
@@ -436,11 +442,23 @@ int main(int argc, char *argv[])
         close(input_fd);
         close(output_fd);
 
-        for (i = 2; i < argc; i++)
-            argv[i - 1] = argv[i];
-        argv[argc - 1] = NULL;
+        /* Copy environment and override TERM and COLUMNS variables */
+        for (srci = 0, dsti = 0; environ[srci] && (dsti < (sizeof(env) / sizeof(env[0])) - 3); ++srci) {
+            static const char term_eq[] = "TERM=";
+            static const char cols_eq[] = "COLUMNS=";
 
-        execv(program, &argv[1]);
+            if ((strncmp(environ[srci], term_eq, sizeof(term_eq) - 1) == 0) ||
+                (strncmp(environ[srci], cols_eq, sizeof(cols_eq) - 1) == 0))
+                continue;
+
+            env[dsti++] = environ[srci];
+        }
+        assert(dsti + 3 <= sizeof(env) / sizeof(env[0]));
+        env[dsti++] = term;
+        env[dsti++] = cols;
+        env[dsti]   = NULL;
+
+        execve(argv[1], &argv[1], env);
 
         perror("execv error");
         goto cleanup;
