@@ -701,7 +701,7 @@ static HIST_NODE *alloc_history_node(struct KOS_MEMPOOL_S *allocator,
     const size_t capacity   = KOS_align_up(size, (size_t)16);
     const size_t alloc_size = sizeof(HIST_NODE) - 1 + capacity;
 
-    HIST_NODE *node = kos_mempool_alloc(allocator, alloc_size);
+    HIST_NODE *node = (HIST_NODE *)kos_mempool_alloc(allocator, alloc_size);
 
     if (node) {
 

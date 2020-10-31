@@ -286,7 +286,7 @@ static int run_one_command_from_script(int tty_fd, pid_t child_pid)
             char c         = 0;
             int  to_delete = 0;
 
-            ptr = memchr(ptr, '\\', end - ptr);
+            ptr = (char *)memchr(ptr, '\\', end - ptr);
             if ( ! ptr)
                 break;
 
