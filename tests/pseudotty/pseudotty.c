@@ -263,7 +263,7 @@ static int run_one_command_from_script(int tty_fd, pid_t child_pid)
     {
         char *const eol = (char *)memchr(script_buf, '\n', size);
 
-        cmd_size  = eol ? (eol - &script_buf[0]) : size;
+        cmd_size  = eol ? (size_t)(eol - &script_buf[0]) : size;
         line_size = cmd_size + (eol ? 1 : 0);
     }
 
