@@ -273,7 +273,7 @@ ifneq (,$(filter Linux Darwin %BSD, $(UNAME)))
 pseudotty = $(out_dir)/pseudotty/pseudotty
 $(pseudotty):
 	@$(MAKE) -C pseudotty
-test: $(pseudotty)
+default: $(pseudotty)
 endif
 
 .PHONY: test simple_test gcov fuzz $(addprefix gcov., $(gcov_modules)) $(standalone_tests) $(parser_test_list) $(sequential_test_list) $(interactive_scripts) module_paths print_heap_test $(interpreter_test_list) $(interpreter_fail_test_list)
