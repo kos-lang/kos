@@ -203,8 +203,10 @@ static int get_cursor_pos_via_esc(unsigned *pos)
     if (c == EOF)
         return check_error(stdin);
 
-    if (c != 0x1B)
+    if (c != 0x1B) {
+        ungetc(c, stdin);
         return KOS_ERROR_ERRNO;
+    }
 
     do {
         c = getchar();
@@ -249,8 +251,12 @@ static unsigned get_num_columns()
                  ! move_cursor_right(999) &&
                  ! get_cursor_pos_via_esc(&rightmost_pos)) {
 
-                if (rightmost_pos > orig_pos)
-                    (void)move_cursor_left(rightmost_pos - orig_pos);
+                if (rightmost_pos > orig_pos) {
+                    if (orig_pos > 1)
+                        (void)move_cursor_left(rightmost_pos - orig_pos);
+                    else
+                        putchar('\r');
+                }
 
                 cols = rightmost_pos;
             }
