@@ -1,0 +1,31 @@
+Kos 0.1 interactive interpreter\r
+\e[6n\e[999C\e[6n\r\r> \e[0K[[disable_cursor_pos]]print(42)\r
+42\r
+\e[6n\r> \e[0K\a\a\a\a\a\a\a\a\r
+\r> \e[0K\r
+\r> \e[0Kabcd\r
+\r> \e[0K[123]\r> print(42)\e[0K\r> print(42\e[0K\r> print(4\e[0K\r> [123]\e[0K\e[1D\r> [12]\e[0K\e[1D\r
+[12]\r
+\r> \e[0Kxyz\r> [12]\e[0K\r> print(42)\e[0K\r
+42\r
+\r> \e[0Ki\e[1D\r> ri\e[0K\e[1D\e[1Cn\e[1D\e[1D\e[1D\a\r> prin\e[0K\e[3D\e[1C\e[1C\e[1C\at(84)\r
+84\r
+\r> \e[0K\r> print(84)\e[0K\r> print(84\e[0K12345678)\r
+8412345678\r
+\r> \e[0K\r> print(8412345678)\e[0K\r> print(8412345678\e[0K9\r> rint(84123456789)\e[0K\r
+84123456789\r
+\r> \e[0K\r> rint(84123456789)\e[0K\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\r> rint(840123456789)\e[10D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\r> print(840123456789\e[18D\a\r> rint(840123456789)\e[18D\r> print(840123456789\e[17D\r
+840123456789\r
+\r> \e[0Kes\e[2D\r> "es\e[0K\e[2D\r> "tes\e[0K\e[2D\e[2Ct1"\r
+"test1"\r
+\r> \e[0Kes\e[2D\r> "es\e[0K\e[2D\r> "tes\e[0K\e[2D\e[2Ct2"\r
+"test2"\r
+\r> \e[0Kes\e[2D\r> "es\e[0K\e[2D\r> "tes\e[0K\e[2D\e[2Ct3"\r
+"test3"\r
+\r> \e[0Kes\e[2D\r> "es\e[0K\e[2D\r> "tes\e[0K\e[2D\e[2Ct4"\r
+"test4"\r
+\r> \e[0Kes\e[2D\r> "es\e[0K\e[2D\r> "tes\e[0K\e[2D\e[2Ct5"\r
+"test5"\r
+\r> \e[0KBCDEFGHIJKLMNOPQR\r> CDEFGHIJKLMNOPQRS\e[0K\r> DEFGHIJKLMNOPQRST\e[0K\r> EFGHIJKLMNOPQRSTU\e[0K\r> BCDEFGHIJKLMNOPQRS\e[18D\r> ABCDEFGHIJKLMNOPQR\e[17D\r> EFGHIJKLMNOPQRSTU\e[0K\r> FGHIJKLMNOPQRSTUV\e[0K\r> GHIJKLMNOPQRSTUVW\e[0K\r> HIJKLMNOPQRSTUVWX\e[0K\r> IJKLMNOPQRSTUVWXY\e[0K\r> ABCDEFGHIJKLMNOPQR\e[18D\r> "ABCDEFGHIJKLMNOPQ\e[17D\r> IJKLMNOPQRSTUVWXY\e[0K\r> JKLMNOPQRSTUVWXYZ\e[0K\r> KLMNOPQRSTUVWXYZ"\e[0K\r
+"ABCDEFGHIJKLMNOPQRSTUVWXYZ"\r
+\r> \e[0K

@@ -269,11 +269,28 @@ $(all_tests): gcov.pre.clean
 $(addprefix gcov., $(gcov_modules)): $(all_tests)
 endif
 
-ifneq (,$(filter Linux Darwin %BSD, $(UNAME)))
+pseudotty_scripts = interactive
+
 pseudotty = $(out_dir)/pseudotty/pseudotty
 $(pseudotty):
 	@$(MAKE) -C pseudotty
+
+define PSEUDOTTY_RULE
+pseudotty_$1: $(pseudotty) pseudotty/$1
+	@echo Test pseudotty $1
+	@pseudotty/run_pseudotty $(pseudotty) $(out_dir_base)/interpreter/kos$(exe_suffix) pseudotty/$1 $(out_dir_base)/tests/pseudotty/$(basename $1)
+endef
+
+$(foreach test, $(pseudotty_scripts), $(eval $(call PSEUDOTTY_RULE,$(test))))
+
+ifneq (,$(filter Linux Darwin %BSD, $(UNAME)))
 default: $(pseudotty)
+simple_test: $(addprefix pseudotty_, $(pseudotty_scripts))
 endif
 
-.PHONY: test simple_test gcov fuzz $(addprefix gcov., $(gcov_modules)) $(standalone_tests) $(parser_test_list) $(sequential_test_list) $(interactive_scripts) module_paths print_heap_test $(interpreter_test_list) $(interpreter_fail_test_list)
+.PHONY: test simple_test gcov fuzz
+.PHONY: $(addprefix gcov., $(gcov_modules))
+.PHONY: $(standalone_tests) $(parser_test_list) $(sequential_test_list) $(interactive_scripts)
+.PHONY: module_paths print_heap_test
+.PHONY: $(interpreter_test_list) $(interpreter_fail_test_list)
+.PHONY: $(addprefix pseudotty_, $(pseudotty_scripts))

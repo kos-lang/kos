@@ -1,0 +1,165 @@
+# After displaying first command prompt, and after Kos queries terminal size
+# via \e[6n, disable responses to \e[6n, so that further terminal queries
+# go through COLUMNS env var.
+#disable_cursor_pos
+
+# Simple/basic test - print 42
+print(42)\r
+
+# ============================================================================
+# Perform basic cursor movement on an empty command line
+
+# Left
+\e[D
+\eOD
+\x02
+
+# Right
+\e[C
+\eOC
+\x06
+
+# Home
+\e[H
+\eOH
+\e[1~
+\e[7~
+\x01
+
+# End
+\e[F
+\eOF
+\e[4~
+\e[8~
+\x05
+
+# Backspace
+\x7f
+\x08
+
+# Delete
+\e[3~
+
+# Ctrl-K
+\x0B
+
+# Ctrl-U
+\x15
+
+# Enter/Return
+\r
+\n
+
+# ============================================================================
+# Ctrl-C
+
+abcd
+\x03
+
+# ============================================================================
+# History
+
+[123]
+\e[A      # Up
+# Modify print(42), but it should not affect history
+\x7f\x7f  # Backspace x2
+\e[B      # Down
+\e[D      # Left
+\x7f      # Backspace
+\r        # RUN: [12]
+xyz
+\eOA      # Up
+\x10      # Up
+\r        # RUN: print(42)
+
+# ============================================================================
+# Insert with cursor movement
+
+i
+\e[D      # Left
+r
+\e[C      # Right
+n
+\eOD      # Left
+\eOD      # Left
+\eOD      # Left
+\eOD      # Left
+p
+\eOC      # Right
+\eOC      # Right
+\eOC      # Right
+\eOC      # Right
+t(84)\r   # RUN: print(84)
+
+\x10      # Up
+\x7f      # Backspace
+
+12345678)\r # RUN: print(8412345678)
+
+# One more character than terminal width, will cause text scrolling
+
+\x10      # Up
+\x7F      # Backspace
+
+9)\r      # RUN: print(84123456789)
+
+# Insert characters in the middle and at the beginning
+
+\x10      # Up
+\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02 # Left x10
+0
+\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02 # Left x10
+\e[3~     # Delete
+p\r
+
+# ============================================================================
+# Home/End cursor movement
+
+es
+\e[H      # Home
+"t
+\e[F      # End
+t1"\r
+
+es
+\eOH      # Home
+"t
+\eOF      # End
+t2"\r
+
+es
+\e[1~     # Home
+"t
+\e[4~     # End
+t3"\r
+
+es
+\e[7~     # Home
+"t
+\e[8~     # End
+t4"\r
+
+es
+\x01      # Home
+"t
+\x05      # End
+t5"\r
+
+BCDEFGHIJKLMNOPQRSTU
+\e[H      # Home
+\e[H      # Home
+A
+\e[F      # End
+\e[F      # End
+VWXY
+\e[H      # Home
+\e[H      # Home
+"
+\e[F      # End
+\e[F      # End
+Z"\r
+
+# ============================================================================
+# Exit
+
+\x04
