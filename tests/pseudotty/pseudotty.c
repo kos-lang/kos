@@ -38,7 +38,7 @@ static int read_byte(int fd)
     char          c;
     const ssize_t num_read = read(fd, &c, 1);
 
-    return num_read ? (int)(unsigned char)c : EOF;
+    return (num_read > 0) ? (int)(unsigned char)c : EOF;
 }
 
 static void output_byte(int byte)
