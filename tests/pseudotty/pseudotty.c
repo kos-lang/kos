@@ -376,7 +376,7 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    master_fd = posix_openpt(O_RDWR | O_CLOEXEC);
+    master_fd = posix_openpt(O_RDWR);
     if (master_fd == -1) {
         perror("posix_openpt error");
         goto cleanup;
@@ -418,6 +418,9 @@ int main(int argc, char *argv[])
         static char *env[128];
         static char  term[] = "TERM=test";
         static char  cols[] = "COLUMNS=20";
+
+        /* Close fd of the master pseudo tty in child process */
+        close(master_fd);
 
         /* Open the slave tty as stdin/stdout */
         input_fd = open(term_tty_name, O_RDONLY);
