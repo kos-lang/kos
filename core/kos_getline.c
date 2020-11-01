@@ -233,14 +233,17 @@ static unsigned get_num_columns()
     static int     esc_cursor_failed = 0;
     struct winsize ws;
     int            error;
-    unsigned       cols = 80; /* If all attempts fail, default to 80 columns */
+    unsigned       cols;
 
     /* First, try to get terminal width via ioctl */
     error = ioctl(fileno(stdout), TIOCGWINSZ, &ws);
 
-    if ((error != -1) && (ws.ws_col != 0) && ! kos_seq_fail())
-        cols = ws.ws_col;
-    else {
+    cols = ws.ws_col;
+
+    if ((error == -1) || (ws.ws_col == 0) || kos_seq_fail()) {
+
+        /* Default to 80 columns */
+        cols = 80;
 
         /* Second, fall back to reading via escape code, but attempt this only once */
         if ( ! esc_cursor_failed) {
