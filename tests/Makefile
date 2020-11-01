@@ -272,7 +272,7 @@ endif
 pseudotty_scripts = interactive
 
 pseudotty = $(out_dir)/pseudotty/pseudotty
-$(pseudotty):
+$(pseudotty)::
 	@$(MAKE) -C pseudotty
 
 define PSEUDOTTY_RULE
