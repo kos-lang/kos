@@ -285,7 +285,9 @@ $(foreach test, $(pseudotty_scripts), $(eval $(call PSEUDOTTY_RULE,$(test))))
 
 ifneq (,$(filter Linux Darwin %BSD, $(UNAME)))
 default: $(pseudotty)
+ifneq ($(mad_gc), 1)
 simple_test: $(addprefix pseudotty_, $(pseudotty_scripts))
+endif
 endif
 
 .PHONY: test simple_test gcov fuzz
