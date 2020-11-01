@@ -268,12 +268,16 @@ static int run_one_command_from_script(int tty_fd, pid_t child_pid)
 
     /* Find comment */
     {
-        comment = (char *)memchr(script_buf, '@', cmd_size);
+        comment = (char *)memchr(script_buf, '#', cmd_size);
 
         if (comment) {
             comment_size = cmd_size - (comment - &script_buf[0]) - 1;
             cmd_size     = comment - &script_buf[0];
             ++comment;
+
+            /* Remove trailing spaces */
+            while (cmd_size && (script_buf[cmd_size - 1] == ' '))
+                --cmd_size;
         }
     }
 
