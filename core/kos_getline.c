@@ -186,17 +186,13 @@ static int move_cursor_left(unsigned offset)
     return send_escape(offset, 'D');
 }
 
-static int get_cursor_pos_via_esc(unsigned *pos)
+static int receive_cursor_pos(unsigned *pos)
 {
     int       c;
     unsigned  i     = 0;
     unsigned  rows  = 0;
     unsigned  cols  = 0;
-    int       error = send_escape(6, 'n');
     char      buf[16];
-
-    if (error)
-        return error;
 
     c = getchar();
 
@@ -247,24 +243,16 @@ static unsigned get_num_columns()
 
         /* Second, fall back to reading via escape code, but attempt this only once */
         if ( ! esc_cursor_failed) {
-            unsigned orig_pos;
-            unsigned rightmost_pos;
 
-            if ( ! get_cursor_pos_via_esc(&orig_pos) &&
-                 ! move_cursor_right(999) &&
-                 ! get_cursor_pos_via_esc(&rightmost_pos)) {
+            /* Move faaar to the right and query cursor position */
+            static const char esc_get_width[] = "\x1B[9999C\x1B[6n";
+            unsigned          rightmost_pos   = cols;
 
-                if (rightmost_pos > orig_pos) {
-                    if (orig_pos > 1)
-                        (void)move_cursor_left(rightmost_pos - orig_pos);
-                    else
-                        putchar('\r');
-                }
-
+            if ((write(STDOUT_FILENO, esc_get_width, sizeof(esc_get_width) - 1) == sizeof(esc_get_width) - 1) &&
+                    ! receive_cursor_pos(&rightmost_pos))
                 cols = rightmost_pos;
-            }
             else
-                esc_cursor_failed = 1;
+                esc_cursor_failed = 1; /* Don't try it again if the terminal does not support this */
         }
 
         /* Third, see if we can read it from environment */
