@@ -1240,12 +1240,6 @@ int kos_getline(KOS_GETLINE      *state,
 
     memset(&edit, 0, sizeof(edit));
     edit.line = buf;
-    kos_mempool_init(&edit.temp_allocator);
-    error = init_history(&edit, state->head);
-    if (error) {
-        kos_mempool_destroy(&edit.temp_allocator);
-        return error;
-    }
 
     if (prompt == PROMPT_FIRST_LINE) {
         static const char str_prompt[] = "\r> ";
@@ -1258,20 +1252,19 @@ int kos_getline(KOS_GETLINE      *state,
         edit.prompt_size = sizeof(str_prompt) - 1;
     }
 
-    if (kos_is_stdin_interactive() && getenv("TERM")) {
+    kos_mempool_init(&edit.temp_allocator);
+    error = init_history(&edit, state->head);
+
+    if ( ! error && kos_is_stdin_interactive() && getenv("TERM")) {
 
         edit.interactive = 1;
 
         error = init_terminal(&old_term_info);
-        if (error) {
-            kos_mempool_destroy(&edit.temp_allocator);
-            return error;
-        }
     }
 
     KOS_atomic_write_relaxed_u32(window_dimensions_changed, 1);
 
-    do {
+    while ( ! error && (key != KEY_ENTER)) {
 
         if (KOS_atomic_swap_u32(window_dimensions_changed, 0)) {
             edit.num_columns = edit.interactive ? get_num_columns() : ~0U;
@@ -1292,8 +1285,7 @@ int kos_getline(KOS_GETLINE      *state,
             clearerr(stdout);
             error = KOS_SUCCESS;
         }
-
-    } while ( ! error && (key != KEY_ENTER));
+    }
 
     if (edit.interactive)
         restore_terminal(&old_term_info);
