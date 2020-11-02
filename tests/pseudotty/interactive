@@ -275,6 +275,42 @@ x"abc defghijklmnopqrst.uvwxyz"y
 "abcd"\r
 
 # ============================================================================
+# Ctrl-O is not supported, should trigger bell
+
+\x0F      # Ctrl-O
+
+# ============================================================================
+# Word movement, deleting words
+
+      123      456      789      0\x08
+\eb       # Alt-Left
+\eb       # Alt-Left
+\eb       # Alt-Left
+\x06      # Right
+\x06      # Right
+\x17      # Ctrl-W
+\x06      # Right
+\x06      # Right
+\x06      # Right
+\x06      # Right
+\e\x08    # Alt-Ctrl-H
+\ef       # Alt-Right
++\r
+
+      123      456      789      0\x08
+\x01      # Home
+\ed       # Esc-D
+0+
+\ef       # Alt-Right
+-\r
+
+123     456
+\x01      # Home
+\ef       # Alt-Right
+\e\x7f    # Alt-Backspace
+\r
+
+# ============================================================================
 # Exit
 
 \x04
