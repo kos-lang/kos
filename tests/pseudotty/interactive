@@ -160,6 +160,64 @@ VWXY
 Z"\r
 
 # ============================================================================
+# Backspace
+
+x"Hello"y
+\x7F      # Backspace
+\x01      # Home
+\x06      # Right
+\x08      # Backspace
+\x08      # Backspace
+\r
+
+x"abc defghijklmnopqrst.uvwxyz"y
+\x01      # Home
+\x06      # Right
+\x08      # Backspace
+\x05      # End
+\x08      # Backspace
+# Left x25
+\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02
+\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02
+\x02\x02\x02\x02\x02
+\x08      # Backspace
+# Right x18
+\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06
+\x06\x06\x06\x06\x06\x06\x06\x06
+\x08      # Backspace
+\r
+
+# ============================================================================
+# Delete
+
+x"Hello2"y
+\e[3~     # Delete
+\x02      # Left
+\e[3~     # Delete
+\e[3~     # Delete
+\x01      # Home
+\e[3~     # Delete
+\r
+
+x"abc defghijklmnopqrst.uvwxyz"y
+\x01      # Home
+\e[3~     # Delete
+# Right x22
+\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06
+\x06\x06\x06\x06\x06\x06\x06\x06\x06\x06
+\x06\x06
+\e[3~     # Delete
+\x05      # End
+\x02      # Left
+\e[3~     # Delete
+# Left x25
+\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02
+\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02
+\x02\x02\x02\x02\x02
+\e[3~     # Delete
+\r
+
+# ============================================================================
 # Exit
 
 \x04
