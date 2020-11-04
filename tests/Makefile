@@ -28,10 +28,10 @@ standalone_tests += kos_utf8_len
 standalone_tests += kos_vm_test
 standalone_tests += kos_vm_unit_test
 
-all_tests  = $(standalone_tests)
-all_tests += kos_parser_test
-all_tests += kos_print_heap_test
-all_tests += kos_module_path_test
+all_test_programs  = $(standalone_tests)
+all_test_programs += kos_parser_test
+all_test_programs += kos_print_heap_test
+all_test_programs += kos_module_path_test
 
 fuzz_tests  = kos_fuzz_compiler
 fuzz_tests += kos_fuzz_interpreter
@@ -81,7 +81,7 @@ $(out_dir)/kos_vm_unit_test$(o_suffix): CFLAGS += -Wno-missing-field-initializer
 endif
 endif
 
-default: $(addsuffix $(exe_suffix), $(addprefix $(out_dir)/, $(all_tests)))
+default: $(addsuffix $(exe_suffix), $(addprefix $(out_dir)/, $(all_test_programs)))
 
 tool ?=
 
@@ -90,13 +90,13 @@ libs += $(out_dir_base)/core/$(call LIB_NAME,kos_lang)
 
 LINK_TEST = $(call LINK_EXE,$1,$1.c,$(libs))
 
-$(foreach test, $(all_tests), $(eval $(call LINK_TEST,$(test))))
+$(foreach test, $(all_test_programs), $(eval $(call LINK_TEST,$(test))))
 
 define PARALLEL_DEP
 $(out_dir)/$1$(exe_suffix): $(out_dir)/kos_test_tools$(o_suffix)
 endef
 
-$(foreach test, $(filter kos_parallel_%, $(all_tests)), $(eval $(call PARALLEL_DEP,$(test))))
+$(foreach test, $(filter kos_parallel_%, $(all_test_programs)), $(eval $(call PARALLEL_DEP,$(test))))
 
 parser_test_list = $(wildcard parser_tests/*.kos)
 
@@ -165,7 +165,28 @@ print_heap_test:
 	@echo Test $@
 	@./$@ $(out_dir)/kos_print_heap_test$(exe_suffix) $(out_dir)
 
-all_tests = $(standalone_tests) $(parser_test_list) $(interactive_scripts) module_paths print_heap_test $(interpreter_test_list) $(interpreter_fail_test_list)
+pseudotty_scripts = interactive
+
+pseudotty = $(out_dir)/pseudotty/pseudotty
+$(pseudotty)::
+	@$(MAKE) -C pseudotty
+
+define PSEUDOTTY_RULE
+pseudotty_$1: $(pseudotty) pseudotty/$1
+	@echo Test pseudotty $1
+	@pseudotty/run_pseudotty $(pseudotty) $(out_dir_base)/interpreter/kos$(exe_suffix) pseudotty/$1 $(out_dir_base)/tests/pseudotty/$(basename $1)
+endef
+
+$(foreach test, $(pseudotty_scripts), $(eval $(call PSEUDOTTY_RULE,$(test))))
+
+ifeq (,$(filter Linux Darwin %BSD, $(UNAME)))
+    pseudotty_test_list =
+else
+    pseudotty_test_list = $(addprefix pseudotty_, $(pseudotty_scripts))
+    default: $(pseudotty)
+endif
+
+all_tests = $(standalone_tests) $(parser_test_list) $(interactive_scripts) module_paths print_heap_test $(pseudotty_test_list) $(interpreter_test_list) $(interpreter_fail_test_list)
 
 all_simple_tests = $(filter-out kos_parallel%, $(all_tests))
 
@@ -269,30 +290,9 @@ $(all_tests): gcov.pre.clean
 $(addprefix gcov., $(gcov_modules)): $(all_tests)
 endif
 
-pseudotty_scripts = interactive
-
-pseudotty = $(out_dir)/pseudotty/pseudotty
-$(pseudotty)::
-	@$(MAKE) -C pseudotty
-
-define PSEUDOTTY_RULE
-pseudotty_$1: $(pseudotty) pseudotty/$1
-	@echo Test pseudotty $1
-	@pseudotty/run_pseudotty $(pseudotty) $(out_dir_base)/interpreter/kos$(exe_suffix) pseudotty/$1 $(out_dir_base)/tests/pseudotty/$(basename $1)
-endef
-
-$(foreach test, $(pseudotty_scripts), $(eval $(call PSEUDOTTY_RULE,$(test))))
-
-ifneq (,$(filter Linux Darwin %BSD, $(UNAME)))
-default: $(pseudotty)
-ifneq ($(mad_gc), 1)
-simple_test: $(addprefix pseudotty_, $(pseudotty_scripts))
-endif
-endif
-
 .PHONY: test simple_test gcov fuzz
 .PHONY: $(addprefix gcov., $(gcov_modules))
 .PHONY: $(standalone_tests) $(parser_test_list) $(sequential_test_list) $(interactive_scripts)
 .PHONY: module_paths print_heap_test
-.PHONY: $(interpreter_test_list) $(interpreter_fail_test_list)
 .PHONY: $(addprefix pseudotty_, $(pseudotty_scripts))
+.PHONY: $(interpreter_test_list) $(interpreter_fail_test_list)
