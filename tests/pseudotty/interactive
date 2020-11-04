@@ -225,10 +225,8 @@ x"abc defghijklmnopqrst.uvwxyz"y
 \x02      # Left
 \x02      # Left
 \x02      # Left
-\x04      # Delete
-\x04      # Delete
-\x04      # Delete
-\x04      # Delete
+# Delete x4
+\x04\x04\x04\x04
 \r
 
 # ============================================================================

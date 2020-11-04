@@ -13,12 +13,15 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <time.h>
 #include <unistd.h>
 
 static int console_width = 20; /* Number of columns in the simulated console */
 static int cursor_pos    = 1;  /* Simulated cursor position                  */
 static int enable_esc_6n = 1;  /* Enable support for "get cursor pos" escape */
-static int saw_prompt    = 0;  /* Prompt has been detected from client       */
+static int saw_eol       = 0;  /* EOL detection for detecting prompts        */
+static int prompts_seen  = 0;  /* Count prompts received from client         */
+static int verbose       = 0;  /* Enables debug output                       */
 
 extern char **environ;
 
@@ -71,19 +74,26 @@ static void update_cursor(int byte)
         ++cursor_pos;
 }
 
-/* Crude prompt detection from kos */
-static void detect_prompt(char c)
+/* Crude prompt detection from Kos */
+static int is_prompt(char c)
 {
-    if ((c == '>') || (c == '_'))
-        saw_prompt = 1;
+    return (c == '>') || (c == '_');
 }
 
+enum ESC_TYPE {
+    ESC_NONE,
+    ESC_OTHER,
+    ESC_UNHANDLED_6N
+};
+
 /* Handles incoming escape sequences from client */
-static size_t handle_escape(int tty_fd, char *buf, size_t max_size, int *handled)
+static size_t handle_escape(int tty_fd, char *buf, size_t max_size, enum ESC_TYPE *esc_found)
 {
     size_t buf_size = 1;
 
     buf[0] = '\x1B';
+
+    *esc_found = ESC_NONE;
 
     do {
         const int byte = read_byte(tty_fd);
@@ -102,17 +112,21 @@ static size_t handle_escape(int tty_fd, char *buf, size_t max_size, int *handled
                 case 'n': {
                     static const char get_cursor_pos[] = "\x1B[6n";
 
-                    if (enable_esc_6n &&
-                        (buf_size == sizeof(get_cursor_pos) - 1) &&
+                    if ((buf_size == sizeof(get_cursor_pos) - 1) &&
                         (memcmp(buf, get_cursor_pos, sizeof(get_cursor_pos) - 1) == 0)) {
 
-                        char      esc_buf[20];
-                        const int len = snprintf(esc_buf, sizeof(esc_buf), "\x1B[1;%dR", cursor_pos);
+                        if (enable_esc_6n) {
+                            char      esc_buf[20];
+                            const int len = snprintf(esc_buf, sizeof(esc_buf), "\x1B[1;%dR", cursor_pos);
 
-                        if ((len > 5) && ((unsigned)len < sizeof(esc_buf)))
-                            if (write(tty_fd, esc_buf, len) == len)
-                                *handled = 1;
+                            if ((len > 5) && ((unsigned)len < sizeof(esc_buf)))
+                                if (write(tty_fd, esc_buf, len) == len)
+                                    *esc_found = ESC_OTHER;
+                        }
+                        else
+                            *esc_found = ESC_UNHANDLED_6N;
                     }
+
                     break;
                 }
 
@@ -126,7 +140,7 @@ static size_t handle_escape(int tty_fd, char *buf, size_t max_size, int *handled
                         else
                             cursor_pos += delta;
 
-                        *handled = 1;
+                        *esc_found = ESC_OTHER;
                     }
                     break;
                 }
@@ -141,7 +155,7 @@ static size_t handle_escape(int tty_fd, char *buf, size_t max_size, int *handled
                         else
                             cursor_pos -= delta;
 
-                        *handled = 1;
+                        *esc_found = ESC_OTHER;
                     }
                     break;
                 }
@@ -149,7 +163,7 @@ static size_t handle_escape(int tty_fd, char *buf, size_t max_size, int *handled
                 case 'H':
                 case 'J':
                 case 'K':
-                    *handled = 1;
+                    *esc_found = ESC_OTHER;
                     break;
 
                 default:
@@ -164,61 +178,133 @@ static size_t handle_escape(int tty_fd, char *buf, size_t max_size, int *handled
     return buf_size;
 }
 
+enum RECEIVE_STATUS {
+    RECEIVED_NOTHING,
+    RECEIVE_ERROR,
+    RECEIVED_SOMETHING,
+    RECEIVED_PROMPT
+};
+
 /* Receives input from tty_fd and writes it out to stdout.
  * Translates non-printable characters (except \n) to escape sequences.
- * Returns number of characters received (zero or more).
- * On failure returns -1.
  */
-static int receive_input(int tty_fd)
+static enum RECEIVE_STATUS receive_one_batch_of_input(int tty_fd, int timeout_ms)
 {
-    int total_read = 0;
-    int pending;
+    int                 pending;
+    enum RECEIVE_STATUS status = RECEIVED_NOTHING;
 
-    pending = is_input_pending(tty_fd, 1);
+    pending = is_input_pending(tty_fd, timeout_ms);
 
-    if (pending < 0)
-        return -1;
-
-    if (pending == 0)
-        return 0;
-
-    do {
+    while (pending == 1) {
         const int byte = read_byte(tty_fd);
 
         if (byte == EOF)
             break;
 
         if (byte == 0x1B) {
-            char         buf[16];
-            int          handled  = 0;
-            const size_t buf_size = handle_escape(tty_fd, buf, sizeof(buf), &handled);
+            char          buf[16];
+            enum ESC_TYPE esc_found;
+            size_t        i;
+            const size_t  buf_size = handle_escape(tty_fd, buf, sizeof(buf), &esc_found);
 
-            if (buf_size) {
-                size_t i;
+            assert(buf_size > 0);
 
-                for (i = 0; i < buf_size; i++)
-                    output_byte((int)(unsigned char)buf[i]);
+            for (i = 0; i < buf_size; i++)
+                output_byte((int)(unsigned char)buf[i]);
 
-                if ( ! handled)
-                    total_read += buf_size;
-            }
-            else {
-                ++total_read;
-                output_byte(byte);
-            }
+            /* For unhandled ESC[6N, pretend we had a prompt, because the
+             * client is waiting for some response. */
+            if (esc_found == ESC_UNHANDLED_6N)
+                status = RECEIVED_PROMPT;
+
+            if ( ! esc_found && ! status)
+                status = RECEIVED_SOMETHING;
         }
         else {
-            detect_prompt((char)byte);
+            if ((char)byte == '\n')
+                saw_eol = 1;
+            else if (saw_eol && is_prompt((char)byte)) {
+                saw_eol = 0;
+                ++prompts_seen;
+                status = RECEIVED_PROMPT;
+            }
 
-            ++total_read;
+            if ( ! status)
+                status = RECEIVED_SOMETHING;
+
             output_byte(byte);
             update_cursor(byte);
         }
 
-        pending = is_input_pending(tty_fd, 1);
-    } while (pending == 1);
+        pending = is_input_pending(tty_fd, 0);
+    }
 
-    return total_read;
+    if (verbose && status)
+        printf("\033[1;32m%c\033[0m", status == RECEIVED_PROMPT ? 'P' : 'S');
+
+    fflush(stdout);
+
+    return (pending < 0) ? RECEIVE_ERROR : status;
+}
+
+static uint64_t get_time_ms(void)
+{
+    uint64_t        time_ms = 0;
+    struct timespec ts;
+
+    if ( ! clock_gettime(CLOCK_REALTIME, &ts)) {
+        time_ms =  (uint64_t)ts.tv_sec * 1000;
+        time_ms += (uint64_t)ts.tv_nsec / 1000000;
+    }
+
+    return time_ms;
+}
+
+enum INPUT_STATUS {
+    NO_INPUT,
+    SOME_INPUT,
+    INPUT_ERROR
+};
+
+static enum INPUT_STATUS receive_input(int tty_fd, pid_t child_pid, int script_eof)
+{
+    enum RECEIVE_STATUS saved_status     = RECEIVED_NOTHING;
+    uint64_t            start_time_ms    = get_time_ms();
+    uint64_t            prev_time_ms     = start_time_ms;
+    int                 cur_wait_time_ms = 0;
+
+    do {
+
+        const int max_time_ms = (saved_status == RECEIVED_PROMPT) ? 1 : script_eof ? 50 : 1000;
+        const int timeout_ms  = (cur_wait_time_ms < max_time_ms) ? (max_time_ms - cur_wait_time_ms) : max_time_ms;
+
+        enum RECEIVE_STATUS status = receive_one_batch_of_input(tty_fd, timeout_ms);
+
+        prev_time_ms     = get_time_ms();
+        cur_wait_time_ms = (int)(prev_time_ms - start_time_ms);
+
+        switch (status) {
+
+            case RECEIVE_ERROR:
+                return INPUT_ERROR;
+
+            case RECEIVED_NOTHING:
+                if ((cur_wait_time_ms > max_time_ms) && prompts_seen)
+                    return status ? SOME_INPUT : NO_INPUT;
+                break;
+
+            default:
+                start_time_ms    = get_time_ms();
+                prev_time_ms     = start_time_ms;
+                cur_wait_time_ms = 0;
+                if (saved_status != RECEIVED_PROMPT)
+                    saved_status = status;
+                break;
+        }
+
+    } while (kill(child_pid, 0) == 0);
+
+    return INPUT_ERROR;
 }
 
 static unsigned char from_hex(char c)
@@ -235,7 +321,7 @@ static unsigned char from_hex(char c)
 
 /* Extracts a single command from script read from stdin and sends it to the tty tty_fd.
  * Returns 0 on success and non-zero on failure or end of script. */
-static int run_one_command_from_script(int tty_fd, pid_t child_pid)
+static int send_one_line_from_script(int tty_fd, pid_t child_pid, int *eol)
 {
     static char   script_buf[64 * 1024];
     static size_t size;
@@ -244,6 +330,8 @@ static int run_one_command_from_script(int tty_fd, pid_t child_pid)
     size_t        comment_size = 0;
     size_t        cmd_size;
     size_t        line_size;
+
+    *eol = 0;
 
     if (to_read) {
         const ssize_t num_read = read(STDIN_FILENO, &script_buf[size], to_read);
@@ -260,10 +348,10 @@ static int run_one_command_from_script(int tty_fd, pid_t child_pid)
 
     /* Find end of line */
     {
-        char *const eol = (char *)memchr(script_buf, '\n', size);
+        char *const eol_ptr = (char *)memchr(script_buf, '\n', size);
 
-        cmd_size  = eol ? (size_t)(eol - &script_buf[0]) : size;
-        line_size = cmd_size + (eol ? 1 : 0);
+        cmd_size  = eol_ptr ? (size_t)(eol_ptr - &script_buf[0]) : size;
+        line_size = cmd_size + (eol_ptr ? 1 : 0);
     }
 
     /* Find comment */
@@ -284,8 +372,12 @@ static int run_one_command_from_script(int tty_fd, pid_t child_pid)
     /* Send command to the child */
     if (cmd_size) {
 
-        char *end = &script_buf[cmd_size];
-        char *ptr = &script_buf[0];
+        ssize_t num_written;
+        char   *end = &script_buf[cmd_size];
+        char   *ptr = &script_buf[0];
+
+        if (verbose)
+            printf("\033[1;33mS%u\033[0m", (unsigned)cmd_size);
 
         /* Convert escaped characters */
         while (ptr < end) {
@@ -300,8 +392,8 @@ static int run_one_command_from_script(int tty_fd, pid_t child_pid)
                 break;
 
             switch (ptr[1]) {
-                case 'r':  c = '\r';   to_delete = 1; break;
-                case 'n':  c = '\n';   to_delete = 1; break;
+                case 'r':  c = '\r';   to_delete = 1; *eol = 1; break;
+                case 'n':  c = '\n';   to_delete = 1; *eol = 1; break;
                 case 'e':  c = '\x1B'; to_delete = 1; break;
                 case 'a':  c = '\a';   to_delete = 1; break;
                 case '\\': c = '\\';   to_delete = 1; break;
@@ -310,6 +402,10 @@ static int run_one_command_from_script(int tty_fd, pid_t child_pid)
                     if (ptr + 3 < end) {
                         c = (char)((from_hex(ptr[2]) << 4) | from_hex(ptr[3]));
                         to_delete = 3;
+
+                        /* Ctrl-C works like Enter */
+                        if (c == 3)
+                            *eol = 1;
                     }
                     break;
 
@@ -327,18 +423,23 @@ static int run_one_command_from_script(int tty_fd, pid_t child_pid)
                 ++ptr;
         }
 
-        if (write(tty_fd, script_buf, cmd_size) != (ssize_t)cmd_size)
+        if ((cmd_size == 1) && (*script_buf == 4))
+            *eol = 1;
+
+        num_written = write(tty_fd, script_buf, cmd_size);
+
+        if (num_written != (ssize_t)cmd_size) {
+            if (num_written < 0)
+                perror("send error");
             return 1;
+        }
     }
+
     /* Handle special commands for pseudotty placed in comments */
-    else if (comment) {
+    if (comment && (comment_size > 1) && (*comment != ' ')) {
         if (strncmp("disable_cursor_pos", comment, comment_size) == 0) {
             printf("[[disable_cursor_pos]]");
             enable_esc_6n = 0;
-        }
-        else if (strncmp("enable_cursor_pos", comment, comment_size) == 0) {
-            printf("[[enable_cursor_pos]]");
-            enable_esc_6n = 1;
         }
         else if ((strncmp("resize", comment, comment_size) == 0) && (comment_size > 6)) {
             unsigned new_width = 0;
@@ -364,12 +465,27 @@ static int run_one_command_from_script(int tty_fd, pid_t child_pid)
         memmove(&script_buf[0], &script_buf[line_size], size - line_size);
     size -= line_size;
 
+    return size ? 0 : 1;
+}
+
+static int run_one_command_from_script(int tty_fd, pid_t child_pid)
+{
+    int eol = 0;
+
+    do {
+        const int error = send_one_line_from_script(tty_fd, child_pid, &eol);
+
+        if (error)
+            return error;
+    } while ( ! eol);
+
     return 0;
 }
 
 int main(int argc, char *argv[])
 {
     int   retval         = EXIT_FAILURE;
+    int   script_eof     = 0;
     int   master_fd      = -1;
     char *term_tty_name  = NULL;
     pid_t child_pid;
@@ -473,15 +589,16 @@ int main(int argc, char *argv[])
     /* Execute the script and receive output from child */
     for (;;) {
 
-        const int num_received = receive_input(master_fd);
-        if (num_received < 0)
+        enum INPUT_STATUS status = receive_input(master_fd, child_pid, script_eof);
+
+        if (status == INPUT_ERROR)
             break;
 
-        if (kill(child_pid, 0) != 0)
-            break;
-
-        if (saw_prompt && ! num_received && run_one_command_from_script(master_fd, child_pid))
-            break;
+        if (run_one_command_from_script(master_fd, child_pid)) {
+            script_eof = 1;
+            if (status == NO_INPUT)
+                break;
+        }
     }
 
     close(master_fd);
