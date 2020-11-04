@@ -33,7 +33,7 @@ Branch health (master)
 ----------------------
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Build Status](https://travis-ci.org/kos-lang/kos.svg?branch=master)](https://travis-ci.org/kos-lang/kos)
+[![Build Status](https://travis-ci.com/kos-lang/kos.svg?branch=master)](https://travis-ci.com/kos-lang/kos)
 [![Build Status](https://ci.appveyor.com/api/projects/status/github/kos-lang/kos?branch=master&svg=true)](https://ci.appveyor.com/project/cdragan/kos)
 [![Coverage Status](https://coveralls.io/repos/github/kos-lang/kos/badge.svg?branch=master)](https://coveralls.io/github/kos-lang/kos?branch=master)
 [![Coverity Scan](https://scan.coverity.com/projects/10189/badge.svg)](https://scan.coverity.com/projects/kos)
