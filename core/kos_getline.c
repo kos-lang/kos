@@ -402,6 +402,28 @@ static int is_utf8_finished(const char *buf, int pos)
     return num >= code_len;
 }
 
+static void decrement_pos(struct TERM_EDIT *edit, struct TERM_POS *pos)
+{
+    unsigned i = pos->physical;
+
+    do --i;
+    while (i && is_utf8_tail(edit->line->buffer[i]));
+
+    pos->physical = i;
+    --pos->logical;
+}
+
+static void increment_pos(struct TERM_EDIT *edit, struct TERM_POS *pos)
+{
+    unsigned i = pos->physical;
+
+    do ++i;
+    while ((i < edit->line->size) && is_utf8_tail(edit->line->buffer[i]));
+
+    pos->physical = i;
+    ++pos->logical;
+}
+
 static int clear_and_redraw(struct TERM_EDIT *edit)
 {
     const char *const begin        = edit->line->buffer + edit->scroll_pos.physical;
@@ -417,6 +439,10 @@ static int clear_and_redraw(struct TERM_EDIT *edit)
     assert(edit->cursor_pos.physical >= edit->scroll_pos.physical);
 
     edit->last_visible_column = edit->scroll_pos.logical + num_left - 1;
+
+    /* Move cursor after terminal resize */
+    while (edit->cursor_pos.logical > edit->last_visible_column)
+        decrement_pos(edit, &edit->cursor_pos);
 
     if (fwrite(edit->prompt, 1, edit->prompt_size, stdout) != edit->prompt_size)
         return check_error(stdout);
@@ -458,28 +484,6 @@ static int clear_and_redraw(struct TERM_EDIT *edit)
     }
 
     return edit->interactive ? send_escape(0, 'K') : KOS_SUCCESS;
-}
-
-static void decrement_pos(struct TERM_EDIT *edit, struct TERM_POS *pos)
-{
-    unsigned i = pos->physical;
-
-    do --i;
-    while (i && is_utf8_tail(edit->line->buffer[i]));
-
-    pos->physical = i;
-    --pos->logical;
-}
-
-static void increment_pos(struct TERM_EDIT *edit, struct TERM_POS *pos)
-{
-    unsigned i = pos->physical;
-
-    do ++i;
-    while ((i < edit->line->size) && is_utf8_tail(edit->line->buffer[i]));
-
-    pos->physical = i;
-    ++pos->logical;
 }
 
 static int move_cursor_to(struct TERM_EDIT *edit, struct TERM_POS pos)
