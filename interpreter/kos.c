@@ -433,6 +433,11 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
         buf->size = 0;
     }
 
+    if (error == KOS_ERROR_ERRNO) {
+        KOS_raise_errno(ctx, NULL);
+        error = KOS_ERROR_EXCEPTION;
+    }
+
     if (error == KOS_SUCCESS_RETURN)
         error = KOS_SUCCESS;
 
