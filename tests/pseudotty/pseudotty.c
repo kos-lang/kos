@@ -12,9 +12,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <time.h>
 #include <unistd.h>
 
 static int console_width = 20; /* Number of columns in the simulated console */
@@ -250,12 +250,12 @@ static enum RECEIVE_STATUS receive_one_batch_of_input(int tty_fd, int timeout_ms
 
 static uint64_t get_time_ms(void)
 {
-    uint64_t        time_ms = 0;
-    struct timespec ts;
+    uint64_t       time_ms = 0;
+    struct timeval tv;
 
-    if ( ! clock_gettime(CLOCK_REALTIME, &ts)) {
-        time_ms =  (uint64_t)ts.tv_sec * 1000;
-        time_ms += (uint64_t)ts.tv_nsec / 1000000;
+    if ( ! gettimeofday(&tv, 0)) {
+        time_ms =  (int64_t)tv.tv_sec * 1000;
+        time_ms += (int64_t)tv.tv_usec / 1000;
     }
 
     return time_ms;
