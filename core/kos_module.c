@@ -1602,7 +1602,6 @@ static KOS_OBJ_ID import_and_run(KOS_CONTEXT ctx,
                         (KOS_OBJ_ID *)&module_dir.o,
                         (KOS_OBJ_ID *)&module_path.o,
                         (KOS_OBJ_ID *)&mod_init.o));
-        source_found = 1;
     }
 
     if (inst->flags & KOS_INST_VERBOSE)

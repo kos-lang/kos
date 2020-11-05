@@ -807,7 +807,7 @@ static int restore_from_temp_history(struct TERM_EDIT *edit)
     edit->line_size = node->line_size;
 
     edit->cursor_pos.logical  = node->line_size;
-    edit->cursor_pos.physical = edit->line->size;
+    edit->cursor_pos.physical = (unsigned)edit->line->size;
     edit->scroll_pos.logical  = 0;
     edit->scroll_pos.physical = 0;
 
