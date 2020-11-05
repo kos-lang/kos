@@ -26,6 +26,10 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifdef _MSC_VER
+#   pragma warning( disable : 4996 ) /* strerror: This function or variable may be unsafe */
+#endif
+
 static const char str_array_close[]             = "]";
 static const char str_array_comma[]             = ", ";
 static const char str_array_open[]              = "[";

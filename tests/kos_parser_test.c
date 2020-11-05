@@ -14,6 +14,10 @@
 #include "../core/kos_parser.h"
 #include "../inc/kos_error.h"
 
+#ifdef _MSC_VER
+#   pragma warning( disable : 4996 ) /* strerror: This function or variable may be unsafe */
+#endif
+
 static const char *const node_types[] = {
     "empty",
     "import",

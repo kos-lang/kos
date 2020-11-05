@@ -696,10 +696,11 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
         BOOL               ok           = FALSE;
         BOOL               have_storage = FALSE;
 
-        KOS_DECLARE_STATIC_CONST_STRING(str_type,        "type");
-        KOS_DECLARE_STATIC_CONST_STRING(str_type_file,   "file");
-        KOS_DECLARE_STATIC_CONST_STRING(str_type_dir,    "directory");
-        KOS_DECLARE_STATIC_CONST_STRING(str_type_dev,    "device");
+        KOS_DECLARE_STATIC_CONST_STRING(str_type,          "type");
+        KOS_DECLARE_STATIC_CONST_STRING(str_type_file,     "file");
+        KOS_DECLARE_STATIC_CONST_STRING(str_type_dir,      "directory");
+        KOS_DECLARE_STATIC_CONST_STRING(str_type_dev,      "device");
+        KOS_DECLARE_STATIC_CONST_STRING(str_err_file_stat, "unable to obtain information about file");
 
         KOS_suspend_context(ctx);
 
@@ -722,7 +723,7 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
         KOS_resume_context(ctx);
 
         if ( ! ok)
-            RAISE_EXCEPTION(str_err_file_stat);
+            RAISE_EXCEPTION_STR(str_err_file_stat);
 
         if ( ! have_storage)
             storage_info.LogicalBytesPerSector = 1;
