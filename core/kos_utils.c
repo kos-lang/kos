@@ -1545,7 +1545,7 @@ void KOS_raise_errno(KOS_CONTEXT ctx, const char *prefix)
         const size_t len = error_str ? strlen(error_str) : 0;
 
         KOS_OBJ_ID error_obj = KOS_new_string(ctx, error_str, (unsigned)len);
-        if ( ! IS_BAD_PTR(error_str))
+        if ( ! IS_BAD_PTR(error_obj))
             KOS_raise_exception(ctx, error_obj);
     }
 }
