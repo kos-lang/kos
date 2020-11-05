@@ -1,0 +1,17 @@
+# Run some command
+1 + 2 + 3\r
+
+# Put a long string in the command line
+12345 + 23456 + 34567 + 45678
+
+# Resize the window to 10 columns
+#resize 10
+
+\x7F # Backspace
+\r
+
+# Run the first command
+\x10\x10\r
+
+# Exit
+\x04

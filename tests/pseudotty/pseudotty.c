@@ -438,11 +438,19 @@ static int send_one_line_from_script(int tty_fd, pid_t child_pid, int *eol)
 
     /* Handle special commands for pseudotty placed in comments */
     if (comment && (comment_size > 1) && (*comment != ' ')) {
-        if (strncmp("disable_cursor_pos", comment, comment_size) == 0) {
+
+        static const char cmt_disable_cursor_pos[] = "disable_cursor_pos";
+        static const char cmt_resize[]             = "resize";
+
+        if ((comment_size >= sizeof(cmt_disable_cursor_pos) - 1) &&
+            (strncmp(cmt_disable_cursor_pos, comment, sizeof(cmt_disable_cursor_pos) - 1) == 0)) {
+
             printf("[[disable_cursor_pos]]");
             enable_esc_6n = 0;
         }
-        else if ((strncmp("resize", comment, comment_size) == 0) && (comment_size > 6)) {
+        else if ((comment_size >= sizeof(cmt_resize) - 1) &&
+                 (strncmp(cmt_resize, comment, sizeof(cmt_resize) - 1) == 0)) {
+
             unsigned new_width = 0;
 
             memmove(comment, comment + 6, comment_size - 6);
@@ -456,7 +464,15 @@ static int send_one_line_from_script(int tty_fd, pid_t child_pid, int *eol)
                 if (cursor_pos > console_width)
                     cursor_pos = console_width;
 
-                kill(SIGWINCH, child_pid);
+                receive_input(tty_fd, child_pid, 1);
+
+                if (kill(child_pid, SIGWINCH) != 0) {
+                    perror("kill(SIGWINCH) error");
+                    size = 0;
+                    return 1;
+                }
+
+                receive_input(tty_fd, child_pid, 1);
             }
         }
     }

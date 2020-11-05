@@ -165,7 +165,8 @@ print_heap_test:
 	@echo Test $@
 	@./$@ $(out_dir)/kos_print_heap_test$(exe_suffix) $(out_dir)
 
-pseudotty_scripts = interactive
+pseudotty_scripts =  interactive
+pseudotty_scripts += sigwinch
 
 pseudotty = $(out_dir)/pseudotty/pseudotty
 $(pseudotty)::
