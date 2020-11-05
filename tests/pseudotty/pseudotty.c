@@ -486,7 +486,6 @@ static int run_one_command_from_script(int tty_fd, pid_t child_pid)
 int main(int argc, char *argv[])
 {
     int   retval         = EXIT_FAILURE;
-    int   script_eof     = 0;
     int   master_fd      = -1;
     char *term_tty_name  = NULL;
     pid_t child_pid;
@@ -590,15 +589,14 @@ int main(int argc, char *argv[])
     /* Execute the script and receive output from child */
     for (;;) {
 
-        enum INPUT_STATUS status = receive_input(master_fd, child_pid, script_eof);
+        enum INPUT_STATUS status = receive_input(master_fd, child_pid, 0);
 
         if (status == INPUT_ERROR)
             break;
 
         if (run_one_command_from_script(master_fd, child_pid)) {
-            script_eof = 1;
-            if (status == NO_INPUT)
-                break;
+            receive_input(master_fd, child_pid, 1);
+            break;
         }
     }
 
