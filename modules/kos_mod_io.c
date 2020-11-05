@@ -38,19 +38,11 @@
 #endif
 
 static const char str_err_bad_flags[]           = "incorrect file open flags";
-static const char str_err_cannot_get_position[] = "unable to obtain file position";
-static const char str_err_cannot_get_size[]     = "unable to obtain file size";
-static const char str_err_cannot_open_file[]    = "unable to open file";
-static const char str_err_cannot_set_position[] = "unable to update file position";
 static const char str_err_file_not_open[]       = "file not open";
-static const char str_err_file_read[]           = "file read error";
-static const char str_err_file_stat[]           = "unable to obtain information about file";
-static const char str_err_file_write[]          = "file write error";
 static const char str_err_invalid_buffer_size[] = "buffer size out of range";
 static const char str_err_not_buffer[]          = "argument to file.read_some is not a buffer";
 static const char str_err_not_buffer_or_str[]   = "argument to file.write is neither a buffer nor a string";
 static const char str_err_too_many_to_read[]    = "requested read size exceeds buffer size limit";
-static const char str_position[]                = "position";
 
 static KOS_OBJ_ID get_file_pos(KOS_CONTEXT ctx,
                                KOS_OBJ_ID  this_obj,
@@ -107,7 +99,6 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
                            KOS_OBJ_ID  args_obj)
 {
     int        error        = KOS_SUCCESS;
-    KOS_OBJ_ID pos_id;
     KOS_OBJ_ID filename_obj;
     FILE      *file         = 0;
     KOS_LOCAL  this_;
@@ -115,6 +106,8 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
     KOS_LOCAL  ret;
     KOS_VECTOR filename_cstr;
     KOS_VECTOR flags_cstr;
+
+    KOS_DECLARE_STATIC_CONST_STRING(str_position, "position");
 
     kos_vector_init(&filename_cstr);
     kos_vector_init(&flags_cstr);
@@ -150,18 +143,17 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
 
     KOS_resume_context(ctx);
 
-    if ( ! file)
-        RAISE_EXCEPTION(str_err_cannot_open_file);
+    if ( ! file) {
+        KOS_raise_errno(ctx, NULL);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
 
     ret.o = KOS_new_object_with_prototype(ctx, this_.o);
     TRY_OBJID(ret.o);
 
-    pos_id = KOS_new_const_ascii_string(ctx, str_position, sizeof(str_position) - 1);
-    TRY_OBJID(pos_id);
-
     TRY(KOS_set_builtin_dynamic_property(ctx,
                                          ret.o,
-                                         pos_id,
+                                         KOS_CONST_ID(str_position),
                                          KOS_get_module(ctx),
                                          get_file_pos,
                                          set_file_pos));
@@ -346,7 +338,8 @@ static KOS_OBJ_ID read_line(KOS_CONTEXT ctx,
         if ( ! ret) {
             if (ferror(file)) {
                 KOS_resume_context(ctx);
-                RAISE_EXCEPTION(str_err_file_read);
+                KOS_raise_errno(ctx, NULL);
+                RAISE_ERROR(KOS_ERROR_EXCEPTION);
             }
             else
                 break;
@@ -451,8 +444,10 @@ static KOS_OBJ_ID read_some(KOS_CONTEXT ctx,
 
     TRY(KOS_buffer_resize(ctx, buf.o, (unsigned)(offset + num_read)));
 
-    if (num_read < (size_t)to_read && ferror(file))
-        RAISE_EXCEPTION(str_err_file_read);
+    if (num_read < (size_t)to_read && ferror(file)) {
+        KOS_raise_errno(ctx, NULL);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
 
 cleanup:
     buf.o = KOS_destroy_top_locals(ctx, &args, &buf);
@@ -536,8 +531,10 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
                 KOS_resume_context(ctx);
             }
 
-            if (num_writ < to_write)
-                RAISE_EXCEPTION(str_err_file_write); /* TODO error from errno */
+            if (num_writ < to_write) {
+                KOS_raise_errno(ctx, NULL);
+                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+            }
         }
         else if (GET_OBJ_TYPE(arg.o) == OBJ_STRING) {
 
@@ -558,8 +555,10 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
                 KOS_resume_context(ctx);
             }
 
-            if (num_writ < cstr.size - 1)
-                RAISE_EXCEPTION(str_err_file_write);
+            if (num_writ < cstr.size - 1) {
+                KOS_raise_errno(ctx, NULL);
+                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+            }
 
             cstr.size = 0;
         }
@@ -767,8 +766,10 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
 
         KOS_resume_context(ctx);
 
-        if (error)
-            RAISE_EXCEPTION(str_err_file_stat); /* TODO error from errno */
+        if (error) {
+            KOS_raise_errno(ctx, NULL);
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
 
         info.o = KOS_new_object(ctx);
         TRY_OBJID(info.o);
@@ -839,18 +840,26 @@ static KOS_OBJ_ID get_file_size(KOS_CONTEXT ctx,
     TRY(get_file_object(ctx, this_obj, &file, 1));
 
     orig_pos = ftell(file);
-    if (orig_pos < 0)
-        RAISE_EXCEPTION(str_err_cannot_get_size);
+    if (orig_pos < 0) {
+        KOS_raise_errno(ctx, NULL);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
 
-    if (fseek(file, 0, SEEK_END))
-        RAISE_EXCEPTION(str_err_cannot_get_size);
+    if (fseek(file, 0, SEEK_END)) {
+        KOS_raise_errno(ctx, NULL);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
 
     size = ftell(file);
-    if (size < 0)
-        RAISE_EXCEPTION(str_err_cannot_get_size);
+    if (size < 0) {
+        KOS_raise_errno(ctx, NULL);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
 
-    if (fseek(file, orig_pos, SEEK_SET))
-        RAISE_EXCEPTION(str_err_cannot_get_size);
+    if (fseek(file, orig_pos, SEEK_SET)) {
+        KOS_raise_errno(ctx, NULL);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
 
 cleanup:
     return error ? KOS_BADPTR : KOS_new_int(ctx, (int64_t)size);
@@ -883,8 +892,10 @@ static KOS_OBJ_ID get_file_pos(KOS_CONTEXT ctx,
 
     KOS_resume_context(ctx);
 
-    if (pos < 0)
-        RAISE_EXCEPTION(str_err_cannot_get_position);
+    if (pos < 0) {
+        KOS_raise_errno(ctx, NULL);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
 
 cleanup:
     return error ? KOS_BADPTR : KOS_new_int(ctx, (int64_t)pos);
@@ -933,8 +944,10 @@ static KOS_OBJ_ID set_file_pos(KOS_CONTEXT ctx,
 
     KOS_suspend_context(ctx);
 
-    if (fseek(file, (long)pos, whence))
-        RAISE_EXCEPTION(str_err_cannot_set_position);
+    if (fseek(file, (long)pos, whence)) {
+        KOS_raise_errno(ctx, NULL);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
 
     KOS_resume_context(ctx);
 

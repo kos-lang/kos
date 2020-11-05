@@ -18,6 +18,7 @@
 #include "kos_try.h"
 #include "kos_utf8.h"
 #include <assert.h>
+#include <errno.h>
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #include <math.h>
@@ -1526,6 +1527,23 @@ void KOS_raise_printf(KOS_CONTEXT ctx,
 
     if ( ! IS_BAD_PTR(str))
         KOS_raise_exception(ctx, str);
+}
+
+void KOS_raise_errno(KOS_CONTEXT ctx, const char *prefix)
+{
+    const char *const error_str = strerror(errno);
+
+    if (prefix)
+        KOS_raise_printf(ctx, "%s: %s", prefix, error_str ? error_str : "");
+
+    else {
+
+        const size_t len = error_str ? strlen(error_str) : 0;
+
+        KOS_OBJ_ID error_obj = KOS_new_string(ctx, error_str, (unsigned)len);
+        if ( ! IS_BAD_PTR(error_str))
+            KOS_raise_exception(ctx, error_obj);
+    }
 }
 
 KOS_OBJ_ID KOS_new_iterator_copy(KOS_CONTEXT ctx,

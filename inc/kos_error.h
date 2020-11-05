@@ -13,15 +13,13 @@ enum KOS_ERROR_E {
     KOS_ERROR_OUT_OF_MEMORY,
     KOS_ERROR_NOT_FOUND,
     KOS_ERROR_NO_DIRECTORY,
-    KOS_ERROR_CANNOT_OPEN_FILE,
-    KOS_ERROR_CANNOT_READ_FILE,
+    KOS_ERROR_ERRNO,                        /* read errno to get error code */
+    KOS_ERROR_SETTER,                       /* property has a setter */
     KOS_ERROR_SCANNING_FAILED,
     KOS_ERROR_PARSE_FAILED,
     KOS_ERROR_COMPILE_FAILED,
     KOS_ERROR_INVALID_UTF8_CHARACTER,
     KOS_ERROR_INTERRUPTED,
-    KOS_ERROR_ERRNO,                        /* read errno to get error code */
-    KOS_ERROR_SETTER,                       /* property has a setter */
     KOS_ERROR_INVALID_EXPONENT,
     KOS_ERROR_EXPONENT_OUT_OF_RANGE,
     KOS_ERROR_NUMBER_TOO_BIG,

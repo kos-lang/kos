@@ -9,7 +9,6 @@
 #include "kos_perf.h"
 #include "kos_try.h"
 #include <assert.h>
-#include <errno.h>
 #include <limits.h>
 #include <memory.h>
 #include <stdio.h>
@@ -37,28 +36,6 @@
 #ifdef __APPLE__
 #   include <mach-o/dyld.h>
 #endif
-
-static int errno_to_error(void)
-{
-    int error;
-
-    switch (errno)
-    {
-        case ENOENT:
-            error = KOS_ERROR_NOT_FOUND;
-            break;
-
-        case ENOMEM:
-            error = KOS_ERROR_OUT_OF_MEMORY;
-            break;
-
-        default:
-            error = KOS_ERROR_CANNOT_OPEN_FILE;
-            break;
-    }
-
-    return error;
-}
 
 int kos_is_stdin_interactive(void)
 {
@@ -102,7 +79,7 @@ static int is_file(const char *filename)
             error = KOS_ERROR_NOT_FOUND;
     }
     else
-        error = errno_to_error();
+        error = KOS_ERROR_ERRNO;
 
     return error;
 }
@@ -132,19 +109,20 @@ int kos_load_file(const char  *filename,
 
     TRY(is_file(filename));
 
-    file = fopen(filename, "rb");
-    if (!file || kos_seq_fail())
-        RAISE_ERROR(KOS_ERROR_CANNOT_OPEN_FILE);
+    file = kos_seq_fail() ? NULL :
+           fopen(filename, "rb");
+    if ( ! file)
+        RAISE_ERROR(KOS_ERROR_ERRNO);
 
     if (0 != fseek(file, 0, SEEK_END) || kos_seq_fail())
-        RAISE_ERROR(KOS_ERROR_CANNOT_READ_FILE);
+        RAISE_ERROR(KOS_ERROR_ERRNO);
 
     lsize = ftell(file);
     if (lsize < 0)
-        RAISE_ERROR(KOS_ERROR_CANNOT_READ_FILE);
+        RAISE_ERROR(KOS_ERROR_ERRNO);
     size = (size_t)lsize;
     if (0 != fseek(file, 0, SEEK_SET))
-        RAISE_ERROR(KOS_ERROR_CANNOT_READ_FILE);
+        RAISE_ERROR(KOS_ERROR_ERRNO);
 
     file_buf->buffer = (const char *)malloc(size);
     if ( ! file_buf->buffer)
@@ -156,7 +134,7 @@ int kos_load_file(const char  *filename,
         PROF_FREE((void *)file_buf->buffer)
         free((void *)file_buf->buffer);
         file_buf->buffer = 0;
-        RAISE_ERROR(KOS_ERROR_CANNOT_READ_FILE);
+        RAISE_ERROR(KOS_ERROR_ERRNO);
     }
 
     file_buf->size = size;
@@ -199,23 +177,19 @@ int kos_load_file(const char  *filename,
     assert( ! file_buf->buffer);
     assert( ! file_buf->size);
 
-    if (kos_seq_fail())
-        RAISE_ERROR(KOS_ERROR_CANNOT_READ_FILE);
-
-    if (kos_seq_fail())
-        RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
-
-    fd = open(filename, O_RDONLY);
+    fd = kos_seq_fail() ? -1 :
+         open(filename, O_RDONLY);
     if (fd == -1)
-        RAISE_ERROR(errno_to_error());
+        RAISE_ERROR(KOS_ERROR_ERRNO);
 
-    if (fstat(fd, &st) != 0)
-        RAISE_ERROR(errno_to_error());
+    if ((fstat(fd, &st) != 0) || kos_seq_fail())
+        RAISE_ERROR(KOS_ERROR_ERRNO);
 
     if (st.st_size) {
-        addr = mmap(0, st.st_size, PROT_READ, MAP_FILE | MAP_SHARED, fd, 0);
+        addr = kos_seq_fail() ? MAP_FAILED :
+               mmap(0, st.st_size, PROT_READ, MAP_FILE | MAP_SHARED, fd, 0);
         if (addr == MAP_FAILED)
-            RAISE_ERROR(errno_to_error());
+            RAISE_ERROR(KOS_ERROR_ERRNO);
     }
 
     file_buf->buffer = (const char *)addr;
@@ -285,7 +259,7 @@ int kos_get_absolute_path(KOS_VECTOR *path)
         }
     }
     else
-        error = errno_to_error();
+        error = KOS_ERROR_ERRNO;
 
     return error;
 }

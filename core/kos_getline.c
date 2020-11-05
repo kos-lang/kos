@@ -136,7 +136,7 @@ int kos_getline(KOS_GETLINE      *state,
                 return KOS_SUCCESS_RETURN;
 
             fprintf(stderr, "Failed reading from stdin\n");
-            return KOS_ERROR_CANNOT_READ_FILE;
+            return KOS_ERROR_ERRNO;
         }
 
         num_read = strlen(buf->buffer + old_size);

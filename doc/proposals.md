@@ -1,8 +1,6 @@
 ﻿Enhancement proposals
 =====================
 
-* Add universal conversion from errno to exception
-
 * Add { } support for switch case instead of : (retain : ???)
 
 * Hook Ctrl-C in interpreter to interrupt all threads

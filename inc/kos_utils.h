@@ -112,6 +112,9 @@ void KOS_raise_printf(KOS_CONTEXT ctx,
                       const char *format,
                       ...) KOS_CHECK_FORMAT(2, 3);
 
+KOS_API
+void KOS_raise_errno(KOS_CONTEXT ctx, const char *prefix);
+
 #ifdef __cplusplus
 }
 #endif

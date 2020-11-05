@@ -389,15 +389,25 @@ static int load_file(KOS_CONTEXT  ctx,
 
     switch (error) {
 
-        case KOS_ERROR_CANNOT_OPEN_FILE:
-            KOS_raise_printf(ctx, "unable to open file \"%s\"", cpath.buffer);
-            error = KOS_ERROR_EXCEPTION;
-            break;
+        case KOS_ERROR_ERRNO: {
 
-        case KOS_ERROR_CANNOT_READ_FILE:
-            KOS_raise_printf(ctx, "unable to read file \"%s\"", cpath.buffer);
-            error = KOS_ERROR_EXCEPTION;
-            break;
+            static const char error_info[] = "unable to load file \"";
+            const size_t      path_len     = cpath.size - 1;
+
+            if ( ! kos_vector_resize(&cpath, cpath.size + sizeof(error_info))) {
+                memmove(&cpath.buffer[sizeof(error_info) - 1],
+                        cpath.buffer, path_len);
+                memcpy(cpath.buffer, error_info, sizeof(error_info) - 1);
+                cpath.buffer[cpath.size - 2] = '"';
+                cpath.buffer[cpath.size - 1] = 0;
+
+                KOS_raise_errno(ctx, cpath.buffer);
+                error = KOS_ERROR_EXCEPTION;
+                break;
+            }
+        }
+
+        /* fall through */
 
         case KOS_ERROR_OUT_OF_MEMORY:
             KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);

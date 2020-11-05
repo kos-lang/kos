@@ -2,6 +2,7 @@
  * Copyright (c) 2014-2020 Chris Dragan
  */
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -378,16 +379,8 @@ int main(int argc, char *argv[])
                 assert( ! error);
                 break;
 
-            case KOS_ERROR_CANNOT_OPEN_FILE:
-                printf("Failed to open file %s\n", argv[iarg]);
-                return 1;
-
-            case KOS_ERROR_CANNOT_READ_FILE:
-                printf("Failed to read from file %s\n", argv[iarg]);
-                return 1;
-
-            case KOS_ERROR_OUT_OF_MEMORY:
-                printf("Failed to allocate memory\n");
+            case KOS_ERROR_ERRNO:
+                printf("Failed to open file %s: %s\n", argv[iarg], strerror(errno));
                 return 1;
         }
     }
