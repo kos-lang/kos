@@ -1,0 +1,7 @@
+Kos 0.1 interactive interpreter\r
+\e[9999C\e[6n\r> \e[0Kprint(123)\r
+123\r
+\e[9999C\e[6n\r> \e[0K456+1\r
+\r> 456\e[0K\r> print(123)\e[0K\r
+123\r
+\e[9999C\e[6n\r> \e[0K

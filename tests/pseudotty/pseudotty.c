@@ -75,6 +75,21 @@ static void update_cursor(int byte)
         ++cursor_pos;
 }
 
+enum COLOR {
+    RED     = 31,
+    GREEN   = 32,
+    YELLOW  = 33,
+    BLUE    = 34,
+    MAGENTA = 35,
+    CYAN    = 36
+};
+
+static void print_color(int color, const char *text)
+{
+    printf("\033[1;%dm%s\033[0m", color, text);
+    fflush(stdout);
+}
+
 /* Crude prompt detection from Kos */
 static int is_prompt(char c)
 {
@@ -241,11 +256,60 @@ static enum RECEIVE_STATUS receive_one_batch_of_input(int tty_fd, int timeout_ms
     }
 
     if (verbose && status)
-        printf("\033[1;32m%c\033[0m", status == RECEIVED_PROMPT ? 'P' : 'S');
+        print_color(GREEN, status == RECEIVED_PROMPT ? "P" : "S");
 
     fflush(stdout);
 
     return (pending < 0) ? RECEIVE_ERROR : status;
+}
+
+typedef struct {
+    pid_t child_pid;
+    int   running;
+    int   stopped;
+    int   status;
+} CHILD_INFO;
+
+static int check_child_status(CHILD_INFO *child_info, int options)
+{
+    int status      = 0;
+    int wait_status = 0;
+
+    if ( ! child_info->running)
+        return child_info->status;
+
+    wait_status = wait4(child_info->child_pid, &status, options, NULL);
+    if ( ! wait_status)
+        return 0;
+
+    assert((wait_status == -1) || (wait_status == child_info->child_pid));
+
+    if (wait_status == -1) {
+        perror("wait error");
+        child_info->running = 0;
+    }
+    else if (WIFEXITED(status)) {
+        child_info->status  = WEXITSTATUS(status);
+        child_info->running = 0;
+    }
+    else if (WIFSTOPPED(status)) {
+        if (verbose)
+            print_color(BLUE, "STOP");
+
+        child_info->stopped = 1;
+        kill(child_info->child_pid, SIGCONT);
+        return 0;
+    }
+    else if (WIFSIGNALED(status)) {
+        fprintf(stderr, "Child exited due to signal %d\n", WTERMSIG(status));
+        child_info->running = 0;
+    }
+    else {
+        fprintf(stderr, "Unexpected child exit\n");
+        child_info->running = 0;
+    }
+
+    return child_info->status;
 }
 
 static uint64_t get_time_ms(void)
@@ -267,7 +331,7 @@ enum INPUT_STATUS {
     INPUT_ERROR
 };
 
-static enum INPUT_STATUS receive_input(int tty_fd, pid_t child_pid, int script_eof)
+static enum INPUT_STATUS receive_input(int tty_fd, CHILD_INFO *child_info, int script_eof)
 {
     enum RECEIVE_STATUS saved_status     = RECEIVED_NOTHING;
     uint64_t            start_time_ms    = get_time_ms();
@@ -303,7 +367,7 @@ static enum INPUT_STATUS receive_input(int tty_fd, pid_t child_pid, int script_e
                 break;
         }
 
-    } while (kill(child_pid, 0) == 0);
+    } while ( ! check_child_status(child_info, WUNTRACED | WNOHANG));
 
     return INPUT_ERROR;
 }
@@ -322,7 +386,7 @@ static unsigned char from_hex(char c)
 
 /* Extracts a single command from script read from stdin and sends it to the tty tty_fd.
  * Returns 0 on success and non-zero on failure or end of script. */
-static int send_one_line_from_script(int tty_fd, pid_t child_pid, int *eol)
+static int send_one_line_from_script(int tty_fd, CHILD_INFO *child_info, int *eol)
 {
     static char   script_buf[64 * 1024];
     static size_t size;
@@ -377,8 +441,11 @@ static int send_one_line_from_script(int tty_fd, pid_t child_pid, int *eol)
         char   *end = &script_buf[cmd_size];
         char   *ptr = &script_buf[0];
 
-        if (verbose)
-            printf("\033[1;33mS%u\033[0m", (unsigned)cmd_size);
+        if (verbose) {
+            char size_str[16];
+            snprintf(size_str, sizeof(size_str), "S%u", (unsigned)cmd_size);
+            print_color(YELLOW, size_str);
+        }
 
         /* Convert escaped characters */
         while (ptr < end) {
@@ -427,12 +494,38 @@ static int send_one_line_from_script(int tty_fd, pid_t child_pid, int *eol)
         if ((cmd_size == 1) && (*script_buf == 4))
             *eol = 1;
 
+        /* Ctrl-Z */
+        if ((cmd_size == 1) && (*script_buf == 0x1A)) {
+            if (receive_input(tty_fd, child_info, 1) == INPUT_ERROR)
+                return 1;
+        }
+
         num_written = write(tty_fd, script_buf, cmd_size);
 
         if (num_written != (ssize_t)cmd_size) {
             if (num_written < 0)
                 perror("send error");
             return 1;
+        }
+
+        /* Ctrl-Z */
+        if ((cmd_size == 1) && (*script_buf == 0x1A)) {
+
+            const uint64_t start_time_ms = get_time_ms();
+
+            child_info->stopped = 0;
+
+            do {
+
+                if (check_child_status(child_info, WUNTRACED | WNOHANG))
+                    return 1;
+
+                if (get_time_ms() - start_time_ms > 5000) {
+                    print_color(RED, "TIMEOUT");
+                    break;
+                }
+
+            } while ( ! child_info->stopped);
         }
     }
 
@@ -464,15 +557,17 @@ static int send_one_line_from_script(int tty_fd, pid_t child_pid, int *eol)
                 if (cursor_pos > console_width)
                     cursor_pos = console_width;
 
-                receive_input(tty_fd, child_pid, 1);
+                if (receive_input(tty_fd, child_info, 1) == INPUT_ERROR)
+                    return 1;
 
-                if (kill(child_pid, SIGWINCH) != 0) {
+                if (kill(child_info->child_pid, SIGWINCH) != 0) {
                     perror("kill(SIGWINCH) error");
                     size = 0;
                     return 1;
                 }
 
-                receive_input(tty_fd, child_pid, 1);
+                if (receive_input(tty_fd, child_info, 1) == INPUT_ERROR)
+                    return 1;
             }
         }
     }
@@ -485,12 +580,12 @@ static int send_one_line_from_script(int tty_fd, pid_t child_pid, int *eol)
     return size ? 0 : 1;
 }
 
-static int run_one_command_from_script(int tty_fd, pid_t child_pid)
+static int run_one_command_from_script(int tty_fd, CHILD_INFO *child_info)
 {
     int eol = 0;
 
     do {
-        const int error = send_one_line_from_script(tty_fd, child_pid, &eol);
+        const int error = send_one_line_from_script(tty_fd, child_info, &eol);
 
         if (error)
             return error;
@@ -501,14 +596,23 @@ static int run_one_command_from_script(int tty_fd, pid_t child_pid)
 
 int main(int argc, char *argv[])
 {
-    int   retval         = EXIT_FAILURE;
-    int   master_fd      = -1;
-    char *term_tty_name  = NULL;
-    pid_t child_pid;
+    int        master_fd     = -1;
+    int        prog_arg      = 1;
+    char      *term_tty_name = NULL;
+    CHILD_INFO child_info;
 
-    if (argc < 2) {
+    child_info.running = 0;
+    child_info.stopped = 0;
+    child_info.status  = EXIT_FAILURE;
+
+    if ((argc >= 2) && (strcmp(argv[1], "--verbose") == 0)) {
+        verbose  = 1;
+        prog_arg = 2;
+    }
+
+    if (argc < prog_arg + 1) {
         fprintf(stderr, "Missing arguments\n");
-        printf("Usage: pseudotty <PROGRAM> [<ARGS>...]\n");
+        printf("Usage: pseudotty [--verbose] <PROGRAM> [<ARGS>...]\n");
         return EXIT_FAILURE;
     }
 
@@ -539,14 +643,15 @@ int main(int argc, char *argv[])
         goto cleanup;
     }
 
-    child_pid = fork();
-    if (child_pid == -1) {
+    child_info.running = 0;
+    child_info.child_pid = fork();
+    if (child_info.child_pid == -1) {
         perror("fork error");
         goto cleanup;
     }
 
     /* In the child process run the target program specified by args */
-    if (child_pid == 0) {
+    if (child_info.child_pid == 0) {
         int          input_fd;
         int          output_fd;
         size_t       srci;
@@ -596,43 +701,32 @@ int main(int argc, char *argv[])
         env[dsti++] = cols;
         env[dsti]   = NULL;
 
-        execve(argv[1], &argv[1], env);
+        execve(argv[prog_arg], &argv[prog_arg], env);
 
         perror("execv error");
         goto cleanup;
     }
 
-    /* Execute the script and receive output from child */
-    for (;;) {
+    child_info.running = 1;
 
-        enum INPUT_STATUS status = receive_input(master_fd, child_pid, 0);
+    /* Execute the script and receive output from child */
+    do {
+
+        enum INPUT_STATUS status = receive_input(master_fd, &child_info, 0);
 
         if (status == INPUT_ERROR)
             break;
 
-        if (run_one_command_from_script(master_fd, child_pid)) {
-            receive_input(master_fd, child_pid, 1);
+        if (run_one_command_from_script(master_fd, &child_info)) {
+            receive_input(master_fd, &child_info, 1);
             break;
         }
-    }
+    } while (child_info.running);
 
     close(master_fd);
     master_fd = -1;
 
-    {
-        int status = 0;
-        if (wait(&status) == -1) {
-            perror("wait error");
-            goto cleanup;
-        }
-
-        if (WIFEXITED(status))
-            retval = WEXITSTATUS(status);
-        else if (WIFSIGNALED(status))
-            fprintf(stderr, "Child exited due to signal %d\n", WTERMSIG(status));
-        else
-            fprintf(stderr, "Unexpected child exit\n");
-    }
+    check_child_status(&child_info, 0);
 
 cleanup:
     if (master_fd != -1)
@@ -641,5 +735,5 @@ cleanup:
     if (term_tty_name)
         free(term_tty_name);
 
-    return retval;
+    return child_info.status;
 }

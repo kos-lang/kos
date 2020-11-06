@@ -1,0 +1,14 @@
+print(123)\r
+
+456
+
+# Ctrl-Z generates SIGTSTP
+\x1A
+
++1\r
+
+\x10 # Up
+\r
+
+# Exit
+\x04
