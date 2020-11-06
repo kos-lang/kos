@@ -9,7 +9,7 @@ Kos 0.1 interactive interpreter\r
 [12]\r
 \r> \e[0Kxyz\r> [12]\e[0K\r> print(42)\e[0K\r
 42\r
-\r> \e[0Ki\e[1D\r> ri\e[0K\e[1D\e[1Cn\e[1D\e[1D\e[1D\a\r> prin\e[0K\e[3D\e[1C\e[1C\e[1C\at(84)\r
+\r> \e[0K\r> print(42)\e[0K\r> \e[0K\r> print(42)\e[0K\r> \e[0Ki\e[1D\r> ri\e[0K\e[1D\e[1Cn\e[1D\e[1D\e[1D\a\r> prin\e[0K\e[3D\e[1C\e[1C\e[1C\at(84)\r
 84\r
 \r> \e[0K\r> print(84)\e[0K\r> print(84\e[0K12345678)\r
 8412345678\r
@@ -55,4 +55,8 @@ Kos 0.1 interactive interpreter\r
 -333\r
 \r> \e[0K123     456\e[11D\e[3C\r>      456\e[0K\e[8D\r
 456\r
-\r> \e[0K
+\r> \e[0Kp\ar\ai\an\at\a(84)\r
+84\r
+\r> \e[0K256->\e[H\e[2J\r> 256->\e[0Kprint\r
+256\r
+\r> \e[0K\a
