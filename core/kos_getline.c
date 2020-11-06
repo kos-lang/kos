@@ -1259,7 +1259,14 @@ int kos_getline(KOS_GETLINE      *state,
     while ( ! error && (key != KEY_ENTER)) {
 
         if (KOS_atomic_swap_u32(window_dimensions_changed, 0)) {
+
+            const unsigned min_width = edit.prompt_size + 2;
+            const unsigned max_width = 9999U;
+
             edit.num_columns = edit.interactive ? get_num_columns() : ~0U;
+
+            edit.num_columns = (edit.interactive && (edit.num_columns < min_width)) ? min_width : edit.num_columns;
+            edit.num_columns = (edit.interactive && (edit.num_columns > max_width)) ? max_width : edit.num_columns;
 
             error = clear_and_redraw(&edit);
         }
