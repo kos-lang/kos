@@ -282,28 +282,28 @@ static signal_handler old_sig_winch;
 
 static int init_terminal(TERM_INFO *old_info)
 {
-    int error;
+    int error = KOS_ERROR_ERRNO;
 
     struct termios new_attrs;
 
-    if (tcgetattr(fileno(stdin), &new_attrs))
-        return KOS_ERROR_ERRNO;
+    if ( ! tcgetattr(fileno(stdin), &new_attrs)) {
 
-    *old_info = new_attrs;
+        *old_info = new_attrs;
 
-    new_attrs.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
-    new_attrs.c_oflag &= ~OPOST;
-    new_attrs.c_cflag |= CS8;
-    new_attrs.c_lflag &= ~(ECHOKE | ECHOE | ECHO | ECHONL | ECHOPRT | ECHOCTL | ICANON | IEXTEN | ISIG);
-    new_attrs.c_cc[VMIN]  = 1;
-    new_attrs.c_cc[VTIME] = 0;
+        new_attrs.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
+        new_attrs.c_oflag &= ~OPOST;
+        new_attrs.c_cflag |= CS8;
+        new_attrs.c_lflag &= ~(ECHOKE | ECHOE | ECHO | ECHONL | ECHOPRT | ECHOCTL | ICANON | IEXTEN | ISIG);
+        new_attrs.c_cc[VMIN]  = 1;
+        new_attrs.c_cc[VTIME] = 0;
 
-    if (tcsetattr(fileno(stdin), TCSAFLUSH, &new_attrs) != 0)
-        return KOS_ERROR_ERRNO;
+        if (tcsetattr(fileno(stdin), TCSAFLUSH, &new_attrs) == 0) {
 
-    error = install_signal(SIGWINCH, sig_winch, &old_sig_winch);
-    if (error)
-        (void)tcsetattr(fileno(stdin), TCSANOW, old_info);
+            error = install_signal(SIGWINCH, sig_winch, &old_sig_winch);
+            if (error)
+                (void)tcsetattr(fileno(stdin), TCSANOW, old_info);
+        }
+    }
 
     return error;
 }
@@ -720,38 +720,42 @@ static int add_to_persistent_history(KOS_GETLINE *state,
                                      size_t       size,
                                      size_t       num_chars)
 {
-    HIST_NODE *node = alloc_history_node(&state->allocator, str, size, num_chars);
+    int        error = KOS_ERROR_OUT_OF_MEMORY;
+    HIST_NODE *node  = alloc_history_node(&state->allocator, str, size, num_chars);
 
     if (node) {
         node->persistent      = 1;
         node->persistent_prev = state->head;
         state->head           = node;
 
-        return KOS_SUCCESS;
+        error = KOS_SUCCESS;
     }
-    else
-        return KOS_ERROR_OUT_OF_MEMORY;
+
+    return error;
 }
 
 static int init_history(struct TERM_EDIT *edit, HIST_NODE *node)
 {
+    int        error     = KOS_ERROR_OUT_OF_MEMORY;
     HIST_NODE *next_node = alloc_history_node(&edit->temp_allocator, 0, 0, 0);
 
-    if ( ! next_node)
-        return KOS_ERROR_OUT_OF_MEMORY;
+    if (next_node) {
 
-    edit->cur_hist_node = next_node;
+        edit->cur_hist_node = next_node;
 
-    while (node) {
-        next_node->prev = node;
-        node->next      = next_node;
-        next_node       = node;
-        node            = node->persistent_prev;
+        while (node) {
+            next_node->prev = node;
+            node->next      = next_node;
+            next_node       = node;
+            node            = node->persistent_prev;
+        }
+
+        next_node->prev = 0;
+
+        error = KOS_SUCCESS;
     }
 
-    next_node->prev = 0;
-
-    return KOS_SUCCESS;
+    return error;
 }
 
 static int save_to_temp_history(struct TERM_EDIT *edit)
@@ -799,31 +803,34 @@ static int restore_from_temp_history(struct TERM_EDIT *edit)
     assert(node);
 
     error = kos_vector_resize(edit->line, node->size);
-    if (error)
-        return error;
 
-    memcpy(edit->line->buffer, &node->buffer[0], node->size);
+    if ( ! error) {
 
-    edit->line_size = node->line_size;
+        memcpy(edit->line->buffer, &node->buffer[0], node->size);
 
-    edit->cursor_pos.logical  = node->line_size;
-    edit->cursor_pos.physical = (unsigned)edit->line->size;
-    edit->scroll_pos.logical  = 0;
-    edit->scroll_pos.physical = 0;
+        edit->line_size = node->line_size;
 
-    if (node->line_size + edit->prompt_size > edit->num_columns) {
+        edit->cursor_pos.logical  = node->line_size;
+        edit->cursor_pos.physical = (unsigned)edit->line->size;
+        edit->scroll_pos.logical  = 0;
+        edit->scroll_pos.physical = 0;
 
-        struct TERM_POS pos = edit->cursor_pos;
+        if (node->line_size + edit->prompt_size > edit->num_columns) {
 
-        const unsigned scroll_target = pos.logical - edit->num_columns + edit->prompt_size;
+            struct TERM_POS pos = edit->cursor_pos;
 
-        while (pos.logical > scroll_target)
-            decrement_pos(edit, &pos);
+            const unsigned scroll_target = pos.logical - edit->num_columns + edit->prompt_size;
 
-        edit->scroll_pos = pos;
+            while (pos.logical > scroll_target)
+                decrement_pos(edit, &pos);
+
+            edit->scroll_pos = pos;
+        }
+
+        error = clear_and_redraw(edit);
     }
 
-    return clear_and_redraw(edit);
+    return error;
 }
 
 static int action_up(struct TERM_EDIT *edit)
