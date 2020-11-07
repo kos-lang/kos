@@ -954,24 +954,6 @@ static int action_delete_to_word_end(struct TERM_EDIT *edit)
     return delete_range(edit, begin, end);
 }
 
-static int action_capitalize_to_word_end(struct TERM_EDIT *edit)
-{
-    /* TODO capitalize up to the end of next word */
-    return send_char(KEY_BELL);
-}
-
-static int action_lowercase_to_word_end(struct TERM_EDIT *edit)
-{
-    /* TODO lowercase up to the end of next word */
-    return send_char(KEY_BELL);
-}
-
-static int action_uppercase_to_word_end(struct TERM_EDIT *edit)
-{
-    /* TODO uppercase up to the end of next word */
-    return send_char(KEY_BELL);
-}
-
 static int action_clear_after_cursor(struct TERM_EDIT *edit)
 {
     if (edit->cursor_pos.physical == edit->line->size)
@@ -1006,12 +988,6 @@ static int action_clear_screen(struct TERM_EDIT *edit)
         return check_error(stdout);
 
     return clear_and_redraw(edit);
-}
-
-static int action_swap_chars(struct TERM_EDIT *edit)
-{
-    /* TODO swap char at cursor with previous char, then move cursor right */
-    return send_char(KEY_BELL);
 }
 
 static int insert_char(struct TERM_EDIT *edit, char c)
@@ -1169,12 +1145,15 @@ static int dispatch_esc(struct TERM_EDIT *edit)
             break;
         }
 
+        /* Unsupported cases:
+         * - Alt-c  - capitalize to word end
+         * - Alt-l  - lowercase to word end
+         * - Alt-u  - uppercase to word end
+         */
+
         case 'b':           return action_word_begin(edit);
-        case 'c':           return action_capitalize_to_word_end(edit);
         case 'd':           return action_delete_to_word_end(edit);
         case 'f':           return action_word_end(edit);
-        case 'l':           return action_lowercase_to_word_end(edit);
-        case 'u':           return action_uppercase_to_word_end(edit);
         case KEY_CTRL_H:    return action_delete_to_word_begin(edit);
         case KEY_BACKSPACE: return action_delete_to_word_begin(edit);
 
@@ -1214,7 +1193,7 @@ static int dispatch_key(struct TERM_EDIT *edit, int *key)
         case KEY_CTRL_N:    return action_down(edit);
         case KEY_CTRL_P:    return action_up(edit);
         case KEY_CTRL_R:    return action_reverse_search(edit);
-        case KEY_CTRL_T:    return action_swap_chars(edit);
+        /* Unsupported: Ctrl-T - swap chars */
         case KEY_CTRL_U:    return action_clear_line(edit);
         case KEY_CTRL_W:    return action_delete_to_word_begin(edit);
         case KEY_CTRL_Z:    return action_stop_process(edit);
