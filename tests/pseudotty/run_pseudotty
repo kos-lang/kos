@@ -21,4 +21,4 @@ rm -rf "$4"
 
 [ -f "$3.expected" ] || die "Error: Missing '$3.expected'"
 
-diff "$4" "$3.expected"
+diff "$3.expected" "$4"
