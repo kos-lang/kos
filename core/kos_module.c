@@ -120,10 +120,10 @@ static int load_native(KOS_CONTEXT ctx, KOS_OBJ_ID module_name, KOS_VECTOR *cpat
 
         KOS_suspend_context(ctx);
 
-        lib = kos_load_library(cpath->buffer, &error_cstr);
+        lib = kos_seq_fail() ? NULL : kos_load_library(cpath->buffer, &error_cstr);
 
         if (lib)
-            init = (KOS_BUILTIN_INIT)kos_get_library_function(lib, "init_kos_module", &error_cstr);
+            init = kos_seq_fail() ? NULL : (KOS_BUILTIN_INIT)kos_get_library_function(lib, "init_kos_module", &error_cstr);
 
         KOS_resume_context(ctx);
 

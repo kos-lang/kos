@@ -5,11 +5,10 @@
 #include "../inc/kos_error.h"
 #include "../inc/kos_instance.h"
 #include "../inc/kos_module.h"
+#include "kos_test_tools.h"
 #include <stdio.h>
 
-#define TEST(test) do { if (!(test)) { printf("Failed: line %d: %s\n", __LINE__, #test); return 1; } } while (0)
-#define TEST_EXCEPTION() do { TEST(KOS_is_exception_pending(ctx)); KOS_clear_exception(ctx); } while (0)
-#define TEST_NO_EXCEPTION() TEST( ! KOS_is_exception_pending(ctx))
+KOS_DECLARE_STATIC_CONST_STRING(str_test, "test_global");
 
 int main(void)
 {
@@ -22,6 +21,25 @@ int main(void)
 
     /************************************************************************/
     TEST(KOS_load_module_from_memory(ctx, base, sizeof(base) - 1, 0, 0) != KOS_SUCCESS);
+    TEST_EXCEPTION();
+
+    /************************************************************************/
+    {
+        KOS_OBJ_ID mod_obj = inst.modules.init_module;
+        unsigned   idx     = ~0U;
+
+        TEST( ! IS_BAD_PTR(mod_obj));
+        TEST(GET_OBJ_TYPE(mod_obj) == OBJ_MODULE);
+
+        TEST(KOS_module_add_global(ctx, mod_obj, KOS_CONST_ID(str_test), TO_SMALL_INT(42), &idx) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+        TEST(idx == 0);
+
+        idx = ~0U;
+        TEST(KOS_module_add_global(ctx, mod_obj, KOS_CONST_ID(str_test), TO_SMALL_INT(42), &idx) != KOS_SUCCESS);
+        TEST_EXCEPTION();
+        TEST(idx == ~0U);
+    }
 
     KOS_instance_destroy(&inst);
 
