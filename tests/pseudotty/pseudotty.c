@@ -523,11 +523,9 @@ static int send_one_line_from_script(int tty_fd, CHILD_INFO *child_info, int *eo
                 if (check_child_status(child_info, WUNTRACED | WNOHANG))
                     return 1;
 
-                if (get_time_ms() - start_time_ms > 10000) {
+                if (get_time_ms() - start_time_ms > 5000) {
                     if (verbose)
                         print_color(RED, "TIMEOUT");
-                    else
-                        printf("[[TIMEOUT]]");
                     break;
                 }
 
