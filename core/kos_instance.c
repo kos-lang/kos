@@ -771,6 +771,8 @@ KOS_OBJ_ID kos_register_module_init(KOS_CONTEXT      ctx,
             mod_init_ptr->init = 0;
 
             mod_init.o = KOS_BADPTR;
+
+            KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
         }
     }
     else
