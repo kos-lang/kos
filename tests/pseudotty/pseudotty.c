@@ -62,7 +62,7 @@ static void output_byte(int byte)
         putchar('\\');
         putchar('a');
     }
-    else if ((byte < 0x20) || (byte == 0x7F))
+    else if ((byte < 0x20) || (byte >= 0x7F))
         printf("\\x%02x", byte);
     else
         putchar((char)byte);
@@ -280,8 +280,11 @@ static int check_child_status(CHILD_INFO *child_info, int options)
         return child_info->status;
 
     wait_status = wait4(child_info->child_pid, &status, options, NULL);
-    if ( ! wait_status)
+    if ( ! wait_status) {
+        if (WIFSTOPPED(status))
+            printf("STOPPED");
         return 0;
+    }
 
     assert((wait_status == -1) || (wait_status == child_info->child_pid));
 
