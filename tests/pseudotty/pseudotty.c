@@ -15,6 +15,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <time.h>
 #include <unistd.h>
 
 static int console_width = 20; /* Number of columns in the simulated console */
@@ -517,6 +518,8 @@ static int send_one_line_from_script(int tty_fd, CHILD_INFO *child_info, int *eo
 
             do {
 
+                struct timespec ts;
+
                 if (check_child_status(child_info, WUNTRACED | WNOHANG))
                     return 1;
 
@@ -527,6 +530,10 @@ static int send_one_line_from_script(int tty_fd, CHILD_INFO *child_info, int *eo
                         printf("[[TIMEOUT]]");
                     break;
                 }
+
+                ts.tv_sec  = 0;
+                ts.tv_nsec = 1000000;
+                nanosleep(&ts, NULL);
 
             } while ( ! child_info->stopped);
         }
