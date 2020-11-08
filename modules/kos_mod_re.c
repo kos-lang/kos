@@ -212,7 +212,12 @@ struct RE_PARSE_CTX {
     KOS_VECTOR      buf;
     KOS_VECTOR      class_descs;
     KOS_VECTOR      class_data;
+
+    /* Reuse character classes */
+    uint16_t        digit_class_id;
 };
+
+#define NO_CLASS_ID 0xFFFFU
 
 struct RE_CLASS_DESC {
     uint16_t begin_idx;
@@ -402,6 +407,8 @@ static int parse_number(struct RE_PARSE_CTX *re_ctx, uint32_t* number)
     uint32_t  code  = peek_next_char(&re_ctx->iter);
     const int pos   = re_ctx->idx;
 
+    assert(code != END_OF_STR);
+
     if (code < '0' || code > '9') {
         char str_code[6];
 
@@ -434,13 +441,6 @@ static int parse_number(struct RE_PARSE_CTX *re_ctx, uint32_t* number)
     *number = value;
 
     return KOS_SUCCESS;
-}
-
-static int parse_escape_seq(struct RE_PARSE_CTX *re_ctx)
-{
-    /* TODO */
-    KOS_raise_printf(re_ctx->ctx, "escape sequences not implemented yet");
-    return KOS_ERROR_EXCEPTION;
 }
 
 static int parse_class_char(struct RE_PARSE_CTX *re_ctx, uint32_t *out_code)
@@ -485,7 +485,7 @@ static uint16_t generate_class(struct RE_PARSE_CTX *re_ctx)
 
     if (error) {
         KOS_raise_exception(re_ctx->ctx, KOS_STR_OUT_OF_MEMORY);
-        return 0xFFFFU;
+        return NO_CLASS_ID;
     }
 
     class_id = (uint16_t)(re_ctx->class_descs.size / sizeof(struct RE_CLASS_DESC)) - 1;
@@ -625,11 +625,11 @@ static int add_class_range(struct RE_PARSE_CTX *re_ctx,
 
 static int parse_class(struct RE_PARSE_CTX *re_ctx)
 {
-    uint32_t      code     = peek_next_char(&re_ctx->iter);
-    enum RE_INSTR instr    = INSTR_MATCH_CLASS;
-    uint16_t      class_id = generate_class(re_ctx);
+    uint32_t       code     = peek_next_char(&re_ctx->iter);
+    enum RE_INSTR  instr    = INSTR_MATCH_CLASS;
+    const uint16_t class_id = generate_class(re_ctx);
 
-    if (class_id == 0xFFFFU)
+    if (class_id == NO_CLASS_ID)
         return KOS_ERROR_EXCEPTION;
 
     if (code == '^') {
@@ -685,6 +685,69 @@ static int parse_class(struct RE_PARSE_CTX *re_ctx)
     consume_next_char(re_ctx);
 
     return emit_instr1(re_ctx, instr, class_id);
+}
+
+static uint16_t get_digit_class_id(struct RE_PARSE_CTX *re_ctx)
+{
+    if (re_ctx->digit_class_id == NO_CLASS_ID) {
+        const uint16_t class_id = generate_class(re_ctx);
+
+        if ((class_id != NO_CLASS_ID) && ! add_class_range(re_ctx, class_id, '0', '9'))
+            re_ctx->digit_class_id = class_id;
+    }
+
+    return re_ctx->digit_class_id;
+}
+
+static int parse_escape_seq(struct RE_PARSE_CTX *re_ctx)
+{
+    int            error;
+    const uint32_t code = peek_next_char(&re_ctx->iter);
+
+    if (code == END_OF_STR) {
+        KOS_raise_printf(re_ctx->ctx, "error parsing regular expression: "
+                         "expected an escape sequence at position %d but reached end of regular expression",
+                         re_ctx->idx);
+        return KOS_ERROR_EXCEPTION;
+    }
+
+    consume_next_char(re_ctx);
+
+    switch (code) {
+
+        case '\\':
+            error = emit_instr1(re_ctx, INSTR_MATCH_ONE_CHAR, code);
+            break;
+
+        case 'd': {
+            const uint16_t class_id = get_digit_class_id(re_ctx);
+            if (class_id != NO_CLASS_ID)
+                error = emit_instr1(re_ctx, INSTR_MATCH_CLASS, class_id);
+            else
+                error = KOS_ERROR_EXCEPTION;
+            break;
+        }
+
+        case 'D': {
+            const uint16_t class_id = get_digit_class_id(re_ctx);
+            if (class_id != NO_CLASS_ID)
+                error = emit_instr1(re_ctx, INSTR_MATCH_NOT_CLASS, class_id);
+            else
+                error = KOS_ERROR_EXCEPTION;
+            break;
+        }
+
+        default: {
+            char str_code[6];
+
+            encode_utf8(code, &str_code[0], sizeof(str_code));
+            KOS_raise_printf(re_ctx->ctx, "unsupported escape sequence \\%s at position %d",
+                             str_code, re_ctx->idx);
+            error = KOS_ERROR_EXCEPTION;
+        }
+    }
+
+    return error;
 }
 
 static int parse_group(struct RE_PARSE_CTX *re_ctx)
@@ -1078,6 +1141,7 @@ static int parse_re(KOS_CONTEXT ctx, KOS_OBJ_ID regex_str, KOS_OBJ_ID regex)
     re_ctx.num_groups          = 0U;
     re_ctx.group_depth         = 0U;
     re_ctx.num_counts          = 0U;
+    re_ctx.digit_class_id      = NO_CLASS_ID;
 
     TRY(parse_alternative_match_seq(&re_ctx));
 

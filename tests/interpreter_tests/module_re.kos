@@ -432,3 +432,35 @@ do {
     assert result[1] == " @["
     assert result[2] == " big "
 }
+
+do {
+    expect_fail(() => re.re("\\"))
+    expect_fail(() => re.re("a\\"))
+    expect_fail(() => re.re("[\\"))
+}
+
+do {
+    const r = re.re(r"\\")
+    check(r.search("abc\\d"), 3, 4)
+    assert r.search("abc_d") == void
+}
+
+do {
+    const r = re.re(r"x\d")
+    check(r.search("abc9dx9e"), 5, 7)
+}
+
+do {
+    const r = re.re(r"\d+")
+    const result = find_all(r, "abcxyz0123456789ABCXYZ_!@#$%^&")
+    assert result.size == 1
+    assert result[0] == "0123456789"
+}
+
+do {
+    const r = re.re(r"\D+")
+    const result = find_all(r, "abcxyz0123456789ABCXYZ_!@#$%^&")
+    assert result.size == 2
+    assert result[0] == "abcxyz"
+    assert result[1] == "ABCXYZ_!@#$%^&"
+}
