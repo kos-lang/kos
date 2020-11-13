@@ -165,6 +165,7 @@ enum RE_INSTR {
     INSTR_MATCH_NOT_CLASS,  /* MATCH.NOT.CLASS <class_id>                */
     INSTR_MATCH_LINE_BEGIN, /* MATCH.LINE.BEGIN                          */
     INSTR_MATCH_LINE_END,   /* MATCH.LINE.END                            */
+    INSTR_MATCH_BOUNDARY,   /* MATCH.BOUNDARY <kind>                     */
     INSTR_BEGIN_GROUP,      /* BEGIN.GROUP <group_id>                    */
     INSTR_END_GROUP,        /* END.GROUP <group_id>                      */
     INSTR_FORK,             /* FORK <offs>                               */
@@ -173,6 +174,13 @@ enum RE_INSTR {
     INSTR_LAZY_COUNT,       /* LAZY.COUNT <offs> <count_id> <min>        */
     INSTR_GREEDY_JUMP,      /* GREEDY.JUMP <offs> <count_id> <min> <max> */
     INSTR_LAZY_JUMP         /* LAZY.JUMP <offs> <count_id> <min> <max>   */
+};
+
+enum BOUNDARY_KIND {
+    BOUNDARY_NONE       = 1,
+    BOUNDARY_WORD_BEGIN = 2,
+    BOUNDARY_WORD_END   = 4,
+    BOUNDARY_WORD       = 6
 };
 
 struct RE_INSTR_DESC_S {
@@ -191,6 +199,7 @@ static const RE_INSTR_DESC re_instr_descs[] = {
     { "MATCH.NOT.CLASS",  1, 0 },
     { "MATCH.LINE.BEGIN", 0, 0 },
     { "MATCH.LINE.END",   0, 0 },
+    { "MATCH.BOUNDARY",   1, 0 },
     { "BEGIN.GROUP",      1, 0 },
     { "END.GROUP",        1, 0 },
     { "FORK",             1, 1 },
@@ -454,13 +463,6 @@ static int parse_class_char(struct RE_PARSE_CTX *re_ctx, uint32_t *out_code)
         return KOS_ERROR_EXCEPTION;
     }
 
-    if ((code == ']') || (code == '-')) {
-        KOS_raise_printf(re_ctx->ctx, "error parsing regular expression: "
-                         "found character %c but expected a class character at position %d",
-                         (char)(uint8_t)code, re_ctx->idx);
-        return KOS_ERROR_EXCEPTION;
-    }
-
     consume_next_char(re_ctx);
 
     if (code == '\\') {
@@ -717,6 +719,22 @@ static int parse_escape_seq(struct RE_PARSE_CTX *re_ctx)
 
         case '\\':
             error = emit_instr1(re_ctx, INSTR_MATCH_ONE_CHAR, code);
+            break;
+
+        case '<':
+            error = emit_instr1(re_ctx, INSTR_MATCH_BOUNDARY, BOUNDARY_WORD_BEGIN);
+            break;
+
+        case '>':
+            error = emit_instr1(re_ctx, INSTR_MATCH_BOUNDARY, BOUNDARY_WORD_END);
+            break;
+
+        case 'b':
+            error = emit_instr1(re_ctx, INSTR_MATCH_BOUNDARY, BOUNDARY_WORD);
+            break;
+
+        case 'B':
+            error = emit_instr1(re_ctx, INSTR_MATCH_BOUNDARY, BOUNDARY_NONE);
             break;
 
         case 'd': {
@@ -1409,6 +1427,14 @@ static uint16_t *get_group(struct RE_POSS_STACK *poss_stack, uint16_t num_counts
     return &poss_stack->current->counts_and_groups[num_counts + group_id * 2];
 }
 
+static int is_word_char(uint32_t code)
+{
+    return ((code >= 'A') && (code <= 'Z')) ||
+           ((code >= 'a') && (code <= 'z')) ||
+           ((code >= '0') && (code <= '9')) ||
+           (code == '_');
+}
+
 #define BEGIN_INSTRUCTION(instr) case INSTR_ ## instr
 #define NEXT_INSTRUCTION         break
 
@@ -1530,6 +1556,32 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
                     goto try_other_possibility;
 
                 bytecode += 1;
+                NEXT_INSTRUCTION;
+            }
+
+            BEGIN_INSTRUCTION(MATCH_BOUNDARY): {
+                const uint16_t  boundary  = bytecode[1];
+                uint16_t        cur_state = 0;
+                uint32_t        cur_code;
+                uint32_t        prev_code;
+                KOS_STRING_ITER iter0;
+
+                kos_init_string_iter(&iter0, str_obj);
+
+                prev_code = (iter.ptr > iter0.ptr) ? peek_prev_char(&iter) : ' ';
+                cur_code  = peek_next_char(&iter);
+
+                if (is_word_char(prev_code)) {
+                    cur_state = is_word_char(cur_code) ? BOUNDARY_NONE : BOUNDARY_WORD_END;
+                }
+                else {
+                    cur_state = is_word_char(cur_code) ? BOUNDARY_WORD_BEGIN : BOUNDARY_NONE;
+                }
+
+                if ( ! (boundary & cur_state))
+                    goto try_other_possibility;
+
+                bytecode += 2;
                 NEXT_INSTRUCTION;
             }
 

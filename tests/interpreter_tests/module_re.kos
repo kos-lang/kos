@@ -73,7 +73,6 @@ do {
     expect_fail(() => re.re(r"a*{1}"))
     expect_fail(() => re.re(r"["))
     expect_fail(() => re.re(r"[]"))
-    expect_fail(() => re.re(r"[-]"))
     expect_fail(() => re.re(r"[a"))
     expect_fail(() => re.re(r"[0-]"))
     expect_fail(() => re.re(r"[0--]"))
@@ -85,6 +84,16 @@ do {
     assert r instanceof re.re
     assert ! (void instanceof re.re)
     assert ! ({} instanceof re.re)
+}
+
+do {
+    const r = re.re("[-]")
+    assert check(r.search("abc-d"), 3, 4)
+}
+
+do {
+    const r = re.re("[^-]+")
+    assert check(r.search("-ab.c-"), 1, 5)
 }
 
 do {
@@ -463,4 +472,63 @@ do {
     assert result.size == 2
     assert result[0] == "abcxyz"
     assert result[1] == "ABCXYZ_!@#$%^&"
+}
+
+do {
+    const r = re.re(r"\<")
+    assert r.search("") == void
+    assert r.search(" ") == void
+    assert r.search("+-*/") == void
+    assert check(r.search("a"), 0, 0)
+    assert check(r.search(" a"), 1, 1)
+    assert check(r.search(" +=012 "), 3, 3)
+}
+
+do {
+    const r = re.re(r"\>")
+    assert r.search("") == void
+    assert r.search(" ") == void
+    assert r.search("+-*/") == void
+    assert check(r.search("a"), 1, 1)
+    assert check(r.search(" a "), 2, 2)
+    assert check(r.search(" +=012+ "), 6, 6)
+}
+
+do {
+    const r = re.re(r"\b")
+    assert r.search("") == void
+    assert r.search(" ") == void
+    assert r.search("+-*/") == void
+    assert check(r.search("a"), 0, 0)
+    assert check(r.search("a", 1), 1, 1)
+    assert check(r.search(" a ", 1), 1, 1)
+    assert check(r.search(" a ", 2), 2, 2)
+    assert check(r.search(" +=012+ "), 3, 3)
+    assert check(r.search(" +=012+ ", 4), 6, 6)
+}
+
+do {
+    const r = re.re(r"\B")
+    assert check(r.search(""), 0, 0)
+    assert check(r.search(" "), 0, 0)
+    assert check(r.search("+-*/"), 0, 0)
+    assert r.search("a") == void
+    assert r.search("a b c d") == void
+    assert check(r.search("a b cd e"), 5, 5)
+    assert check(r.search("a b c  e"), 6, 6)
+}
+
+do {
+    const r = re.re(r"\<.*\>")
+    assert check(r.search("....abc..."), 4, 7)
+}
+
+do {
+    const r = re.re(r"\b.*\b")
+    assert check(r.search("....abc..."), 4, 7)
+}
+
+do {
+    const r = re.re(r"\B.*\B")
+    assert check(r.search("a b cdef g"), 5, 7)
 }
