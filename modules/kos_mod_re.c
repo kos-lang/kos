@@ -224,6 +224,7 @@ struct RE_PARSE_CTX {
 
     /* Reuse character classes */
     uint16_t        digit_class_id;
+    uint16_t        word_class_id;
 };
 
 #define NO_CLASS_ID 0xFFFFU
@@ -701,6 +702,22 @@ static uint16_t get_digit_class_id(struct RE_PARSE_CTX *re_ctx)
     return re_ctx->digit_class_id;
 }
 
+static uint16_t get_word_class_id(struct RE_PARSE_CTX *re_ctx)
+{
+    if (re_ctx->word_class_id == NO_CLASS_ID) {
+        const uint16_t class_id = generate_class(re_ctx);
+
+        if ((class_id != NO_CLASS_ID) &&
+            ! add_class_range(re_ctx, class_id, 'a', 'z') &&
+            ! add_class_range(re_ctx, class_id, '_', '_') &&
+            ! add_class_range(re_ctx, class_id, 'A', 'Z') &&
+            ! add_class_range(re_ctx, class_id, '0', '9'))
+            re_ctx->word_class_id = class_id;
+    }
+
+    return re_ctx->word_class_id;
+}
+
 static int parse_escape_seq(struct RE_PARSE_CTX *re_ctx)
 {
     int            error;
@@ -748,6 +765,24 @@ static int parse_escape_seq(struct RE_PARSE_CTX *re_ctx)
 
         case 'D': {
             const uint16_t class_id = get_digit_class_id(re_ctx);
+            if (class_id != NO_CLASS_ID)
+                error = emit_instr1(re_ctx, INSTR_MATCH_NOT_CLASS, class_id);
+            else
+                error = KOS_ERROR_EXCEPTION;
+            break;
+        }
+
+        case 'w': {
+            const uint16_t class_id = get_word_class_id(re_ctx);
+            if (class_id != NO_CLASS_ID)
+                error = emit_instr1(re_ctx, INSTR_MATCH_CLASS, class_id);
+            else
+                error = KOS_ERROR_EXCEPTION;
+            break;
+        }
+
+        case 'W': {
+            const uint16_t class_id = get_word_class_id(re_ctx);
             if (class_id != NO_CLASS_ID)
                 error = emit_instr1(re_ctx, INSTR_MATCH_NOT_CLASS, class_id);
             else
@@ -1160,6 +1195,7 @@ static int parse_re(KOS_CONTEXT ctx, KOS_OBJ_ID regex_str, KOS_OBJ_ID regex)
     re_ctx.group_depth         = 0U;
     re_ctx.num_counts          = 0U;
     re_ctx.digit_class_id      = NO_CLASS_ID;
+    re_ctx.word_class_id       = NO_CLASS_ID;
 
     TRY(parse_alternative_match_seq(&re_ctx));
 

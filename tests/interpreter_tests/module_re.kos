@@ -532,3 +532,22 @@ do {
     const r = re.re(r"\B.*\B")
     assert check(r.search("a b cdef g"), 5, 7)
 }
+
+do {
+    const r = re.re(r"\w+")
+    const result = find_all(r, "01ab + cd_E - Xy&z")
+    assert result.size == 4
+    assert result[0] == "01ab"
+    assert result[1] == "cd_E"
+    assert result[2] == "Xy"
+    assert result[3] == "z"
+}
+
+do {
+    const r = re.re(r"\W+")
+    const result = find_all(r, "01ab + cd_E - Xy&z")
+    assert result.size == 3
+    assert result[0] == " + "
+    assert result[1] == " - "
+    assert result[2] == "&"
+}
