@@ -1608,10 +1608,10 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
                 cur_code  = peek_next_char(&iter);
 
                 if (is_word_char(prev_code)) {
-                    cur_state = is_word_char(cur_code) ? BOUNDARY_NONE : BOUNDARY_WORD_END;
+                    cur_state = (uint16_t)(is_word_char(cur_code) ? BOUNDARY_NONE : BOUNDARY_WORD_END);
                 }
                 else {
-                    cur_state = is_word_char(cur_code) ? BOUNDARY_WORD_BEGIN : BOUNDARY_NONE;
+                    cur_state = (uint16_t)(is_word_char(cur_code) ? BOUNDARY_WORD_BEGIN : BOUNDARY_NONE);
                 }
 
                 if ( ! (boundary & cur_state))
