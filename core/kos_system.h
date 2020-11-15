@@ -39,6 +39,10 @@ int kos_get_absolute_path(struct KOS_VECTOR_S *path);
 int kos_get_env(const char          *name,
                 struct KOS_VECTOR_S *buf);
 
+#ifndef _WIN32
+int kos_unix_open(const char *filename, int flags);
+#endif
+
 int kos_executable_path(struct KOS_VECTOR_S *buf);
 
 enum KOS_PROTECT_E {

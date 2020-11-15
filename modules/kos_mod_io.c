@@ -27,14 +27,12 @@
 #   pragma warning( pop )
 #   pragma warning( disable : 4996 ) /* 'fopen/getenv': This function may be unsafe */
 #else
+#   include <fcntl.h>
 #   include <sys/stat.h>
 #   include <sys/types.h>
 #endif
 #ifdef __linux__
 #   include <sys/sysmacros.h>
-#endif
-#ifdef _WIN32
-#   pragma warning( disable : 4996 ) /* 'fopen': This function may be unsafe */
 #endif
 
 static const char str_err_bad_flags[]           = "incorrect file open flags";
@@ -125,6 +123,7 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
     fix_path_separators(&filename_cstr);
 
     /* TODO use own flags */
+    /* TODO add flag to avoid cloexec */
 
     if (KOS_get_array_size(args.o) > 1) {
         KOS_OBJ_ID flags_obj = KOS_array_read(ctx, args.o, 1);
@@ -135,11 +134,24 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
             RAISE_EXCEPTION(str_err_bad_flags);
 
         TRY(KOS_string_to_cstr_vec(ctx, flags_obj, &flags_cstr));
+
+        {
+            const size_t e_pos = flags_cstr.size - 1;
+
+            TRY(kos_vector_resize(&flags_cstr, e_pos + 2));
+            flags_cstr.buffer[e_pos] = 'e';
+            flags_cstr.buffer[e_pos + 1] = 0;
+        }
     }
 
     KOS_suspend_context(ctx);
 
-    file = fopen(filename_cstr.buffer, flags_cstr.size ? flags_cstr.buffer : "r+b");
+    file = fopen(filename_cstr.buffer, flags_cstr.size ? flags_cstr.buffer : "r+be");
+
+#ifndef _WIN32
+    if (file)
+        fcntl(fileno(file), F_SETFD, FD_CLOEXEC);
+#endif
 
     KOS_resume_context(ctx);
 

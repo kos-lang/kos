@@ -85,6 +85,19 @@ static int is_file(const char *filename)
 }
 #endif
 
+#ifndef _WIN32
+int kos_unix_open(const char *filename, int flags)
+{
+    const int fd = kos_seq_fail() ? -1 :
+                   open(filename, flags | O_CLOEXEC);
+
+    if (fd != -1)
+        fcntl(fd, F_SETFD, FD_CLOEXEC);
+
+    return fd;
+}
+#endif
+
 #if defined(_WIN32) || defined(__HAIKU__)
 void kos_filebuf_init(KOS_FILEBUF *file_buf)
 {
@@ -110,9 +123,13 @@ int kos_load_file(const char  *filename,
     TRY(is_file(filename));
 
     file = kos_seq_fail() ? NULL :
-           fopen(filename, "rb");
+           fopen(filename, "rbe");
     if ( ! file)
         RAISE_ERROR(KOS_ERROR_ERRNO);
+
+#ifndef _WIN32
+    fcntl(fileno(file), F_SETFD, FD_CLOEXEC);
+#endif
 
     if (0 != fseek(file, 0, SEEK_END) || kos_seq_fail())
         RAISE_ERROR(KOS_ERROR_ERRNO);
@@ -177,8 +194,7 @@ int kos_load_file(const char  *filename,
     assert( ! file_buf->buffer);
     assert( ! file_buf->size);
 
-    fd = kos_seq_fail() ? -1 :
-         open(filename, O_RDONLY);
+    fd = kos_unix_open(filename, O_RDONLY);
     if (fd == -1)
         RAISE_ERROR(KOS_ERROR_ERRNO);
 

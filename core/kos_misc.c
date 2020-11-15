@@ -5,6 +5,7 @@
 #include "kos_misc.h"
 #include "kos_math.h"
 #include "kos_try.h"
+#include "kos_system.h"
 #include "../inc/kos_error.h"
 #include <assert.h>
 #include <stdint.h>
@@ -610,7 +611,7 @@ static void get_entropy(uint8_t *bytes, unsigned size)
 #else
 static void get_entropy(uint8_t *bytes, unsigned size)
 {
-    const int fd = open("/dev/urandom", O_RDONLY);
+    const int fd = kos_unix_open("/dev/urandom", O_RDONLY);
 
     if (fd == -1)
         kos_get_entropy_fallback(bytes, size);
