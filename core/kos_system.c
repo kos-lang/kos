@@ -86,7 +86,9 @@ static int is_file(const char *filename)
 #endif
 
 #ifndef _WIN32
-#   ifndef CONFIG_NO_O_CLOEXEC
+#   ifdef CONFIG_NO_O_CLOEXEC
+#       define KOS_O_CLOEXEC 0
+#   else
 #       define KOS_O_CLOEXEC O_CLOEXEC
 #   endif
 
