@@ -273,22 +273,19 @@ typedef struct {
 
 static int check_child_status(CHILD_INFO *child_info, int options)
 {
-    int status      = 0;
-    int wait_status = 0;
+    int   status    = 0;
+    pid_t ret_child = 0;
 
     if ( ! child_info->running)
         return child_info->status;
 
-    wait_status = wait4(child_info->child_pid, &status, options, NULL);
-    if ( ! wait_status) {
-        if (WIFSTOPPED(status))
-            printf("STOPPED");
+    ret_child = waitpid(child_info->child_pid, &status, options);
+    if ( ! ret_child)
         return 0;
-    }
 
-    assert((wait_status == -1) || (wait_status == child_info->child_pid));
+    assert((ret_child == -1) || (ret_child == child_info->child_pid));
 
-    if (wait_status == -1) {
+    if (ret_child == -1) {
         perror("wait error");
         child_info->running = 0;
     }
