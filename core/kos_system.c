@@ -86,10 +86,14 @@ static int is_file(const char *filename)
 #endif
 
 #ifndef _WIN32
+#   ifndef CONFIG_NO_O_CLOEXEC
+#       define KOS_O_CLOEXEC O_CLOEXEC
+#   endif
+
 int kos_unix_open(const char *filename, int flags)
 {
     const int fd = kos_seq_fail() ? -1 :
-                   open(filename, flags | O_CLOEXEC);
+                   open(filename, flags | KOS_O_CLOEXEC);
 
     if (fd != -1)
         fcntl(fd, F_SETFD, FD_CLOEXEC);

@@ -1,0 +1,22 @@
+#!/bin/sh
+
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2014-2020 Chris Dragan
+
+set -e
+
+CC="$1"
+
+SRC=$(mktemp)
+OBJ=$(mktemp)
+
+echo "#include <sys/types.h>" > "$SRC"
+echo "#include <sys/stat.h>" >> "$SRC"
+echo "#include <fcntl.h>" >> "$SRC"
+echo "int get_o_cloexec() { return O_CLOEXEC; }" >> "$SRC"
+
+if "$CC" -x c -c -o "$OBJ" "$SRC" >/dev/null 2>&1; then
+    echo "true"
+fi
+
+rm -f "$SRC" "$OBJ"

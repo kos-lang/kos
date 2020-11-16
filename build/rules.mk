@@ -172,6 +172,10 @@ else
         CFLAGS += -fvisibility=hidden -DKOS_SUPPORTS_VISIBILITY
     endif
 
+    ifneq (true,$(shell $(kos_dir)build/have_o_cloexec $(CC)))
+        CFLAGS += -DCONFIG_NO_O_CLOEXEC
+    endif
+
     ifeq ($(UNAME), Darwin)
         SHARED_LDFLAGS += -dynamiclib -undefined dynamic_lookup
         LD_DEFS = -Wl,-exported_symbols_list -Wl,$1.macos.def
