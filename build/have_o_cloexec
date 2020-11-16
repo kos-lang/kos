@@ -6,6 +6,7 @@
 set -e
 
 CC="$1"
+shift
 
 SRC=$(mktemp)
 OBJ=$(mktemp)
@@ -15,7 +16,7 @@ echo "#include <sys/stat.h>" >> "$SRC"
 echo "#include <fcntl.h>" >> "$SRC"
 echo "int get_o_cloexec() { return O_CLOEXEC; }" >> "$SRC"
 
-if "$CC" -x c -c -o "$OBJ" "$SRC" >/dev/null 2>&1; then
+if "$CC" -x c "$@" -c -o "$OBJ" "$SRC" >/dev/null 2>&1; then
     echo "true"
 fi
 
