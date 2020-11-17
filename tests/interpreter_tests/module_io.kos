@@ -34,6 +34,9 @@ do {
     do {
         const f = io.create(name)
         assert typeof f == "object"
+        assert f.fd > 2
+        assert ! f.error
+        assert ! f.eof
 
         assert f.size == 0
 
@@ -52,6 +55,9 @@ do {
         expect_fail(()=>f.size)
         expect_fail(()=>f.read())
         expect_fail(()=>f.write(init_buf))
+        expect_fail(()=>f.eof)
+        expect_fail(()=>f.error)
+        expect_fail(()=>f.fd)
     }
 
     assert fs.is_file(name)
@@ -176,6 +182,10 @@ do {
     assert io.stdin  instanceof io.file
     assert io.stdout instanceof io.file
     assert io.stderr instanceof io.file
+
+    assert io.stdin.fd  == 0
+    assert io.stdout.fd == 1
+    assert io.stderr.fd == 2
 }
 
 ##############################################################################

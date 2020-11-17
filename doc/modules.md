@@ -132,6 +132,7 @@ Table of Contents
       * [file.prototype.close()](#fileprototypeclose)
       * [file.prototype.eof](#fileprototypeeof)
       * [file.prototype.error](#fileprototypeerror)
+      * [file.prototype.fd](#fileprototypefd)
       * [file.prototype.info](#fileprototypeinfo)
       * [file.prototype.position](#fileprototypeposition)
       * [file.prototype.print()](#fileprototypeprint)
@@ -3033,6 +3034,13 @@ file.prototype.error
 
 A boolean read-only flag indicating whether there was an error during the
 last file operation on the file object.
+
+file.prototype.fd
+-----------------
+
+    file.prototype.fd
+
+An integer number representing the underlying file descriptor number.
 
 file.prototype.info
 -------------------

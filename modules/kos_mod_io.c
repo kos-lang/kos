@@ -630,6 +630,32 @@ static KOS_OBJ_ID get_file_error(KOS_CONTEXT ctx,
     return error ? KOS_BADPTR : KOS_BOOL(status);
 }
 
+/* @item io file.prototype.fd
+ *
+ *     file.prototype.fd
+ *
+ * An integer number representing the underlying file descriptor number.
+ */
+static KOS_OBJ_ID get_file_fd(KOS_CONTEXT ctx,
+                              KOS_OBJ_ID  this_obj,
+                              KOS_OBJ_ID  args_obj)
+{
+    FILE *file   = 0;
+    int   error  = get_file_object(ctx, this_obj, &file, 1);
+    int   fd = 0;
+
+#ifdef _WIN32
+#   define kos_fileno _fileno
+#else
+#   define kos_fileno fileno
+#endif
+
+    if ( ! error)
+        fd = kos_fileno(file);
+
+    return error ? KOS_BADPTR : KOS_new_int(ctx, fd);
+}
+
 #ifdef _WIN32
 static int64_t get_epoch_time_us(const LARGE_INTEGER *time)
 {
@@ -1024,6 +1050,7 @@ int kos_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "write",     kos_write,      0);
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "eof",       get_file_eof,   0);
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "error",     get_file_error, 0);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "fd",        get_file_fd,    0);
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "info",      get_file_info,  0);
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "position",  get_file_pos,   0);
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "size",      get_file_size,  0);
