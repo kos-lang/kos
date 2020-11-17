@@ -129,7 +129,7 @@ int kos_load_file(const char  *filename,
     TRY(is_file(filename));
 
     file = kos_seq_fail() ? NULL :
-           fopen(filename, "rbe");
+           fopen(filename, "rb" KOS_FOPEN_CLOEXEC);
     if ( ! file)
         RAISE_ERROR(KOS_ERROR_ERRNO);
 

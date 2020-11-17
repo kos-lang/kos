@@ -135,6 +135,7 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
 
         TRY(KOS_string_to_cstr_vec(ctx, flags_obj, &flags_cstr));
 
+#ifndef _WIN32
         {
             const size_t e_pos = flags_cstr.size - 1;
 
@@ -142,11 +143,12 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
             flags_cstr.buffer[e_pos] = 'e';
             flags_cstr.buffer[e_pos + 1] = 0;
         }
+#endif
     }
 
     KOS_suspend_context(ctx);
 
-    file = fopen(filename_cstr.buffer, flags_cstr.size ? flags_cstr.buffer : "r+be");
+    file = fopen(filename_cstr.buffer, flags_cstr.size ? flags_cstr.buffer : "r+b" KOS_FOPEN_CLOEXEC);
 
 #ifndef _WIN32
     if (file)

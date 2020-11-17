@@ -39,7 +39,10 @@ int kos_get_absolute_path(struct KOS_VECTOR_S *path);
 int kos_get_env(const char          *name,
                 struct KOS_VECTOR_S *buf);
 
-#ifndef _WIN32
+#ifdef _WIN32
+#define KOS_FOPEN_CLOEXEC
+#else
+#define KOS_FOPEN_CLOEXEC "e"
 int kos_unix_open(const char *filename, int flags);
 #endif
 
