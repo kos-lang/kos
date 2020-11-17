@@ -34,6 +34,5 @@ void kos_vector_destroy(KOS_VECTOR *vector);
 int  kos_vector_reserve(KOS_VECTOR *vector, size_t capacity);
 int  kos_vector_resize(KOS_VECTOR *vector, size_t size);
 int  kos_vector_concat(KOS_VECTOR *dest, KOS_VECTOR *src);
-int  kos_vector_append_cstr(KOS_VECTOR *dest, const char* cstr);
 
 #endif
