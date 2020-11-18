@@ -6,14 +6,10 @@ var cache = { }
 public class re
 {
     constructor(regex) {
-        if regex in cache {
-            this.regex = cache[regex]
+        if ! (regex in cache) {
+            cache[regex] = re_uncached(regex)
         }
-        else {
-            const re_obj = re_uncached(regex)
-            this.regex = re_obj
-            cache[regex] = re_obj
-        }
+        this.regex  = cache[regex]
         this.string = regex
     }
     search(args...) {
