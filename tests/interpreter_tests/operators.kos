@@ -803,6 +803,21 @@ do {
     assert double_neg(0.0)   == false
     assert double_neg(1)     == true
     assert double_neg([])    == true
+    assert double_neg("")    == true
+}
+
+do {
+    fun negate(a)
+    {
+        return ! a
+    }
+
+    assert negate(true)  == false
+    assert negate(false) == true
+    assert negate(0)     == true
+    assert negate(42)    == false
+    assert negate("")    == false
+    assert negate("x")   == false
 }
 
 ##############################################################################
@@ -1413,6 +1428,51 @@ do {
     a >>>= 32
     assert a == 0xFFFFFFFF
     assert typeof a == "integer"
+}
+
+##############################################################################
+# ?:
+
+do {
+    fun first(a, b)
+    {
+        return a ? a : b
+    }
+
+    assert first("x", "y")  == "x"
+    assert first(5, "y")    == 5
+    assert first(void, "z") == "z"
+
+    fun second(a, b)
+    {
+        return a ? b : a
+    }
+
+    assert second(void, "m") == void
+    assert second(0, 6)      == 0
+    assert second("", 1)     == 1
+}
+
+do {
+    fun first(a, b)
+    {
+        a = !a ? b : a
+        return [a]
+    }
+
+    assert first("x", "y")[0]  == "x"
+    assert first(5, "y")[0]    == 5
+    assert first(void, "z")[0] == "z"
+
+    fun second(a, b)
+    {
+        a = !a ? a : b
+        return [a]
+    }
+
+    assert second(void, "m")[0] == void
+    assert second(0, 6)[0]      == 0
+    assert second("", 1)[0]     == 1
 }
 
 ##############################################################################
