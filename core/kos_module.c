@@ -7,6 +7,7 @@
 #include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_object.h"
+#include "../inc/kos_malloc.h"
 #include "../inc/kos_string.h"
 #include "../inc/kos_utils.h"
 #include "kos_compiler.h"
@@ -15,7 +16,6 @@
 #include "kos_debug.h"
 #include "kos_disasm.h"
 #include "kos_heap.h"
-#include "kos_malloc.h"
 #include "kos_math.h"
 #include "kos_object_internal.h"
 #include "kos_parser.h"
@@ -83,7 +83,7 @@ static int load_native(KOS_CONTEXT ctx, KOS_OBJ_ID module_name, KOS_VECTOR *cpat
         pos = (unsigned)cpath->size - 1;
     }
 
-    if (kos_vector_resize(cpath, pos + sizeof(ext))) {
+    if (KOS_vector_resize(cpath, pos + sizeof(ext))) {
         KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
         return KOS_ERROR_EXCEPTION;
     }
@@ -94,7 +94,7 @@ static int load_native(KOS_CONTEXT ctx, KOS_OBJ_ID module_name, KOS_VECTOR *cpat
     if ( ! memchr(cpath->buffer, KOS_PATH_SEPARATOR, cpath->size - 1)) {
         const size_t old_size = cpath->size;
 
-        if (kos_vector_resize(cpath, old_size + 2)) {
+        if (KOS_vector_resize(cpath, old_size + 2)) {
             KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
             return KOS_ERROR_EXCEPTION;
         }
@@ -111,7 +111,7 @@ static int load_native(KOS_CONTEXT ctx, KOS_OBJ_ID module_name, KOS_VECTOR *cpat
     if (ctx->inst->flags & KOS_INST_VERBOSE)
         printf("Kos loading native code from %s\n", cpath->buffer);
 
-    kos_vector_init(&error_cstr);
+    KOS_vector_init(&error_cstr);
 
     {
         KOS_LOCAL saved_name;
@@ -140,11 +140,11 @@ static int load_native(KOS_CONTEXT ctx, KOS_OBJ_ID module_name, KOS_VECTOR *cpat
         else
             KOS_raise_printf(ctx, "failed to load module native code from %s: %s\n",
                              cpath->buffer, error_cstr.buffer);
-        kos_vector_destroy(&error_cstr);
+        KOS_vector_destroy(&error_cstr);
         return KOS_ERROR_EXCEPTION;
     }
 
-    kos_vector_destroy(&error_cstr);
+    KOS_vector_destroy(&error_cstr);
 
     *mod_init = kos_register_module_init(ctx, module_name, lib, init);
 
@@ -170,7 +170,7 @@ static int find_module(KOS_CONTEXT            ctx,
     int        native_mod_init = 1;
     int        has_dot         = 0;
 
-    kos_vector_init(&cpath);
+    KOS_vector_init(&cpath);
 
     KOS_init_locals(ctx, 4, &path, &dir, &components[0], &components[2]);
 
@@ -195,7 +195,7 @@ static int find_module(KOS_CONTEXT            ctx,
 
     /* Check if file exists */
     if (is_path) {
-        TRY(kos_vector_resize(&cpath, length+1));
+        TRY(KOS_vector_resize(&cpath, length+1));
         memcpy(cpath.buffer, maybe_path, length);
         cpath.buffer[length] = 0;
 
@@ -292,7 +292,7 @@ cleanup:
 
     KOS_destroy_top_locals(ctx, &path, &components[2]);
 
-    kos_vector_destroy(&cpath);
+    KOS_vector_destroy(&cpath);
 
     assert(error != KOS_ERROR_INTERNAL);
 
@@ -382,7 +382,7 @@ static int load_file(KOS_CONTEXT  ctx,
     int        error = KOS_SUCCESS;
     KOS_VECTOR cpath;
 
-    kos_vector_init(&cpath);
+    KOS_vector_init(&cpath);
     TRY(KOS_string_to_cstr_vec(ctx, path_obj, &cpath));
 
     error = kos_load_file(cpath.buffer, file_buf);
@@ -394,7 +394,7 @@ static int load_file(KOS_CONTEXT  ctx,
             static const char error_info[] = "unable to load file \"";
             const size_t      path_len     = cpath.size - 1;
 
-            if ( ! kos_vector_resize(&cpath, cpath.size + sizeof(error_info))) {
+            if ( ! KOS_vector_resize(&cpath, cpath.size + sizeof(error_info))) {
                 memmove(&cpath.buffer[sizeof(error_info) - 1],
                         cpath.buffer, path_len);
                 memcpy(cpath.buffer, error_info, sizeof(error_info) - 1);
@@ -419,7 +419,7 @@ static int load_file(KOS_CONTEXT  ctx,
     }
 
 cleanup:
-    kos_vector_destroy(&cpath);
+    KOS_vector_destroy(&cpath);
 
     return error;
 }
@@ -435,7 +435,7 @@ static int predefine_globals(KOS_CONTEXT    ctx,
     KOS_LOCAL  module_names;
     KOS_LOCAL  walk;
 
-    kos_vector_init(&cpath);
+    KOS_vector_init(&cpath);
 
     KOS_init_local_with(ctx, &module_names, module_names_obj);
     KOS_init_local(ctx, &walk);
@@ -470,7 +470,7 @@ static int predefine_globals(KOS_CONTEXT    ctx,
     }
 
 cleanup:
-    kos_vector_destroy(&cpath);
+    KOS_vector_destroy(&cpath);
 
     KOS_destroy_top_locals(ctx, &walk, &module_names);
 
@@ -685,7 +685,7 @@ static KOS_OBJ_ID get_line(KOS_CONTEXT ctx,
     KOS_VECTOR        line_buf;
     KOS_OBJ_ID        ret       = KOS_BADPTR;
 
-    kos_vector_init(&line_buf);
+    KOS_vector_init(&line_buf);
 
     /* Find the desired line */
     for ( ; line > 1 && buf < end; line--) {
@@ -725,7 +725,7 @@ static KOS_OBJ_ID get_line(KOS_CONTEXT ctx,
     }
 
     /* Copy line, expanding TABs */
-    if ( ! kos_vector_resize(&line_buf, len)) {
+    if ( ! KOS_vector_resize(&line_buf, len)) {
 
         unsigned dest = 0;
 
@@ -748,7 +748,7 @@ static KOS_OBJ_ID get_line(KOS_CONTEXT ctx,
     else
         KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
 
-    kos_vector_destroy(&line_buf);
+    KOS_vector_destroy(&line_buf);
 
     return ret;
 }
@@ -765,7 +765,7 @@ static KOS_OBJ_ID format_error(KOS_CONTEXT  ctx,
     KOS_VECTOR cstr;
     KOS_LOCAL  parts[11];
 
-    kos_vector_init(&cstr);
+    KOS_vector_init(&cstr);
 
     KOS_init_locals(ctx, 6,
                     &parts[0], &parts[2], &parts[4], &parts[6], &parts[8], &parts[10]);
@@ -795,7 +795,7 @@ static KOS_OBJ_ID format_error(KOS_CONTEXT  ctx,
 
     parts[9].o = KOS_CONST_ID(str_eol);
 
-    error = kos_vector_resize(&cstr, pos.column);
+    error = KOS_vector_resize(&cstr, pos.column);
     if (error) {
         KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
         goto cleanup;
@@ -815,7 +815,7 @@ cleanup:
 
     KOS_destroy_top_locals(ctx, &parts[0], &parts[10]);
 
-    kos_vector_destroy(&cstr);
+    KOS_vector_destroy(&cstr);
 
     return ret;
 }
@@ -872,7 +872,7 @@ int kos_comp_walk_globals(void                          *vframe,
     KOS_LOCAL           walk;
     KOS_OBJ_ID          module_obj;
 
-    kos_vector_init(&name);
+    KOS_vector_init(&name);
 
     KOS_init_local(ctx, &walk);
 
@@ -899,7 +899,7 @@ int kos_comp_walk_globals(void                          *vframe,
 
 cleanup:
     KOS_destroy_top_local(ctx, &walk);
-    kos_vector_destroy(&name);
+    KOS_vector_destroy(&name);
 
     return error;
 }
@@ -916,11 +916,11 @@ static void print_search_paths(KOS_CONTEXT ctx,
 
     assert(GET_OBJ_TYPE(paths) == OBJ_ARRAY);
 
-    kos_vector_init(&cstr);
+    KOS_vector_init(&cstr);
 
-    TRY(kos_vector_reserve(&cstr, 128));
+    TRY(KOS_vector_reserve(&cstr, 128));
 
-    TRY(kos_vector_resize(&cstr, sizeof(str_paths)));
+    TRY(KOS_vector_resize(&cstr, sizeof(str_paths)));
 
     memcpy(cstr.buffer, str_paths, sizeof(str_paths));
 
@@ -938,7 +938,7 @@ static void print_search_paths(KOS_CONTEXT ctx,
         TRY(KOS_object_to_string_or_cstr_vec(ctx, path, KOS_DONT_QUOTE, 0, &cstr));
 
         if (i + 1 < num_paths) {
-            TRY(kos_vector_resize(&cstr, cstr.size + sizeof(str_comma) - 1));
+            TRY(KOS_vector_resize(&cstr, cstr.size + sizeof(str_comma) - 1));
             memcpy(cstr.buffer + cstr.size - sizeof(str_comma), str_comma, sizeof(str_comma));
         }
     }
@@ -951,7 +951,7 @@ cleanup:
     else
         printf("%s\n", cstr.buffer);
 
-    kos_vector_destroy(&cstr);
+    KOS_vector_destroy(&cstr);
 }
 
 static void print_load_info(KOS_CONTEXT ctx,
@@ -967,17 +967,17 @@ static void print_load_info(KOS_CONTEXT ctx,
     assert(GET_OBJ_TYPE(module_name) == OBJ_STRING);
     assert(GET_OBJ_TYPE(module_path) == OBJ_STRING);
 
-    kos_vector_init(&cstr);
+    KOS_vector_init(&cstr);
 
-    TRY(kos_vector_reserve(&cstr, 128));
+    TRY(KOS_vector_reserve(&cstr, 128));
 
-    TRY(kos_vector_resize(&cstr, sizeof(str_loading)));
+    TRY(KOS_vector_resize(&cstr, sizeof(str_loading)));
 
     memcpy(cstr.buffer, str_loading, sizeof(str_loading));
 
     TRY(KOS_object_to_string_or_cstr_vec(ctx, module_name, KOS_DONT_QUOTE, 0, &cstr));
 
-    TRY(kos_vector_resize(&cstr, cstr.size + sizeof(str_from) - 1));
+    TRY(KOS_vector_resize(&cstr, cstr.size + sizeof(str_from) - 1));
     memcpy(cstr.buffer + cstr.size - sizeof(str_from), str_from, sizeof(str_from));
 
     TRY(KOS_object_to_string_or_cstr_vec(ctx, module_path, KOS_DONT_QUOTE, 0, &cstr));
@@ -990,7 +990,7 @@ cleanup:
     else
         printf("%s\n", cstr.buffer);
 
-    kos_vector_destroy(&cstr);
+    KOS_vector_destroy(&cstr);
 }
 
 static int append_buf(const uint8_t **dest,
@@ -1006,14 +1006,14 @@ static int append_buf(const uint8_t **dest,
     assert(src);
     assert(src_size);
 
-    new_buf = (uint8_t *)kos_malloc(dest_size + src_size);
+    new_buf = (uint8_t *)KOS_malloc(dest_size + src_size);
     if ( ! new_buf)
         return KOS_ERROR_OUT_OF_MEMORY;
 
     memcpy(new_buf, *dest, dest_size);
     memcpy(new_buf + dest_size, src, src_size);
 
-    kos_free((void *)*dest);
+    KOS_free((void *)*dest);
 
     *dest = new_buf;
 
@@ -1218,7 +1218,7 @@ static int compile_module(KOS_CONTEXT ctx,
     if (inst->flags & KOS_INST_DEBUG) {
         KOS_VECTOR cname;
 
-        kos_vector_init(&cname);
+        KOS_vector_init(&cname);
         error = KOS_string_to_cstr_vec(ctx, OBJPTR(MODULE, module.o)->name, &cname);
 
         if ( ! error) {
@@ -1227,7 +1227,7 @@ static int compile_module(KOS_CONTEXT ctx,
             printf("%s: optimization passes : %u\n",    cname.buffer, num_opt_passes);
         }
 
-        kos_vector_destroy(&cname);
+        KOS_vector_destroy(&cname);
         TRY(error);
     }
 
@@ -1346,8 +1346,8 @@ static int compile_module(KOS_CONTEXT ctx,
         const uint32_t             num_func_addrs = module_ptr->num_func_addrs;
         KOS_PRINT_CONST_COOKIE     print_cookie;
 
-        kos_vector_init(&cname);
-        kos_vector_init(&ptrs);
+        KOS_vector_init(&cname);
+        KOS_vector_init(&ptrs);
 
         error = KOS_string_to_cstr_vec(ctx, module_ptr->name, &cname);
         printf("\n");
@@ -1372,14 +1372,14 @@ static int compile_module(KOS_CONTEXT ctx,
         }
 
         if (!error)
-            error = kos_vector_resize(&ptrs, num_func_addrs * sizeof(void *));
+            error = KOS_vector_resize(&ptrs, num_func_addrs * sizeof(void *));
         if (!error) {
             KOS_VECTOR buf;
             uint32_t   i;
             size_t     total_size = 0;
             char      *names      = 0;
 
-            kos_vector_init(&buf);
+            KOS_vector_init(&buf);
 
             for (i = 0; i < num_func_addrs; i++) {
                 const uint32_t   idx = func_addrs[i].str_idx;
@@ -1396,7 +1396,7 @@ static int compile_module(KOS_CONTEXT ctx,
 
             if (!error) {
                 const size_t base = cname.size;
-                error = kos_vector_resize(&cname, base + total_size);
+                error = KOS_vector_resize(&cname, base + total_size);
                 if (!error)
                     names = cname.buffer + base;
             }
@@ -1419,7 +1419,7 @@ static int compile_module(KOS_CONTEXT ctx,
                 }
             }
 
-            kos_vector_destroy(&buf);
+            KOS_vector_destroy(&buf);
         }
 
         if (!error) {
@@ -1443,8 +1443,8 @@ static int compile_module(KOS_CONTEXT ctx,
                         print_func,
                         &print_cookie);
 
-        kos_vector_destroy(&ptrs);
-        kos_vector_destroy(&cname);
+        KOS_vector_destroy(&ptrs);
+        KOS_vector_destroy(&cname);
         TRY(error);
     }
 
@@ -1792,19 +1792,19 @@ static int load_stdin(KOS_CONTEXT ctx, KOS_VECTOR *buf)
 {
     int error = KOS_SUCCESS;
 
-    TRY(kos_vector_resize(buf, 0));
+    TRY(KOS_vector_resize(buf, 0));
 
     for (;;) {
         const size_t last_size = buf->size;
         size_t       num_read;
 
-        TRY(kos_vector_resize(buf, last_size + KOS_BUF_ALLOC_SIZE));
+        TRY(KOS_vector_resize(buf, last_size + KOS_BUF_ALLOC_SIZE));
 
         num_read = fread(buf->buffer + last_size, 1, KOS_BUF_ALLOC_SIZE, stdin);
 
         if (num_read < KOS_BUF_ALLOC_SIZE) {
 
-            TRY(kos_vector_resize(buf, last_size + num_read));
+            TRY(KOS_vector_resize(buf, last_size + num_read));
 
             if (ferror(stdin)) {
                 KOS_raise_exception(ctx, KOS_CONST_ID(str_err_stdin));
@@ -1832,7 +1832,7 @@ KOS_OBJ_ID KOS_repl_stdin(KOS_CONTEXT ctx,
     KOS_INSTANCE *const inst        = ctx->inst;
     KOS_VECTOR          buf;
 
-    kos_vector_init(&buf);
+    KOS_vector_init(&buf);
 
     KOS_init_local(ctx, &module);
 
@@ -1861,7 +1861,7 @@ KOS_OBJ_ID KOS_repl_stdin(KOS_CONTEXT ctx,
     TRY(compile_module(ctx, module.o, (uint16_t)module_idx, buf.buffer, (unsigned)buf.size, 1));
 
     /* Free the buffer */
-    kos_vector_destroy(&buf);
+    KOS_vector_destroy(&buf);
 
     /* Run module */
     ret = kos_vm_run_module(ctx, module.o);
@@ -1880,7 +1880,7 @@ cleanup:
 
     KOS_destroy_top_local(ctx, &module);
 
-    kos_vector_destroy(&buf);
+    KOS_vector_destroy(&buf);
 
     return error ? KOS_BADPTR : ret;
 }
@@ -1911,7 +1911,7 @@ int KOS_module_add_global(KOS_CONTEXT ctx,
     if ( ! IS_BAD_PTR(prop)) {
         KOS_VECTOR global_cstr;
 
-        kos_vector_init(&global_cstr);
+        KOS_vector_init(&global_cstr);
 
         error = KOS_string_to_cstr_vec(ctx, name.o, &global_cstr);
         if ( ! error) {
@@ -1919,7 +1919,7 @@ int KOS_module_add_global(KOS_CONTEXT ctx,
             error = KOS_ERROR_EXCEPTION;
         }
 
-        kos_vector_destroy(&global_cstr);
+        KOS_vector_destroy(&global_cstr);
         goto cleanup;
     }
 

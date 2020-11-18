@@ -5,14 +5,14 @@
 #include "../inc/kos_array.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_instance.h"
+#include "../inc/kos_malloc.h"
+#include "../inc/kos_memory.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_object.h"
 #include "../inc/kos_utils.h"
 #include "../core/kos_const_strings.h"
 #include "../core/kos_object_internal.h"
-#include "../core/kos_malloc.h"
 #include "../core/kos_math.h"
-#include "../core/kos_memory.h"
 #include "../core/kos_misc.h"
 #include "../core/kos_try.h"
 #include "../core/kos_utf8.h"
@@ -287,7 +287,7 @@ static int emit_instr(struct RE_PARSE_CTX *re_ctx,
                       ...)
 {
     const size_t pos   = re_ctx->buf.size;
-    const int    error = kos_vector_resize(&re_ctx->buf, pos + 2 + num_args * 2);
+    const int    error = KOS_vector_resize(&re_ctx->buf, pos + 2 + num_args * 2);
     va_list      args;
     int          i;
     uint16_t    *dest;
@@ -484,7 +484,7 @@ static uint16_t generate_class(struct RE_PARSE_CTX *re_ctx)
 
     const size_t   new_size  = re_ctx->class_descs.size + sizeof(struct RE_CLASS_DESC);
     const uint16_t begin_idx = (uint16_t)(re_ctx->class_data.size / sizeof(struct RE_CLASS_RANGE));
-    const int      error     = kos_vector_resize(&re_ctx->class_descs, new_size);
+    const int      error     = KOS_vector_resize(&re_ctx->class_descs, new_size);
 
     if (error) {
         KOS_raise_exception(re_ctx->ctx, KOS_STR_OUT_OF_MEMORY);
@@ -512,7 +512,7 @@ static int add_class_range(struct RE_PARSE_CTX *re_ctx,
     size_t                 end;
     const size_t           old_size = re_ctx->class_data.size;
     const size_t           new_size = old_size + sizeof(struct RE_CLASS_RANGE);
-    const int              error    = kos_vector_resize(&re_ctx->class_data, new_size);
+    const int              error    = KOS_vector_resize(&re_ctx->class_data, new_size);
 
     assert(class_id == (re_ctx->class_descs.size / sizeof(struct RE_CLASS_DESC)) - 1);
 
@@ -559,7 +559,7 @@ static int add_class_range(struct RE_PARSE_CTX *re_ctx,
             if (end_code > range->end_code)
                 range->end_code = end_code;
 
-            return kos_vector_resize(&re_ctx->class_data, old_size);
+            return KOS_vector_resize(&re_ctx->class_data, old_size);
         }
 
         ++range;
@@ -604,7 +604,7 @@ static int add_class_range(struct RE_PARSE_CTX *re_ctx,
 
         desc->num_ranges -= (uint16_t)num_to_delete;
 
-        return kos_vector_resize(&re_ctx->class_data,
+        return KOS_vector_resize(&re_ctx->class_data,
                                  old_size - num_to_delete * sizeof(struct RE_CLASS_RANGE));
     }
 
@@ -1168,7 +1168,7 @@ static void disassemble(struct RE_OBJ *re, const char *re_cstr)
 static void finalize(KOS_CONTEXT ctx, void *priv)
 {
     if (priv)
-        kos_free(priv);
+        KOS_free(priv);
 }
 
 static int parse_re(KOS_CONTEXT ctx, KOS_OBJ_ID regex_str, KOS_OBJ_ID regex)
@@ -1182,11 +1182,11 @@ static int parse_re(KOS_CONTEXT ctx, KOS_OBJ_ID regex_str, KOS_OBJ_ID regex)
 
     kos_init_string_iter(&re_ctx.iter, regex_str);
 
-    kos_vector_init(&re_ctx.buf);
-    kos_vector_init(&re_ctx.class_descs);
-    kos_vector_init(&re_ctx.class_data);
+    KOS_vector_init(&re_ctx.buf);
+    KOS_vector_init(&re_ctx.class_descs);
+    KOS_vector_init(&re_ctx.class_data);
 
-    TRY(kos_vector_reserve(&re_ctx.buf, KOS_get_string_length(regex_str) * 2U));
+    TRY(KOS_vector_reserve(&re_ctx.buf, KOS_get_string_length(regex_str) * 2U));
 
     re_ctx.ctx                 = ctx;
     re_ctx.idx                 = 1;
@@ -1203,7 +1203,7 @@ static int parse_re(KOS_CONTEXT ctx, KOS_OBJ_ID regex_str, KOS_OBJ_ID regex)
     class_descs_size      = (uint32_t)KOS_align_up(re_ctx.class_descs.size, sizeof(uint32_t));
     class_data_size       = (uint32_t)KOS_align_up(re_ctx.class_data.size, sizeof(uint32_t));
 
-    re = (struct RE_OBJ *)kos_malloc(hdr_and_bytecode_size + class_descs_size + class_data_size);
+    re = (struct RE_OBJ *)KOS_malloc(hdr_and_bytecode_size + class_descs_size + class_data_size);
     if ( ! re) {
         KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
@@ -1239,9 +1239,9 @@ static int parse_re(KOS_CONTEXT ctx, KOS_OBJ_ID regex_str, KOS_OBJ_ID regex)
     KOS_object_set_private_ptr(regex, re);
 
 cleanup:
-    kos_vector_destroy(&re_ctx.class_data);
-    kos_vector_destroy(&re_ctx.class_descs);
-    kos_vector_destroy(&re_ctx.buf);
+    KOS_vector_destroy(&re_ctx.class_data);
+    KOS_vector_destroy(&re_ctx.class_descs);
+    KOS_vector_destroy(&re_ctx.buf);
 
     return error;
 }
@@ -1274,7 +1274,7 @@ static struct RE_POSS_STACK_ITEM *push_item(struct RE_POSS_STACK *poss_stack,
 {
     const size_t old_size = poss_stack->buffer.size;
 
-    if (kos_vector_resize(&poss_stack->buffer, old_size + item_size)) {
+    if (KOS_vector_resize(&poss_stack->buffer, old_size + item_size)) {
         KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
         return 0;
     }
@@ -1286,7 +1286,7 @@ static struct RE_POSS_STACK_ITEM *push_item(struct RE_POSS_STACK *poss_stack,
 
 static void init_possibility_stack(struct RE_POSS_STACK *poss_stack)
 {
-    kos_vector_init(&poss_stack->buffer);
+    KOS_vector_init(&poss_stack->buffer);
 }
 
 static int reset_possibility_stack(struct RE_POSS_STACK *poss_stack,
@@ -1320,7 +1320,7 @@ static int reset_possibility_stack(struct RE_POSS_STACK *poss_stack,
 
 static void destroy_possibility_stack(struct RE_POSS_STACK *poss_stack)
 {
-    kos_vector_destroy(&poss_stack->buffer);
+    KOS_vector_destroy(&poss_stack->buffer);
 }
 
 static int push_possibility(struct RE_POSS_STACK *poss_stack,

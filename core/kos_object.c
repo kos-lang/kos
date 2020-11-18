@@ -6,12 +6,12 @@
 #include "../inc/kos_atomic.h"
 #include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
+#include "../inc/kos_memory.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_string.h"
 #include "../inc/kos_utils.h"
 #include "kos_heap.h"
 #include "kos_math.h"
-#include "kos_memory.h"
 #include "kos_object_internal.h"
 #include "kos_perf.h"
 #include "kos_try.h"
@@ -415,12 +415,12 @@ static void raise_no_property(KOS_CONTEXT ctx, KOS_OBJ_ID prop)
 {
     KOS_VECTOR prop_cstr;
 
-    kos_vector_init(&prop_cstr);
+    KOS_vector_init(&prop_cstr);
 
     if ( ! KOS_string_to_cstr_vec(ctx, prop, &prop_cstr))
         KOS_raise_printf(ctx, "no such property: \"%s\"", prop_cstr.buffer);
 
-    kos_vector_destroy(&prop_cstr);
+    KOS_vector_destroy(&prop_cstr);
 }
 
 KOS_OBJ_ID KOS_get_property_with_depth(KOS_CONTEXT      ctx,

@@ -83,7 +83,7 @@ static int gen_new_reg(KOS_COMP_UNIT *program,
         program->unused_regs = reg->next;
     }
     else {
-        reg = (KOS_REG *)kos_mempool_alloc(&program->allocator, sizeof(KOS_REG));
+        reg = (KOS_REG *)KOS_mempool_alloc(&program->allocator, sizeof(KOS_REG));
 
         if ( ! reg)
             error = KOS_ERROR_OUT_OF_MEMORY;
@@ -571,7 +571,7 @@ static int gen_str_esc(KOS_COMP_UNIT   *program,
     if (!str) {
 
         str = (KOS_COMP_STRING *)
-            kos_mempool_alloc(&program->allocator, sizeof(KOS_COMP_STRING));
+            KOS_mempool_alloc(&program->allocator, sizeof(KOS_COMP_STRING));
 
         if (str) {
 
@@ -686,7 +686,7 @@ static int gen_assert_str(KOS_COMP_UNIT      *program,
     if (length > max_length)
         length = max_length;
 
-    buf = (char *)kos_mempool_alloc(&program->allocator, length);
+    buf = (char *)KOS_mempool_alloc(&program->allocator, length);
 
     if (buf) {
 
@@ -732,7 +732,7 @@ static int add_addr2line(KOS_COMP_UNIT   *program,
         }
     }
 
-    error = kos_vector_resize(addr2line, addr2line->size + sizeof(new_loc));
+    error = KOS_vector_resize(addr2line, addr2line->size + sizeof(new_loc));
 
     if ( ! error) {
 
@@ -751,7 +751,7 @@ static int gen_instr(KOS_COMP_UNIT *program,
                      ...)
 {
     int cur_offs = program->cur_offs;
-    int error    = kos_vector_resize(&program->code_gen_buf,
+    int error    = KOS_vector_resize(&program->code_gen_buf,
                                     (size_t)cur_offs + 1 + 4 * num_args); /* Over-estimate */
 
     if (program->code_buf.size + program->code_gen_buf.size > KOS_MAX_CODE_SIZE)
@@ -1086,7 +1086,7 @@ static int append_frame(KOS_COMP_UNIT     *program,
     const size_t a2l_size     = program->addr2line_gen_buf.size - addr2line_start_offs;
     size_t       a2l_new_offs = program->addr2line_buf.size;
 
-    TRY(kos_vector_resize(&program->code_buf, fun_new_offs + fun_size));
+    TRY(KOS_vector_resize(&program->code_buf, fun_new_offs + fun_size));
 
     if (a2l_new_offs) {
 
@@ -1099,16 +1099,16 @@ static int append_frame(KOS_COMP_UNIT     *program,
             a2l_new_offs -= sizeof(struct KOS_COMP_ADDR_TO_LINE_S);
     }
 
-    TRY(kos_vector_resize(&program->addr2line_buf, a2l_new_offs + a2l_size));
+    TRY(KOS_vector_resize(&program->addr2line_buf, a2l_new_offs + a2l_size));
 
-    TRY(kos_vector_resize(&program->addr2func_buf,
+    TRY(KOS_vector_resize(&program->addr2func_buf,
                           program->addr2func_buf.size + sizeof(struct KOS_COMP_ADDR_TO_FUNC_S)));
 
     memcpy(program->code_buf.buffer + fun_new_offs,
            program->code_gen_buf.buffer + fun_start_offs,
            fun_size);
 
-    TRY(kos_vector_resize(&program->code_gen_buf, (size_t)fun_start_offs));
+    TRY(KOS_vector_resize(&program->code_gen_buf, (size_t)fun_start_offs));
 
     program->cur_offs = fun_start_offs;
 
@@ -1118,7 +1118,7 @@ static int append_frame(KOS_COMP_UNIT     *program,
            program->addr2line_gen_buf.buffer + addr2line_start_offs,
            a2l_size);
 
-    TRY(kos_vector_resize(&program->addr2line_gen_buf, addr2line_start_offs));
+    TRY(KOS_vector_resize(&program->addr2line_gen_buf, addr2line_start_offs));
 
     /* Update addr2line offsets for this function */
     {
@@ -1163,7 +1163,7 @@ static KOS_COMP_FUNCTION *alloc_func_constant(KOS_COMP_UNIT *program,
 {
     KOS_COMP_FUNCTION *constant;
 
-    constant = (KOS_COMP_FUNCTION *)kos_mempool_alloc(&program->allocator,
+    constant = (KOS_COMP_FUNCTION *)KOS_mempool_alloc(&program->allocator,
                                                       sizeof(KOS_COMP_FUNCTION));
     if (constant) {
 
@@ -1446,7 +1446,7 @@ static int gen_return(KOS_COMP_UNIT *program,
         const int return_reg = scope->catch_ref.catch_reg->reg;
 
         KOS_RETURN_OFFS *const return_offs = (KOS_RETURN_OFFS *)
-            kos_mempool_alloc(&program->allocator, sizeof(KOS_RETURN_OFFS));
+            KOS_mempool_alloc(&program->allocator, sizeof(KOS_RETURN_OFFS));
 
         if ( ! return_offs)
             RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
@@ -2066,7 +2066,7 @@ static int push_break_offs(KOS_COMP_UNIT *program,
 {
     int                   error      = KOS_SUCCESS;
     KOS_BREAK_OFFS *const break_offs = (KOS_BREAK_OFFS *)
-        kos_mempool_alloc(&program->allocator, sizeof(KOS_BREAK_OFFS));
+        KOS_mempool_alloc(&program->allocator, sizeof(KOS_BREAK_OFFS));
 
     if (break_offs) {
         break_offs->next               = program->cur_frame->break_offs;
@@ -2151,7 +2151,7 @@ static int switch_stmt(KOS_COMP_UNIT      *program,
 
     assert(num_cases);
 
-    cases = (KOS_SWITCH_CASE *)kos_mempool_alloc(
+    cases = (KOS_SWITCH_CASE *)KOS_mempool_alloc(
             &program->allocator, sizeof(KOS_SWITCH_CASE) * num_cases);
 
     if ( ! cases)
@@ -2582,7 +2582,7 @@ static int refinement_module(KOS_COMP_UNIT      *program,
     int        error;
     KOS_VECTOR cstr;
 
-    kos_vector_init(&cstr);
+    KOS_vector_init(&cstr);
 
     if (node->type == NT_STRING_LITERAL) {
 
@@ -2621,7 +2621,7 @@ static int refinement_module(KOS_COMP_UNIT      *program,
     }
 
 cleanup:
-    kos_vector_destroy(&cstr);
+    KOS_vector_destroy(&cstr);
 
     return error;
 }
@@ -4408,7 +4408,7 @@ static int numeric_literal(KOS_COMP_UNIT      *program,
 
         if ( ! constant) {
             constant = (KOS_COMP_CONST *)
-                kos_mempool_alloc(&program->allocator,
+                KOS_mempool_alloc(&program->allocator,
                                   KOS_max(sizeof(KOS_COMP_INTEGER),
                                           sizeof(KOS_COMP_FLOAT)));
 
@@ -4685,7 +4685,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
     if (fun_node->type == NT_CONSTRUCTOR_LITERAL) {
 
         KOS_COMP_CONST *proto_const = (KOS_COMP_CONST *)
-                kos_mempool_alloc(&program->allocator, sizeof(KOS_COMP_CONST));
+                KOS_mempool_alloc(&program->allocator, sizeof(KOS_COMP_CONST));
 
         if ( ! proto_const)
             RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
@@ -5194,7 +5194,7 @@ static int object_literal(KOS_COMP_UNIT      *program,
         }
         else {
             KOS_OBJECT_PROP_DUPE *new_node = (KOS_OBJECT_PROP_DUPE *)
-                kos_mempool_alloc(&program->allocator, sizeof(KOS_OBJECT_PROP_DUPE));
+                KOS_mempool_alloc(&program->allocator, sizeof(KOS_OBJECT_PROP_DUPE));
 
             if ( ! new_node)
                 RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
@@ -5505,13 +5505,13 @@ void kos_compiler_init(KOS_COMP_UNIT *program,
     program->optimize = 1;
     program->file_id  = file_id;
 
-    kos_mempool_init(&program->allocator);
+    KOS_mempool_init(&program->allocator);
 
-    kos_vector_init(&program->code_buf);
-    kos_vector_init(&program->code_gen_buf);
-    kos_vector_init(&program->addr2line_buf);
-    kos_vector_init(&program->addr2line_gen_buf);
-    kos_vector_init(&program->addr2func_buf);
+    KOS_vector_init(&program->code_buf);
+    KOS_vector_init(&program->code_gen_buf);
+    KOS_vector_init(&program->addr2line_buf);
+    KOS_vector_init(&program->addr2line_gen_buf);
+    KOS_vector_init(&program->addr2func_buf);
 }
 
 int kos_compiler_compile(KOS_COMP_UNIT *program,
@@ -5525,11 +5525,11 @@ int kos_compiler_compile(KOS_COMP_UNIT *program,
     unsigned num_passes = 0;
     KOS_REG *reg        = 0;
 
-    TRY(kos_vector_reserve(&program->code_buf,          1024));
-    TRY(kos_vector_reserve(&program->code_gen_buf,      1024));
-    TRY(kos_vector_reserve(&program->addr2line_buf,     1024));
-    TRY(kos_vector_reserve(&program->addr2line_gen_buf, 256));
-    TRY(kos_vector_reserve(&program->addr2func_buf,     256));
+    TRY(KOS_vector_reserve(&program->code_buf,          1024));
+    TRY(KOS_vector_reserve(&program->code_gen_buf,      1024));
+    TRY(KOS_vector_reserve(&program->addr2line_buf,     1024));
+    TRY(KOS_vector_reserve(&program->addr2line_gen_buf, 256));
+    TRY(KOS_vector_reserve(&program->addr2func_buf,     256));
 
     TRY(kos_compiler_process_vars(program, ast));
 
@@ -5560,11 +5560,11 @@ void kos_compiler_destroy(KOS_COMP_UNIT *program)
 {
     program->pre_globals = 0;
 
-    kos_vector_destroy(&program->code_gen_buf);
-    kos_vector_destroy(&program->code_buf);
-    kos_vector_destroy(&program->addr2line_gen_buf);
-    kos_vector_destroy(&program->addr2line_buf);
-    kos_vector_destroy(&program->addr2func_buf);
+    KOS_vector_destroy(&program->code_gen_buf);
+    KOS_vector_destroy(&program->code_buf);
+    KOS_vector_destroy(&program->addr2line_gen_buf);
+    KOS_vector_destroy(&program->addr2line_buf);
+    KOS_vector_destroy(&program->addr2func_buf);
 
-    kos_mempool_destroy(&program->allocator);
+    KOS_mempool_destroy(&program->allocator);
 }

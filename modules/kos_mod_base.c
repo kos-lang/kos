@@ -6,12 +6,12 @@
 #include "../inc/kos_buffer.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_object.h"
+#include "../inc/kos_malloc.h"
+#include "../inc/kos_memory.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_string.h"
 #include "../inc/kos_utils.h"
 #include "../core/kos_const_strings.h"
-#include "../core/kos_malloc.h"
-#include "../core/kos_memory.h"
 #include "../core/kos_misc.h"
 #include "../core/kos_object_internal.h"
 #include "../core/kos_try.h"
@@ -84,7 +84,7 @@ static KOS_OBJ_ID print(KOS_CONTEXT ctx,
     int        error = KOS_SUCCESS;
     KOS_VECTOR cstr;
 
-    kos_vector_init(&cstr);
+    KOS_vector_init(&cstr);
 
     TRY(KOS_print_to_cstr_vec(ctx, args_obj, KOS_DONT_QUOTE, &cstr, " ", 1));
 
@@ -102,7 +102,7 @@ static KOS_OBJ_ID print(KOS_CONTEXT ctx,
     KOS_resume_context(ctx);
 
 cleanup:
-    kos_vector_destroy(&cstr);
+    KOS_vector_destroy(&cstr);
 
     return error ? KOS_BADPTR : KOS_VOID;
 }
@@ -303,7 +303,7 @@ static KOS_OBJ_ID number_constructor(KOS_CONTEXT ctx,
 
             KOS_VECTOR cstr;
 
-            kos_vector_init(&cstr);
+            KOS_vector_init(&cstr);
 
             if (KOS_SUCCESS == KOS_string_to_cstr_vec(ctx, arg, &cstr)) {
 
@@ -326,7 +326,7 @@ static KOS_OBJ_ID number_constructor(KOS_CONTEXT ctx,
                     KOS_raise_exception(ctx, KOS_CONST_ID(str_err_bad_number));
             }
 
-            kos_vector_destroy(&cstr);
+            KOS_vector_destroy(&cstr);
         }
         else
             KOS_raise_exception(ctx, KOS_CONST_ID(str_err_unsup_operand_types));
@@ -389,7 +389,7 @@ static KOS_OBJ_ID integer_constructor(KOS_CONTEXT ctx,
 
             KOS_VECTOR cstr;
 
-            kos_vector_init(&cstr);
+            KOS_vector_init(&cstr);
 
             if (KOS_SUCCESS == KOS_string_to_cstr_vec(ctx, arg, &cstr)) {
 
@@ -407,7 +407,7 @@ static KOS_OBJ_ID integer_constructor(KOS_CONTEXT ctx,
                     ret = KOS_new_int(ctx, value);
             }
 
-            kos_vector_destroy(&cstr);
+            KOS_vector_destroy(&cstr);
         }
         else if ( ! IS_BAD_PTR(arg))
             KOS_raise_exception(ctx, KOS_CONST_ID(str_err_unsup_operand_types));
@@ -478,7 +478,7 @@ static KOS_OBJ_ID float_constructor(KOS_CONTEXT ctx,
 
             KOS_VECTOR cstr;
 
-            kos_vector_init(&cstr);
+            KOS_vector_init(&cstr);
 
             if (KOS_string_to_cstr_vec(ctx, arg, &cstr) == KOS_SUCCESS) {
 
@@ -497,7 +497,7 @@ static KOS_OBJ_ID float_constructor(KOS_CONTEXT ctx,
                     ret = KOS_new_float(ctx, value);
             }
 
-            kos_vector_destroy(&cstr);
+            KOS_vector_destroy(&cstr);
             break;
         }
 
@@ -2813,7 +2813,7 @@ static int pack_format(KOS_CONTEXT               ctx,
     KOS_VECTOR str_buf;
     KOS_LOCAL  buffer;
 
-    kos_vector_init(&str_buf);
+    KOS_vector_init(&str_buf);
 
     KOS_init_local_with(ctx, &buffer, buffer_obj);
 
@@ -3066,7 +3066,7 @@ static int pack_format(KOS_CONTEXT               ctx,
 
 cleanup:
     KOS_destroy_top_local(ctx, &buffer);
-    kos_vector_destroy(&str_buf);
+    KOS_vector_destroy(&str_buf);
     return error;
 }
 

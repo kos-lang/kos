@@ -7,12 +7,12 @@
 #include "../inc/kos_buffer.h"
 #include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
+#include "../inc/kos_memory.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_object.h"
 #include "../inc/kos_string.h"
 #include "kos_const_strings.h"
 #include "kos_math.h"
-#include "kos_memory.h"
 #include "kos_misc.h"
 #include "kos_object_internal.h"
 #include "kos_try.h"
@@ -190,7 +190,7 @@ void KOS_print_exception(KOS_CONTEXT ctx, enum KOS_PRINT_WHERE_E print_where)
     dest = fopen("/dev/null", "r+");
 #endif
 
-    kos_vector_init(&cstr);
+    KOS_vector_init(&cstr);
 
     KOS_init_locals(ctx, 2, &exception, &last_exception);
 
@@ -252,7 +252,7 @@ void KOS_print_exception(KOS_CONTEXT ctx, enum KOS_PRINT_WHERE_E print_where)
 
     KOS_destroy_top_locals(ctx, &exception, &last_exception);
 
-    kos_vector_destroy(&cstr);
+    KOS_vector_destroy(&cstr);
 
     if (KOS_is_exception_pending(ctx)) {
         fprintf(dest, "Exception: <unable to format>\n");
@@ -300,14 +300,14 @@ static int int_to_str(KOS_CONTEXT ctx,
     unsigned len;
 
     if (cstr_vec) {
-        TRY(kos_vector_reserve(cstr_vec, cstr_vec->size + sizeof(buf)));
+        TRY(KOS_vector_reserve(cstr_vec, cstr_vec->size + sizeof(buf)));
         ptr = &cstr_vec->buffer[cstr_vec->size ? cstr_vec->size - 1 : 0];
     }
 
     len = (unsigned)snprintf(ptr, sizeof(buf), "%" PRId64, value);
 
     if (cstr_vec) {
-        TRY(kos_vector_resize(cstr_vec,
+        TRY(KOS_vector_resize(cstr_vec,
                               cstr_vec->size + KOS_min(len, (unsigned)(sizeof(buf) - 1)) +
                                   (cstr_vec->size ? 0 : 1)));
     }
@@ -337,14 +337,14 @@ static int float_to_str(KOS_CONTEXT ctx,
     unsigned size;
 
     if (cstr_vec) {
-        TRY(kos_vector_reserve(cstr_vec, cstr_vec->size + sizeof(buf)));
+        TRY(KOS_vector_reserve(cstr_vec, cstr_vec->size + sizeof(buf)));
         ptr = &cstr_vec->buffer[cstr_vec->size ? cstr_vec->size - 1 : 0];
     }
 
     size = kos_print_float(ptr, sizeof(buf), value);
 
     if (cstr_vec) {
-        TRY(kos_vector_resize(cstr_vec, cstr_vec->size + size +
+        TRY(KOS_vector_resize(cstr_vec, cstr_vec->size + size +
                     (cstr_vec->size ? 0 : 1)));
     }
     else if (str) {
@@ -388,7 +388,7 @@ static int vector_append_str(KOS_CONTEXT   ctx,
     if ( ! str_len && ! quote_str)
         return KOS_SUCCESS;
 
-    error = kos_vector_resize(cstr_vec, pos + str_len + 1 + (quote_str ? 2 : 0));
+    error = KOS_vector_resize(cstr_vec, pos + str_len + 1 + (quote_str ? 2 : 0));
 
     if (error) {
         KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
@@ -421,7 +421,7 @@ static int vector_append_str(KOS_CONTEXT   ctx,
             char    *dst;
             unsigned num_utf8_cont = 0;
 
-            error = kos_vector_resize(cstr_vec, cstr_vec->size + extra_len);
+            error = KOS_vector_resize(cstr_vec, cstr_vec->size + extra_len);
 
             if (error) {
                 KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
@@ -754,7 +754,7 @@ static int vector_append_buffer(KOS_CONTEXT ctx,
 
     size = KOS_get_buffer_size(obj_id);
 
-    error = kos_vector_reserve(cstr_vec, cstr_vec->size + size * 3 + 2);
+    error = KOS_vector_reserve(cstr_vec, cstr_vec->size + size * 3 + 2);
     if (error) {
         KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
@@ -803,7 +803,7 @@ static KOS_OBJ_ID buffer_to_str(KOS_CONTEXT ctx,
         return KOS_new_const_ascii_string(ctx, str_empty_buffer,
                                           sizeof(str_empty_buffer) - 1);
 
-    kos_vector_init(&cstr_vec);
+    KOS_vector_init(&cstr_vec);
 
     TRY(vector_append_buffer(ctx, &cstr_vec, obj_id));
 
@@ -812,7 +812,7 @@ static KOS_OBJ_ID buffer_to_str(KOS_CONTEXT ctx,
     ret = KOS_new_string(ctx, cstr_vec.buffer, (unsigned)cstr_vec.size - 1U);
 
 cleanup:
-    kos_vector_destroy(&cstr_vec);
+    KOS_vector_destroy(&cstr_vec);
 
     return error ? KOS_BADPTR : ret;
 }
@@ -907,7 +907,7 @@ static KOS_OBJ_ID object_to_str(KOS_CONTEXT        ctx,
 
     assert(GET_OBJ_TYPE(obj_id) == OBJ_OBJECT);
 
-    kos_vector_init(&cstr_vec);
+    KOS_vector_init(&cstr_vec);
 
     TRY(vector_append_object(ctx, &cstr_vec, obj_id, guard));
 
@@ -916,7 +916,7 @@ static KOS_OBJ_ID object_to_str(KOS_CONTEXT        ctx,
     ret = KOS_new_string(ctx, cstr_vec.buffer, (unsigned)cstr_vec.size - 1U);
 
 cleanup:
-    kos_vector_destroy(&cstr_vec);
+    KOS_vector_destroy(&cstr_vec);
 
     return error ? KOS_BADPTR : ret;
 }
@@ -1146,7 +1146,7 @@ int KOS_print_to_cstr_vec(KOS_CONTEXT   ctx,
     len = KOS_get_array_size(array);
 
     if (len)
-        TRY(kos_vector_reserve(cstr_vec, cstr_vec->size + 128U));
+        TRY(KOS_vector_reserve(cstr_vec, cstr_vec->size + 128U));
 
     for (i = 0; i < len; i++) {
         KOS_OBJ_ID obj = KOS_array_read(ctx, array, (int)i);
@@ -1154,7 +1154,7 @@ int KOS_print_to_cstr_vec(KOS_CONTEXT   ctx,
 
         if (i >= first_sep_i && sep_len) {
             const size_t pos = cstr_vec->size;
-            TRY(kos_vector_resize(cstr_vec, pos + sep_len + (pos ? 0 : 1)));
+            TRY(KOS_vector_resize(cstr_vec, pos + sep_len + (pos ? 0 : 1)));
             memcpy(&cstr_vec->buffer[pos - (pos ? 1 : 0)], sep, sep_len + 1);
         }
 
@@ -1467,13 +1467,13 @@ static KOS_OBJ_ID string_vprintf(KOS_CONTEXT ctx,
     int        size;
     KOS_OBJ_ID str = KOS_BADPTR;
 
-    kos_vector_init(&buf);
+    KOS_vector_init(&buf);
 
     size = vsnprintf(buf.buffer, (size_t)buf.capacity, format, args1);
 
     if (size > 0) {
         if ((size_t)(size + 1) > buf.capacity) {
-            const int error = kos_vector_resize(&buf, (size_t)(size + 1));
+            const int error = KOS_vector_resize(&buf, (size_t)(size + 1));
 
             if (error) {
                 KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
@@ -1489,7 +1489,7 @@ static KOS_OBJ_ID string_vprintf(KOS_CONTEXT ctx,
         str = KOS_STR_EMPTY;
 
 cleanup:
-    kos_vector_destroy(&buf);
+    KOS_vector_destroy(&buf);
 
     return str;
 }

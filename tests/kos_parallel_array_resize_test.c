@@ -5,10 +5,10 @@
 #include "../inc/kos_array.h"
 #include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
+#include "../inc/kos_memory.h"
 #include "../inc/kos_string.h"
 #include "../inc/kos_threads.h"
 #include "../core/kos_system.h"
-#include "../core/kos_memory.h"
 #include "../core/kos_misc.h"
 #include "../core/kos_object_internal.h"
 #include "kos_test_tools.h"
@@ -138,8 +138,8 @@ int main(void)
         data.obj.o = KOS_new_array(ctx, (uint32_t)num_idcs);
         TEST( ! IS_BAD_PTR(data.obj.o));
 
-        kos_vector_init(&mem_buf);
-        TEST(kos_vector_resize(&mem_buf,
+        KOS_vector_init(&mem_buf);
+        TEST(KOS_vector_resize(&mem_buf,
                 num_threads * (sizeof(KOS_OBJ_ID) + sizeof(struct THREAD_DATA))
             ) == KOS_SUCCESS);
         thread_cookies = (struct THREAD_DATA *)mem_buf.buffer;
@@ -191,7 +191,7 @@ int main(void)
             TEST(KOS_atomic_read_relaxed_u32(thread_cookies[i].num_loops) == (uint32_t)num_loops);
         }
 
-        kos_vector_destroy(&mem_buf);
+        KOS_vector_destroy(&mem_buf);
     }
 
     KOS_instance_destroy(&inst);

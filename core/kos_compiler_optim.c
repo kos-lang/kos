@@ -54,7 +54,7 @@ static int collapse_numeric(KOS_COMP_UNIT     *program,
 {
     int            error;
     const uint16_t length = sizeof(KOS_NUMERIC);
-    KOS_NUMERIC   *store  = (KOS_NUMERIC *)kos_mempool_alloc(&program->allocator, length);
+    KOS_NUMERIC   *store  = (KOS_NUMERIC *)KOS_mempool_alloc(&program->allocator, length);
 
     if (store) {
 
@@ -1491,7 +1491,7 @@ static int add_strings(KOS_COMP_UNIT      *program,
         return KOS_ERROR_COMPILE_FAILED;
     }
 
-    str = (char *)kos_mempool_alloc(&program->allocator, new_length);
+    str = (char *)KOS_mempool_alloc(&program->allocator, new_length);
 
     if ( ! str)
         return KOS_ERROR_OUT_OF_MEMORY;
@@ -1842,7 +1842,7 @@ static int stringify(KOS_COMP_UNIT       *program,
 
             copy_node_as_string(tmp_node, *node_ptr);
 
-            store = (char *)kos_mempool_alloc(&program->allocator, max_size + 1);
+            store = (char *)KOS_mempool_alloc(&program->allocator, max_size + 1);
             if ( ! store)
                 return 0; /* Malloc errors are handled later */
 

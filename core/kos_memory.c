@@ -2,12 +2,12 @@
  * Copyright (c) 2014-2020 Chris Dragan
  */
 
-#include "kos_memory.h"
+#include "../inc/kos_memory.h"
 #include "../inc/kos_atomic.h"
 #include "../inc/kos_error.h"
+#include "../inc/kos_malloc.h"
 #include "kos_config.h"
 #include "kos_debug.h"
-#include "kos_malloc.h"
 #include "kos_math.h"
 #include <assert.h>
 #include <string.h>
@@ -17,13 +17,13 @@ struct MEMPOOL_BUF {
     uint8_t             buf[8];
 };
 
-void kos_mempool_init(struct KOS_MEMPOOL_S *mempool)
+void KOS_mempool_init(struct KOS_MEMPOOL_S *mempool)
 {
     mempool->free_size = 0;
     mempool->buffers   = 0;
 }
 
-void kos_mempool_destroy(struct KOS_MEMPOOL_S *mempool)
+void KOS_mempool_destroy(struct KOS_MEMPOOL_S *mempool)
 {
     struct MEMPOOL_BUF *buf = (struct MEMPOOL_BUF *)(mempool->buffers);
 
@@ -32,7 +32,7 @@ void kos_mempool_destroy(struct KOS_MEMPOOL_S *mempool)
 
         buf = buf->next;
 
-        kos_free(to_free);
+        KOS_free(to_free);
     }
 }
 
@@ -40,7 +40,7 @@ static void *alloc_large(struct KOS_MEMPOOL_S *mempool, size_t size)
 {
     const size_t alloc_size = size + sizeof(struct MEMPOOL_BUF);
 
-    struct MEMPOOL_BUF *buf = (struct MEMPOOL_BUF *)kos_malloc(alloc_size);
+    struct MEMPOOL_BUF *buf = (struct MEMPOOL_BUF *)KOS_malloc(alloc_size);
 
     uint8_t *obj = 0;
 
@@ -66,7 +66,7 @@ static void *alloc_large(struct KOS_MEMPOOL_S *mempool, size_t size)
     return obj;
 }
 
-void *kos_mempool_alloc(struct KOS_MEMPOOL_S *mempool, size_t size)
+void *KOS_mempool_alloc(struct KOS_MEMPOOL_S *mempool, size_t size)
 {
     uint8_t            *obj = 0;
     struct MEMPOOL_BUF *buf = 0;
@@ -79,7 +79,7 @@ void *kos_mempool_alloc(struct KOS_MEMPOOL_S *mempool, size_t size)
         if (size > (KOS_BUF_ALLOC_SIZE / 16U))
             return alloc_large(mempool, size);
 
-        buf = (struct MEMPOOL_BUF *)kos_malloc(KOS_BUF_ALLOC_SIZE);
+        buf = (struct MEMPOOL_BUF *)KOS_malloc(KOS_BUF_ALLOC_SIZE);
 
         if (buf) {
             buf->next          = (struct MEMPOOL_BUF *)(mempool->buffers);
@@ -101,23 +101,23 @@ void *kos_mempool_alloc(struct KOS_MEMPOOL_S *mempool, size_t size)
     return obj;
 }
 
-void kos_vector_init(KOS_VECTOR *vector)
+void KOS_vector_init(KOS_VECTOR *vector)
 {
     vector->buffer   = (char *)(void *)&vector->local_buffer_;
     vector->size     = 0;
     vector->capacity = sizeof(vector->local_buffer_);
 }
 
-void kos_vector_destroy(KOS_VECTOR *vector)
+void KOS_vector_destroy(KOS_VECTOR *vector)
 {
     if (vector->capacity > sizeof(vector->local_buffer_)) {
-        kos_free(vector->buffer);
+        KOS_free(vector->buffer);
 
-        kos_vector_init(vector);
+        KOS_vector_init(vector);
     }
 }
 
-int kos_vector_reserve(KOS_VECTOR *vector, size_t capacity)
+int KOS_vector_reserve(KOS_VECTOR *vector, size_t capacity)
 {
     int error = KOS_SUCCESS;
 
@@ -125,8 +125,8 @@ int kos_vector_reserve(KOS_VECTOR *vector, size_t capacity)
 
         const int in_place = vector->capacity <= sizeof(vector->local_buffer_);
 
-        char *const new_buf = in_place ? (char *)kos_malloc(capacity)
-                                       : (char *)kos_realloc(vector->buffer, capacity);
+        char *const new_buf = in_place ? (char *)KOS_malloc(capacity)
+                                       : (char *)KOS_realloc(vector->buffer, capacity);
 
         if (new_buf) {
             if (in_place && vector->size)
@@ -142,7 +142,7 @@ int kos_vector_reserve(KOS_VECTOR *vector, size_t capacity)
     return error;
 }
 
-int kos_vector_resize(KOS_VECTOR *vector, size_t size)
+int KOS_vector_resize(KOS_VECTOR *vector, size_t size)
 {
     int error = KOS_SUCCESS;
 
@@ -158,7 +158,7 @@ int kos_vector_resize(KOS_VECTOR *vector, size_t size)
         else
             new_capacity = size;
 
-        error = kos_vector_reserve(vector, new_capacity);
+        error = KOS_vector_reserve(vector, new_capacity);
     }
 
     if (!error)
@@ -167,7 +167,7 @@ int kos_vector_resize(KOS_VECTOR *vector, size_t size)
     return error;
 }
 
-int kos_vector_concat(KOS_VECTOR *dest, KOS_VECTOR *src)
+int KOS_vector_concat(KOS_VECTOR *dest, KOS_VECTOR *src)
 {
     int error = KOS_SUCCESS;
 
@@ -175,7 +175,7 @@ int kos_vector_concat(KOS_VECTOR *dest, KOS_VECTOR *src)
 
         const size_t pos = dest->size;
 
-        error = kos_vector_resize(dest, dest->size + src->size);
+        error = KOS_vector_resize(dest, dest->size + src->size);
         if ( ! error)
             memcpy(dest->buffer + pos, src->buffer, src->size);
     }

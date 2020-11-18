@@ -15,7 +15,7 @@ typedef struct KOS_GETLINE_S {
 
 #else
 
-#include "kos_memory.h"
+#include "../inc/kos_memory.h"
 
 typedef struct KOS_GETLINE_S {
     struct KOS_GETLINE_HISTORY_NODE_S *head;

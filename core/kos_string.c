@@ -8,11 +8,11 @@
 #include "../inc/kos_buffer.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_instance.h"
+#include "../inc/kos_memory.h"
 #include "../inc/kos_utils.h"
 #include "kos_const_strings.h"
 #include "kos_heap.h"
 #include "kos_math.h"
-#include "kos_memory.h"
 #include "kos_object_internal.h"
 #include "kos_try.h"
 #include "kos_unicode.h"
@@ -460,7 +460,7 @@ int KOS_string_to_cstr_vec(KOS_CONTEXT ctx,
         }
     }
 
-    error = kos_vector_resize(str_vec, str_len+1);
+    error = KOS_vector_resize(str_vec, str_len+1);
 
     if (error) {
         KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
@@ -1597,7 +1597,7 @@ int kos_append_cstr(KOS_CONTEXT ctx,
                     size_t      len)
 {
     const size_t pos   = cstr_vec->size;
-    int          error = kos_vector_resize(cstr_vec, pos + len + (pos ? 0 : 1));
+    int          error = KOS_vector_resize(cstr_vec, pos + len + (pos ? 0 : 1));
 
     if (error) {
         KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);

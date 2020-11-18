@@ -6,10 +6,9 @@
 #include "../inc/kos_array.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_instance.h"
+#include "../inc/kos_memory.h"
 #include "../core/kos_config.h"
 #include "../core/kos_const_strings.h"
-#include "../core/kos_malloc.h"
-#include "../core/kos_memory.h"
 #include "../core/kos_system.h"
 #include "../core/kos_try.h"
 
@@ -54,18 +53,18 @@ int get_num_cpus(void)
     int        num_cpus = 2; /* By default behave as if there were 2 CPUs */
     KOS_VECTOR cstr;
 
-    kos_vector_init(&cstr);
+    KOS_vector_init(&cstr);
 
     if (kos_get_env("TEST_CPUS", &cstr) == KOS_SUCCESS) {
         num_cpus = (int)strtol(cstr.buffer, 0, 10);
         if (num_cpus < 1) {
-            kos_vector_destroy(&cstr);
+            KOS_vector_destroy(&cstr);
             printf("Failed: Invalid value in TEST_CPUS env var!\n");
             exit(1);
         }
     }
 
-    kos_vector_destroy(&cstr);
+    KOS_vector_destroy(&cstr);
 
     /* Don't try to create more threads than the max number of threads supported */
     if ((unsigned)num_cpus > KOS_MAX_THREADS)

@@ -4,12 +4,12 @@
 
 #include "kos_getline.h"
 #include "../inc/kos_error.h"
+#include "../inc/kos_malloc.h"
+#include "../inc/kos_memory.h"
 #include "kos_config.h"
 #include "kos_debug.h"
 #include "kos_system.h"
-#include "kos_malloc.h"
 #include "kos_math.h"
-#include "kos_memory.h"
 #include "kos_misc.h"
 #include "kos_utf8.h"
 #include <setjmp.h>
@@ -107,7 +107,7 @@ int kos_getline(KOS_GETLINE      *state,
         signal_handler old_signal;
         char*          ret_buf;
 
-        if (kos_vector_resize(buf, old_size + increment)) {
+        if (KOS_vector_resize(buf, old_size + increment)) {
             fprintf(stderr, "Out of memory\n");
             return KOS_ERROR_OUT_OF_MEMORY;
         }
@@ -674,7 +674,7 @@ struct KOS_GETLINE_HISTORY_NODE_S {
 
 int kos_getline_init(KOS_GETLINE *state)
 {
-    kos_mempool_init(&state->allocator);
+    KOS_mempool_init(&state->allocator);
 
     state->head = 0;
 
@@ -683,7 +683,7 @@ int kos_getline_init(KOS_GETLINE *state)
 
 void kos_getline_destroy(KOS_GETLINE *state)
 {
-    kos_mempool_destroy(&state->allocator);
+    KOS_mempool_destroy(&state->allocator);
 
     state->head = 0;
 }
@@ -696,7 +696,7 @@ static HIST_NODE *alloc_history_node(struct KOS_MEMPOOL_S *allocator,
     const size_t capacity   = KOS_align_up(size, (size_t)16);
     const size_t alloc_size = sizeof(HIST_NODE) - 1 + capacity;
 
-    HIST_NODE *node = (HIST_NODE *)kos_mempool_alloc(allocator, alloc_size);
+    HIST_NODE *node = (HIST_NODE *)KOS_mempool_alloc(allocator, alloc_size);
 
     if (node) {
 
@@ -802,7 +802,7 @@ static int restore_from_temp_history(struct TERM_EDIT *edit)
 
     assert(node);
 
-    error = kos_vector_resize(edit->line, node->size);
+    error = KOS_vector_resize(edit->line, node->size);
 
     if ( ! error) {
 
@@ -1002,7 +1002,7 @@ static int insert_char(struct TERM_EDIT *edit, char c)
     const size_t   init_size  = edit->line->size;
     const unsigned insert_pos = edit->cursor_pos.physical;
     const unsigned tail_size  = (unsigned)(init_size - insert_pos);
-    int            error      = kos_vector_resize(edit->line, init_size + 1);
+    int            error      = KOS_vector_resize(edit->line, init_size + 1);
 
     if (error)
         return error;
@@ -1230,7 +1230,7 @@ int kos_getline(KOS_GETLINE      *state,
         edit.prompt_size = sizeof(str_prompt) - 1;
     }
 
-    kos_mempool_init(&edit.temp_allocator);
+    KOS_mempool_init(&edit.temp_allocator);
     error = init_history(&edit, state->head);
 
     if ( ! error && kos_is_stdin_interactive() && getenv("TERM")) {
@@ -1278,7 +1278,7 @@ int kos_getline(KOS_GETLINE      *state,
     if ( ! error && buf->size)
         error = add_to_persistent_history(state, buf->buffer, buf->size, edit.line_size);
 
-    kos_mempool_destroy(&edit.temp_allocator);
+    KOS_mempool_destroy(&edit.temp_allocator);
 
     return error;
 }

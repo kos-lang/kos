@@ -6,12 +6,12 @@
 #include "../inc/kos_instance.h"
 #include "../inc/kos_entity.h"
 #include "../inc/kos_error.h"
+#include "../inc/kos_malloc.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_object.h"
 #include "../inc/kos_string.h"
 #include "../inc/kos_threads.h"
 #include "../core/kos_const_strings.h"
-#include "../core/kos_malloc.h"
 #include "../core/kos_misc.h"
 #include "../core/kos_try.h"
 #include <math.h>
@@ -35,7 +35,7 @@ static void finalize(KOS_CONTEXT ctx,
 
         kos_destroy_mutex(&rng->mutex);
 
-        kos_free(priv);
+        KOS_free(priv);
     }
 }
 
@@ -100,7 +100,7 @@ static KOS_OBJ_ID kos_random(KOS_CONTEXT ctx,
             RAISE_EXCEPTION(str_err_invalid_seed);
     }
 
-    rng = (KOS_RNG_CONTAINER *)kos_malloc(sizeof(KOS_RNG_CONTAINER));
+    rng = (KOS_RNG_CONTAINER *)KOS_malloc(sizeof(KOS_RNG_CONTAINER));
 
     if ( ! rng) {
         KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
@@ -126,7 +126,7 @@ static KOS_OBJ_ID kos_random(KOS_CONTEXT ctx,
 
 cleanup:
     if (rng)
-        kos_free(rng);
+        KOS_free(rng);
 
     ret.o = KOS_destroy_top_locals(ctx, &args, &ret);
 

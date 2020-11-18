@@ -7,6 +7,7 @@
 #include "../inc/kos_instance.h"
 #include "../inc/kos_entity.h"
 #include "../inc/kos_error.h"
+#include "../inc/kos_malloc.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_object.h"
 #include "../inc/kos_string.h"
@@ -15,7 +16,6 @@
 #include "../core/kos_const_strings.h"
 #include "../core/kos_heap.h"
 #include "../core/kos_lexer.h"
-#include "../core/kos_malloc.h"
 #include "../core/kos_object_internal.h"
 #include "../core/kos_try.h"
 #include <string.h>
@@ -53,7 +53,7 @@ static void finalize(KOS_CONTEXT ctx,
                      void       *priv)
 {
     if (priv)
-        kos_free(priv);
+        KOS_free(priv);
 }
 
 static KOS_OBJ_ID raw_lexer(KOS_CONTEXT ctx,
@@ -103,7 +103,7 @@ static KOS_OBJ_ID raw_lexer(KOS_CONTEXT ctx,
         lexer.o = KOS_new_object(ctx);
         TRY_OBJID(lexer.o);
 
-        kos_lexer = (KOS_LEXER_OBJ *)kos_malloc(sizeof(KOS_LEXER_OBJ) + buf_size - 1);
+        kos_lexer = (KOS_LEXER_OBJ *)KOS_malloc(sizeof(KOS_LEXER_OBJ) + buf_size - 1);
         if ( ! kos_lexer) {
             KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
             goto cleanup;

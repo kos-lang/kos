@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../inc/kos_error.h"
-#include "../core/kos_malloc.h"
+#include "../inc/kos_malloc.h"
 #include "../core/kos_misc.h"
 #include "../core/kos_red_black.h"
 
@@ -157,7 +157,7 @@ static void free_tree(struct MYNODE *n)
     if (n) {
         free_tree((struct MYNODE *)n->node.left);
         free_tree((struct MYNODE *)n->node.right);
-        kos_free(n);
+        KOS_free(n);
     }
 }
 
@@ -331,7 +331,7 @@ int main(int argc, char *argv[])
         int            total = 0;
         struct KOS_RNG rng;
         struct MYNODE *root   = 0;
-        intptr_t      *values = (intptr_t *)kos_malloc(size * sizeof(intptr_t));
+        intptr_t      *values = (intptr_t *)KOS_malloc(size * sizeof(intptr_t));
 
         kos_rng_init(&rng);
 
@@ -348,7 +348,7 @@ int main(int argc, char *argv[])
                                    cmp_value))
                 continue;
 
-            node = (struct MYNODE *)kos_malloc(sizeof(struct MYNODE));
+            node = (struct MYNODE *)KOS_malloc(sizeof(struct MYNODE));
 
             node->value = values[i % size];
 
@@ -376,7 +376,7 @@ int main(int argc, char *argv[])
             if (node) {
                 kos_red_black_delete((KOS_RED_BLACK_NODE **)&root,
                                      (KOS_RED_BLACK_NODE *)node);
-                kos_free(node);
+                KOS_free(node);
                 --total;
             }
         }
@@ -389,7 +389,7 @@ int main(int argc, char *argv[])
             print_tree(root);
 
         free_tree(root);
-        kos_free(values);
+        KOS_free(values);
 
         print_error(error);
     }

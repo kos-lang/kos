@@ -78,7 +78,7 @@ static KOS_VAR *alloc_var(KOS_COMP_UNIT      *program,
                           const KOS_AST_NODE *node)
 {
     KOS_VAR *var = (KOS_VAR *)
-        kos_mempool_alloc(&program->allocator, sizeof(KOS_VAR));
+        KOS_mempool_alloc(&program->allocator, sizeof(KOS_VAR));
 
     if (var) {
         memset(var, 0, sizeof(*var));
@@ -132,7 +132,7 @@ static int push_scope(KOS_COMP_UNIT *program,
     int          error = KOS_SUCCESS;
     const size_t size  = alloc_frame ? sizeof(KOS_FRAME) : sizeof(KOS_SCOPE);
 
-    KOS_SCOPE *const scope = (KOS_SCOPE *)kos_mempool_alloc(&program->allocator, size);
+    KOS_SCOPE *const scope = (KOS_SCOPE *)KOS_mempool_alloc(&program->allocator, size);
 
     if ( ! scope)
         error = KOS_ERROR_OUT_OF_MEMORY;
@@ -256,7 +256,7 @@ static int add_scope_ref(KOS_COMP_UNIT *program,
 
     if ( ! ref) {
 
-        ref = (KOS_SCOPE_REF *)kos_mempool_alloc(&program->allocator, sizeof(KOS_SCOPE_REF));
+        ref = (KOS_SCOPE_REF *)KOS_mempool_alloc(&program->allocator, sizeof(KOS_SCOPE_REF));
 
         if (ref) {
 
@@ -438,7 +438,7 @@ static int import_global(const char *global_name,
     int                 error  = KOS_SUCCESS;
     KOS_IMPORT_INFO_V  *info   = (KOS_IMPORT_INFO_V *)cookie;
     KOS_AST_NODE *const g_node = (KOS_AST_NODE *)
-        kos_mempool_alloc(&info->program->allocator, sizeof(KOS_AST_NODE) + global_length);
+        KOS_mempool_alloc(&info->program->allocator, sizeof(KOS_AST_NODE) + global_length);
 
     if (g_node) {
 
@@ -1187,7 +1187,7 @@ static int predefine_global(KOS_COMP_UNIT      *program,
     int error = KOS_SUCCESS;
 
     KOS_PRE_GLOBAL *global = (KOS_PRE_GLOBAL *)
-        kos_mempool_alloc(&program->allocator, sizeof(KOS_PRE_GLOBAL) + name_len);
+        KOS_mempool_alloc(&program->allocator, sizeof(KOS_PRE_GLOBAL) + name_len);
 
     if (global) {
         memset(&global->node, 0, sizeof(global->node));

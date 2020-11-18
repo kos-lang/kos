@@ -2,7 +2,7 @@
  * Copyright (c) 2014-2020 Chris Dragan
  */
 
-#include "kos_malloc.h"
+#include "../inc/kos_malloc.h"
 #include "kos_debug.h"
 #include "kos_perf.h"
 #include <stdlib.h>
@@ -10,7 +10,7 @@
 #   include <malloc.h>
 #endif
 
-void *kos_malloc(size_t size)
+void *KOS_malloc(size_t size)
 {
     void *ptr;
 
@@ -24,7 +24,7 @@ void *kos_malloc(size_t size)
     return ptr;
 }
 
-void *kos_realloc(void *ptr, size_t size)
+void *KOS_realloc(void *ptr, size_t size)
 {
     if (kos_seq_fail())
         return 0;
@@ -38,7 +38,7 @@ void *kos_realloc(void *ptr, size_t size)
     return ptr;
 }
 
-void kos_free(void *ptr)
+void KOS_free(void *ptr)
 {
     PROF_FREE(ptr)
 
@@ -46,7 +46,7 @@ void kos_free(void *ptr)
 }
 
 #ifdef _WIN32
-void *kos_malloc_aligned(size_t size, size_t alignment)
+void *KOS_malloc_aligned(size_t size, size_t alignment)
 {
     void *ptr;
 
@@ -60,7 +60,7 @@ void *kos_malloc_aligned(size_t size, size_t alignment)
     return ptr;
 }
 
-void kos_free_aligned(void *ptr)
+void KOS_free_aligned(void *ptr)
 {
     PROF_FREE(ptr)
 
@@ -69,7 +69,7 @@ void kos_free_aligned(void *ptr)
 
 #else
 
-void *kos_malloc_aligned(size_t size, size_t alignment)
+void *KOS_malloc_aligned(size_t size, size_t alignment)
 {
     void *ptr = 0;
 
@@ -84,7 +84,7 @@ void *kos_malloc_aligned(size_t size, size_t alignment)
     return ptr;
 }
 
-void kos_free_aligned(void *ptr)
+void KOS_free_aligned(void *ptr)
 {
     PROF_FREE(ptr)
 

@@ -6,11 +6,11 @@
 #include "../inc/kos_array.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_instance.h"
+#include "../inc/kos_malloc.h"
 #include "../inc/kos_utils.h"
 #include "kos_const_strings.h"
 #include "kos_debug.h"
 #include "kos_heap.h"
-#include "kos_malloc.h"
 #include "kos_object_internal.h"
 #include "kos_try.h"
 #include <assert.h>
@@ -108,7 +108,7 @@ static KOS_THREAD *alloc_thread(KOS_CONTEXT ctx,
     uint32_t       can_create;
     uint32_t       i;
 
-    thread = (KOS_THREAD *)kos_malloc(sizeof(KOS_THREAD));
+    thread = (KOS_THREAD *)KOS_malloc(sizeof(KOS_THREAD));
 
     if ( ! thread) {
         KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
@@ -162,7 +162,7 @@ static KOS_THREAD *alloc_thread(KOS_CONTEXT ctx,
         KOS_raise_exception(ctx, can_create ? KOS_CONST_ID(str_too_many_threads)
                                             : KOS_CONST_ID(str_shutdown));
 
-        kos_free(thread);
+        KOS_free(thread);
         thread = 0;
     }
 
@@ -191,7 +191,7 @@ void kos_thread_add_ref(KOS_THREAD *thread)
 static void release_thread(KOS_THREAD *thread)
 {
     if (KOS_atomic_add_u32(thread->ref_count, (uint32_t)-1) == 1)
-        kos_free(thread);
+        KOS_free(thread);
 }
 
 static void remove_thread(KOS_THREAD *thread)
@@ -494,14 +494,14 @@ int kos_create_mutex(KOS_MUTEX *mutex)
     int error = KOS_SUCCESS;
 
     assert(mutex);
-    *mutex = (KOS_MUTEX)kos_malloc(sizeof(struct KOS_MUTEX_OBJECT_S));
+    *mutex = (KOS_MUTEX)KOS_malloc(sizeof(struct KOS_MUTEX_OBJECT_S));
 
     if (*mutex) {
         __try {
             InitializeCriticalSection(&(*mutex)->cs);
         }
         __except (EXCEPTION_EXECUTE_HANDLER) {
-            kos_free(*mutex);
+            KOS_free(*mutex);
             error = KOS_ERROR_OUT_OF_MEMORY;
         }
 
@@ -518,7 +518,7 @@ void kos_destroy_mutex(KOS_MUTEX *mutex)
 
     DeleteCriticalSection(&(*mutex)->cs);
 
-    kos_free(*mutex);
+    KOS_free(*mutex);
 }
 
 void kos_lock_mutex(KOS_MUTEX *mutex)
@@ -544,7 +544,7 @@ int kos_create_cond_var(KOS_COND_VAR *cond_var)
     int error = KOS_SUCCESS;
 
     assert(cond_var);
-    *cond_var = (KOS_COND_VAR)kos_malloc(sizeof(struct KOS_COND_VAR_OBJECT_S));
+    *cond_var = (KOS_COND_VAR)KOS_malloc(sizeof(struct KOS_COND_VAR_OBJECT_S));
 
     if (*cond_var)
         InitializeConditionVariable(&(*cond_var)->cond);
@@ -558,7 +558,7 @@ void kos_destroy_cond_var(KOS_COND_VAR *cond_var)
 {
     assert(cond_var && *cond_var);
 
-    kos_free(*cond_var);
+    KOS_free(*cond_var);
 }
 
 void kos_signal_cond_var(KOS_COND_VAR *cond_var)
@@ -643,11 +643,11 @@ int kos_create_mutex(KOS_MUTEX *mutex)
     int error = KOS_SUCCESS;
 
     assert(mutex);
-    *mutex = (KOS_MUTEX)kos_malloc(sizeof(struct KOS_MUTEX_OBJECT_S));
+    *mutex = (KOS_MUTEX)KOS_malloc(sizeof(struct KOS_MUTEX_OBJECT_S));
 
     if (*mutex) {
         if (kos_seq_fail() || pthread_mutex_init(&(*mutex)->mutex, 0)) {
-            kos_free(*mutex);
+            KOS_free(*mutex);
             *mutex = 0;
             error = KOS_ERROR_OUT_OF_MEMORY;
         }
@@ -664,7 +664,7 @@ void kos_destroy_mutex(KOS_MUTEX *mutex)
 
     pthread_mutex_destroy(&(*mutex)->mutex);
 
-    kos_free(*mutex);
+    KOS_free(*mutex);
 }
 
 void kos_lock_mutex(KOS_MUTEX *mutex)
@@ -708,11 +708,11 @@ int kos_create_cond_var(KOS_COND_VAR *cond_var)
     int error = KOS_SUCCESS;
 
     assert(cond_var);
-    *cond_var = (KOS_COND_VAR)kos_malloc(sizeof(struct KOS_COND_VAR_OBJECT_S));
+    *cond_var = (KOS_COND_VAR)KOS_malloc(sizeof(struct KOS_COND_VAR_OBJECT_S));
 
     if (*cond_var) {
         if (kos_seq_fail() || pthread_cond_init(&(*cond_var)->cond, 0)) {
-            kos_free(*cond_var);
+            KOS_free(*cond_var);
             *cond_var = 0;
             error = KOS_ERROR_OUT_OF_MEMORY;
         }
@@ -738,7 +738,7 @@ void kos_destroy_cond_var(KOS_COND_VAR *cond_var)
 
     assert(ret == 0);
 
-    kos_free(*cond_var);
+    KOS_free(*cond_var);
 }
 
 void kos_signal_cond_var(KOS_COND_VAR *cond_var)
@@ -797,11 +797,11 @@ struct KOS_TLS_OBJECT_S {
 int kos_tls_create(KOS_TLS_KEY *key)
 {
     int         error   = KOS_SUCCESS;
-    KOS_TLS_KEY new_key = (KOS_TLS_KEY)kos_malloc(sizeof(struct KOS_TLS_OBJECT_S));
+    KOS_TLS_KEY new_key = (KOS_TLS_KEY)KOS_malloc(sizeof(struct KOS_TLS_OBJECT_S));
 
     if (new_key) {
         if (kos_seq_fail() || pthread_key_create(&new_key->key, 0)) {
-            kos_free(new_key);
+            KOS_free(new_key);
             error = KOS_ERROR_OUT_OF_MEMORY;
         }
         else
@@ -816,7 +816,7 @@ int kos_tls_create(KOS_TLS_KEY *key)
 void kos_tls_destroy(KOS_TLS_KEY key)
 {
     pthread_key_delete(key->key);
-    kos_free(key);
+    KOS_free(key);
 }
 
 void *kos_tls_get(KOS_TLS_KEY key)

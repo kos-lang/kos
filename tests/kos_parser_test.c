@@ -7,12 +7,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include "../inc/kos_error.h"
+#include "../inc/kos_memory.h"
 #include "../core/kos_ast.h"
 #include "../core/kos_system.h"
-#include "../core/kos_memory.h"
 #include "../core/kos_misc.h"
 #include "../core/kos_parser.h"
-#include "../inc/kos_error.h"
 
 #ifdef _MSC_VER
 #   pragma warning( disable : 4996 ) /* strerror: This function or variable may be unsafe */
@@ -352,7 +352,7 @@ int main(int argc, char *argv[])
 
     kos_filebuf_init(&file_buf);
 
-    kos_mempool_init(&allocator);
+    KOS_mempool_init(&allocator);
 
     if (argc < 2 || argc > 4) {
         printf("%s", usage);
@@ -486,7 +486,7 @@ int main(int argc, char *argv[])
         buf = end;
     }
 
-    kos_mempool_destroy(&allocator);
+    KOS_mempool_destroy(&allocator);
 
     kos_unload_file(&file_buf);
 

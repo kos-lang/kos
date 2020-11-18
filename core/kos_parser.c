@@ -3,12 +3,12 @@
  */
 
 #include "kos_parser.h"
+#include "../inc/kos_error.h"
+#include "../inc/kos_memory.h"
 #include "kos_ast.h"
 #include "kos_config.h"
-#include "kos_memory.h"
 #include "kos_perf.h"
 #include "kos_try.h"
-#include "../inc/kos_error.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -184,7 +184,7 @@ static int new_node(KOS_PARSER    *parser,
 
     assert(parser->ast_buf);
 
-    ast_node = (KOS_AST_NODE *)kos_mempool_alloc(parser->ast_buf, sizeof(KOS_AST_NODE));
+    ast_node = (KOS_AST_NODE *)KOS_mempool_alloc(parser->ast_buf, sizeof(KOS_AST_NODE));
 
     if (ast_node) {
         memset(ast_node, 0, sizeof(*ast_node));
@@ -2267,7 +2267,7 @@ static int gen_fake_const(KOS_PARSER   *parser,
 
     TRY(push_node(parser, node, NT_IDENTIFIER, &node));
 
-    name = (char *)kos_mempool_alloc(parser->ast_buf, max_len);
+    name = (char *)KOS_mempool_alloc(parser->ast_buf, max_len);
 
     if ( ! name) {
         error = KOS_ERROR_OUT_OF_MEMORY;

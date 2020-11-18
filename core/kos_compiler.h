@@ -6,8 +6,8 @@
 #define KOS_COMPILER_H_INCLUDED
 
 #include "../inc/kos_bytecode.h"
+#include "../inc/kos_memory.h"
 #include "kos_ast.h"
-#include "kos_memory.h"
 #include "kos_red_black.h"
 #include "kos_utf8.h"
 #include <stdint.h>

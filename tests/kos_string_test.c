@@ -7,10 +7,10 @@
 #include "../inc/kos_buffer.h"
 #include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
+#include "../inc/kos_memory.h"
 #include "../inc/kos_object.h"
 #include "../inc/kos_utils.h"
 #include "../core/kos_const_strings.h"
-#include "../core/kos_memory.h"
 #include "../core/kos_object_internal.h"
 #include "../core/kos_utf8.h"
 #include <stdio.h>
@@ -1491,7 +1491,7 @@ int main(void)
         KOS_OBJ_ID str;
         KOS_VECTOR vec;
 
-        kos_vector_init(&vec);
+        KOS_vector_init(&vec);
 
         str = KOS_new_cstring(ctx, "");
         TEST( ! IS_BAD_PTR(str));
@@ -1531,7 +1531,7 @@ int main(void)
         TEST((uint8_t)vec.buffer[3] == 0xBFU);
         TEST(vec.buffer[4] == 0);
 
-        kos_vector_destroy(&vec);
+        KOS_vector_destroy(&vec);
     }
 
     /************************************************************************/
@@ -1655,7 +1655,7 @@ int main(void)
         KOS_OBJ_ID str;
         KOS_VECTOR vec;
 
-        kos_vector_init(&vec);
+        KOS_vector_init(&vec);
 
         str = KOS_new_cstring(ctx, "");
         TEST(GET_OBJ_TYPE(str)          == OBJ_STRING);
@@ -1663,7 +1663,7 @@ int main(void)
 
         TEST(KOS_object_to_string_or_cstr_vec(ctx, str, KOS_QUOTE_STRINGS, &str, &vec) == KOS_SUCCESS);
 
-        kos_vector_destroy(&vec);
+        KOS_vector_destroy(&vec);
 
         TEST(GET_OBJ_TYPE(str)                     == OBJ_STRING);
         TEST(KOS_get_string_length(str)            == 2);
@@ -1676,7 +1676,7 @@ int main(void)
         KOS_OBJ_ID str;
         KOS_VECTOR vec;
 
-        kos_vector_init(&vec);
+        KOS_vector_init(&vec);
 
         str = KOS_new_cstring(ctx, "\\\"\n\x1f\x7f");
         TEST(GET_OBJ_TYPE(str)          == OBJ_STRING);
@@ -1684,7 +1684,7 @@ int main(void)
 
         TEST(KOS_object_to_string_or_cstr_vec(ctx, str, KOS_QUOTE_STRINGS, &str, &vec) == KOS_SUCCESS);
 
-        kos_vector_destroy(&vec);
+        KOS_vector_destroy(&vec);
 
         TEST(GET_OBJ_TYPE(str)                      == OBJ_STRING);
         TEST(KOS_get_string_length(str)             == 18);
@@ -1713,9 +1713,9 @@ int main(void)
         KOS_OBJ_ID str;
         KOS_VECTOR vec;
 
-        kos_vector_init(&vec);
+        KOS_vector_init(&vec);
 
-        TEST(kos_vector_resize(&vec, 1) == KOS_SUCCESS);
+        TEST(KOS_vector_resize(&vec, 1) == KOS_SUCCESS);
         vec.buffer[0] = 0;
 
         str = KOS_new_cstring(ctx, "\t");
@@ -1727,7 +1727,7 @@ int main(void)
         TEST(vec.size      == 1);
         TEST(vec.buffer[0] == 0);
 
-        kos_vector_destroy(&vec);
+        KOS_vector_destroy(&vec);
 
         TEST(GET_OBJ_TYPE(str)                     == OBJ_STRING);
         TEST(KOS_get_string_length(str)            == 6);

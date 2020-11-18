@@ -5,13 +5,13 @@
 #include "../inc/kos_array.h"
 #include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
+#include "../inc/kos_memory.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_modules_init.h"
 #include "../inc/kos_utils.h"
 #include "../inc/kos_version.h"
 #include "../core/kos_getline.h"
 #include "../core/kos_heap.h"
-#include "../core/kos_memory.h"
 #include "../core/kos_parser.h"
 #include "../core/kos_perf.h"
 #include "../core/kos_system.h"
@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
     KOS_CONTEXT  ctx;
     KOS_VECTOR   buf;
 
-    kos_vector_init(&buf);
+    KOS_vector_init(&buf);
 
     setlocale(LC_ALL, "");
 
@@ -245,7 +245,7 @@ cleanup:
     if (inst_ok)
         KOS_instance_destroy(&inst);
 
-    kos_vector_destroy(&buf);
+    KOS_vector_destroy(&buf);
 
     return error ? EXIT_FAILURE : EXIT_SUCCESS;
 }
@@ -297,7 +297,7 @@ static int is_input_complete(KOS_VECTOR *buf,
     int                    error;
     struct KOS_AST_NODE_S *out;
 
-    kos_mempool_init(&mempool);
+    KOS_mempool_init(&mempool);
 
     kos_parser_init(&parser, &mempool, 0, buf->buffer, buf->buffer + buf->size);
 
@@ -305,7 +305,7 @@ static int is_input_complete(KOS_VECTOR *buf,
 
     kos_parser_destroy(&parser);
 
-    kos_mempool_destroy(&mempool);
+    KOS_mempool_destroy(&mempool);
 
     return error != KOS_ERROR_PARSE_FAILED || parser.token.type != TT_EOF;
 }
@@ -316,7 +316,7 @@ static int enforce_eol(KOS_VECTOR *buf)
 
     if (c != '\r' && c != '\n') {
 
-        const int error = kos_vector_resize(buf, buf->size + 1);
+        const int error = KOS_vector_resize(buf, buf->size + 1);
         if (error)
             return error;
 
@@ -336,7 +336,7 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
     int         genline_init = 0;
     KOS_VECTOR  tmp_buf;
 
-    kos_vector_init(&tmp_buf);
+    KOS_vector_init(&tmp_buf);
 
     printf(KOS_VERSION_STRING " interactive interpreter\n");
 
@@ -388,7 +388,7 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
             if (error)
                 break;
 
-            error = kos_vector_concat(buf, &tmp_buf);
+            error = KOS_vector_concat(buf, &tmp_buf);
             if (error)
                 break;
         }
@@ -445,7 +445,7 @@ cleanup:
     if (genline_init)
         kos_getline_destroy(&state);
 
-    kos_vector_destroy(&tmp_buf);
+    KOS_vector_destroy(&tmp_buf);
 
     return error;
 }

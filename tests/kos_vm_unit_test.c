@@ -7,10 +7,10 @@
 #include "../inc/kos_instance.h"
 #include "../inc/kos_entity.h"
 #include "../inc/kos_error.h"
+#include "../inc/kos_memory.h"
 #include "../inc/kos_string.h"
 #include "../core/kos_const_strings.h"
 #include "../core/kos_object_internal.h"
-#include "../core/kos_memory.h"
 #include "../core/kos_misc.h"
 #include "../core/kos_vm.h"
 #include <stdio.h>
@@ -467,7 +467,7 @@ static int test_instr(KOS_CONTEXT           ctx,
                 if ( ! error && KOS_string_compare(ret, expected)) {
                     KOS_VECTOR cstr;
 
-                    kos_vector_init(&cstr);
+                    KOS_vector_init(&cstr);
                     KOS_clear_exception(ctx);
 
                     error = KOS_string_to_cstr_vec(ctx, expected, &cstr);
@@ -476,7 +476,7 @@ static int test_instr(KOS_CONTEXT           ctx,
                     else
                         printf("Failed: line %d: expected string \"%s\"\n", line, cstr.buffer);
 
-                    kos_vector_destroy(&cstr);
+                    KOS_vector_destroy(&cstr);
                     error = KOS_ERROR_EXCEPTION;
                 }
             }

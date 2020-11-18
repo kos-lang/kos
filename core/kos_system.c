@@ -4,8 +4,8 @@
 
 #include "kos_system.h"
 #include "../inc/kos_error.h"
+#include "../inc/kos_memory.h"
 #include "kos_debug.h"
-#include "kos_memory.h"
 #include "kos_perf.h"
 #include "kos_try.h"
 #include <assert.h>
@@ -270,7 +270,7 @@ int kos_get_absolute_path(KOS_VECTOR *path)
 
         const size_t len = strlen(resolved_path) + 1;
 
-        error = kos_vector_resize(path, len);
+        error = KOS_vector_resize(path, len);
 
         if (!error)
             memcpy(path->buffer, resolved_path, len);
@@ -296,7 +296,7 @@ int kos_get_env(const char *name,
 
         const size_t len = strlen(value);
 
-        error = kos_vector_resize(buf, len+1);
+        error = KOS_vector_resize(buf, len+1);
 
         if (!error)
             memcpy(buf->buffer, value, len+1);
@@ -321,7 +321,7 @@ int kos_executable_path(KOS_VECTOR *buf)
 
         assert(path_buf[size] == 0);
 
-        error = kos_vector_resize(buf, len);
+        error = KOS_vector_resize(buf, len);
 
         if ( ! error)
             memcpy(buf->buffer, path_buf, len);
@@ -337,7 +337,7 @@ int kos_executable_path(KOS_VECTOR *buf)
 
     if (_NSGetExecutablePath(0, &size) == -1) {
 
-        error = kos_vector_resize(buf, (size_t)size);
+        error = KOS_vector_resize(buf, (size_t)size);
 
         if ( ! error) {
 
@@ -363,7 +363,7 @@ int kos_executable_path(KOS_VECTOR *buf)
 #   define INITIAL_EXE_SIZE 16U
 #endif
 
-    TRY(kos_vector_resize(buf, INITIAL_EXE_SIZE));
+    TRY(KOS_vector_resize(buf, INITIAL_EXE_SIZE));
 
     for (;;) {
 
@@ -381,7 +381,7 @@ int kos_executable_path(KOS_VECTOR *buf)
 
         if ((num_read > 0) && (num_read < (ssize_t)buf->size - 1)) {
 
-            TRY(kos_vector_resize(buf, num_read + 1));
+            TRY(KOS_vector_resize(buf, num_read + 1));
 
             buf->buffer[num_read] = 0;
 
@@ -391,7 +391,7 @@ int kos_executable_path(KOS_VECTOR *buf)
         if ((num_read == 0) || (buf->size > 0x7FFFU))
             RAISE_ERROR(KOS_ERROR_NOT_FOUND);
 
-        TRY(kos_vector_resize(buf, buf->size * 2U));
+        TRY(KOS_vector_resize(buf, buf->size * 2U));
     }
 
 cleanup:
@@ -477,7 +477,7 @@ static void get_lib_error(KOS_VECTOR *error_cstr)
 {
     const DWORD error = GetLastError();
 
-    if (kos_vector_resize(error_cstr, 11) == KOS_SUCCESS)
+    if (KOS_vector_resize(error_cstr, 11) == KOS_SUCCESS)
         snprintf(error_cstr->buffer, error_cstr->size, "0x%08x", (unsigned)error);
     else {
         error_cstr->size      = 1;
@@ -490,7 +490,7 @@ static void get_lib_error(KOS_VECTOR *error_cstr)
     const char  *error = dlerror();
     const size_t len   = strlen(error);
 
-    if (kos_vector_resize(error_cstr, len + 1) == KOS_SUCCESS)
+    if (KOS_vector_resize(error_cstr, len + 1) == KOS_SUCCESS)
         memcpy(error_cstr->buffer, error, len + 1);
     else {
         error_cstr->size      = 1;

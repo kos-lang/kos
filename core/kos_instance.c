@@ -6,6 +6,8 @@
 #include "../inc/kos_array.h"
 #include "../inc/kos_atomic.h"
 #include "../inc/kos_error.h"
+#include "../inc/kos_malloc.h"
+#include "../inc/kos_memory.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_object.h"
 #include "../inc/kos_string.h"
@@ -14,9 +16,7 @@
 #include "kos_const_strings.h"
 #include "kos_debug.h"
 #include "kos_heap.h"
-#include "kos_malloc.h"
 #include "kos_math.h"
-#include "kos_memory.h"
 #include "kos_misc.h"
 #include "kos_object_internal.h"
 #include "kos_perf.h"
@@ -81,14 +81,14 @@ int kos_seq_fail(void)
         KOS_VECTOR cstr;
         int64_t    value = -1;
 
-        kos_vector_init(&cstr);
+        KOS_vector_init(&cstr);
 
         if (kos_get_env("KOSSEQFAIL", &cstr) == KOS_SUCCESS
                 && cstr.size > 0
                 && kos_parse_int(cstr.buffer, cstr.buffer + cstr.size - 1, &value) == KOS_SUCCESS)
             kos_seq_threshold = (uint32_t)value;
 
-        kos_vector_destroy(&cstr);
+        KOS_vector_destroy(&cstr);
 
         KOS_atomic_write_relaxed_u32(kos_seq, 0);
 
@@ -234,12 +234,12 @@ static int init_search_paths(KOS_CONTEXT ctx)
     int        error = KOS_SUCCESS;
     KOS_VECTOR cpaths;
 
-    kos_vector_init(&cpaths);
+    KOS_vector_init(&cpaths);
 
     if (kos_get_env("KOSPATH", &cpaths) == KOS_SUCCESS)
         error = add_multiple_paths(ctx, &cpaths);
 
-    kos_vector_destroy(&cpaths);
+    KOS_vector_destroy(&cpaths);
 
     return error;
 #endif
@@ -369,7 +369,7 @@ int KOS_instance_init(KOS_INSTANCE *inst,
     heap_ok = 1;
 
     inst->threads.threads = (KOS_ATOMIC(KOS_THREAD *) *)
-        kos_malloc(sizeof(KOS_THREAD *) * inst->threads.max_threads);
+        KOS_malloc(sizeof(KOS_THREAD *) * inst->threads.max_threads);
     if ( ! inst->threads.threads)
         RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
     memset((void *)inst->threads.threads, 0, sizeof(KOS_THREAD *) * inst->threads.max_threads);
@@ -433,7 +433,7 @@ cleanup:
         }
 
         if (inst->threads.threads)
-            kos_free((void *)inst->threads.threads);
+            KOS_free((void *)inst->threads.threads);
     }
 
     return error;
@@ -463,11 +463,11 @@ void KOS_instance_destroy(KOS_INSTANCE *inst)
             KOS_clear_exception(ctx);
         else if (GET_OBJ_TYPE(module_obj) == OBJ_MODULE) {
             if ((OBJPTR(MODULE, module_obj)->flags & KOS_MODULE_OWN_BYTECODE))
-                kos_free((void *)OBJPTR(MODULE, module_obj)->bytecode);
+                KOS_free((void *)OBJPTR(MODULE, module_obj)->bytecode);
             if ((OBJPTR(MODULE, module_obj)->flags & KOS_MODULE_OWN_LINE_ADDRS))
-                kos_free((void *)OBJPTR(MODULE, module_obj)->line_addrs);
+                KOS_free((void *)OBJPTR(MODULE, module_obj)->line_addrs);
             if ((OBJPTR(MODULE, module_obj)->flags & KOS_MODULE_OWN_FUNC_ADDRS))
-                kos_free((void *)OBJPTR(MODULE, module_obj)->func_addrs);
+                KOS_free((void *)OBJPTR(MODULE, module_obj)->func_addrs);
         }
         else {
             /* failed e.g. during compilation */
@@ -488,7 +488,7 @@ void KOS_instance_destroy(KOS_INSTANCE *inst)
             kos_unload_library(lib);
         }
 
-        kos_free((void *)libs);
+        KOS_free((void *)libs);
     }
 
     kos_tls_destroy(inst->threads.thread_key);
@@ -496,7 +496,7 @@ void KOS_instance_destroy(KOS_INSTANCE *inst)
     kos_destroy_mutex(&inst->threads.new_mutex);
     kos_destroy_mutex(&inst->threads.ctx_mutex);
 
-    kos_free((void *)inst->threads.threads);
+    KOS_free((void *)inst->threads.threads);
 
     clear_instance(inst);
 
@@ -575,8 +575,8 @@ int KOS_instance_add_default_path(KOS_CONTEXT ctx, const char *argv0)
     size_t            pos;
     static const char rel_path[] = CONFIG_MODULE_PATH;
 
-    kos_vector_init(&cstr);
-    kos_vector_init(&cpath);
+    KOS_vector_init(&cstr);
+    KOS_vector_init(&cpath);
 
     if (argv0) {
 
@@ -592,7 +592,7 @@ int KOS_instance_add_default_path(KOS_CONTEXT ctx, const char *argv0)
                 RAISE_ERROR(KOS_ERROR_NOT_FOUND);
 
             len += 1;
-            TRY(kos_vector_resize(&cstr, len));
+            TRY(KOS_vector_resize(&cstr, len));
 
             memcpy(cstr.buffer, argv0, len);
         }
@@ -605,7 +605,7 @@ int KOS_instance_add_default_path(KOS_CONTEXT ctx, const char *argv0)
 
             buf = cpath.buffer;
 
-            TRY(kos_vector_reserve(&cstr, cpath.size + len + 1));
+            TRY(KOS_vector_reserve(&cstr, cpath.size + len + 1));
 
             cstr.size = 0;
 
@@ -619,7 +619,7 @@ int KOS_instance_add_default_path(KOS_CONTEXT ctx, const char *argv0)
 
                 base_len = end - buf;
 
-                TRY(kos_vector_resize(&cstr, base_len + 1 + len + 1));
+                TRY(KOS_vector_resize(&cstr, base_len + 1 + len + 1));
 
                 memcpy(cstr.buffer, buf, base_len);
                 cstr.buffer[base_len] = KOS_PATH_SEPARATOR;
@@ -654,15 +654,15 @@ int KOS_instance_add_default_path(KOS_CONTEXT ctx, const char *argv0)
     if ( ! pos)
         RAISE_ERROR(KOS_ERROR_NOT_FOUND);
 
-    TRY(kos_vector_resize(&cstr, pos + 1 + sizeof(rel_path)));
+    TRY(KOS_vector_resize(&cstr, pos + 1 + sizeof(rel_path)));
 
     memcpy(&cstr.buffer[pos + 1], rel_path, sizeof(rel_path));
 
     TRY(KOS_instance_add_path(ctx, cstr.buffer));
 
 cleanup:
-    kos_vector_destroy(&cpath);
-    kos_vector_destroy(&cstr);
+    KOS_vector_destroy(&cpath);
+    KOS_vector_destroy(&cstr);
 
     return error;
 }
@@ -703,7 +703,7 @@ static int save_module_lib(KOS_CONTEXT ctx, KOS_SHARED_LIB lib)
     libs = ctx->inst->modules.libs;
 
     if ( ! libs) {
-        libs = (KOS_LIB_LIST *)kos_malloc(sizeof(KOS_LIB_LIST) + 7 * sizeof(KOS_SHARED_LIB));
+        libs = (KOS_LIB_LIST *)KOS_malloc(sizeof(KOS_LIB_LIST) + 7 * sizeof(KOS_SHARED_LIB));
 
         if ( ! libs)
             return KOS_ERROR_OUT_OF_MEMORY;
@@ -716,7 +716,7 @@ static int save_module_lib(KOS_CONTEXT ctx, KOS_SHARED_LIB lib)
 
     if (libs->num_libs >= libs->capacity) {
         const uint32_t new_capacity = libs->capacity + 8;
-        KOS_LIB_LIST  *new_libs     = (KOS_LIB_LIST *)kos_realloc(libs,
+        KOS_LIB_LIST  *new_libs     = (KOS_LIB_LIST *)KOS_realloc(libs,
                 sizeof(KOS_LIB_LIST) + (new_capacity - 1) * sizeof(KOS_SHARED_LIB));
 
         if ( ! new_libs)
@@ -861,7 +861,7 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
     KOS_OBJ_ID str;
     KOS_VECTOR cstr;
 
-    kos_vector_init(&cstr);
+    KOS_vector_init(&cstr);
 
     KOS_init_locals(ctx, 4, &value, &backtrace, &frame_desc, &array);
 
@@ -878,7 +878,7 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
     array.o = KOS_new_array(ctx, 1 + depth);
     TRY_OBJID(array.o);
 
-    if (kos_vector_reserve(&cstr, 80) != KOS_SUCCESS) {
+    if (KOS_vector_reserve(&cstr, 80) != KOS_SUCCESS) {
         KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
@@ -952,7 +952,7 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
 cleanup:
     array.o = KOS_destroy_top_locals(ctx, &value, &array);
 
-    kos_vector_destroy(&cstr);
+    KOS_vector_destroy(&cstr);
 
     return error ? KOS_BADPTR : array.o;
 }

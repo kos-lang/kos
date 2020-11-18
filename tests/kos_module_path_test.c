@@ -5,9 +5,9 @@
 #include "../inc/kos_array.h"
 #include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
+#include "../inc/kos_memory.h"
 #include "../inc/kos_modules_init.h"
 #include "../inc/kos_string.h"
-#include "../core/kos_memory.h"
 #include "../core/kos_try.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
     KOS_OBJ_ID   path_str;
     KOS_VECTOR   cstr;
 
-    kos_vector_init(&cstr);
+    KOS_vector_init(&cstr);
 
     TRY(KOS_instance_init(&inst, 0, &ctx));
 
@@ -55,7 +55,7 @@ cleanup:
     if (inst_ok)
         KOS_instance_destroy(&inst);
 
-    kos_vector_destroy(&cstr);
+    KOS_vector_destroy(&cstr);
 
     if (error)
         fprintf(stderr, "Error: Failed with error code %d\n", error);

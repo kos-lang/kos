@@ -5,11 +5,11 @@
 #include "../inc/kos_array.h"
 #include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
+#include "../inc/kos_memory.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_string.h"
 #include "../inc/kos_utils.h"
 #include "../core/kos_system.h"
-#include "../core/kos_memory.h"
 #include "../core/kos_try.h"
 #ifdef _WIN32
 #   define WIN32_LEAN_AND_MEAN
@@ -50,7 +50,7 @@ static KOS_OBJ_ID is_file(KOS_CONTEXT ctx,
     KOS_OBJ_ID filename_obj = KOS_array_read(ctx, args_obj, 0);
     KOS_VECTOR filename_cstr;
 
-    kos_vector_init(&filename_cstr);
+    KOS_vector_init(&filename_cstr);
 
     TRY_OBJID(filename_obj);
 
@@ -61,7 +61,7 @@ static KOS_OBJ_ID is_file(KOS_CONTEXT ctx,
     ret = KOS_BOOL(kos_does_file_exist(filename_cstr.buffer));
 
 cleanup:
-    kos_vector_destroy(&filename_cstr);
+    KOS_vector_destroy(&filename_cstr);
 
     return ret;
 }
@@ -85,7 +85,7 @@ static KOS_OBJ_ID remove(KOS_CONTEXT ctx,
     KOS_OBJ_ID filename_obj = KOS_array_read(ctx, args_obj, 0);
     KOS_VECTOR filename_cstr;
 
-    kos_vector_init(&filename_cstr);
+    KOS_vector_init(&filename_cstr);
 
     TRY_OBJID(filename_obj);
 
@@ -100,7 +100,7 @@ static KOS_OBJ_ID remove(KOS_CONTEXT ctx,
 #endif
 
 cleanup:
-    kos_vector_destroy(&filename_cstr);
+    KOS_vector_destroy(&filename_cstr);
 
     return ret;
 }

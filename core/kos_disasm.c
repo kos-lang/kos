@@ -3,8 +3,8 @@
  */
 
 #include "kos_disasm.h"
+#include "../inc/kos_memory.h"
 #include "kos_compiler.h"
-#include "kos_memory.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -393,11 +393,11 @@ void kos_disassemble(const char                           *filename,
     KOS_VECTOR                            const_buf;
     const size_t                          max_const_chars = 32;
 
-    kos_vector_init(&const_buf);
+    KOS_vector_init(&const_buf);
 
-    if (kos_vector_reserve(&const_buf, 128)) {
+    if (KOS_vector_reserve(&const_buf, 128)) {
         printf("Error: Failed to allocate buffer\n");
-        kos_vector_destroy(&const_buf);
+        KOS_vector_destroy(&const_buf);
         return;
     }
 
@@ -539,5 +539,5 @@ void kos_disassemble(const char                           *filename,
             size -= instr_size;
     }
 
-    kos_vector_destroy(&const_buf);
+    KOS_vector_destroy(&const_buf);
 }

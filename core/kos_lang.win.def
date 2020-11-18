@@ -26,6 +26,8 @@ EXPORTS
     KOS_destroy_ulocal
     KOS_false DATA
     KOS_format_exception
+    KOS_free
+    KOS_free_aligned
     KOS_get_file_name
     KOS_get_integer
     KOS_get_module
@@ -50,6 +52,11 @@ EXPORTS
     KOS_load_module
     KOS_load_module_from_memory
     KOS_lock_object
+    KOS_malloc
+    KOS_malloc_aligned
+    KOS_mempool_alloc
+    KOS_mempool_destroy
+    KOS_mempool_init
     KOS_module_add_constructor
     KOS_module_add_function
     KOS_module_add_global
@@ -90,6 +97,7 @@ EXPORTS
     KOS_raise_exception_cstring
     KOS_raise_generator_end
     KOS_raise_printf
+    KOS_realloc
     KOS_repl
     KOS_repl_stdin
     KOS_resume_context
@@ -123,5 +131,10 @@ EXPORTS
     KOS_string_uppercase
     KOS_suspend_context
     KOS_true DATA
+    KOS_vector_concat
+    KOS_vector_destroy
+    KOS_vector_init
+    KOS_vector_reserve
+    KOS_vector_resize
     KOS_void DATA
     kos_call_function

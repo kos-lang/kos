@@ -7,10 +7,10 @@
 #include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_object.h"
+#include "../inc/kos_memory.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_string.h"
 #include "../inc/kos_utils.h"
-#include "../core/kos_memory.h"
 #include "../core/kos_const_strings.h"
 #include "../core/kos_object_internal.h"
 #include "../core/kos_system.h"
@@ -107,8 +107,8 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
 
     KOS_DECLARE_STATIC_CONST_STRING(str_position, "position");
 
-    kos_vector_init(&filename_cstr);
-    kos_vector_init(&flags_cstr);
+    KOS_vector_init(&filename_cstr);
+    KOS_vector_init(&flags_cstr);
 
     KOS_init_locals(ctx, 3, &this_, &args, &ret);
 
@@ -139,7 +139,7 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
         {
             const size_t e_pos = flags_cstr.size - 1;
 
-            TRY(kos_vector_resize(&flags_cstr, e_pos + 2));
+            TRY(KOS_vector_resize(&flags_cstr, e_pos + 2));
             flags_cstr.buffer[e_pos] = 'e';
             flags_cstr.buffer[e_pos + 1] = 0;
         }
@@ -178,8 +178,8 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
     file = 0;
 
 cleanup:
-    kos_vector_destroy(&flags_cstr);
-    kos_vector_destroy(&filename_cstr);
+    KOS_vector_destroy(&flags_cstr);
+    KOS_vector_destroy(&filename_cstr);
     if (file)
         fclose(file);
 
@@ -253,7 +253,7 @@ static KOS_OBJ_ID print(KOS_CONTEXT ctx,
     int        error = get_file_object(ctx, this_obj, &file, 0);
     KOS_VECTOR cstr;
 
-    kos_vector_init(&cstr);
+    KOS_vector_init(&cstr);
 
     if ( ! error && file) {
 
@@ -278,7 +278,7 @@ static KOS_OBJ_ID print(KOS_CONTEXT ctx,
     }
 
 cleanup:
-    kos_vector_destroy(&cstr);
+    KOS_vector_destroy(&cstr);
 
     return error ? KOS_BADPTR : this_obj;
 }
@@ -316,7 +316,7 @@ static KOS_OBJ_ID read_line(KOS_CONTEXT ctx,
     KOS_VECTOR buf;
     KOS_OBJ_ID line       = KOS_BADPTR;
 
-    kos_vector_init(&buf);
+    KOS_vector_init(&buf);
 
     TRY(get_file_object(ctx, this_obj, &file, 1));
 
@@ -341,7 +341,7 @@ static KOS_OBJ_ID read_line(KOS_CONTEXT ctx,
     do {
         char *ret;
 
-        if (kos_vector_resize(&buf, (size_t)(last_size + size_delta))) {
+        if (KOS_vector_resize(&buf, (size_t)(last_size + size_delta))) {
             KOS_resume_context(ctx);
             KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
@@ -371,7 +371,7 @@ static KOS_OBJ_ID read_line(KOS_CONTEXT ctx,
     line = KOS_new_string(ctx, buf.buffer, (unsigned)last_size);
 
 cleanup:
-    kos_vector_destroy(&buf);
+    KOS_vector_destroy(&buf);
     return error ? KOS_BADPTR : line;
 }
 
@@ -500,7 +500,7 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
     KOS_LOCAL      args;
     KOS_LOCAL      this_;
 
-    kos_vector_init(&cstr);
+    KOS_vector_init(&cstr);
 
     KOS_init_locals(ctx, 4, &print_args, &arg, &args, &this_);
 
@@ -526,7 +526,7 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
 
                 if (kos_is_heap_object(KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, arg.o)->data))) {
 
-                    if (kos_vector_resize(&cstr, to_write)) {
+                    if (KOS_vector_resize(&cstr, to_write)) {
                         KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
                         RAISE_ERROR(KOS_ERROR_EXCEPTION);
                     }
@@ -583,7 +583,7 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
 cleanup:
     this_.o = KOS_destroy_top_locals(ctx, &print_args, &this_);
 
-    kos_vector_destroy(&cstr);
+    KOS_vector_destroy(&cstr);
 
     return error ? KOS_BADPTR : this_.o;
 }

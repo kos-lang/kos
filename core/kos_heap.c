@@ -6,13 +6,13 @@
 #include "../inc/kos_atomic.h"
 #include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
+#include "../inc/kos_malloc.h"
+#include "../inc/kos_memory.h"
 #include "../inc/kos_string.h"
 #include "kos_config.h"
 #include "kos_const_strings.h"
 #include "kos_debug.h"
-#include "kos_malloc.h"
 #include "kos_math.h"
-#include "kos_memory.h"
 #include "kos_object_internal.h"
 #include "kos_perf.h"
 #include "kos_system.h"
@@ -268,7 +268,7 @@ static void finalize_object(KOS_CONTEXT     ctx,
 
                 gc_trace(("free huge %p\n", (void *)obj->data));
 
-                kos_free_aligned(obj->data);
+                KOS_free_aligned(obj->data);
 
                 get_heap(ctx)->malloc_size -= obj->size;
 
@@ -345,7 +345,7 @@ void kos_heap_destroy(KOS_INSTANCE *inst)
 
             del = locked_pages;
             locked_pages = locked_pages->next;
-            kos_free(del);
+            KOS_free(del);
         }
 
         inst->heap.locked_pages_first = 0;
@@ -363,7 +363,7 @@ void kos_heap_destroy(KOS_INSTANCE *inst)
 
         KOS_atomic_write_relaxed_ptr(inst->heap.free_mark_groups, next);
 
-        kos_free(to_delete);
+        KOS_free(to_delete);
     }
 
     for (;;) {
@@ -376,9 +376,9 @@ void kos_heap_destroy(KOS_INSTANCE *inst)
         inst->heap.pools = pool->next;
 
         memory = pool->memory;
-        kos_free_aligned(memory);
+        KOS_free_aligned(memory);
 
-        kos_free(pool);
+        KOS_free(pool);
     }
 
     kos_destroy_cond_var(&inst->heap.helper_cond);
@@ -480,7 +480,7 @@ static KOS_POOL *alloc_pool(KOS_HEAP *heap,
     if (heap->heap_size + alloc_size > heap->max_heap_size)
         return 0;
 
-    pool = (uint8_t *)kos_malloc_aligned(alloc_size, (size_t)KOS_PAGE_SIZE);
+    pool = (uint8_t *)KOS_malloc_aligned(alloc_size, (size_t)KOS_PAGE_SIZE);
 
     if ( ! pool)
         return 0;
@@ -489,10 +489,10 @@ static KOS_POOL *alloc_pool(KOS_HEAP *heap,
 
     assert(KOS_align_up((uintptr_t)pool, (uintptr_t)KOS_PAGE_SIZE) == (uintptr_t)pool);
 
-    pool_hdr = (KOS_POOL *)kos_malloc(sizeof(KOS_POOL));
+    pool_hdr = (KOS_POOL *)KOS_malloc(sizeof(KOS_POOL));
 
     if ( ! pool_hdr) {
-        kos_free_aligned(pool);
+        KOS_free_aligned(pool);
         return 0;
     }
 
@@ -955,7 +955,7 @@ static void *alloc_huge_object(KOS_CONTEXT ctx,
             goto cleanup;
     }
 
-    ptrval = (intptr_t)kos_malloc_aligned(size, 32);
+    ptrval = (intptr_t)KOS_malloc_aligned(size, 32);
 
     if ( ! ptrval)
         goto cleanup;
@@ -1416,7 +1416,7 @@ static int schedule_for_marking(KOS_MARK_CONTEXT *mark_ctx,
         } while ( ! KOS_atomic_cas_weak_ptr(heap->free_mark_groups, current, next));
 
         if ( ! current) {
-            current = (KOS_MARK_GROUP *)kos_malloc(sizeof(KOS_MARK_GROUP));
+            current = (KOS_MARK_GROUP *)KOS_malloc(sizeof(KOS_MARK_GROUP));
             if ( ! current)
                 return KOS_ERROR_OUT_OF_MEMORY;
         }
@@ -1812,7 +1812,7 @@ static void lock_pages(KOS_HEAP *heap, KOS_PAGE *pages)
         if ( ! heap->locked_pages_last || heap->locked_pages_last->num_pages == KOS_MAX_LOCKED_PAGES) {
 
             struct KOS_LOCKED_PAGES_S *locked_pages =
-                (struct KOS_LOCKED_PAGES_S *)kos_malloc(sizeof(struct KOS_LOCKED_PAGES_S));
+                (struct KOS_LOCKED_PAGES_S *)KOS_malloc(sizeof(struct KOS_LOCKED_PAGES_S));
 
             if ( ! locked_pages) {
                 fprintf(stderr, "Failed to allocate memory to store locked pages\n");
@@ -1941,7 +1941,7 @@ static unsigned unlock_pages(KOS_HEAP      *heap,
             ++num_unlocked;
         }
 
-        kos_free(cur_locked_page_list);
+        KOS_free(cur_locked_page_list);
     }
 
     heap->locked_pages_first = 0;
