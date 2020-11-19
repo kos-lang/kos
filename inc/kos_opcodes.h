@@ -183,7 +183,7 @@ DEFINE_INSTRUCTION(TAIL_CALL_N, 0xC2)
 /* TAIL.CALL.FUN <r.func>, <r.arg1>, <numargs.uint8> */
 /* Arguments are in consecutive registers, r.arg1 ignored if numargs.uint8 is 0. */
 DEFINE_INSTRUCTION(TAIL_CALL_FUN, 0xC3)
-/* YIELD <r.src> */
+/* YIELD <r.dest>, <r.src> */
 DEFINE_INSTRUCTION(YIELD, 0xC4)
 /* THROW <r.src> */
 DEFINE_INSTRUCTION(THROW, 0xC5)

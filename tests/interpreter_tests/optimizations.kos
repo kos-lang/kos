@@ -207,7 +207,7 @@ do {
         assert iter() == 0.5
     }
 
-    check(map, { registers: 5, instructions: 7, size: 26 })
+    check(map, { registers: 5, instructions: 7, size: 27 })
 }
 
 #============================================================================#

@@ -350,6 +350,27 @@ do {
 }
 
 do {
+    fun gen(a, last)
+    {
+        const ret = a + "1"
+        var b = yield ret
+        b = yield b + "2"
+        const c = yield ret + b
+        last.push(yield c)
+    }
+
+    const last = []
+    const g = gen("x", last)
+    assert g("a") == "x1"
+    assert g("b") == "b2"
+    assert g("c") == "x1c"
+    assert g("d") == "d"
+    expect_fail(() => g("e"))
+    assert last.size == 1
+    assert last[0] == "e"
+}
+
+do {
     var type = void
     var size = void
 

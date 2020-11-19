@@ -23,7 +23,6 @@ static int get_num_operands(KOS_BYTECODE_INSTR instr)
         case INSTR_LOAD_OBJ:            /* fall through */
         case INSTR_JUMP:                /* fall through */
         case INSTR_RETURN:              /* fall through */
-        case INSTR_YIELD:               /* fall through */
         case INSTR_THROW:
             return 1;
 
@@ -51,6 +50,7 @@ static int get_num_operands(KOS_BYTECODE_INSTR instr)
         case INSTR_CATCH:               /* fall through */
         case INSTR_PUSH:                /* fall through */
         case INSTR_PUSH_EX:             /* fall through */
+        case INSTR_YIELD:               /* fall through */
         case INSTR_NEXT:
             return 2;
 

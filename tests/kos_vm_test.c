@@ -1272,7 +1272,7 @@ int main(void)
             INSTR_CALL_FUN,    0, 0, 2, 0,        /* invoke generator        */
             INSTR_RETURN,      0,
 
-            INSTR_YIELD,       0,                 /* generator yields 'this' */
+            INSTR_YIELD,       0, 0,              /* generator yields 'this' */
             INSTR_RETURN,      0
         };
 
@@ -1299,7 +1299,7 @@ int main(void)
             INSTR_RETURN,      0,
 
             INSTR_LOAD_INT8,   0, 42,
-            INSTR_YIELD,       0
+            INSTR_YIELD,       0, 0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(1, 0);
         KOS_OBJ_ID        func = create_gen(ctx, 15, &opts);
@@ -1320,8 +1320,8 @@ int main(void)
             INSTR_CALL_FUN,    1, 0, 0, 0,    /* yields 'void', because args are empty */
             INSTR_RETURN,      1,
 
-            INSTR_YIELD,       0,
-            INSTR_JUMP,        IMM32(-7)
+            INSTR_YIELD,       0, 0,
+            INSTR_JUMP,        IMM32(-8)
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(1, 0);
         KOS_OBJ_ID        func;
@@ -1367,14 +1367,14 @@ int main(void)
     /* LOAD.CONST (generator), YIELD, NEXT */
     {
         const uint8_t code[] = {
-            INSTR_JUMP,          IMM32(19),
+            INSTR_JUMP,          IMM32(22),
 
             INSTR_LOAD_INT8,     0, 3,
-            INSTR_YIELD,         0,
+            INSTR_YIELD,         0, 0,
             INSTR_LOAD_INT8,     0, 4,
-            INSTR_YIELD,         0,
+            INSTR_YIELD,         0, 0,
             INSTR_LOAD_INT8,     0, 5,
-            INSTR_YIELD,         0,
+            INSTR_YIELD,         0, 0,
             INSTR_LOAD_VOID,     0,
             INSTR_RETURN,        0,
 
@@ -1410,7 +1410,7 @@ int main(void)
             INSTR_CALL,        0, 0, 1, 2, /* instantiate generator */
             INSTR_RETURN,      1,
 
-            INSTR_YIELD,       1
+            INSTR_YIELD,       1, 1
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(3, 2);
         KOS_OBJ_ID        func = create_gen(ctx, 16, &opts);
@@ -1429,7 +1429,7 @@ int main(void)
             INSTR_CALL,        0, 0, 1, 2, /* instantiate generator */
             INSTR_RETURN,      1,
 
-            INSTR_YIELD,       1
+            INSTR_YIELD,       1, 1
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(2, 0);
         KOS_OBJ_ID        func = create_gen(ctx, 15, &opts);
@@ -1448,7 +1448,7 @@ int main(void)
             INSTR_CALL_FUN,    0, 0, 0, 0,    /* invoke generator */
             INSTR_RETURN,      0,
 
-            INSTR_YIELD,       1
+            INSTR_YIELD,       1, 1
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(2, 1);
         KOS_OBJ_ID        func;
@@ -1484,8 +1484,8 @@ int main(void)
 
             INSTR_LOAD_INT8,   1, 1,
             INSTR_ADD,         0, 0, 1,    /* use 'this' as the initial value */
-            INSTR_YIELD,       0,
-            INSTR_JUMP,        IMM32(-11)
+            INSTR_YIELD,       0, 0,
+            INSTR_JUMP,        IMM32(-12)
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(2, 0);
         KOS_OBJ_ID        func;
@@ -1514,7 +1514,7 @@ int main(void)
             INSTR_CALL_FUN,    1, 0, 12, 0,
             INSTR_RETURN,      1,
 
-            INSTR_YIELD,       0,
+            INSTR_YIELD,       0, 0,
             INSTR_RETURN,      0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(1, 0);
@@ -1586,7 +1586,7 @@ int main(void)
             INSTR_CALL_N,      0, 0, 1, 10, 0, /* invoke function */
             INSTR_RETURN,      0,
 
-            INSTR_YIELD,       0,
+            INSTR_YIELD,       0, 0,
             INSTR_RETURN,      0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(1, 0);
@@ -1911,7 +1911,7 @@ int main(void)
             INSTR_ADD,         0, 0, 3,
             INSTR_SET_ELEM,    1, IMM32(4), 0,
             INSTR_LOAD_INT8,   0, 0,
-            INSTR_YIELD,       0
+            INSTR_YIELD,       0, 0
         };
 
         KOS_FUNCTION_OPTS opts;

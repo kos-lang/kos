@@ -1540,10 +1540,7 @@ static int yield(KOS_COMP_UNIT      *program,
 
     TRY(gen_dest_reg(program, reg, src));
 
-    if (src != *reg)
-        TRY(gen_instr2(program, INSTR_MOVE, (*reg)->reg, src->reg));
-
-    TRY(gen_instr1(program, INSTR_YIELD, (*reg)->reg));
+    TRY(gen_instr2(program, INSTR_YIELD, (*reg)->reg, src->reg));
 
     if (src != *reg)
         free_reg(program, src);

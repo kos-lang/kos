@@ -3400,11 +3400,14 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
                 goto handle_return;
             }
 
-            BEGIN_INSTRUCTION(YIELD): { /* <r.src> */
+            BEGIN_INSTRUCTION(YIELD): { /* <r.dest>, <r.src> */
                 PROF_ZONE_N(INSTR, "YIELD")
-                const uint8_t rsrc = bytecode[1];
+                const uint8_t rsrc = bytecode[2];
 
-                assert(rsrc < num_regs);
+                rdest = bytecode[1];
+
+                assert(rsrc  < num_regs);
+                assert(rdest < num_regs);
 
                 if ( ! (KOS_atomic_read_relaxed_u32(OBJPTR(STACK, ctx->stack)->flags) & KOS_CAN_YIELD))
                     RAISE_EXCEPTION_STR(str_err_cannot_yield);
@@ -3412,11 +3415,11 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
                 out = read_reg(stack_frame, rsrc);
 
                 assert(KOS_atomic_read_relaxed_u32(OBJPTR(STACK, ctx->stack)->flags) & KOS_REENTRANT_STACK);
-                OBJPTR(STACK, ctx->stack)->yield_reg = rsrc;
+                OBJPTR(STACK, ctx->stack)->yield_reg = rdest;
 
                 clear_stack_flag(ctx, KOS_CAN_YIELD);
 
-                bytecode += 2;
+                bytecode += 3;
 
                 error = KOS_SUCCESS;
                 assert( ! IS_BAD_PTR(out));
