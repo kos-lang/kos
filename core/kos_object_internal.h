@@ -274,11 +274,6 @@ static inline void kos_string_iter_advance(KOS_STRING_ITER *iter)
 
 #endif
 
-int kos_append_cstr(KOS_CONTEXT          ctx,
-                    struct KOS_VECTOR_S *cstr_vec,
-                    const char          *str,
-                    size_t               len);
-
 void kos_init_string_iter(KOS_STRING_ITER *iter, KOS_OBJ_ID str_id);
 
 uint32_t kos_string_iter_peek_next_code(KOS_STRING_ITER *iter);

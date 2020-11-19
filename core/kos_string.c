@@ -1591,24 +1591,6 @@ KOS_OBJ_ID KOS_string_repeat(KOS_CONTEXT ctx,
     return OBJID(STRING, new_str);
 }
 
-int kos_append_cstr(KOS_CONTEXT ctx,
-                    KOS_VECTOR *cstr_vec,
-                    const char *str,
-                    size_t      len)
-{
-    const size_t pos   = cstr_vec->size;
-    int          error = KOS_vector_resize(cstr_vec, pos + len + (pos ? 0 : 1));
-
-    if (error) {
-        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
-        error = KOS_ERROR_EXCEPTION;
-    }
-    else
-        memcpy(&cstr_vec->buffer[pos ? pos - 1 : pos], str, len + 1);
-
-    return error;
-}
-
 KOS_OBJ_ID KOS_string_lowercase(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
 {
     KOS_LOCAL        save_obj_id;

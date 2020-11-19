@@ -81,6 +81,12 @@ int KOS_print_to_cstr_vec(KOS_CONTEXT          ctx,
                           unsigned             sep_len);
 
 KOS_API
+int KOS_append_cstr(KOS_CONTEXT          ctx,
+                    struct KOS_VECTOR_S *cstr_vec,
+                    const char          *str,
+                    size_t               len);
+
+KOS_API
 int KOS_array_push_expand(KOS_CONTEXT ctx,
                           KOS_OBJ_ID  array,
                           KOS_OBJ_ID  value);

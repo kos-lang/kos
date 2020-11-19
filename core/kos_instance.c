@@ -882,7 +882,7 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
         KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
-    TRY(kos_append_cstr(ctx, &cstr, str_format_exception, sizeof(str_format_exception) - 1));
+    TRY(KOS_append_cstr(ctx, &cstr, str_format_exception, sizeof(str_format_exception) - 1));
     TRY(KOS_object_to_string_or_cstr_vec(ctx, value.o, KOS_DONT_QUOTE, 0, &cstr));
 
     str = KOS_new_string(ctx, cstr.buffer, (unsigned)(cstr.size - 1));
@@ -900,13 +900,13 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
 
         cstr.size = 0;
 
-        TRY(kos_append_cstr(ctx, &cstr, str_format_hash,
+        TRY(KOS_append_cstr(ctx, &cstr, str_format_hash,
                             sizeof(str_format_hash) - 1));
 
         len = (unsigned)snprintf(cbuf, sizeof(cbuf), "%u", i);
-        TRY(kos_append_cstr(ctx, &cstr, cbuf, KOS_min(len, (unsigned)(sizeof(cbuf) - 1))));
+        TRY(KOS_append_cstr(ctx, &cstr, cbuf, KOS_min(len, (unsigned)(sizeof(cbuf) - 1))));
 
-        TRY(kos_append_cstr(ctx, &cstr, str_format_offset,
+        TRY(KOS_append_cstr(ctx, &cstr, str_format_offset,
                             sizeof(str_format_offset) - 1));
 
         str = KOS_get_property(ctx, frame_desc.o, KOS_STR_OFFSET);
@@ -914,20 +914,20 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
         if (IS_SMALL_INT(str)) {
             len = (unsigned)snprintf(cbuf, sizeof(cbuf), "0x%X",
                                      (unsigned)GET_SMALL_INT(str));
-            TRY(kos_append_cstr(ctx, &cstr, cbuf, KOS_min(len, (unsigned)(sizeof(cbuf) - 1))));
+            TRY(KOS_append_cstr(ctx, &cstr, cbuf, KOS_min(len, (unsigned)(sizeof(cbuf) - 1))));
         }
         else
-            TRY(kos_append_cstr(ctx, &cstr, str_format_question_marks,
+            TRY(KOS_append_cstr(ctx, &cstr, str_format_question_marks,
                                 sizeof(str_format_question_marks) - 1));
 
-        TRY(kos_append_cstr(ctx, &cstr, str_format_function,
+        TRY(KOS_append_cstr(ctx, &cstr, str_format_function,
                             sizeof(str_format_function) - 1));
 
         str = KOS_get_property(ctx, frame_desc.o, KOS_STR_FUNCTION);
         TRY_OBJID(str);
         TRY(KOS_object_to_string_or_cstr_vec(ctx, str, KOS_DONT_QUOTE, 0, &cstr));
 
-        TRY(kos_append_cstr(ctx, &cstr, str_format_module,
+        TRY(KOS_append_cstr(ctx, &cstr, str_format_module,
                             sizeof(str_format_module) - 1));
 
         str = KOS_get_property(ctx, frame_desc.o, KOS_STR_FILE);
@@ -936,7 +936,7 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
         TRY_OBJID(str);
         TRY(KOS_object_to_string_or_cstr_vec(ctx, str, KOS_DONT_QUOTE, 0, &cstr));
 
-        TRY(kos_append_cstr(ctx, &cstr, str_format_line,
+        TRY(KOS_append_cstr(ctx, &cstr, str_format_line,
                             sizeof(str_format_line) - 1));
 
         str = KOS_get_property(ctx, frame_desc.o, KOS_STR_LINE);

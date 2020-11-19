@@ -1,4 +1,5 @@
 {
+    KOS_append_cstr;
     KOS_array_cas;
     KOS_array_fill;
     KOS_array_insert;

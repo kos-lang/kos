@@ -601,7 +601,7 @@ static int vector_append_array(KOS_CONTEXT        ctx,
 
     length = KOS_get_array_size(array.o);
 
-    TRY(kos_append_cstr(ctx, cstr_vec, str_array_open, sizeof(str_array_open)-1));
+    TRY(KOS_append_cstr(ctx, cstr_vec, str_array_open, sizeof(str_array_open)-1));
 
     for (i = 0; i < length; ) {
 
@@ -610,11 +610,11 @@ static int vector_append_array(KOS_CONTEXT        ctx,
 
         if (is_to_string_recursive(&new_guard, val_id)) {
             if (GET_OBJ_TYPE(val_id) == OBJ_ARRAY)
-                TRY(kos_append_cstr(ctx, cstr_vec,
+                TRY(KOS_append_cstr(ctx, cstr_vec,
                                     str_recursive_array, sizeof(str_recursive_array)-1));
             else {
                 assert(GET_OBJ_TYPE(val_id) == OBJ_OBJECT);
-                TRY(kos_append_cstr(ctx, cstr_vec,
+                TRY(KOS_append_cstr(ctx, cstr_vec,
                                     str_recursive_object, sizeof(str_recursive_object)-1));
             }
         }
@@ -625,10 +625,10 @@ static int vector_append_array(KOS_CONTEXT        ctx,
         ++i;
 
         if (i < length)
-            TRY(kos_append_cstr(ctx, cstr_vec, str_array_comma, sizeof(str_array_comma)-1));
+            TRY(KOS_append_cstr(ctx, cstr_vec, str_array_comma, sizeof(str_array_comma)-1));
     }
 
-    TRY(kos_append_cstr(ctx, cstr_vec, str_array_close, sizeof(str_array_close)-1));
+    TRY(KOS_append_cstr(ctx, cstr_vec, str_array_close, sizeof(str_array_close)-1));
 
 cleanup:
     KOS_destroy_top_local(ctx, &array);
@@ -762,7 +762,7 @@ static int vector_append_buffer(KOS_CONTEXT ctx,
     assert(sizeof(str_buffer_open)  == 2);
     assert(sizeof(str_buffer_close) == 2);
 
-    TRY(kos_append_cstr(ctx, cstr_vec, str_buffer_open, sizeof(str_buffer_open)-1));
+    TRY(KOS_append_cstr(ctx, cstr_vec, str_buffer_open, sizeof(str_buffer_open)-1));
 
     dest = cstr_vec->buffer + cstr_vec->size - 1;
     src  = KOS_buffer_data_const(obj_id);
@@ -784,7 +784,7 @@ static int vector_append_buffer(KOS_CONTEXT ctx,
         cstr_vec->size += size * 3 - 1;
     }
 
-    TRY(kos_append_cstr(ctx, cstr_vec, str_buffer_close, sizeof(str_buffer_close)-1));
+    TRY(KOS_append_cstr(ctx, cstr_vec, str_buffer_close, sizeof(str_buffer_close)-1));
 
 cleanup:
     return error;
@@ -841,7 +841,7 @@ static int vector_append_object(KOS_CONTEXT        ctx,
     walk.o = kos_new_object_walk(ctx, obj.o, KOS_SHALLOW);
     TRY_OBJID(walk.o);
 
-    TRY(kos_append_cstr(ctx, cstr_vec, str_object_open, sizeof(str_object_open)-1));
+    TRY(KOS_append_cstr(ctx, cstr_vec, str_object_open, sizeof(str_object_open)-1));
 
     while ( ! kos_object_walk(ctx, walk.o)) {
 
@@ -849,11 +849,11 @@ static int vector_append_object(KOS_CONTEXT        ctx,
         assert( ! IS_BAD_PTR(KOS_get_walk_value(walk.o)));
 
         if (num_elems)
-            TRY(kos_append_cstr(ctx, cstr_vec, str_object_sep, sizeof(str_object_sep)-1));
+            TRY(KOS_append_cstr(ctx, cstr_vec, str_object_sep, sizeof(str_object_sep)-1));
 
         TRY(vector_append_str(ctx, cstr_vec, KOS_get_walk_key(walk.o), KOS_QUOTE_STRINGS));
 
-        TRY(kos_append_cstr(ctx, cstr_vec, str_object_colon, sizeof(str_object_colon)-1));
+        TRY(KOS_append_cstr(ctx, cstr_vec, str_object_colon, sizeof(str_object_colon)-1));
 
         value.o = KOS_get_walk_value(walk.o);
         assert( ! IS_BAD_PTR(value.o));
@@ -876,10 +876,10 @@ static int vector_append_object(KOS_CONTEXT        ctx,
 
         if (is_to_string_recursive(&new_guard, value.o)) {
             if (GET_OBJ_TYPE(value.o) == OBJ_ARRAY)
-                TRY(kos_append_cstr(ctx, cstr_vec,
+                TRY(KOS_append_cstr(ctx, cstr_vec,
                                     str_recursive_array, sizeof(str_recursive_array)-1));
             else
-                TRY(kos_append_cstr(ctx, cstr_vec,
+                TRY(KOS_append_cstr(ctx, cstr_vec,
                                     str_recursive_object, sizeof(str_recursive_object)-1));
         }
         else
@@ -889,7 +889,7 @@ static int vector_append_object(KOS_CONTEXT        ctx,
         ++num_elems;
     }
 
-    TRY(kos_append_cstr(ctx, cstr_vec, str_object_close, sizeof(str_object_close)-1));
+    TRY(KOS_append_cstr(ctx, cstr_vec, str_object_close, sizeof(str_object_close)-1));
 
 cleanup:
     KOS_destroy_top_locals(ctx, &obj, &value);
@@ -936,9 +936,9 @@ static int vector_append_function(KOS_CONTEXT ctx,
     func = OBJPTR(FUNCTION, obj_id);
 
     if (GET_OBJ_TYPE(obj_id) == OBJ_FUNCTION)
-        TRY(kos_append_cstr(ctx, cstr_vec, str_function_open, sizeof(str_function_open) - 1));
+        TRY(KOS_append_cstr(ctx, cstr_vec, str_function_open, sizeof(str_function_open) - 1));
     else
-        TRY(kos_append_cstr(ctx, cstr_vec, str_class_open, sizeof(str_class_open) - 1));
+        TRY(KOS_append_cstr(ctx, cstr_vec, str_class_open, sizeof(str_class_open) - 1));
 
     TRY(vector_append_str(ctx, cstr_vec, func->name, KOS_DONT_QUOTE));
 
@@ -949,7 +949,7 @@ static int vector_append_function(KOS_CONTEXT ctx,
         len = (unsigned)snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%X>",
                                  (unsigned)func->instr_offs);
 
-    TRY(kos_append_cstr(ctx, cstr_vec, cstr_ptr, KOS_min(len, (unsigned)(sizeof(cstr_ptr) - 1))));
+    TRY(KOS_append_cstr(ctx, cstr_vec, cstr_ptr, KOS_min(len, (unsigned)(sizeof(cstr_ptr) - 1))));
 
 cleanup:
     return error;
@@ -1042,7 +1042,7 @@ static int object_to_string_or_cstr_vec(KOS_CONTEXT        ctx,
         default:
             assert(READ_OBJ_TYPE(obj_id) == OBJ_VOID);
             if (cstr_vec)
-                error = kos_append_cstr(ctx, cstr_vec, "void", 4);
+                error = KOS_append_cstr(ctx, cstr_vec, "void", 4);
             else if (str)
                 *str = KOS_STR_VOID;
             break;
@@ -1050,7 +1050,7 @@ static int object_to_string_or_cstr_vec(KOS_CONTEXT        ctx,
         case OBJ_BOOLEAN:
             if (KOS_get_bool(obj_id)) {
                 if (cstr_vec)
-                    error = kos_append_cstr(ctx, cstr_vec, "true", 4);
+                    error = KOS_append_cstr(ctx, cstr_vec, "true", 4);
                 else if (str) {
                     KOS_DECLARE_STATIC_CONST_STRING(str_true, "true");
                     *str = KOS_CONST_ID(str_true);
@@ -1058,7 +1058,7 @@ static int object_to_string_or_cstr_vec(KOS_CONTEXT        ctx,
             }
             else {
                 if (cstr_vec)
-                    error = kos_append_cstr(ctx, cstr_vec, "false", 5);
+                    error = KOS_append_cstr(ctx, cstr_vec, "false", 5);
                 else if (str) {
                     KOS_DECLARE_STATIC_CONST_STRING(str_false, "false");
                     *str = KOS_CONST_ID(str_false);
@@ -1166,6 +1166,24 @@ cleanup:
         KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
         error = KOS_ERROR_EXCEPTION;
     }
+
+    return error;
+}
+
+int KOS_append_cstr(KOS_CONTEXT ctx,
+                    KOS_VECTOR *cstr_vec,
+                    const char *str,
+                    size_t      len)
+{
+    const size_t pos   = cstr_vec->size;
+    int          error = KOS_vector_resize(cstr_vec, pos + len + (pos ? 0 : 1));
+
+    if (error) {
+        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+        error = KOS_ERROR_EXCEPTION;
+    }
+    else
+        memcpy(&cstr_vec->buffer[pos ? pos - 1 : pos], str, len + 1);
 
     return error;
 }

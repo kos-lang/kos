@@ -1,3 +1,4 @@
+_KOS_append_cstr
 _KOS_array_cas
 _KOS_array_fill
 _KOS_array_insert

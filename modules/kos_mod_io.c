@@ -136,13 +136,7 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
         TRY(KOS_string_to_cstr_vec(ctx, flags_obj, &flags_cstr));
 
 #ifndef _WIN32
-        {
-            const size_t e_pos = flags_cstr.size - 1;
-
-            TRY(KOS_vector_resize(&flags_cstr, e_pos + 2));
-            flags_cstr.buffer[e_pos] = 'e';
-            flags_cstr.buffer[e_pos + 1] = 0;
-        }
+        TRY(KOS_append_cstr(ctx, &flags_cstr, "e", 1));
 #endif
     }
 
