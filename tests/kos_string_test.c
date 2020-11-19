@@ -1812,24 +1812,24 @@ int main(void)
         KOS_STRING_ITER iter;
         KOS_DECLARE_STATIC_CONST_STRING(str8, "abc");
 
-        kos_init_string_iter(&iter, KOS_CONST_ID(str8));
+        KOS_init_string_iter(&iter, KOS_CONST_ID(str8));
 
-        TEST( ! kos_is_string_iter_end(&iter));
-        code = kos_string_iter_peek_next_code(&iter);
+        TEST( ! KOS_is_string_iter_end(&iter));
+        code = KOS_string_iter_peek_next_code(&iter);
         TEST(code == 'a');
-        kos_string_iter_advance(&iter);
+        KOS_string_iter_advance(&iter);
 
-        TEST( ! kos_is_string_iter_end(&iter));
-        code = kos_string_iter_peek_next_code(&iter);
+        TEST( ! KOS_is_string_iter_end(&iter));
+        code = KOS_string_iter_peek_next_code(&iter);
         TEST(code == 'b');
-        kos_string_iter_advance(&iter);
+        KOS_string_iter_advance(&iter);
 
-        TEST( ! kos_is_string_iter_end(&iter));
-        code = kos_string_iter_peek_next_code(&iter);
+        TEST( ! KOS_is_string_iter_end(&iter));
+        code = KOS_string_iter_peek_next_code(&iter);
         TEST(code == 'c');
-        kos_string_iter_advance(&iter);
+        KOS_string_iter_advance(&iter);
 
-        TEST(kos_is_string_iter_end(&iter));
+        TEST(KOS_is_string_iter_end(&iter));
     }
 
     /************************************************************************/
@@ -1839,24 +1839,24 @@ int main(void)
         KOS_STRING_ITER  iter;
         const KOS_OBJ_ID str_str = KOS_new_string(ctx, str, sizeof(str));
 
-        kos_init_string_iter(&iter, str_str);
+        KOS_init_string_iter(&iter, str_str);
 
-        TEST( ! kos_is_string_iter_end(&iter));
-        code = kos_string_iter_peek_next_code(&iter);
+        TEST( ! KOS_is_string_iter_end(&iter));
+        code = KOS_string_iter_peek_next_code(&iter);
         TEST(code == '1');
-        kos_string_iter_advance(&iter);
+        KOS_string_iter_advance(&iter);
 
-        TEST( ! kos_is_string_iter_end(&iter));
-        code = kos_string_iter_peek_next_code(&iter);
+        TEST( ! KOS_is_string_iter_end(&iter));
+        code = KOS_string_iter_peek_next_code(&iter);
         TEST(code == 0xFFFFU);
-        kos_string_iter_advance(&iter);
+        KOS_string_iter_advance(&iter);
 
-        TEST( ! kos_is_string_iter_end(&iter));
-        code = kos_string_iter_peek_next_code(&iter);
+        TEST( ! KOS_is_string_iter_end(&iter));
+        code = KOS_string_iter_peek_next_code(&iter);
         TEST(code == 0xC0U);
-        kos_string_iter_advance(&iter);
+        KOS_string_iter_advance(&iter);
 
-        TEST(kos_is_string_iter_end(&iter));
+        TEST(KOS_is_string_iter_end(&iter));
     }
 
     /************************************************************************/
@@ -1866,24 +1866,24 @@ int main(void)
         KOS_STRING_ITER  iter;
         const KOS_OBJ_ID str_str = KOS_new_string(ctx, str, sizeof(str));
 
-        kos_init_string_iter(&iter, str_str);
+        KOS_init_string_iter(&iter, str_str);
 
-        TEST( ! kos_is_string_iter_end(&iter));
-        code = kos_string_iter_peek_next_code(&iter);
+        TEST( ! KOS_is_string_iter_end(&iter));
+        code = KOS_string_iter_peek_next_code(&iter);
         TEST(code == '1');
-        kos_string_iter_advance(&iter);
+        KOS_string_iter_advance(&iter);
 
-        TEST( ! kos_is_string_iter_end(&iter));
-        code = kos_string_iter_peek_next_code(&iter);
+        TEST( ! KOS_is_string_iter_end(&iter));
+        code = KOS_string_iter_peek_next_code(&iter);
         TEST(code == 0x10000U);
-        kos_string_iter_advance(&iter);
+        KOS_string_iter_advance(&iter);
 
-        TEST( ! kos_is_string_iter_end(&iter));
-        code = kos_string_iter_peek_next_code(&iter);
+        TEST( ! KOS_is_string_iter_end(&iter));
+        code = KOS_string_iter_peek_next_code(&iter);
         TEST(code == '0');
-        kos_string_iter_advance(&iter);
+        KOS_string_iter_advance(&iter);
 
-        TEST(kos_is_string_iter_end(&iter));
+        TEST(KOS_is_string_iter_end(&iter));
     }
 
     /************************************************************************/

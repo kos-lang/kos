@@ -259,10 +259,10 @@ KOS_DECLARE_STATIC_CONST_STRING(str_err_too_long,   "regular expression too long
 
 static uint32_t peek_next_char(KOS_STRING_ITER *iter)
 {
-    if (kos_is_string_iter_end(iter))
+    if (KOS_is_string_iter_end(iter))
         return END_OF_STR;
 
-    return kos_string_iter_peek_next_code(iter);
+    return KOS_string_iter_peek_next_code(iter);
 }
 
 static uint32_t peek_prev_char(KOS_STRING_ITER *iter)
@@ -271,12 +271,12 @@ static uint32_t peek_prev_char(KOS_STRING_ITER *iter)
 
     prev_iter.ptr -= (intptr_t)1 << prev_iter.elem_size;
 
-    return kos_string_iter_peek_next_code(&prev_iter);
+    return KOS_string_iter_peek_next_code(&prev_iter);
 }
 
 static void consume_next_char(struct RE_PARSE_CTX *re_ctx)
 {
-    kos_string_iter_advance(&re_ctx->iter);
+    KOS_string_iter_advance(&re_ctx->iter);
 
     ++re_ctx->idx;
 }
@@ -1180,7 +1180,7 @@ static int parse_re(KOS_CONTEXT ctx, KOS_OBJ_ID regex_str, KOS_OBJ_ID regex)
     uint32_t            class_descs_size;
     uint32_t            class_data_size;
 
-    kos_init_string_iter(&re_ctx.iter, regex_str);
+    KOS_init_string_iter(&re_ctx.iter, regex_str);
 
     KOS_vector_init(&re_ctx.buf);
     KOS_vector_init(&re_ctx.class_descs);
@@ -1451,7 +1451,7 @@ static uint16_t get_iter_pos(KOS_OBJ_ID str_obj, KOS_STRING_ITER *iter)
     KOS_STRING_ITER iter0;
     uintptr_t       pos;
 
-    kos_init_string_iter(&iter0, str_obj);
+    KOS_init_string_iter(&iter0, str_obj);
 
     pos = ((uintptr_t)iter->ptr - (uintptr_t)iter0.ptr) >> iter0.elem_size;
 
@@ -1493,7 +1493,7 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
     KOS_init_locals(ctx, 2, &groups, &ret);
     TRY(reset_possibility_stack(poss_stack, ctx, re));
 
-    kos_init_string_iter(&iter, str_obj);
+    KOS_init_string_iter(&iter, str_obj);
     iter.end = iter.ptr + ((uintptr_t)end_pos << iter.elem_size);
     iter.ptr += (uintptr_t)pos << iter.elem_size;
 
@@ -1511,7 +1511,7 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
                 if (expected_code != actual_code)
                     goto try_other_possibility;
 
-                kos_string_iter_advance(&iter);
+                KOS_string_iter_advance(&iter);
                 bytecode += 2;
                 NEXT_INSTRUCTION;
             }
@@ -1523,7 +1523,7 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
                 if (expected_code != actual_code)
                     goto try_other_possibility;
 
-                kos_string_iter_advance(&iter);
+                KOS_string_iter_advance(&iter);
                 bytecode += 3;
                 NEXT_INSTRUCTION;
             }
@@ -1534,7 +1534,7 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
                 if (actual_code == END_OF_STR)
                     goto try_other_possibility;
 
-                kos_string_iter_advance(&iter);
+                KOS_string_iter_advance(&iter);
                 bytecode += 1;
                 NEXT_INSTRUCTION;
             }
@@ -1549,7 +1549,7 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
                 if ( ! match_class(code, class_id, re))
                     goto try_other_possibility;
 
-                kos_string_iter_advance(&iter);
+                KOS_string_iter_advance(&iter);
                 bytecode += 2;
                 NEXT_INSTRUCTION;
             }
@@ -1564,7 +1564,7 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
                 if (match_class(code, class_id, re))
                     goto try_other_possibility;
 
-                kos_string_iter_advance(&iter);
+                KOS_string_iter_advance(&iter);
                 bytecode += 2;
                 NEXT_INSTRUCTION;
             }
@@ -1572,7 +1572,7 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
             BEGIN_INSTRUCTION(MATCH_LINE_BEGIN): {
                 KOS_STRING_ITER iter0;
 
-                kos_init_string_iter(&iter0, str_obj);
+                KOS_init_string_iter(&iter0, str_obj);
                 iter0.ptr += (uintptr_t)begin_pos << iter0.elem_size;
 
                 if (iter.ptr > iter0.ptr) {
@@ -1602,7 +1602,7 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
                 uint32_t        prev_code;
                 KOS_STRING_ITER iter0;
 
-                kos_init_string_iter(&iter0, str_obj);
+                KOS_init_string_iter(&iter0, str_obj);
 
                 prev_code = (iter.ptr > iter0.ptr) ? peek_prev_char(&iter) : ' ';
                 cur_code  = peek_next_char(&iter);

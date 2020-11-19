@@ -39,6 +39,7 @@ EXPORTS
     KOS_help_gc
     KOS_init_local_with
     KOS_init_locals
+    KOS_init_string_iter
     KOS_init_ulocal
     KOS_instance_add_default_path
     KOS_instance_add_path
@@ -121,6 +122,7 @@ EXPORTS
     KOS_string_get_char
     KOS_string_get_char_code
     KOS_string_get_hash
+    KOS_string_iter_peek_next_code
     KOS_string_lowercase
     KOS_string_printf
     KOS_string_repeat

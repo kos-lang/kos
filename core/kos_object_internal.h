@@ -232,12 +232,6 @@ extern const struct KOS_CONST_ARRAY_S kos_empty_array;
 /* KOS_STRING                                                               */
 /*==========================================================================*/
 
-typedef struct KOS_STRING_ITER_S {
-    const uint8_t   *ptr;
-    const uint8_t   *end;
-    KOS_STRING_FLAGS elem_size;
-} KOS_STRING_ITER;
-
 #ifdef __cplusplus
 
 static inline const void* kos_get_string_buffer(KOS_STRING *str)
@@ -250,16 +244,6 @@ static inline KOS_STRING_FLAGS kos_get_string_elem_size(KOS_STRING *str)
     return (KOS_STRING_FLAGS)(str->header.flags & KOS_STRING_ELEM_MASK);
 }
 
-static inline bool kos_is_string_iter_end(KOS_STRING_ITER *iter)
-{
-    return iter->ptr >= iter->end;
-}
-
-static inline void kos_string_iter_advance(KOS_STRING_ITER *iter)
-{
-    iter->ptr += ((uintptr_t)1 << iter->elem_size);
-}
-
 #else
 
 #define kos_get_string_buffer(str) (((str)->header.flags & KOS_STRING_LOCAL) ? \
@@ -267,10 +251,6 @@ static inline void kos_string_iter_advance(KOS_STRING_ITER *iter)
                 (const void *)((str)->ptr.data_ptr))
 
 #define kos_get_string_elem_size(str) ((KOS_STRING_FLAGS)((str)->header.flags & KOS_STRING_ELEM_MASK))
-
-#define kos_is_string_iter_end(iter) ((iter)->ptr >= (iter)->end)
-
-#define kos_string_iter_advance(iter) do { (iter)->ptr += ((uintptr_t)1 << (iter)->elem_size); } while (0)
 
 #endif
 

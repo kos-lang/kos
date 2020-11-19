@@ -12,6 +12,12 @@
 struct KOS_VECTOR_S;
 struct KOS_LOCAL_S;
 
+typedef struct KOS_STRING_ITER_S {
+    const uint8_t   *ptr;
+    const uint8_t   *end;
+    KOS_STRING_FLAGS elem_size;
+} KOS_STRING_ITER;
+
 #ifdef __cplusplus
 
 static inline unsigned KOS_get_string_length(KOS_OBJ_ID obj_id)
@@ -20,9 +26,23 @@ static inline unsigned KOS_get_string_length(KOS_OBJ_ID obj_id)
     return OBJPTR(STRING, obj_id)->header.length;
 }
 
+static inline bool KOS_is_string_iter_end(KOS_STRING_ITER *iter)
+{
+    return iter->ptr >= iter->end;
+}
+
+static inline void KOS_string_iter_advance(KOS_STRING_ITER *iter)
+{
+    iter->ptr += ((uintptr_t)1 << iter->elem_size);
+}
+
 #else
 
 #define KOS_get_string_length(obj_id) (OBJPTR(STRING, (obj_id))->header.length)
+
+#define KOS_is_string_iter_end(iter) ((iter)->ptr >= (iter)->end)
+
+#define KOS_string_iter_advance(iter) do { (iter)->ptr += ((uintptr_t)1 << (iter)->elem_size); } while (0)
 
 #endif
 
@@ -162,6 +182,12 @@ KOS_OBJ_ID KOS_string_lowercase(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id);
 
 KOS_API
 KOS_OBJ_ID KOS_string_uppercase(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id);
+
+KOS_API
+void KOS_init_string_iter(KOS_STRING_ITER *iter, KOS_OBJ_ID str_id);
+
+KOS_API
+uint32_t KOS_string_iter_peek_next_code(KOS_STRING_ITER *iter);
 
 #ifdef __cplusplus
 }

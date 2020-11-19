@@ -1737,7 +1737,7 @@ KOS_OBJ_ID KOS_string_uppercase(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
     return OBJID(STRING, new_str);
 }
 
-void kos_init_string_iter(KOS_STRING_ITER *iter, KOS_OBJ_ID str_id)
+void KOS_init_string_iter(KOS_STRING_ITER *iter, KOS_OBJ_ID str_id)
 {
     KOS_STRING_FLAGS elem_size;
     const uint8_t   *ptr;
@@ -1754,7 +1754,7 @@ void kos_init_string_iter(KOS_STRING_ITER *iter, KOS_OBJ_ID str_id)
     iter->elem_size = elem_size;
 }
 
-uint32_t kos_string_iter_peek_next_code(KOS_STRING_ITER *iter)
+uint32_t KOS_string_iter_peek_next_code(KOS_STRING_ITER *iter)
 {
     uint32_t ret;
 

@@ -38,6 +38,7 @@ _KOS_has_prototype
 _KOS_help_gc
 _KOS_init_local_with
 _KOS_init_locals
+_KOS_init_string_iter
 _KOS_init_ulocal
 _KOS_instance_add_default_path
 _KOS_instance_add_path
@@ -120,6 +121,7 @@ _KOS_string_find
 _KOS_string_get_char
 _KOS_string_get_char_code
 _KOS_string_get_hash
+_KOS_string_iter_peek_next_code
 _KOS_string_lowercase
 _KOS_string_printf
 _KOS_string_repeat
