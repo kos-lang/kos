@@ -3415,7 +3415,7 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
                 out = read_reg(stack_frame, rsrc);
 
                 assert(KOS_atomic_read_relaxed_u32(OBJPTR(STACK, ctx->stack)->flags) & KOS_REENTRANT_STACK);
-                OBJPTR(STACK, ctx->stack)->yield_reg = rdest;
+                OBJPTR(STACK, ctx->stack)->yield_reg = (uint8_t)rdest;
 
                 clear_stack_flag(ctx, KOS_CAN_YIELD);
 

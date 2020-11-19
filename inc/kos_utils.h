@@ -6,6 +6,7 @@
 #define KOS_UTILS_H_INCLUDED
 
 #include "kos_entity.h"
+#include <stddef.h>
 #include <stdint.h>
 
 enum KOS_NUMERIC_TYPE_E {
