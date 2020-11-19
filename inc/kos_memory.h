@@ -8,6 +8,10 @@
 #include "kos_api.h"
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Variable-size allocator without ability to free items */
 
 struct KOS_MEMPOOL_S {
@@ -35,5 +39,9 @@ KOS_API void KOS_vector_destroy(KOS_VECTOR *vector);
 KOS_API int  KOS_vector_reserve(KOS_VECTOR *vector, size_t capacity);
 KOS_API int  KOS_vector_resize(KOS_VECTOR *vector, size_t size);
 KOS_API int  KOS_vector_concat(KOS_VECTOR *dest, KOS_VECTOR *src);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
