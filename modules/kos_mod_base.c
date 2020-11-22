@@ -12,8 +12,8 @@
 #include "../inc/kos_string.h"
 #include "../inc/kos_utils.h"
 #include "../core/kos_const_strings.h"
-#include "../core/kos_misc.h"
 #include "../core/kos_object_internal.h"
+#include "../core/kos_misc.h"
 #include "../core/kos_try.h"
 #include <assert.h>
 #include <limits.h>
@@ -3426,7 +3426,7 @@ static KOS_OBJ_ID unpack(KOS_CONTEXT ctx,
 
         TRY(KOS_get_integer(ctx, fmt.fmt_str.o, &idx));
 
-        idx = kos_fix_index(idx, KOS_get_buffer_size(buffer.o));
+        idx = KOS_fix_index(idx, KOS_get_buffer_size(buffer.o));
 
         fmt.idx = (int)idx;
 
@@ -4056,7 +4056,7 @@ static KOS_OBJ_ID find(KOS_CONTEXT ctx,
 
         TRY(KOS_get_integer(ctx, arg, &pos64));
 
-        pos = (int)kos_fix_index(pos64, len);
+        pos = (int)KOS_fix_index(pos64, len);
     }
 
     TRY(KOS_string_find(ctx, this_obj, pattern, KOS_FIND_FORWARD, &pos));
@@ -4121,7 +4121,7 @@ static KOS_OBJ_ID rfind(KOS_CONTEXT ctx,
         if (pos64 < -(int64_t)text_len)
             pos = -1;
         else {
-            const int new_pos = (int)kos_fix_index(pos64, text_len);
+            const int new_pos = (int)KOS_fix_index(pos64, text_len);
 
             if (new_pos < pos)
                 pos = new_pos;
@@ -4195,7 +4195,7 @@ static KOS_OBJ_ID scan(KOS_CONTEXT ctx,
 
             TRY(KOS_get_integer(ctx, arg, &pos64));
 
-            pos = (int)kos_fix_index(pos64, len);
+            pos = (int)KOS_fix_index(pos64, len);
 
             if (KOS_get_array_size(args_obj) > 2) {
 
@@ -4285,7 +4285,7 @@ static KOS_OBJ_ID rscan(KOS_CONTEXT ctx,
             if (pos64 < -(int64_t)text_len)
                 pos = -1;
             else {
-                const int new_pos = (int)kos_fix_index(pos64, text_len);
+                const int new_pos = (int)KOS_fix_index(pos64, text_len);
 
                 if (new_pos < pos)
                     pos = new_pos;

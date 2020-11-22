@@ -25,6 +25,7 @@ _KOS_destroy_top_local
 _KOS_destroy_top_locals
 _KOS_destroy_ulocal
 _KOS_false
+_KOS_fix_index
 _KOS_format_exception
 _KOS_free
 _KOS_free_aligned

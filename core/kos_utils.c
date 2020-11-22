@@ -1799,3 +1799,16 @@ int KOS_iterator_next(KOS_CONTEXT ctx,
 
     return KOS_ERROR_NOT_FOUND;
 }
+
+int64_t KOS_fix_index(int64_t idx, unsigned length)
+{
+    if (idx < 0)
+        idx += length;
+
+    if (idx < 0)
+        idx = 0;
+    else if (idx > (int64_t)length)
+        idx = length;
+
+    return idx;
+}

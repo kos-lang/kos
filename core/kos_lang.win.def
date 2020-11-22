@@ -26,6 +26,7 @@ EXPORTS
     KOS_destroy_top_locals
     KOS_destroy_ulocal
     KOS_false DATA
+    KOS_fix_index
     KOS_format_exception
     KOS_free
     KOS_free_aligned

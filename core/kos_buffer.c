@@ -4,6 +4,7 @@
 
 #include "../inc/kos_buffer.h"
 #include "../inc/kos_error.h"
+#include "../inc/kos_utils.h"
 #include "kos_heap.h"
 #include "kos_math.h"
 #include "kos_misc.h"
@@ -350,8 +351,8 @@ int KOS_buffer_fill(KOS_CONTEXT ctx,
         uint32_t size = KOS_atomic_read_relaxed_u32(OBJPTR(BUFFER, obj_id)->size);
         KOS_BUFFER_STORAGE *const data = get_data(obj_id);
 
-        begin = kos_fix_index(begin, size);
-        end   = kos_fix_index(end,   size);
+        begin = KOS_fix_index(begin, size);
+        end   = KOS_fix_index(end,   size);
 
         if (begin < end)
             memset(&data->buf[begin], (int)value, (size_t)(end - begin));
@@ -387,9 +388,9 @@ int KOS_buffer_copy(KOS_CONTEXT ctx,
         uint32_t src_size = KOS_atomic_read_relaxed_u32(OBJPTR(BUFFER, srcptr)->size);
         KOS_BUFFER_STORAGE *const src_data = get_data(srcptr);
 
-        dest_begin = kos_fix_index(dest_begin, dest_size);
-        src_begin  = kos_fix_index(src_begin, src_size);
-        src_end    = kos_fix_index(src_end,   src_size);
+        dest_begin = KOS_fix_index(dest_begin, dest_size);
+        src_begin  = KOS_fix_index(src_begin, src_size);
+        src_end    = KOS_fix_index(src_end,   src_size);
 
         if (src_begin < src_end && dest_begin < dest_size) {
             const size_t size = (size_t)KOS_min(src_end - src_begin, dest_size - dest_begin);
@@ -430,8 +431,8 @@ KOS_OBJ_ID KOS_buffer_slice(KOS_CONTEXT ctx,
             uint32_t new_size;
             int64_t  new_size_64;
 
-            begin = kos_fix_index(begin, src_size);
-            end   = kos_fix_index(end,   src_size);
+            begin = KOS_fix_index(begin, src_size);
+            end   = KOS_fix_index(end,   src_size);
 
             if (end < begin)
                 end = begin;

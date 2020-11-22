@@ -14,7 +14,6 @@
 #include "../core/kos_const_strings.h"
 #include "../core/kos_object_internal.h"
 #include "../core/kos_math.h"
-#include "../core/kos_misc.h"
 #include "../core/kos_try.h"
 #include <stdarg.h>
 #include <stdio.h>
@@ -1901,7 +1900,7 @@ static KOS_OBJ_ID re_search(KOS_CONTEXT ctx,
 
         TRY(KOS_get_integer(ctx, val, &ival));
 
-        begin_pos = (uint32_t)kos_fix_index(ival, end_pos);
+        begin_pos = (uint32_t)KOS_fix_index(ival, end_pos);
 
         if (KOS_get_array_size(args_obj) > 2) {
             val = KOS_array_read(ctx, args_obj, 2);
@@ -1910,7 +1909,7 @@ static KOS_OBJ_ID re_search(KOS_CONTEXT ctx,
             if (val != KOS_VOID) {
                 TRY(KOS_get_integer(ctx, val, &ival));
 
-                end_pos = (uint32_t)kos_fix_index(ival, end_pos);
+                end_pos = (uint32_t)KOS_fix_index(ival, end_pos);
             }
         }
 

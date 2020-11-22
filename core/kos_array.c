@@ -7,12 +7,12 @@
 #include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_object.h"
+#include "../inc/kos_utils.h"
 #include "kos_config.h"
 #include "kos_const_strings.h"
 #include "kos_debug.h"
 #include "kos_heap.h"
 #include "kos_math.h"
-#include "kos_misc.h"
 #include "kos_object_internal.h"
 #include "kos_perf.h"
 #include "kos_try.h"
@@ -538,8 +538,8 @@ KOS_OBJ_ID KOS_array_slice(KOS_CONTEXT ctx,
             uint32_t new_len;
             int64_t  new_len_64;
 
-            begin = kos_fix_index(begin, len);
-            end   = kos_fix_index(end, len);
+            begin = KOS_fix_index(begin, len);
+            end   = KOS_fix_index(end, len);
 
             if (end < begin)
                 end = begin;
@@ -631,8 +631,8 @@ int KOS_array_insert(KOS_CONTEXT ctx,
 
     dest_len = KOS_get_array_size(dest.o);
 
-    dest_begin = kos_fix_index(dest_begin, dest_len);
-    dest_end   = kos_fix_index(dest_end, dest_len);
+    dest_begin = KOS_fix_index(dest_begin, dest_len);
+    dest_end   = KOS_fix_index(dest_end, dest_len);
 
     if (dest_end < dest_begin)
         dest_end = dest_begin;
@@ -641,8 +641,8 @@ int KOS_array_insert(KOS_CONTEXT ctx,
 
     if (src_begin != src_end) {
         src_len   = KOS_get_array_size(src.o);
-        src_begin = kos_fix_index(src_begin, src_len);
-        src_end   = kos_fix_index(src_end, src_len);
+        src_begin = KOS_fix_index(src_begin, src_len);
+        src_end   = KOS_fix_index(src_end, src_len);
 
         if (src_end < src_begin)
             src_end = src_begin;
@@ -838,8 +838,8 @@ int KOS_array_fill(KOS_CONTEXT ctx,
 
     len = KOS_get_array_size(obj_id);
 
-    begin = kos_fix_index(begin, len);
-    end   = kos_fix_index(end, len);
+    begin = KOS_fix_index(begin, len);
+    end   = KOS_fix_index(end, len);
 
     buf = get_data(obj_id);
 
