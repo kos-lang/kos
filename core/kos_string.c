@@ -9,6 +9,7 @@
 #include "../inc/kos_error.h"
 #include "../inc/kos_instance.h"
 #include "../inc/kos_memory.h"
+#include "../inc/kos_utf8.h"
 #include "../inc/kos_utils.h"
 #include "kos_const_strings.h"
 #include "kos_heap.h"
@@ -16,7 +17,6 @@
 #include "kos_object_internal.h"
 #include "kos_try.h"
 #include "kos_unicode.h"
-#include "kos_utf8.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -78,7 +78,7 @@ static KOS_OBJ_ID new_string(KOS_CONTEXT     ctx,
 
     else if (length) {
         uint32_t max_code;
-        unsigned count = kos_utf8_get_len(s, length, escape, &max_code);
+        unsigned count = KOS_utf8_get_len(s, length, escape, &max_code);
 
         if (count < 0xFFFFU) {
 
@@ -114,11 +114,11 @@ static KOS_OBJ_ID new_string(KOS_CONTEXT     ctx,
             ptr = (void *)kos_get_string_buffer(str);
 
             if (elem_size == KOS_STRING_ELEM_8)
-                kos_utf8_decode_8(s, length, escape, (uint8_t *)ptr);
+                KOS_utf8_decode_8(s, length, escape, (uint8_t *)ptr);
             else if (elem_size == KOS_STRING_ELEM_16)
-                kos_utf8_decode_16(s, length, escape, (uint16_t *)ptr);
+                KOS_utf8_decode_16(s, length, escape, (uint16_t *)ptr);
             else
-                kos_utf8_decode_32(s, length, escape, (uint32_t *)ptr);
+                KOS_utf8_decode_32(s, length, escape, (uint32_t *)ptr);
         }
     }
     else
@@ -329,7 +329,7 @@ KOS_OBJ_ID KOS_new_string_from_buffer(KOS_CONTEXT ctx,
 
     utf8_buf.o = KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, utf8_buf.o)->data);
 
-    length = kos_utf8_get_len((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf.o)->buf[begin],
+    length = KOS_utf8_get_len((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf.o)->buf[begin],
                               size, KOS_UTF8_NO_ESCAPE, &max_code);
     if (length == ~0U) {
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_utf8));
@@ -357,13 +357,13 @@ KOS_OBJ_ID KOS_new_string_from_buffer(KOS_CONTEXT ctx,
     ptr = (void *)kos_get_string_buffer(str);
 
     if (elem_size == KOS_STRING_ELEM_8)
-        kos_utf8_decode_8((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf.o)->buf[begin],
+        KOS_utf8_decode_8((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf.o)->buf[begin],
                           size, KOS_UTF8_NO_ESCAPE, (uint8_t *)ptr);
     else if (elem_size == KOS_STRING_ELEM_16)
-        kos_utf8_decode_16((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf.o)->buf[begin],
+        KOS_utf8_decode_16((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf.o)->buf[begin],
                            size, KOS_UTF8_NO_ESCAPE, (uint16_t *)ptr);
     else
-        kos_utf8_decode_32((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf.o)->buf[begin],
+        KOS_utf8_decode_32((const char *)&OBJPTR(BUFFER_STORAGE, utf8_buf.o)->buf[begin],
                            size, KOS_UTF8_NO_ESCAPE, (uint32_t *)ptr);
 
 cleanup:
@@ -391,7 +391,7 @@ unsigned KOS_string_to_utf8(KOS_OBJ_ID obj_id,
         case KOS_STRING_ELEM_8: {
 
             /* Calculate how many bytes we need. */
-            num_out = kos_utf8_calc_buf_size_8((const uint8_t *)src_buf, str->header.length);
+            num_out = KOS_utf8_calc_buf_size_8((const uint8_t *)src_buf, str->header.length);
 
             /* Fill out the buffer. */
             if (buf) {
@@ -399,7 +399,7 @@ unsigned KOS_string_to_utf8(KOS_OBJ_ID obj_id,
                 if (num_out == str->header.length)
                     memcpy(buf, src_buf, num_out);
                 else
-                    kos_utf8_encode_8((const uint8_t *)src_buf, str->header.length, pdest);
+                    KOS_utf8_encode_8((const uint8_t *)src_buf, str->header.length, pdest);
             }
             break;
         }
@@ -407,12 +407,12 @@ unsigned KOS_string_to_utf8(KOS_OBJ_ID obj_id,
         case KOS_STRING_ELEM_16: {
 
             /* Calculate how many bytes we need. */
-            num_out = kos_utf8_calc_buf_size_16((const uint16_t *)src_buf, str->header.length);
+            num_out = KOS_utf8_calc_buf_size_16((const uint16_t *)src_buf, str->header.length);
 
             /* Fill out the buffer. */
             if (buf) {
                 assert(num_out <= buf_size);
-                kos_utf8_encode_16((const uint16_t *)src_buf, str->header.length, pdest);
+                KOS_utf8_encode_16((const uint16_t *)src_buf, str->header.length, pdest);
             }
             break;
         }
@@ -421,12 +421,12 @@ unsigned KOS_string_to_utf8(KOS_OBJ_ID obj_id,
             assert(kos_get_string_elem_size(str) == KOS_STRING_ELEM_32);
 
             /* Calculate how many bytes we need. */
-            num_out = kos_utf8_calc_buf_size_32((const uint32_t *)src_buf, str->header.length);
+            num_out = KOS_utf8_calc_buf_size_32((const uint32_t *)src_buf, str->header.length);
 
             /* Fill out the buffer. */
             if (buf && num_out != ~0U) {
                 assert(num_out <= buf_size);
-                kos_utf8_encode_32((const uint32_t *)src_buf, str->header.length, pdest);
+                KOS_utf8_encode_32((const uint32_t *)src_buf, str->header.length, pdest);
             }
             break;
         }

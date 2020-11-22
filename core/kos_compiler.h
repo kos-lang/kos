@@ -7,9 +7,9 @@
 
 #include "../inc/kos_bytecode.h"
 #include "../inc/kos_memory.h"
+#include "../inc/kos_utf8.h"
 #include "kos_ast.h"
 #include "kos_red_black.h"
-#include "kos_utf8.h"
 #include <stdint.h>
 
 typedef struct KOS_REG_S {

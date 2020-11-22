@@ -134,6 +134,16 @@
     KOS_string_uppercase;
     KOS_suspend_context;
     KOS_true;
+    KOS_utf8_calc_buf_size_16;
+    KOS_utf8_calc_buf_size_32;
+    KOS_utf8_calc_buf_size_8;
+    KOS_utf8_decode_16;
+    KOS_utf8_decode_32;
+    KOS_utf8_decode_8;
+    KOS_utf8_encode_16;
+    KOS_utf8_encode_32;
+    KOS_utf8_encode_8;
+    KOS_utf8_get_len;
     KOS_vector_concat;
     KOS_vector_destroy;
     KOS_vector_init;

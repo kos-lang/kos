@@ -2,8 +2,9 @@
  * Copyright (c) 2014-2020 Chris Dragan
  */
 
-#include "kos_utf8.h"
+#include "../inc/kos_utf8.h"
 #include "../inc/kos_error.h"
+#include "kos_utf8_internal.h"
 #include <assert.h>
 
 const uint8_t kos_utf8_len[32] = {
@@ -149,7 +150,7 @@ static int is_aligned(const char *ptr)
     return ! ((uintptr_t)ptr & (uintptr_t)(sizeof(uintptr_t) - 1U));
 }
 
-unsigned kos_utf8_get_len(const char     *str,
+unsigned KOS_utf8_get_len(const char     *str,
                           unsigned        length,
                           KOS_UTF8_ESCAPE escape,
                           uint32_t       *max_code)
@@ -253,7 +254,7 @@ unsigned kos_utf8_get_len(const char     *str,
     return count;
 }
 
-int kos_utf8_decode_8(const char *str, unsigned length, KOS_UTF8_ESCAPE escape, uint8_t *out)
+int KOS_utf8_decode_8(const char *str, unsigned length, KOS_UTF8_ESCAPE escape, uint8_t *out)
 {
     const char *const end   = str + length;
     int               error = KOS_SUCCESS;
@@ -290,7 +291,7 @@ int kos_utf8_decode_8(const char *str, unsigned length, KOS_UTF8_ESCAPE escape, 
     return error;
 }
 
-int kos_utf8_decode_16(const char *str, unsigned length, KOS_UTF8_ESCAPE escape, uint16_t *out)
+int KOS_utf8_decode_16(const char *str, unsigned length, KOS_UTF8_ESCAPE escape, uint16_t *out)
 {
     const char *const end   = str + length;
     int               error = KOS_SUCCESS;
@@ -327,7 +328,7 @@ int kos_utf8_decode_16(const char *str, unsigned length, KOS_UTF8_ESCAPE escape,
     return error;
 }
 
-int kos_utf8_decode_32(const char *str, unsigned length, KOS_UTF8_ESCAPE escape, uint32_t *out)
+int KOS_utf8_decode_32(const char *str, unsigned length, KOS_UTF8_ESCAPE escape, uint32_t *out)
 {
     const char *const end   = str + length;
     int               error = KOS_SUCCESS;
@@ -364,7 +365,7 @@ int kos_utf8_decode_32(const char *str, unsigned length, KOS_UTF8_ESCAPE escape,
     return error;
 }
 
-unsigned kos_utf8_calc_buf_size_8(const uint8_t *buf, unsigned length)
+unsigned KOS_utf8_calc_buf_size_8(const uint8_t *buf, unsigned length)
 {
     const uint8_t *pend = buf + length;
     unsigned       size = 0;
@@ -377,7 +378,7 @@ unsigned kos_utf8_calc_buf_size_8(const uint8_t *buf, unsigned length)
     return size;
 }
 
-unsigned kos_utf8_calc_buf_size_16(const uint16_t *buf, unsigned length)
+unsigned KOS_utf8_calc_buf_size_16(const uint16_t *buf, unsigned length)
 {
     const uint16_t *pend = buf + length;
     unsigned        size = 0;
@@ -395,7 +396,7 @@ unsigned kos_utf8_calc_buf_size_16(const uint16_t *buf, unsigned length)
     return size;
 }
 
-unsigned kos_utf8_calc_buf_size_32(const uint32_t *buf, unsigned length)
+unsigned KOS_utf8_calc_buf_size_32(const uint32_t *buf, unsigned length)
 {
     const uint32_t *pend = buf + length;
     unsigned        size = 0;
@@ -419,7 +420,7 @@ unsigned kos_utf8_calc_buf_size_32(const uint32_t *buf, unsigned length)
     return size;
 }
 
-void kos_utf8_encode_8(const uint8_t *str, unsigned length, uint8_t *out)
+void KOS_utf8_encode_8(const uint8_t *str, unsigned length, uint8_t *out)
 {
     const uint8_t *end = str + length;
 
@@ -434,7 +435,7 @@ void kos_utf8_encode_8(const uint8_t *str, unsigned length, uint8_t *out)
     }
 }
 
-void kos_utf8_encode_16(const uint16_t *str, unsigned length, uint8_t *out)
+void KOS_utf8_encode_16(const uint16_t *str, unsigned length, uint8_t *out)
 {
     const uint16_t *end = str + length;
 
@@ -454,7 +455,7 @@ void kos_utf8_encode_16(const uint16_t *str, unsigned length, uint8_t *out)
     }
 }
 
-void kos_utf8_encode_32(const uint32_t *str, unsigned length, uint8_t *out)
+void KOS_utf8_encode_32(const uint32_t *str, unsigned length, uint8_t *out)
 {
     const uint32_t *end = str + length;
 

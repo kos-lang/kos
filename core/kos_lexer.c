@@ -4,7 +4,7 @@
 
 #include "kos_lexer.h"
 #include "../inc/kos_error.h"
-#include "kos_utf8.h"
+#include "kos_utf8_internal.h"
 #include <assert.h>
 #include <string.h>
 

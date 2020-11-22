@@ -9,13 +9,13 @@
 #include "../inc/kos_memory.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_object.h"
+#include "../inc/kos_utf8.h"
 #include "../inc/kos_utils.h"
 #include "../core/kos_const_strings.h"
 #include "../core/kos_object_internal.h"
 #include "../core/kos_math.h"
 #include "../core/kos_misc.h"
 #include "../core/kos_try.h"
-#include "../core/kos_utf8.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -349,10 +349,10 @@ static int emit_instr4(struct RE_PARSE_CTX *re_ctx, enum RE_INSTR code,
 
 static void encode_utf8(uint32_t code, char *buf, size_t buf_size)
 {
-    const unsigned len = kos_utf8_calc_buf_size_32(&code, 1);
+    const unsigned len = KOS_utf8_calc_buf_size_32(&code, 1);
 
     assert(len < buf_size);
-    kos_utf8_encode_32(&code, 1, (uint8_t *)buf);
+    KOS_utf8_encode_32(&code, 1, (uint8_t *)buf);
     buf[len] = 0;
 }
 

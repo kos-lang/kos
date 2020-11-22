@@ -22,7 +22,7 @@
 #include "kos_perf.h"
 #include "kos_system.h"
 #include "kos_try.h"
-#include "kos_utf8.h"
+#include "kos_utf8_internal.h"
 #include "kos_vm.h"
 #include <assert.h>
 #include <stdio.h>

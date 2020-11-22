@@ -11,12 +11,12 @@
 #include "../inc/kos_module.h"
 #include "../inc/kos_object.h"
 #include "../inc/kos_string.h"
+#include "../inc/kos_utf8.h"
 #include "kos_const_strings.h"
 #include "kos_math.h"
 #include "kos_misc.h"
 #include "kos_object_internal.h"
 #include "kos_try.h"
-#include "kos_utf8.h"
 #include <assert.h>
 #include <errno.h>
 #define __STDC_FORMAT_MACROS
@@ -463,7 +463,7 @@ static int vector_append_str(KOS_CONTEXT   ctx,
                         if (num_utf8_cont) {
                             assert(num_utf8_cont == 1);
 
-                            kos_utf8_decode_32(src, num_utf8_cont + 1U, KOS_UTF8_NO_ESCAPE, &code[0]);
+                            KOS_utf8_decode_32(src, num_utf8_cont + 1U, KOS_UTF8_NO_ESCAPE, &code[0]);
 
                             num_utf8_cont = 0;
                         }
@@ -487,7 +487,7 @@ static int vector_append_str(KOS_CONTEXT   ctx,
 
                         assert(num_utf8_cont < 5);
 
-                        kos_utf8_decode_32(src, num_utf8_cont + 1U, KOS_UTF8_NO_ESCAPE, &code[0]);
+                        KOS_utf8_decode_32(src, num_utf8_cont + 1U, KOS_UTF8_NO_ESCAPE, &code[0]);
 
                         *(--dst) = '}';
 

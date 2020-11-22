@@ -2,7 +2,7 @@
  * Copyright (c) 2014-2020 Chris Dragan
  */
 
-#include "../core/kos_utf8.h"
+#include "../inc/kos_utf8.h"
 #include "../core/kos_system.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
 
         for (j = 0; j < sizeof(strings) / sizeof(strings[0]); j++) {
             uint32_t       max_code = 0U;
-            const unsigned len      = kos_utf8_get_len(strings[j].str,
+            const unsigned len      = KOS_utf8_get_len(strings[j].str,
                                                        strings[j].length,
                                                        KOS_UTF8_WITH_ESCAPE,
                                                        &max_code);

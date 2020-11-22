@@ -9,10 +9,10 @@
 #include "../inc/kos_error.h"
 #include "../inc/kos_memory.h"
 #include "../inc/kos_object.h"
+#include "../inc/kos_utf8.h"
 #include "../inc/kos_utils.h"
 #include "../core/kos_const_strings.h"
 #include "../core/kos_object_internal.h"
-#include "../core/kos_utf8.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -42,7 +42,7 @@ int main(void)
     {
         const char     src[]    = { '\\', 'x', '{', '0', '0' };
         uint32_t       max_code = 0;
-        const unsigned len      = kos_utf8_get_len(src, sizeof(src), KOS_UTF8_WITH_ESCAPE, &max_code);
+        const unsigned len      = KOS_utf8_get_len(src, sizeof(src), KOS_UTF8_WITH_ESCAPE, &max_code);
         TEST(len == ~0U);
     }
 
@@ -50,7 +50,7 @@ int main(void)
     {
         const char     src[]    = { '\\', 'x', '{', '\0', '\0', '}' };
         uint32_t       max_code = 0;
-        const unsigned len      = kos_utf8_get_len(src, sizeof(src), KOS_UTF8_WITH_ESCAPE, &max_code);
+        const unsigned len      = KOS_utf8_get_len(src, sizeof(src), KOS_UTF8_WITH_ESCAPE, &max_code);
         TEST(len == ~0U);
     }
 
@@ -58,7 +58,7 @@ int main(void)
     {
         const char     src[]    = { '\\', 'x', '{', '1', '0', '0', '0', '0', '0', '0', '}' };
         uint32_t       max_code = 0;
-        const unsigned len      = kos_utf8_get_len(src, sizeof(src), KOS_UTF8_WITH_ESCAPE, &max_code);
+        const unsigned len      = KOS_utf8_get_len(src, sizeof(src), KOS_UTF8_WITH_ESCAPE, &max_code);
         TEST(len == ~0U);
     }
 

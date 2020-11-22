@@ -133,6 +133,16 @@ _KOS_string_to_utf8
 _KOS_string_uppercase
 _KOS_suspend_context
 _KOS_true
+_KOS_utf8_calc_buf_size_16
+_KOS_utf8_calc_buf_size_32
+_KOS_utf8_calc_buf_size_8
+_KOS_utf8_decode_16
+_KOS_utf8_decode_32
+_KOS_utf8_decode_8
+_KOS_utf8_encode_16
+_KOS_utf8_encode_32
+_KOS_utf8_encode_8
+_KOS_utf8_get_len
 _KOS_vector_concat
 _KOS_vector_destroy
 _KOS_vector_init
