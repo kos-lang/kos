@@ -2070,7 +2070,7 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
                 assert(rdest < num_regs);
                 assert(rsrc  < num_regs);
 
-                TRY(KOS_array_push(ctx, read_reg(stack_frame, rdest), read_reg(stack_frame, rsrc), 0));
+                TRY(KOS_array_push(ctx, read_reg(stack_frame, rdest), read_reg(stack_frame, rsrc), KOS_NULL));
 
                 bytecode += 3;
                 NEXT_INSTRUCTION;

@@ -63,13 +63,13 @@ int main(int argc, char *argv[])
     }
 
 #ifdef _WIN32
-    if (argc == 2 && is_option(argv[1], "?", 0)) {
+    if (argc == 2 && is_option(argv[1], "?", KOS_NULL)) {
         print_usage();
         goto cleanup;
     }
 #endif
 
-    if (argc == 2 && is_option(argv[1], 0, "version")) {
+    if (argc == 2 && is_option(argv[1], KOS_NULL, "version")) {
         printf(KOS_VERSION_STRING "\n");
         goto cleanup;
     }
@@ -102,7 +102,7 @@ int main(int argc, char *argv[])
                 flags |= KOS_INST_VERBOSE;
                 ++i_first_arg;
             }
-            else if (is_option(arg, "vv", 0)) {
+            else if (is_option(arg, "vv", KOS_NULL)) {
                 flags |= KOS_INST_VERBOSE | KOS_INST_DEBUG;
                 ++i_first_arg;
             }
@@ -143,7 +143,7 @@ int main(int argc, char *argv[])
     /* KOSNODEFAULTPATH=1 disables default paths */
     if (kos_get_env("KOSNODEFAULTPATH", &buf) || buf.size != 2 ||
                 buf.buffer[0] != '1' || buf.buffer[1] != 0)
-        error = KOS_instance_add_default_path(ctx, 0);
+        error = KOS_instance_add_default_path(ctx, KOS_NULL);
 
     /* Fallback: use argv[0] to find modules */
     if (error)
@@ -312,7 +312,7 @@ static int is_input_complete(KOS_VECTOR *buf,
 
 static int enforce_eol(KOS_VECTOR *buf)
 {
-    const char c = buf->size == 0 ? 0 : buf->buffer[buf->size - 1];
+    const char c = buf->size ? buf->buffer[buf->size - 1] : 0;
 
     if (c != '\r' && c != '\n') {
 
@@ -434,7 +434,7 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
     }
 
     if (error == KOS_ERROR_ERRNO) {
-        KOS_raise_errno(ctx, NULL);
+        KOS_raise_errno(ctx, KOS_NULL);
         error = KOS_ERROR_EXCEPTION;
     }
 

@@ -20,7 +20,7 @@ struct MEMPOOL_BUF {
 void KOS_mempool_init(struct KOS_MEMPOOL_S *mempool)
 {
     mempool->free_size = 0;
-    mempool->buffers   = 0;
+    mempool->buffers   = KOS_NULL;
 }
 
 void KOS_mempool_destroy(struct KOS_MEMPOOL_S *mempool)
@@ -42,7 +42,7 @@ static void *alloc_large(struct KOS_MEMPOOL_S *mempool, size_t size)
 
     struct MEMPOOL_BUF *buf = (struct MEMPOOL_BUF *)KOS_malloc(alloc_size);
 
-    uint8_t *obj = 0;
+    uint8_t *obj = KOS_NULL;
 
     if (buf) {
 
@@ -55,7 +55,7 @@ static void *alloc_large(struct KOS_MEMPOOL_S *mempool, size_t size)
             top->next = buf;
         }
         else {
-            buf->next          = 0;
+            buf->next          = KOS_NULL;
             mempool->buffers   = buf;
             mempool->free_size = 0;
         }
@@ -68,8 +68,8 @@ static void *alloc_large(struct KOS_MEMPOOL_S *mempool, size_t size)
 
 void *KOS_mempool_alloc(struct KOS_MEMPOOL_S *mempool, size_t size)
 {
-    uint8_t            *obj = 0;
-    struct MEMPOOL_BUF *buf = 0;
+    uint8_t            *obj = KOS_NULL;
+    struct MEMPOOL_BUF *buf = KOS_NULL;
 
     size = (size + 7U) & ~7U;
 

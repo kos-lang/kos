@@ -104,18 +104,18 @@ int kos_seq_fail(void)
 
 static void init_context(KOS_CONTEXT ctx, KOS_INSTANCE *inst)
 {
-    ctx->next        = 0;
-    ctx->prev        = 0;
+    ctx->next        = KOS_NULL;
+    ctx->prev        = KOS_NULL;
     ctx->gc_state    = GC_SUSPENDED;
     ctx->inst        = inst;
-    ctx->cur_page    = 0;
+    ctx->cur_page    = KOS_NULL;
     ctx->thread_obj  = KOS_BADPTR;
     ctx->exception   = KOS_BADPTR;
     ctx->stack       = KOS_BADPTR;
     ctx->regs_idx    = 0;
     ctx->stack_depth = 0;
-    ctx->local_list  = 0;
-    ctx->ulocal_list = 0;
+    ctx->local_list  = KOS_NULL;
+    ctx->ulocal_list = KOS_NULL;
 }
 
 static int register_thread(KOS_INSTANCE *inst,
@@ -148,7 +148,7 @@ static void unregister_thread(KOS_INSTANCE *inst,
 
     KOS_suspend_context(ctx);
 
-    kos_tls_set(inst->threads.thread_key, 0);
+    kos_tls_set(inst->threads.thread_key, KOS_NULL);
 
     kos_lock_mutex(&inst->threads.ctx_mutex);
 
@@ -254,14 +254,14 @@ static void setup_init_module(KOS_MODULE *init_module)
     init_module->flags          = 0;
     init_module->name           = KOS_CONST_ID(str_init);
     init_module->path           = KOS_STR_EMPTY;
-    init_module->inst           = 0;
+    init_module->inst           = KOS_NULL;
     init_module->constants      = KOS_BADPTR;
     init_module->global_names   = KOS_BADPTR;
     init_module->globals        = KOS_BADPTR;
     init_module->module_names   = KOS_BADPTR;
-    init_module->bytecode       = 0;
-    init_module->line_addrs     = 0;
-    init_module->func_addrs     = 0;
+    init_module->bytecode       = KOS_NULL;
+    init_module->line_addrs     = KOS_NULL;
+    init_module->func_addrs     = KOS_NULL;
     init_module->num_line_addrs = 0;
     init_module->num_func_addrs = 0;
     init_module->bytecode_size  = 0;
@@ -310,9 +310,9 @@ static void clear_instance(KOS_INSTANCE *inst)
     inst->modules.modules                = KOS_BADPTR;
     inst->modules.init_module            = get_init_module();
     inst->modules.module_inits           = KOS_BADPTR;
-    inst->modules.libs                   = 0;
-    inst->modules.load_chain             = 0;
-    inst->threads.threads                = 0;
+    inst->modules.libs                   = KOS_NULL;
+    inst->modules.load_chain             = KOS_NULL;
+    inst->threads.threads                = KOS_NULL;
     inst->threads.can_create             = 0;
     inst->threads.num_threads            = 0;
     inst->threads.max_threads            = KOS_MAX_THREADS;
@@ -553,7 +553,7 @@ int KOS_instance_add_path(KOS_CONTEXT ctx, const char *module_search_path)
     path_str = KOS_new_cstring(ctx, module_search_path);
     TRY_OBJID(path_str);
 
-    TRY(KOS_array_push(ctx, inst->modules.search_paths, path_str, 0));
+    TRY(KOS_array_push(ctx, inst->modules.search_paths, path_str, KOS_NULL));
 
 cleanup:
     return error;
@@ -767,8 +767,8 @@ KOS_OBJ_ID kos_register_module_init(KOS_CONTEXT      ctx,
             assert( ! KOS_is_exception_pending(ctx));
 
             mod_init_ptr = (struct KOS_MODULE_INIT_S *)OBJPTR(OPAQUE, mod_init.o);
-            mod_init_ptr->lib  = 0;
-            mod_init_ptr->init = 0;
+            mod_init_ptr->lib  = KOS_NULL;
+            mod_init_ptr->init = KOS_NULL;
 
             mod_init.o = KOS_BADPTR;
 
@@ -794,7 +794,7 @@ int KOS_instance_register_builtin(KOS_CONTEXT      ctx,
     if (IS_BAD_PTR(module_name))
         return KOS_ERROR_EXCEPTION;
 
-    return IS_BAD_PTR(kos_register_module_init(ctx, module_name, 0, init))
+    return IS_BAD_PTR(kos_register_module_init(ctx, module_name, KOS_NULL, init))
            ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
 }
 
@@ -883,7 +883,7 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
     TRY(KOS_append_cstr(ctx, &cstr, str_format_exception, sizeof(str_format_exception) - 1));
-    TRY(KOS_object_to_string_or_cstr_vec(ctx, value.o, KOS_DONT_QUOTE, 0, &cstr));
+    TRY(KOS_object_to_string_or_cstr_vec(ctx, value.o, KOS_DONT_QUOTE, KOS_NULL, &cstr));
 
     str = KOS_new_string(ctx, cstr.buffer, (unsigned)(cstr.size - 1));
     TRY_OBJID(str);
@@ -925,7 +925,7 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
 
         str = KOS_get_property(ctx, frame_desc.o, KOS_STR_FUNCTION);
         TRY_OBJID(str);
-        TRY(KOS_object_to_string_or_cstr_vec(ctx, str, KOS_DONT_QUOTE, 0, &cstr));
+        TRY(KOS_object_to_string_or_cstr_vec(ctx, str, KOS_DONT_QUOTE, KOS_NULL, &cstr));
 
         TRY(KOS_append_cstr(ctx, &cstr, str_format_module,
                             sizeof(str_format_module) - 1));
@@ -934,14 +934,14 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
         TRY_OBJID(str);
         str = KOS_get_file_name(ctx, str);
         TRY_OBJID(str);
-        TRY(KOS_object_to_string_or_cstr_vec(ctx, str, KOS_DONT_QUOTE, 0, &cstr));
+        TRY(KOS_object_to_string_or_cstr_vec(ctx, str, KOS_DONT_QUOTE, KOS_NULL, &cstr));
 
         TRY(KOS_append_cstr(ctx, &cstr, str_format_line,
                             sizeof(str_format_line) - 1));
 
         str = KOS_get_property(ctx, frame_desc.o, KOS_STR_LINE);
         TRY_OBJID(str);
-        TRY(KOS_object_to_string_or_cstr_vec(ctx, str, KOS_DONT_QUOTE, 0, &cstr));
+        TRY(KOS_object_to_string_or_cstr_vec(ctx, str, KOS_DONT_QUOTE, KOS_NULL, &cstr));
 
         str = KOS_new_string(ctx, cstr.buffer, (unsigned)(cstr.size - 1));
         TRY_OBJID(str);
@@ -998,7 +998,7 @@ void KOS_init_ulocal(KOS_CONTEXT ctx, KOS_ULOCAL *local)
     check_local_list((KOS_LOCAL *)next, (KOS_LOCAL *)local);
 
     local->next      = next;
-    local->prev      = 0;
+    local->prev      = KOS_NULL;
     local->o         = KOS_BADPTR;
     ctx->ulocal_list = local;
     if (next)
@@ -1008,7 +1008,7 @@ void KOS_init_ulocal(KOS_CONTEXT ctx, KOS_ULOCAL *local)
 void KOS_init_locals(KOS_CONTEXT ctx, int num_locals, ...)
 {
     va_list     args;
-    KOS_LOCAL  *head     = 0;
+    KOS_LOCAL  *head     = KOS_NULL;
     KOS_LOCAL **tail_ptr = &head;
 
     assert(num_locals);
@@ -1026,7 +1026,7 @@ void KOS_init_locals(KOS_CONTEXT ctx, int num_locals, ...)
 
         local->o = KOS_BADPTR;
 #ifndef NDEBUG
-        local->next = 0;
+        local->next = KOS_NULL;
 #endif
     }
 
@@ -1061,8 +1061,8 @@ KOS_OBJ_ID KOS_destroy_ulocal(KOS_CONTEXT ctx, KOS_ULOCAL *local)
         ret = local->o;
 
 #ifndef NDEBUG
-        local->next = 0;
-        local->prev = 0;
+        local->next = KOS_NULL;
+        local->prev = KOS_NULL;
         local->o    = KOS_BADPTR;
 #endif
     }
@@ -1081,7 +1081,7 @@ KOS_OBJ_ID KOS_destroy_top_local(KOS_CONTEXT ctx, KOS_LOCAL *local)
     ret = local->o;
 
 #ifndef NDEBUG
-    local->next = 0;
+    local->next = KOS_NULL;
     local->o    = KOS_BADPTR;
 #endif
 
@@ -1101,7 +1101,7 @@ KOS_OBJ_ID KOS_destroy_top_locals(KOS_CONTEXT ctx, KOS_LOCAL *first, KOS_LOCAL *
     for (;;) {
         KOS_LOCAL *next = first->next;
 
-        first->next = 0;
+        first->next = KOS_NULL;
         first->o    = KOS_BADPTR;
 
         if (first == last)

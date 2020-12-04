@@ -104,7 +104,7 @@ static KOS_ATOMIC(KOS_OBJ_ID) *get_properties(KOS_OBJ_ID obj_id)
             break;
 
         default:
-            props = 0;
+            props = KOS_NULL;
             break;
     }
 
@@ -137,9 +137,9 @@ static KOS_OBJ_ID alloc_buffer(KOS_CONTEXT ctx, unsigned capacity)
 void kos_init_object(KOS_OBJECT *obj, KOS_OBJ_ID prototype)
 {
     obj->prototype = prototype;
-    obj->finalize  = 0;
+    obj->finalize  = KOS_NULL;
 
-    KOS_atomic_write_relaxed_ptr(obj->priv,  (void *)0);
+    KOS_atomic_write_relaxed_ptr(obj->priv,  (void *)KOS_NULL);
     KOS_atomic_write_relaxed_ptr(obj->props, KOS_BADPTR);
 }
 
@@ -444,7 +444,7 @@ KOS_OBJ_ID KOS_get_property_with_depth(KOS_CONTEXT      ctx,
                 obj_id = KOS_get_prototype(ctx, obj_id);
 
                 if (IS_BAD_PTR(obj_id)) {
-                    props = 0;
+                    props = KOS_NULL;
                     break;
                 }
 
@@ -452,7 +452,7 @@ KOS_OBJ_ID KOS_get_property_with_depth(KOS_CONTEXT      ctx,
             }
         }
         else if (props && IS_BAD_PTR(read_props(props)))
-            props = 0;
+            props = KOS_NULL;
 
         if (props) {
             const uint32_t hash         = KOS_string_get_hash(prop);
@@ -596,7 +596,7 @@ int KOS_set_property(KOS_CONTEXT ctx,
             /* It is OK to delete non-existent props even if property table is empty */
             if (value.o == TOMBSTONE) {
                 error = KOS_SUCCESS;
-                props = 0;
+                props = KOS_NULL;
             }
             /* Allocate property table */
             else {
@@ -607,14 +607,14 @@ int KOS_set_property(KOS_CONTEXT ctx,
                 }
                 else {
                     assert(KOS_is_exception_pending(ctx));
-                    props = 0;
+                    props = KOS_NULL;
                 }
             }
         }
 #ifdef CONFIG_MAD_GC
         else {
             error = kos_trigger_mad_gc(ctx);
-            props = error ? 0 : get_properties(obj.o);
+            props = error ? KOS_NULL : get_properties(obj.o);
         }
 #endif
 

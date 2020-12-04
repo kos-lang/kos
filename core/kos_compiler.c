@@ -100,7 +100,7 @@ static int gen_new_reg(KOS_COMP_UNIT *program,
 static void mark_reg_as_used(KOS_FRAME *frame,
                              KOS_REG   *reg)
 {
-    reg->prev = 0;
+    reg->prev = KOS_NULL;
     reg->next = frame->used_regs;
 
     if (frame->used_regs)
@@ -186,7 +186,7 @@ static int gen_reg_range(KOS_COMP_UNIT *program,
     }
 
     while (num_regs--) {
-        reg = 0;
+        reg = KOS_NULL;
 
         error = gen_new_reg(program, &reg);
         if (error)
@@ -212,7 +212,7 @@ static int gen_dest_reg(KOS_COMP_UNIT *program,
     assert(src_reg);
 
     if ( ! src_reg->tmp && (src_reg == dest_reg || ! dest_reg)) {
-        *dest = 0;
+        *dest = KOS_NULL;
         error = gen_reg(program, dest);
     }
     else if ( ! dest_reg)
@@ -242,7 +242,7 @@ static void free_reg(KOS_COMP_UNIT *program,
             reg_ptr = &(*reg_ptr)->next;
         assert(*reg_ptr != reg);
         reg->next = *reg_ptr;
-        reg->prev = 0;
+        reg->prev = KOS_NULL;
         *reg_ptr  = reg;
     }
 }
@@ -333,12 +333,12 @@ static int lookup_var(KOS_COMP_UNIT      *program,
                       KOS_VAR           **out_var,
                       KOS_REG           **reg)
 {
-    KOS_VAR *var = node->is_var ? node->u.var : 0;
+    KOS_VAR *var = node->is_var ? node->u.var : KOS_NULL;
 
     assert( ! node->is_scope);
 
     if (var && ! var->is_active)
-        var = 0;
+        var = KOS_NULL;
 
     if (var) {
         const int  is_var        = var->type == VAR_INDEPENDENT_LOCAL;
@@ -395,14 +395,14 @@ static void lookup_module_var(KOS_COMP_UNIT      *program,
                               const KOS_AST_NODE *node,
                               KOS_VAR           **out_var)
 {
-    KOS_REG *reg        = 0;
-    KOS_VAR *module_var = 0;
+    KOS_REG *reg        = KOS_NULL;
+    KOS_VAR *module_var = KOS_NULL;
 
     (void)lookup_local_var(program, node, &reg);
 
     if (reg)
         free_reg(program, reg);
-    else if ( ! lookup_var(program, node, &module_var, 0)) {
+    else if ( ! lookup_var(program, node, &module_var, KOS_NULL)) {
         if (module_var->type == VAR_MODULE)
             *out_var = module_var;
     }
@@ -542,7 +542,7 @@ static void add_constant(KOS_COMP_UNIT  *program,
                          KOS_COMP_CONST *constant)
 {
     constant->index = program->num_constants++;
-    constant->next  = 0;
+    constant->next  = KOS_NULL;
 
     if (program->last_constant)
         program->last_constant->next = constant;
@@ -789,7 +789,7 @@ static int gen_instr(KOS_COMP_UNIT *program,
             }
             else {
                 int ibyte;
-                for (ibyte=0; ibyte < size; ibyte++) {
+                for (ibyte = 0; ibyte < size; ibyte++) {
                     buf[cur_offs++] = (uint8_t)value;
                     value >>= 8;
                 }
@@ -945,7 +945,7 @@ static int free_scope_regs(KOS_RED_BLACK_NODE *node,
     if (var->reg && var->type != VAR_INDEPENDENT_LOCAL) {
         var->reg->tmp = 1;
         free_reg(program, var->reg);
-        var->reg = 0;
+        var->reg = KOS_NULL;
     }
 
     return KOS_SUCCESS;
@@ -979,7 +979,7 @@ static int import_global(const char *global_name,
 {
     int              error = KOS_SUCCESS;
     KOS_IMPORT_INFO *info  = (KOS_IMPORT_INFO *)cookie;
-    KOS_REG         *reg   = 0;
+    KOS_REG         *reg   = KOS_NULL;
     KOS_VAR         *var;
     KOS_TOKEN        token;
 
@@ -1202,7 +1202,7 @@ static int finish_global_scope(KOS_COMP_UNIT *program,
     TRY(gen_instr1(program, INSTR_RETURN, reg->reg));
 
     free_reg(program, reg);
-    reg = 0;
+    reg = KOS_NULL;
 
     memset(&global, 0, sizeof(global));
     global.begin  = str_global;
@@ -1262,13 +1262,13 @@ static int process_scope(KOS_COMP_UNIT      *program,
                          const KOS_AST_NODE *node)
 {
     int       error  = KOS_SUCCESS;
-    const int global = program->scope_stack == 0;
+    const int global = program->scope_stack == KOS_NULL;
 
     const KOS_AST_NODE *child = node->children;
 
     if (child || global) {
 
-        KOS_REG *reg      = 0;
+        KOS_REG *reg      = KOS_NULL;
 #ifndef NDEBUG
         int      skip_tmp = 0;
 #endif
@@ -1299,7 +1299,7 @@ static int process_scope(KOS_COMP_UNIT      *program,
 
             if (reg) {
                 free_reg(program, reg);
-                reg = 0;
+                reg = KOS_NULL;
             }
 
             TRY(visit_node(program, child, &reg));
@@ -1358,7 +1358,7 @@ static int if_stmt(KOS_COMP_UNIT      *program,
     int offs  = -1;
     int always_truthy;
 
-    KOS_REG *reg = 0;
+    KOS_REG *reg = KOS_NULL;
 
     TRY(add_addr2line(program, &node->token, KOS_FALSE_VALUE));
 
@@ -1378,7 +1378,7 @@ static int if_stmt(KOS_COMP_UNIT      *program,
         TRY(gen_instr2(program, negated ? INSTR_JUMP_COND : INSTR_JUMP_NOT_COND, 0, reg->reg));
 
         free_reg(program, reg);
-        reg = 0;
+        reg = KOS_NULL;
     }
 
     node = node->next;
@@ -1416,7 +1416,7 @@ static KOS_SCOPE *find_try_scope(KOS_SCOPE *scope)
         scope = scope->parent_scope;
 
     if (scope && (scope->is_function || ! scope->catch_ref.catch_reg))
-        scope = 0;
+        scope = KOS_NULL;
 
     return scope;
 }
@@ -1480,7 +1480,7 @@ static int return_stmt(KOS_COMP_UNIT      *program,
                        const KOS_AST_NODE *node)
 {
     int        error;
-    KOS_REG   *reg       = 0;
+    KOS_REG   *reg       = KOS_NULL;
     KOS_SCOPE *try_scope = find_try_scope(program->scope_stack);
     int        tail_call = 0;
 
@@ -1553,7 +1553,7 @@ static int throw_op(KOS_COMP_UNIT      *program,
                     const KOS_AST_NODE *node)
 {
     int      error;
-    KOS_REG *reg = 0;
+    KOS_REG *reg = KOS_NULL;
 
     assert(node->children);
 
@@ -1575,7 +1575,7 @@ static int assert_stmt(KOS_COMP_UNIT      *program,
     int      jump_instr_offs;
     int      str_idx;
     unsigned negated = 0;
-    KOS_REG *reg     = 0;
+    KOS_REG *reg     = KOS_NULL;
 
     assert(node->children);
 
@@ -1591,7 +1591,7 @@ static int assert_stmt(KOS_COMP_UNIT      *program,
     assert( ! node->children->next->next);
 
     free_reg(program, reg);
-    reg = 0;
+    reg = KOS_NULL;
 
     TRY(gen_assert_str(program, node, &str_idx));
 
@@ -1649,7 +1649,7 @@ static void finish_fallthrough(KOS_COMP_UNIT *program)
     KOS_BREAK_OFFS  *break_offs           = *remaining_offs;
     const int        fallthrough_tgt_offs = program->cur_offs;
 
-    *remaining_offs = 0;
+    *remaining_offs = KOS_NULL;
 
     while (break_offs) {
 
@@ -1685,11 +1685,11 @@ static int repeat(KOS_COMP_UNIT      *program,
     int             jump_instr_offs;
     int             test_instr_offs;
     const int       loop_start_offs = program->cur_offs;
-    KOS_REG        *reg             = 0;
+    KOS_REG        *reg             = KOS_NULL;
     KOS_BREAK_OFFS *old_break_offs  = program->cur_frame->break_offs;
     KOS_SCOPE      *prev_try_scope  = push_try_scope(program);
 
-    program->cur_frame->break_offs = 0;
+    program->cur_frame->break_offs = KOS_NULL;
 
     node = node->children;
     assert(node);
@@ -1757,9 +1757,9 @@ static int for_stmt(KOS_COMP_UNIT      *program,
         int                 is_truthy;
         unsigned            negated              = 0;
         const KOS_AST_NODE *step_node;
-        KOS_REG            *reg                  = 0;
+        KOS_REG            *reg                  = KOS_NULL;
 
-        program->cur_frame->break_offs = 0;
+        program->cur_frame->break_offs = KOS_NULL;
 
         is_truthy = kos_node_is_truthy(program, cond_node);
 
@@ -1779,7 +1779,7 @@ static int for_stmt(KOS_COMP_UNIT      *program,
             TRY(gen_instr2(program, negated ? INSTR_JUMP_COND : INSTR_JUMP_NOT_COND, 0, reg->reg));
 
             free_reg(program, reg);
-            reg = 0;
+            reg = KOS_NULL;
         }
 
         loop_start_offs = program->cur_offs;
@@ -1805,7 +1805,7 @@ static int for_stmt(KOS_COMP_UNIT      *program,
             continue_tgt_offs = loop_start_offs;
 
         if (is_truthy)
-            reg = 0;
+            reg = KOS_NULL;
 
         else {
 
@@ -1821,7 +1821,7 @@ static int for_stmt(KOS_COMP_UNIT      *program,
             TRY(gen_instr2(program, negated ? INSTR_JUMP_NOT_COND : INSTR_JUMP_COND, 0, reg->reg));
 
             free_reg(program, reg);
-            reg = 0;
+            reg = KOS_NULL;
         }
         else
             TRY(gen_instr1(program, INSTR_JUMP, 0));
@@ -1847,7 +1847,7 @@ static int gen_get_prop_instr(KOS_COMP_UNIT *program,
     int error;
 
     if (str_idx > 255) {
-        KOS_REG *tmp   = 0;
+        KOS_REG *tmp   = KOS_NULL;
         int      rprop = rdest;
 
         if (rprop == robj) {
@@ -1877,7 +1877,7 @@ static int gen_set_prop_instr(KOS_COMP_UNIT *program,
     int error;
 
     if (str_idx > 255) {
-        KOS_REG *tmp = 0;
+        KOS_REG *tmp = KOS_NULL;
 
         TRY(gen_reg(program, &tmp));
 
@@ -1904,13 +1904,13 @@ static int for_in(KOS_COMP_UNIT      *program,
     const KOS_AST_NODE *var_node;
     const KOS_AST_NODE *expr_node;
     const KOS_AST_NODE *assg_node;
-    KOS_REG            *reg            = 0;
-    KOS_REG            *iter_reg       = 0;
-    KOS_REG            *item_reg       = 0;
+    KOS_REG            *reg            = KOS_NULL;
+    KOS_REG            *iter_reg       = KOS_NULL;
+    KOS_REG            *item_reg       = KOS_NULL;
     KOS_BREAK_OFFS     *old_break_offs = program->cur_frame->break_offs;
     KOS_SCOPE          *prev_try_scope = push_try_scope(program);
 
-    program->cur_frame->break_offs = 0;
+    program->cur_frame->break_offs = KOS_NULL;
 
     push_scope(program, node);
 
@@ -1938,7 +1938,7 @@ static int for_in(KOS_COMP_UNIT      *program,
         reg = iter_reg;
     else {
         reg      = iter_reg;
-        iter_reg = 0;
+        iter_reg = KOS_NULL;
         TRY(gen_reg(program, &iter_reg));
     }
 
@@ -1946,7 +1946,7 @@ static int for_in(KOS_COMP_UNIT      *program,
 
     TRY(gen_instr2(program, INSTR_LOAD_ITER, iter_reg->reg, reg->reg));
 
-    reg = 0;
+    reg = KOS_NULL;
 
     if ( ! var_node->next) {
 
@@ -1969,7 +1969,7 @@ static int for_in(KOS_COMP_UNIT      *program,
 
         for ( ; var_node; var_node = var_node->next) {
 
-            KOS_REG *var_reg = 0;
+            KOS_REG *var_reg = KOS_NULL;
 
             TRY(lookup_local_var(program, var_node, &var_reg));
             assert(var_reg);
@@ -1995,9 +1995,9 @@ static int for_in(KOS_COMP_UNIT      *program,
     finish_break_continue(program, next_jump_offs, old_break_offs);
 
     free_reg(program, item_reg);
-    item_reg = 0;
+    item_reg = KOS_NULL;
     free_reg(program, iter_reg);
-    iter_reg = 0;
+    iter_reg = KOS_NULL;
 
     pop_scope(program);
 
@@ -2120,16 +2120,16 @@ static int switch_stmt(KOS_COMP_UNIT      *program,
                        const KOS_AST_NODE *node)
 {
     int                 error;
-    KOS_REG            *value_reg       = 0;
+    KOS_REG            *value_reg       = KOS_NULL;
     const KOS_AST_NODE *first_case_node;
     int                 num_cases;
     int                 i_case;
     int                 i_default_case  = -1;
     int                 final_jump_offs = -1;
-    KOS_SWITCH_CASE    *cases           = 0;
+    KOS_SWITCH_CASE    *cases           = KOS_NULL;
     KOS_BREAK_OFFS     *old_break_offs  = program->cur_frame->break_offs;
 
-    program->cur_frame->break_offs = 0;
+    program->cur_frame->break_offs = KOS_NULL;
 
     node = node->children;
     assert(node);
@@ -2162,7 +2162,7 @@ static int switch_stmt(KOS_COMP_UNIT      *program,
         assert( ! node->next || (node->next->type == NT_FALLTHROUGH && ! node->next->next));
 
         free_reg(program, value_reg);
-        value_reg = 0;
+        value_reg = KOS_NULL;
 
         if (node->type != NT_FALLTHROUGH) {
             TRY(visit_node(program, node, &value_reg));
@@ -2178,8 +2178,8 @@ static int switch_stmt(KOS_COMP_UNIT      *program,
 
         if (node->type == NT_CASE) {
 
-            KOS_REG            *case_reg   = 0;
-            KOS_REG            *result_reg = 0;
+            KOS_REG            *case_reg   = KOS_NULL;
+            KOS_REG            *result_reg = KOS_NULL;
             const KOS_AST_NODE *case_node;
 
             assert(node->children);
@@ -2240,7 +2240,7 @@ static int switch_stmt(KOS_COMP_UNIT      *program,
     }
 
     free_reg(program, value_reg);
-    value_reg = 0;
+    value_reg = KOS_NULL;
 
     if (i_default_case >= 0)
         cases[i_default_case].to_jump_offs = program->cur_offs;
@@ -2325,7 +2325,7 @@ static void update_child_scope_catch(KOS_COMP_UNIT *program)
         }
     }
 
-    program->scope_stack->catch_ref.child_scopes = 0;
+    program->scope_stack->catch_ref.child_scopes = KOS_NULL;
 }
 
 static int try_stmt(KOS_COMP_UNIT      *program,
@@ -2333,19 +2333,19 @@ static int try_stmt(KOS_COMP_UNIT      *program,
 {
     int                 error;
     int                 catch_offs;
-    KOS_REG            *except_reg     = 0;
-    KOS_VAR            *except_var     = 0;
+    KOS_REG            *except_reg     = KOS_NULL;
+    KOS_VAR            *except_var     = KOS_NULL;
     KOS_RETURN_OFFS    *return_offs    = program->cur_frame->return_offs;
     KOS_BREAK_OFFS     *old_break_offs = program->cur_frame->break_offs;
     const KOS_NODE_TYPE node_type      = (KOS_NODE_TYPE)node->type;
     const KOS_AST_NODE *try_node       = node->children;
-    const KOS_AST_NODE *catch_node     = 0;
-    const KOS_AST_NODE *defer_node     = 0;
+    const KOS_AST_NODE *catch_node     = KOS_NULL;
+    const KOS_AST_NODE *defer_node     = KOS_NULL;
     KOS_SCOPE          *scope;
 
     scope = push_scope(program, node);
 
-    program->cur_frame->break_offs = 0;
+    program->cur_frame->break_offs = KOS_NULL;
 
     assert(try_node);
     assert(try_node->next);
@@ -2397,7 +2397,7 @@ static int try_stmt(KOS_COMP_UNIT      *program,
         scope->catch_ref.catch_reg = except_reg;
 
         scope->catch_ref.finally_active = 1;
-        program->cur_frame->return_offs = 0;
+        program->cur_frame->return_offs = KOS_NULL;
 
         TRY(gen_instr1(program, INSTR_LOAD_VOID, except_reg->reg));
     }
@@ -2412,7 +2412,7 @@ static int try_stmt(KOS_COMP_UNIT      *program,
 
     /* We're done with the try scope, prevent find_try_scope() from finding this
      * catch target again when inside catch or defer clause. */
-    scope->catch_ref.catch_reg = 0;
+    scope->catch_ref.catch_reg = KOS_NULL;
 
     /* Catch section */
 
@@ -2454,7 +2454,7 @@ static int try_stmt(KOS_COMP_UNIT      *program,
         KOS_BREAK_OFFS *try_break_offs = program->cur_frame->break_offs;
 
         program->cur_frame->break_offs = old_break_offs;
-        old_break_offs                 = 0;
+        old_break_offs                 = KOS_NULL;
 
         {
             KOS_RETURN_OFFS *tmp            = program->cur_frame->return_offs;
@@ -2604,7 +2604,7 @@ static int refinement_module(KOS_COMP_UNIT      *program,
     }
     else {
 
-        KOS_REG *prop = 0;
+        KOS_REG *prop = KOS_NULL;
 
         TRY(visit_node(program, node, &prop));
         assert(prop);
@@ -2663,7 +2663,7 @@ static int refinement_object(KOS_COMP_UNIT      *program,
                              KOS_REG           **out_obj)
 {
     int      error;
-    KOS_REG *obj = 0;
+    KOS_REG *obj = KOS_NULL;
     int64_t  idx;
 
     if (node->type == NT_SUPER_PROTO_LITERAL)
@@ -2702,7 +2702,7 @@ static int refinement_object(KOS_COMP_UNIT      *program,
     }
     else {
 
-        KOS_REG *prop = 0;
+        KOS_REG *prop = KOS_NULL;
 
         TRY(visit_node(program, node, &prop));
         assert(prop);
@@ -2725,7 +2725,7 @@ static int refinement(KOS_COMP_UNIT      *program,
                       KOS_REG           **out_obj)
 {
     int      error;
-    KOS_VAR *module_var = 0;
+    KOS_VAR *module_var = KOS_NULL;
 
     node = node->children;
     assert(node);
@@ -2759,8 +2759,8 @@ static int maybe_refinement(KOS_COMP_UNIT      *program,
     if (node->type == NT_REFINEMENT)
         error = refinement(program, node, reg, out_obj);
     else {
-        error = visit_node(program, node, reg);
-        *out_obj = 0;
+        error    = visit_node(program, node, reg);
+        *out_obj = KOS_NULL;
     }
 
     assert(error || *reg);
@@ -2773,9 +2773,9 @@ static int slice(KOS_COMP_UNIT      *program,
                  KOS_REG           **reg)
 {
     int      error;
-    KOS_REG *obj_reg   = 0;
-    KOS_REG *begin_reg = 0;
-    KOS_REG *end_reg   = 0;
+    KOS_REG *obj_reg   = KOS_NULL;
+    KOS_REG *begin_reg = KOS_NULL;
+    KOS_REG *end_reg   = KOS_NULL;
 
     node = node->children;
     assert(node);
@@ -2903,7 +2903,7 @@ static int gen_array(KOS_COMP_UNIT      *program,
     const int num_fixed = count_non_expanded_siblings(node);
 
     if (is_var_used(program, node, *reg))
-        *reg = 0;
+        *reg = KOS_NULL;
 
     TRY(gen_reg(program, reg));
     if (num_fixed < 256)
@@ -2913,7 +2913,7 @@ static int gen_array(KOS_COMP_UNIT      *program,
 
     for (i = 0; node; node = node->next, ++i) {
 
-        KOS_REG  *arg    = 0;
+        KOS_REG  *arg    = KOS_NULL;
         const int expand = node->type == NT_EXPAND ? 1 : 0;
 
         if (expand) {
@@ -2950,8 +2950,8 @@ static int super_invocation(KOS_COMP_UNIT      *program,
     int                 error         = KOS_SUCCESS;
     int                 str_idx       = 0;
     KOS_TOKEN           token;
-    KOS_REG            *args_regs[2]  = { 0, 0 };
-    KOS_REG            *apply_fun     = 0;
+    KOS_REG            *args_regs[2]  = { KOS_NULL, KOS_NULL };
+    KOS_REG            *apply_fun     = KOS_NULL;
     KOS_REG            *base_ctor_reg;
     const KOS_AST_NODE *inv_node      = node;
 
@@ -3029,8 +3029,8 @@ static int invocation(KOS_COMP_UNIT      *program,
 {
     int      error;
     KOS_REG *args;
-    KOS_REG *obj        = 0;
-    KOS_REG *fun        = 0;
+    KOS_REG *obj        = KOS_NULL;
+    KOS_REG *fun        = KOS_NULL;
     int      interp_str = node->type == NT_INTERPOLATED_STRING;
     int      num_contig_args;
 
@@ -3041,7 +3041,7 @@ static int invocation(KOS_COMP_UNIT      *program,
         return super_invocation(program, node, reg);
     }
 
-    args = is_var_used(program, node, *reg) ? 0 : *reg;
+    args = is_var_used(program, node, *reg) ? KOS_NULL : *reg;
 
     node = node->children;
 
@@ -3073,7 +3073,7 @@ static int invocation(KOS_COMP_UNIT      *program,
 
     if (num_contig_args <= MAX_CONTIG_REGS) {
 
-        KOS_REG *argn[MAX_CONTIG_REGS] = { 0, 0, 0, 0 };
+        KOS_REG *argn[MAX_CONTIG_REGS] = { KOS_NULL, KOS_NULL, KOS_NULL, KOS_NULL };
         int      i;
 
         if (num_contig_args > 1)
@@ -3183,9 +3183,9 @@ static int async_op(KOS_COMP_UNIT      *program,
                     KOS_REG           **reg)
 {
     int               error       = KOS_SUCCESS;
-    KOS_REG          *argn[2]     = { 0, 0 };
-    KOS_REG          *fun         = 0;
-    KOS_REG          *async       = 0;
+    KOS_REG          *argn[2]     = { KOS_NULL, KOS_NULL };
+    KOS_REG          *fun         = KOS_NULL;
+    KOS_REG          *async       = KOS_NULL;
     KOS_REG          *obj;
     int               str_idx;
     KOS_TOKEN         token;
@@ -3322,7 +3322,7 @@ static int pos_neg(KOS_COMP_UNIT      *program,
 
     if (op == OT_SUB) {
 
-        KOS_REG *val = 0;
+        KOS_REG *val = KOS_NULL;
 
         TRY(gen_dest_reg(program, reg, src));
 
@@ -3390,8 +3390,8 @@ static int log_and_or(KOS_COMP_UNIT      *program,
     int                     left_offs;
     int                     right_offs = 0;
     const KOS_OPERATOR_TYPE op         = (KOS_OPERATOR_TYPE)node->token.op;
-    KOS_REG                *left       = 0;
-    KOS_REG                *right      = 0;
+    KOS_REG                *left       = KOS_NULL;
+    KOS_REG                *right      = KOS_NULL;
 
     assert(op == OT_LOGAND || op == OT_LOGOR);
 
@@ -3465,7 +3465,7 @@ static int log_tri(KOS_COMP_UNIT      *program,
     int      offs3;
     int      offs4;
     unsigned negated  = 0;
-    KOS_REG *cond_reg = 0;
+    KOS_REG *cond_reg = KOS_NULL;
     KOS_REG *src      = *reg;
 
     node = node->children;
@@ -3554,7 +3554,7 @@ static int has_prop(KOS_COMP_UNIT      *program,
     TRY(gen_str(program, &node->children->next->token, &str_idx));
 
     if (str_idx > 255) {
-        KOS_REG *tmp   = 0;
+        KOS_REG *tmp   = KOS_NULL;
         int      rprop = (*reg)->reg;
 
         if (rprop == src->reg) {
@@ -3586,7 +3586,7 @@ static int delete_op(KOS_COMP_UNIT      *program,
                      KOS_REG           **reg)
 {
     int      error;
-    KOS_REG *obj = 0;
+    KOS_REG *obj = KOS_NULL;
 
     assert(node->children);
 
@@ -3653,8 +3653,8 @@ static int process_operator(KOS_COMP_UNIT      *program,
     int                     error    = KOS_SUCCESS;
     const KOS_OPERATOR_TYPE op       = (KOS_OPERATOR_TYPE)node->token.op;
     const KOS_KEYWORD_TYPE  kw       = (KOS_KEYWORD_TYPE)node->token.keyword;
-    KOS_REG                *reg1     = 0;
-    KOS_REG                *reg2     = 0;
+    KOS_REG                *reg1     = KOS_NULL;
+    KOS_REG                *reg2     = KOS_NULL;
     int                     opcode   = 0;
     int                     operands = 0;
     int                     swap     = 0;
@@ -3894,8 +3894,8 @@ static int assign_member(KOS_COMP_UNIT      *program,
     int      error;
     int      str_idx = 0;
     int64_t  idx     = 0;
-    KOS_REG *obj     = 0;
-    KOS_REG *tmp_reg = 0;
+    KOS_REG *obj     = KOS_NULL;
+    KOS_REG *tmp_reg = KOS_NULL;
 
     assert(node->type == NT_REFINEMENT);
 
@@ -3950,7 +3950,7 @@ static int assign_member(KOS_COMP_UNIT      *program,
     }
     else {
 
-        KOS_REG *prop    = 0;
+        KOS_REG *prop = KOS_NULL;
 
         TRY(visit_node(program, node, &prop));
         assert(prop);
@@ -3986,8 +3986,8 @@ static int assign_non_local(KOS_COMP_UNIT      *program,
                             KOS_REG            *src)
 {
     int      error;
-    KOS_VAR *var     = 0;
-    KOS_REG *tmp_reg = 0;
+    KOS_VAR *var     = KOS_NULL;
+    KOS_REG *tmp_reg = KOS_NULL;
     KOS_REG *container_reg;
 
     assert(node->type == NT_IDENTIFIER);
@@ -4030,10 +4030,10 @@ static int assign_slice(KOS_COMP_UNIT      *program,
 {
     int                 error;
     int                 str_idx;
-    const KOS_AST_NODE *obj_node     = 0;
-    KOS_REG            *argn[3]      = { 0, 0, 0 };
-    KOS_REG            *obj_reg      = 0;
-    KOS_REG            *func_reg     = 0;
+    const KOS_AST_NODE *obj_node     = KOS_NULL;
+    KOS_REG            *argn[3]      = { KOS_NULL, KOS_NULL, KOS_NULL };
+    KOS_REG            *obj_reg      = KOS_NULL;
+    KOS_REG            *func_reg     = KOS_NULL;
     const int           src_reg      = src->reg;
     static const char   str_insert[] = "insert";
     KOS_TOKEN           token;
@@ -4074,7 +4074,7 @@ static int assign_slice(KOS_COMP_UNIT      *program,
         free_reg(program, obj_reg);
     }
 
-    obj_reg = 0;
+    obj_reg = KOS_NULL;
     TRY(visit_node(program, obj_node, &obj_reg));
     assert(obj_reg);
 
@@ -4109,8 +4109,8 @@ static int assignment(KOS_COMP_UNIT      *program,
     const KOS_AST_NODE *node;
     const KOS_AST_NODE *lhs_node;
     const KOS_AST_NODE *rhs_node;
-    KOS_REG            *reg       = 0;
-    KOS_REG            *rhs       = 0;
+    KOS_REG            *reg       = KOS_NULL;
+    KOS_REG            *rhs       = KOS_NULL;
     const KOS_NODE_TYPE node_type = (KOS_NODE_TYPE)assg_node->type;
 
     assert(node_type == NT_ASSIGNMENT || node_type == NT_MULTI_ASSIGNMENT);
@@ -4162,7 +4162,7 @@ static int assignment(KOS_COMP_UNIT      *program,
         assert( ! fun_var->is_active);
 
         if (rhs_node->type == NT_FUNCTION_LITERAL)
-            TRY(function_literal(program, rhs_node, fun_var, 0, 0, &rhs));
+            TRY(function_literal(program, rhs_node, fun_var, KOS_NULL, KOS_NULL, &rhs));
         else {
             assert(rhs_node->type == NT_CLASS_LITERAL);
             TRY(class_literal(program, rhs_node, fun_var, &rhs));
@@ -4173,13 +4173,13 @@ static int assignment(KOS_COMP_UNIT      *program,
     assert(rhs);
 
     if (node_type == NT_MULTI_ASSIGNMENT) {
-        KOS_REG *rsrc = 0;
+        KOS_REG *rsrc = KOS_NULL;
 
         if (rhs->tmp)
             rsrc = rhs;
         else {
             rsrc = rhs;
-            rhs  = 0;
+            rhs  = KOS_NULL;
             TRY(gen_reg(program, &rhs));
         }
 
@@ -4250,14 +4250,14 @@ static int assignment(KOS_COMP_UNIT      *program,
                 assert(node->type == NT_SLICE);
                 assert(assg_node->token.op == OT_SET);
                 TRY(assign_slice(program, node, reg));
-                reg = 0; /* assign_slice frees the register */
+                reg = KOS_NULL; /* assign_slice frees the register */
             }
 
             if (reg)
                 free_reg(program, reg);
         }
 
-        reg = 0;
+        reg = KOS_NULL;
     }
 
     if (node_type == NT_MULTI_ASSIGNMENT)
@@ -4277,7 +4277,7 @@ static int expression_list(KOS_COMP_UNIT      *program,
 
     for ( ; node; node = node->next) {
 
-        KOS_REG *tmp_reg = 0;
+        KOS_REG *tmp_reg = KOS_NULL;
 
         error = add_addr2line(program, &node->token, KOS_FALSE_VALUE);
         if (error)
@@ -4298,7 +4298,7 @@ static int identifier(KOS_COMP_UNIT      *program,
                       KOS_REG           **reg)
 {
     int      error   = KOS_SUCCESS;
-    KOS_REG *src_reg = 0;
+    KOS_REG *src_reg = KOS_NULL;
 
     TRY(lookup_local_var(program, node, &src_reg));
 
@@ -4333,8 +4333,8 @@ static int identifier(KOS_COMP_UNIT      *program,
     }
     else {
 
-        KOS_VAR *var           = 0;
-        KOS_REG *container_reg = 0;
+        KOS_VAR *var           = KOS_NULL;
+        KOS_REG *container_reg = KOS_NULL;
 
         TRY(gen_reg(program, reg));
 
@@ -4620,7 +4620,7 @@ static int free_arg_regs(KOS_RED_BLACK_NODE *node,
 
     if ((var->type & VAR_ARGUMENT_IN_REG) && var->reg && var->reg->tmp) {
         free_reg(program, var->reg);
-        var->reg = 0;
+        var->reg = KOS_NULL;
     }
 
     return KOS_SUCCESS;
@@ -4636,7 +4636,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
     KOS_SCOPE *scope;
     KOS_FRAME *frame;
     KOS_VAR   *var;
-    KOS_REG   *scope_reg    = 0;
+    KOS_REG   *scope_reg    = KOS_NULL;
     int        fun_start_offs;
     size_t     addr2line_start_offs;
     int        last_reg     = -1;
@@ -4882,13 +4882,13 @@ static int gen_function(KOS_COMP_UNIT      *program,
     /* Release unused registers */
     if (frame->args_reg && frame->args_reg->tmp) {
         free_reg(program, frame->args_reg);
-        frame->args_reg = 0;
+        frame->args_reg = KOS_NULL;
     }
     TRY(kos_red_black_walk(scope->vars, free_arg_regs, program));
 
     /* Invoke super constructor if not invoked explicitly */
     if (needs_super_ctor && ! frame->uses_base_ctor)
-        TRY(super_invocation(program, 0, 0));
+        TRY(super_invocation(program, KOS_NULL, KOS_NULL));
 
     kos_activate_self_ref_func(program, fun_var);
 
@@ -4928,8 +4928,8 @@ static int gen_function(KOS_COMP_UNIT      *program,
     /* Free register objects */
     free_all_regs(program, frame->used_regs);
     free_all_regs(program, frame->free_regs);
-    frame->used_regs = 0;
-    frame->free_regs = 0;
+    frame->used_regs = KOS_NULL;
+    frame->free_regs = KOS_NULL;
 
 cleanup:
     return error;
@@ -5018,7 +5018,7 @@ static int function_literal(KOS_COMP_UNIT      *program,
 
         int       i;
         const int num_used_def_args = scope->num_args - constant->min_args;
-        KOS_REG  *defaults_reg      = 0;
+        KOS_REG  *defaults_reg      = KOS_NULL;
 
         assert(num_used_def_args <= (int)constant->num_used_def_args);
         assert(num_used_def_args >= 0);
@@ -5040,7 +5040,7 @@ static int function_literal(KOS_COMP_UNIT      *program,
 
             const KOS_AST_NODE *def_node = node->children;
             KOS_VAR            *var;
-            KOS_REG            *arg      = 0;
+            KOS_REG            *arg      = KOS_NULL;
             int                 used;
 
             assert(def_node);
@@ -5155,11 +5155,11 @@ static int object_literal(KOS_COMP_UNIT      *program,
                           KOS_REG            *prototype)
 {
     int                 error;
-    KOS_RED_BLACK_NODE *prop_str_idcs = 0;
+    KOS_RED_BLACK_NODE *prop_str_idcs = KOS_NULL;
 
     if (prototype) {
         if ( ! *reg || (*reg == prototype && ! prototype->tmp)) {
-            *reg = 0;
+            *reg = KOS_NULL;
             TRY(gen_reg(program, reg));
         }
 
@@ -5176,7 +5176,7 @@ static int object_literal(KOS_COMP_UNIT      *program,
 
         int                 str_idx;
         const KOS_AST_NODE *prop_node = node->children;
-        KOS_REG            *prop      = 0;
+        KOS_REG            *prop      = KOS_NULL;
 
         assert(node->type == NT_PROPERTY);
         assert(prop_node);
@@ -5209,7 +5209,7 @@ static int object_literal(KOS_COMP_UNIT      *program,
 
         assert(prop_node->type != NT_CONSTRUCTOR_LITERAL);
         if (prop_node->type == NT_FUNCTION_LITERAL)
-            TRY(function_literal(program, prop_node, class_var, 0, prototype, &prop));
+            TRY(function_literal(program, prop_node, class_var, KOS_NULL, prototype, &prop));
         else
             TRY(visit_node(program, prop_node, &prop));
         assert(prop);
@@ -5271,9 +5271,9 @@ static int class_literal(KOS_COMP_UNIT      *program,
     int      error          = KOS_SUCCESS;
     int      void_proto     = 0;
     int      ctor_uses_bp   = 0;
-    KOS_REG *base_ctor_reg  = 0;
-    KOS_REG *base_proto_reg = 0;
-    KOS_REG *proto_reg      = 0;
+    KOS_REG *base_ctor_reg  = KOS_NULL;
+    KOS_REG *base_proto_reg = KOS_NULL;
+    KOS_REG *proto_reg      = KOS_NULL;
 
     assert(node->children);
     node = node->children;
@@ -5323,7 +5323,7 @@ static int class_literal(KOS_COMP_UNIT      *program,
 
         if (void_proto && ! ctor_uses_bp) {
             free_reg(program, base_proto_reg);
-            base_proto_reg = 0;
+            base_proto_reg = KOS_NULL;
         }
     }
 
@@ -5332,7 +5332,12 @@ static int class_literal(KOS_COMP_UNIT      *program,
     assert( ! node->next);
 
     /* Build constructor */
-    TRY(function_literal(program, node, class_var, base_ctor_reg, ctor_uses_bp ? base_proto_reg : 0, reg));
+    TRY(function_literal(program,
+                         node,
+                         class_var,
+                         base_ctor_reg,
+                         ctor_uses_bp ? base_proto_reg : KOS_NULL,
+                         reg));
     assert(*reg);
 
     /* Set prototype on the constructor */
@@ -5426,7 +5431,7 @@ static int visit_node(KOS_COMP_UNIT      *program,
             error = try_stmt(program, node);
             break;
         case NT_REFINEMENT:
-            error = refinement(program, node, reg, 0);
+            error = refinement(program, node, reg, KOS_NULL);
             break;
         case NT_SLICE:
             error = slice(program, node, reg);
@@ -5472,16 +5477,16 @@ static int visit_node(KOS_COMP_UNIT      *program,
         case NT_FUNCTION_LITERAL:
             /* fall through */
         case NT_CONSTRUCTOR_LITERAL:
-            error = function_literal(program, node, 0, 0, 0, reg);
+            error = function_literal(program, node, KOS_NULL, KOS_NULL, KOS_NULL, reg);
             break;
         case NT_ARRAY_LITERAL:
             error = array_literal(program, node, reg);
             break;
         case NT_OBJECT_LITERAL:
-            error = object_literal(program, node, reg, 0, 0);
+            error = object_literal(program, node, reg, KOS_NULL, KOS_NULL);
             break;
         case NT_CLASS_LITERAL:
-            error = class_literal(program, node, 0, reg);
+            error = class_literal(program, node, KOS_NULL, reg);
             break;
         case NT_VOID_LITERAL:
             /* fall through */
@@ -5520,7 +5525,7 @@ int kos_compiler_compile(KOS_COMP_UNIT *program,
     int      error;
     int      num_optimizations;
     unsigned num_passes = 0;
-    KOS_REG *reg        = 0;
+    KOS_REG *reg        = KOS_NULL;
 
     TRY(KOS_vector_reserve(&program->code_buf,          1024));
     TRY(KOS_vector_reserve(&program->code_gen_buf,      1024));
@@ -5555,7 +5560,7 @@ cleanup:
 
 void kos_compiler_destroy(KOS_COMP_UNIT *program)
 {
-    program->pre_globals = 0;
+    program->pre_globals = KOS_NULL;
 
     KOS_vector_destroy(&program->code_gen_buf);
     KOS_vector_destroy(&program->code_buf);

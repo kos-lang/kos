@@ -3,6 +3,7 @@
  */
 
 #include "kos_lexer.h"
+#include "../inc/kos_defs.h"
 #include "../inc/kos_error.h"
 #include "kos_utf8_internal.h"
 #include <assert.h>
@@ -249,26 +250,26 @@ struct KOS_OP_SPECIFIER_S {
 };
 
 static const struct KOS_OP_SPECIFIER_S operator_map[][7] = {
-    { { 0,   OT_NONE   } },
-    { { "!", OT_LOGNOT }, { "!=",  OT_NE     }, { 0,     OT_NONE   } },
-    { { "%", OT_MOD    }, { "%=",  OT_SETMOD }, { 0,     OT_NONE   } },
-    { { "&", OT_AND    }, { "&&",  OT_LOGAND }, { "&=",  OT_SETAND }, { 0,      OT_NONE   } },
-    { { "*", OT_MUL    }, { "*=",  OT_SETMUL }, { 0,     OT_NONE } },
-    { { "+", OT_ADD    }, { "+=",  OT_SETADD }, { 0,     OT_NONE   } },
-    { { "-", OT_SUB    }, { "-=",  OT_SETSUB }, { "->",  OT_ARROW  }, { 0,      OT_NONE   } },
-    { { ".", OT_DOT    }, { "...", OT_MORE   }, { 0,     OT_NONE   } },
-    { { "/", OT_DIV    }, { "/=",  OT_SETDIV }, { 0,     OT_NONE   } },
-    { { "<", OT_LT     }, { "<<",  OT_SHL    }, { "<<=", OT_SETSHL }, { "<=\0", OT_LE     }, { 0,     OT_NONE } },
-    { { "=", OT_SET    }, { "==",  OT_EQ     }, { "=>",  OT_LAMBDA }, { 0,      OT_NONE } },
-    { { ">", OT_GT     }, { ">=",  OT_GE     }, { ">>",  OT_SHR    }, { ">>=",  OT_SETSHR }, { ">>>", OT_SHRU }, { ">>>=", OT_SETSHRU }, { 0, OT_NONE } },
-    { { "?", OT_LOGTRI }, { 0,     OT_NONE   } },
-    { { "^", OT_XOR    }, { "^=",  OT_SETXOR }, { 0,     OT_NONE   } },
-    { { "|", OT_OR     }, { "|=",  OT_SETOR  }, { "||",  OT_LOGOR  }, { 0,      OT_NONE   } },
-    { { "~", OT_NOT    }, { 0,     OT_NONE   } }
+    { { KOS_NULL, OT_NONE   } },
+    { { "!",      OT_LOGNOT }, { "!=",     OT_NE     }, { KOS_NULL, OT_NONE   } },
+    { { "%",      OT_MOD    }, { "%=",     OT_SETMOD }, { KOS_NULL, OT_NONE   } },
+    { { "&",      OT_AND    }, { "&&",     OT_LOGAND }, { "&=",     OT_SETAND }, { KOS_NULL, OT_NONE   } },
+    { { "*",      OT_MUL    }, { "*=",     OT_SETMUL }, { KOS_NULL, OT_NONE } },
+    { { "+",      OT_ADD    }, { "+=",     OT_SETADD }, { KOS_NULL, OT_NONE   } },
+    { { "-",      OT_SUB    }, { "-=",     OT_SETSUB }, { "->",     OT_ARROW  }, { KOS_NULL, OT_NONE   } },
+    { { ".",      OT_DOT    }, { "...",    OT_MORE   }, { KOS_NULL, OT_NONE   } },
+    { { "/",      OT_DIV    }, { "/=",     OT_SETDIV }, { KOS_NULL, OT_NONE   } },
+    { { "<",      OT_LT     }, { "<<",     OT_SHL    }, { "<<=",    OT_SETSHL }, { "<=\0",   OT_LE     }, { KOS_NULL, OT_NONE } },
+    { { "=",      OT_SET    }, { "==",     OT_EQ     }, { "=>",     OT_LAMBDA }, { KOS_NULL, OT_NONE } },
+    { { ">",      OT_GT     }, { ">=",     OT_GE     }, { ">>",     OT_SHR    }, { ">>=",    OT_SETSHR }, { ">>>",    OT_SHRU }, { ">>>=", OT_SETSHRU }, { KOS_NULL, OT_NONE } },
+    { { "?",      OT_LOGTRI }, { KOS_NULL, OT_NONE   } },
+    { { "^",      OT_XOR    }, { "^=",     OT_SETXOR }, { KOS_NULL, OT_NONE   } },
+    { { "|",      OT_OR     }, { "|=",     OT_SETOR  }, { "||",     OT_LOGOR  }, { KOS_NULL, OT_NONE   } },
+    { { "~",      OT_NOT    }, { KOS_NULL, OT_NONE   } }
 };
 
 static const char *const keywords[] = {
-    0,
+    KOS_NULL,
     "__line__",
     "assert",
     "async",
@@ -788,7 +789,7 @@ void kos_lexer_init(KOS_LEXER  *lexer,
     lexer->buf_end         = end;
     lexer->prefetch_begin  = begin;
     lexer->prefetch_end    = begin;
-    lexer->error_str       = 0;
+    lexer->error_str       = KOS_NULL;
     lexer->pos.file_id     = file_id;
     lexer->pos.line        = 1;
     lexer->pos.column      = 1;

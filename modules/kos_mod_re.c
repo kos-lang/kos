@@ -1208,8 +1208,8 @@ static int parse_re(KOS_CONTEXT ctx, KOS_OBJ_ID regex_str, KOS_OBJ_ID regex)
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
-    re->class_descs   = 0;
-    re->class_data    = 0;
+    re->class_descs   = KOS_NULL;
+    re->class_data    = KOS_NULL;
     re->num_groups    = (uint16_t)re_ctx.num_groups;
     re->num_counts    = (uint16_t)re_ctx.num_counts;
     re->num_classes   = (class_descs_size && class_data_size) ? (uint16_t)(class_descs_size / sizeof(struct RE_CLASS_DESC)) : 0;
@@ -1275,7 +1275,7 @@ static struct RE_POSS_STACK_ITEM *push_item(struct RE_POSS_STACK *poss_stack,
 
     if (KOS_vector_resize(&poss_stack->buffer, old_size + item_size)) {
         KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
-        return 0;
+        return KOS_NULL;
     }
 
     poss_stack->current = (struct RE_POSS_STACK_ITEM *)poss_stack->buffer.buffer;
@@ -1296,7 +1296,7 @@ static int reset_possibility_stack(struct RE_POSS_STACK *poss_stack,
     const size_t group_size = re->num_groups * 2 * sizeof(uint16_t);
 
     poss_stack->buffer.size = 0;
-    poss_stack->current     = 0;
+    poss_stack->current     = KOS_NULL;
 
     if ( ! push_item(poss_stack, ctx, item_size))
         return KOS_ERROR_EXCEPTION;
@@ -1364,7 +1364,7 @@ static void pop_possibility(struct RE_POSS_STACK *poss_stack,
     }
     else {
         poss_stack->buffer.size = 0;
-        poss_stack->current     = 0;
+        poss_stack->current     = KOS_NULL;
     }
 }
 

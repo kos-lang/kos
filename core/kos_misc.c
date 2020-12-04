@@ -598,7 +598,7 @@ static void get_entropy(uint8_t *bytes, unsigned size)
 {
     HCRYPTPROV crypt_prov;
 
-    if (CryptAcquireContext(&crypt_prov, 0, 0, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT | CRYPT_SILENT)) {
+    if (CryptAcquireContext(&crypt_prov, KOS_NULL, KOS_NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT | CRYPT_SILENT)) {
 
         if ( ! CryptGenRandom(crypt_prov, size, bytes))
             kos_get_entropy_fallback(bytes, size);

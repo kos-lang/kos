@@ -376,7 +376,7 @@ static int vector_append_str(KOS_CONTEXT   ctx,
 
     if (KOS_get_string_length(obj) > 0) {
 
-        str_len = KOS_string_to_utf8(obj, 0, 0);
+        str_len = KOS_string_to_utf8(obj, KOS_NULL, 0);
         assert(str_len > 0);
 
         if (str_len == ~0U) {
@@ -620,7 +620,7 @@ static int vector_append_array(KOS_CONTEXT        ctx,
         }
         else
             TRY(object_to_string_or_cstr_vec(ctx, val_id, KOS_QUOTE_STRINGS,
-                                             0, cstr_vec, &new_guard));
+                                             KOS_NULL, cstr_vec, &new_guard));
 
         ++i;
 
@@ -707,7 +707,7 @@ static KOS_OBJ_ID array_to_str(KOS_CONTEXT        ctx,
             }
             else
                 TRY(object_to_string_or_cstr_vec(ctx, value.o, KOS_QUOTE_STRINGS,
-                                                 &value.o, 0, &new_guard));
+                                                 &value.o, KOS_NULL, &new_guard));
 
             TRY(KOS_array_write(ctx, aux_array.o, i_out, value.o));
 
@@ -884,7 +884,7 @@ static int vector_append_object(KOS_CONTEXT        ctx,
         }
         else
             TRY(object_to_string_or_cstr_vec(ctx, value.o, KOS_QUOTE_STRINGS,
-                                             0, cstr_vec, &new_guard));
+                                             KOS_NULL, cstr_vec, &new_guard));
 
         ++num_elems;
     }
@@ -1111,14 +1111,14 @@ int KOS_object_to_string_or_cstr_vec(KOS_CONTEXT   ctx,
                                      KOS_OBJ_ID   *str,
                                      KOS_VECTOR   *cstr_vec)
 {
-    return object_to_string_or_cstr_vec(ctx, obj_id, quote_str, str, cstr_vec, 0);
+    return object_to_string_or_cstr_vec(ctx, obj_id, quote_str, str, cstr_vec, KOS_NULL);
 }
 
 KOS_OBJ_ID KOS_object_to_string(KOS_CONTEXT ctx,
                                 KOS_OBJ_ID  obj)
 {
     KOS_OBJ_ID ret   = KOS_BADPTR;
-    const int  error = object_to_string_or_cstr_vec(ctx, obj, KOS_DONT_QUOTE, &ret, 0, 0);
+    const int  error = object_to_string_or_cstr_vec(ctx, obj, KOS_DONT_QUOTE, &ret, KOS_NULL, KOS_NULL);
 
     return error ? KOS_BADPTR : ret;
 }
@@ -1158,7 +1158,7 @@ int KOS_print_to_cstr_vec(KOS_CONTEXT   ctx,
             memcpy(&cstr_vec->buffer[pos - (pos ? 1 : 0)], sep, sep_len + 1);
         }
 
-        TRY(KOS_object_to_string_or_cstr_vec(ctx, obj, quote_str, 0, cstr_vec));
+        TRY(KOS_object_to_string_or_cstr_vec(ctx, obj, quote_str, KOS_NULL, cstr_vec));
     }
 
 cleanup:
@@ -1231,7 +1231,7 @@ int KOS_array_push_expand(KOS_CONTEXT ctx,
         case OBJ_BUFFER: {
             const uint32_t size = KOS_get_buffer_size(value.o);
             uint32_t       i;
-            const uint8_t *buf  = 0;
+            const uint8_t *buf  = KOS_NULL;
 
             TRY(KOS_array_resize(ctx, array.o, cur_size + size));
 
@@ -1261,7 +1261,7 @@ int KOS_array_push_expand(KOS_CONTEXT ctx,
                             error = KOS_ERROR_EXCEPTION;
                         break;
                     }
-                    TRY(KOS_array_push(ctx, array.o, ret, 0));
+                    TRY(KOS_array_push(ctx, array.o, ret, KOS_NULL));
                 }
             }
             break;
@@ -1326,9 +1326,9 @@ static KOS_COMPARE_RESULT compare_array(KOS_OBJ_ID                a,
     const uint32_t b_size   = KOS_get_array_size(b);
     const uint32_t cmp_size = KOS_min(a_size, b_size);
 
-    KOS_ATOMIC(KOS_OBJ_ID)       *a_buf    = a_size ? kos_get_array_buffer(OBJPTR(ARRAY, a)) : 0;
-    KOS_ATOMIC(KOS_OBJ_ID)       *b_buf    = b_size ? kos_get_array_buffer(OBJPTR(ARRAY, b)) : 0;
-    KOS_ATOMIC(KOS_OBJ_ID) *const a_end    = a_size ? a_buf + cmp_size : 0;
+    KOS_ATOMIC(KOS_OBJ_ID)       *a_buf    = a_size ? kos_get_array_buffer(OBJPTR(ARRAY, a)) : KOS_NULL;
+    KOS_ATOMIC(KOS_OBJ_ID)       *b_buf    = b_size ? kos_get_array_buffer(OBJPTR(ARRAY, b)) : KOS_NULL;
+    KOS_ATOMIC(KOS_OBJ_ID) *const a_end    = a_size ? a_buf + cmp_size : KOS_NULL;
     KOS_COMPARE_RESULT            cmp      = KOS_EQUAL;
     struct KOS_COMPARE_REF_S      this_ref;
 
@@ -1456,7 +1456,7 @@ static KOS_COMPARE_RESULT compare(KOS_OBJ_ID                a,
 KOS_COMPARE_RESULT KOS_compare(KOS_OBJ_ID a,
                                KOS_OBJ_ID b)
 {
-    return compare(a, b, 0);
+    return compare(a, b, KOS_NULL);
 }
 
 int KOS_is_generator(KOS_OBJ_ID fun_obj, KOS_FUNCTION_STATE *fun_state)

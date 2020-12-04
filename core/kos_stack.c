@@ -173,7 +173,7 @@ int kos_stack_push(KOS_CONTEXT ctx,
     if (type != OBJ_FUNCTION && type != OBJ_CLASS)
         RAISE_EXCEPTION_STR(str_err_not_callable);
 
-    stack      = IS_BAD_PTR(ctx->stack) ? 0 : OBJPTR(STACK, ctx->stack);
+    stack      = IS_BAD_PTR(ctx->stack) ? KOS_NULL : OBJPTR(STACK, ctx->stack);
     new_stack  = stack;
     stack_size = stack ? KOS_atomic_read_relaxed_u32(stack->size) : 0;
     base_idx   = stack_size;
@@ -531,7 +531,7 @@ static int dump_stack(KOS_OBJ_ID stack,
     KOS_FUNCTION           *func        = OBJPTR(FUNCTION, KOS_atomic_read_relaxed_obj(stack_frame->func_obj));
     const uint32_t          instr_offs  = get_instr_offs(stack_frame);
     const unsigned          line        = KOS_module_addr_to_line(IS_BAD_PTR(func->module)
-                                                                      ? 0 : OBJPTR(MODULE, func->module),
+                                                                      ? KOS_NULL : OBJPTR(MODULE, func->module),
                                                                   instr_offs);
     int                     error       = KOS_SUCCESS;
     KOS_LOCAL               module;

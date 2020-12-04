@@ -75,7 +75,7 @@ static KOS_OBJ_ID kos_random(KOS_CONTEXT ctx,
                              KOS_OBJ_ID  args_obj)
 {
     int                error    = KOS_SUCCESS;
-    KOS_RNG_CONTAINER *rng      = 0;
+    KOS_RNG_CONTAINER *rng      = KOS_NULL;
     KOS_LOCAL          args;
     KOS_LOCAL          seed;
     KOS_LOCAL          ret;
@@ -122,7 +122,7 @@ static KOS_OBJ_ID kos_random(KOS_CONTEXT ctx,
         RAISE_EXCEPTION_STR(str_err_mutex_fail);
 
     KOS_object_set_private_ptr(ret.o, rng);
-    rng = 0;
+    rng = KOS_NULL;
 
 cleanup:
     if (rng)
@@ -183,7 +183,7 @@ static KOS_OBJ_ID rand_integer(KOS_CONTEXT ctx,
                                KOS_OBJ_ID  this_obj,
                                KOS_OBJ_ID  args_obj)
 {
-    KOS_RNG_CONTAINER *rng       = 0;
+    KOS_RNG_CONTAINER *rng       = KOS_NULL;
     int                error     = KOS_SUCCESS;
     int64_t            value     = 0;
     int                min_max   = 0;
@@ -253,7 +253,7 @@ static KOS_OBJ_ID rand_float(KOS_CONTEXT ctx,
                              KOS_OBJ_ID  this_obj,
                              KOS_OBJ_ID  args_obj)
 {
-    KOS_RNG_CONTAINER *rng   = 0;
+    KOS_RNG_CONTAINER *rng   = KOS_NULL;
     int                error = KOS_SUCCESS;
     KOS_NUMERIC_VALUE  value;
 

@@ -76,7 +76,7 @@ static int install_signal(int sig, void (*handler)(int), signal_handler *old_act
 
 static void restore_signal(int sig, signal_handler *old_action)
 {
-    (void)sigaction(sig, old_action, NULL);
+    (void)sigaction(sig, old_action, KOS_NULL);
 }
 
 #endif
@@ -676,7 +676,7 @@ int kos_getline_init(KOS_GETLINE *state)
 {
     KOS_mempool_init(&state->allocator);
 
-    state->head = 0;
+    state->head = KOS_NULL;
 
     return KOS_SUCCESS;
 }
@@ -685,7 +685,7 @@ void kos_getline_destroy(KOS_GETLINE *state)
 {
     KOS_mempool_destroy(&state->allocator);
 
-    state->head = 0;
+    state->head = KOS_NULL;
 }
 
 static HIST_NODE *alloc_history_node(struct KOS_MEMPOOL_S *allocator,
@@ -707,9 +707,9 @@ static HIST_NODE *alloc_history_node(struct KOS_MEMPOOL_S *allocator,
         node->size            = (uint16_t)size;
         node->line_size       = (uint16_t)num_chars;
         node->persistent      = 0;
-        node->persistent_prev = 0;
-        node->next            = 0;
-        node->prev            = 0;
+        node->persistent_prev = KOS_NULL;
+        node->next            = KOS_NULL;
+        node->prev            = KOS_NULL;
     }
 
     return node;
@@ -737,7 +737,7 @@ static int add_to_persistent_history(KOS_GETLINE *state,
 static int init_history(struct TERM_EDIT *edit, HIST_NODE *node)
 {
     int        error     = KOS_ERROR_OUT_OF_MEMORY;
-    HIST_NODE *next_node = alloc_history_node(&edit->temp_allocator, 0, 0, 0);
+    HIST_NODE *next_node = alloc_history_node(&edit->temp_allocator, KOS_NULL, 0, 0);
 
     if (next_node) {
 
@@ -750,7 +750,7 @@ static int init_history(struct TERM_EDIT *edit, HIST_NODE *node)
             node            = node->persistent_prev;
         }
 
-        next_node->prev = 0;
+        next_node->prev = KOS_NULL;
 
         error = KOS_SUCCESS;
     }

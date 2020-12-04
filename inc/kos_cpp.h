@@ -122,11 +122,11 @@ class context {
         // Globals
         // =======
 
-        void add_global(KOS_OBJ_ID module, KOS_OBJ_ID name, KOS_OBJ_ID value, unsigned* idx = 0) {
+        void add_global(KOS_OBJ_ID module, KOS_OBJ_ID name, KOS_OBJ_ID value, unsigned* idx = KOS_NULL) {
             check_error(KOS_module_add_global(ctx_, module, name, value, idx));
         }
 
-        handle get_global(KOS_OBJ_ID module, KOS_OBJ_ID name, unsigned* idx = 0);
+        handle get_global(KOS_OBJ_ID module, KOS_OBJ_ID name, unsigned* idx = KOS_NULL);
 
         // Invoke Kos function from C++
         // ============================
@@ -192,7 +192,7 @@ inline std::string value_from_object_ptr<std::string>(context ctx, KOS_OBJ_ID ob
     if (GET_OBJ_TYPE(obj_id) != OBJ_STRING)
         ctx.raise_and_signal_error("source type is not a string");
 
-    const unsigned len = KOS_string_to_utf8(obj_id, 0, 0);
+    const unsigned len = KOS_string_to_utf8(obj_id, KOS_NULL, 0);
     if (len == ~0U)
         ctx.raise_and_signal_error("invalid string");
 
@@ -279,9 +279,9 @@ class thread_ctx {
 
 class handle {
     public:
-        handle() : ctx_(0) {
-            local_.next = 0;
-            local_.prev = 0;
+        handle() : ctx_(KOS_NULL) {
+            local_.next = KOS_NULL;
+            local_.prev = KOS_NULL;
             local_.o    = KOS_BADPTR;
         }
 
@@ -480,7 +480,7 @@ class string: public object {
         }
 
         operator std::string() const {
-            const unsigned len = KOS_string_to_utf8(*this, 0, 0);
+            const unsigned len = KOS_string_to_utf8(*this, KOS_NULL, 0);
             if (len == ~0U)
                 get_context().raise_and_signal_error("invalid string");
 
@@ -1399,24 +1399,24 @@ template<typename Ret, typename T1, typename T2>
 KOS_OBJ_ID invoke_internal(context ctx, Ret (*fun)(T1, T2), KOS_OBJ_ID this_obj, array args)
 {
     return to_object_ptr(ctx, fun(extract_arg<0, T1>(ctx, args),
-                                   extract_arg<1, T2>(ctx, args)));
+                                  extract_arg<1, T2>(ctx, args)));
 }
 
 template<typename Ret, typename T1, typename T2, typename T3>
 KOS_OBJ_ID invoke_internal(context ctx, Ret (*fun)(T1, T2, T3), KOS_OBJ_ID this_obj, array args)
 {
     return to_object_ptr(ctx, fun(extract_arg<0, T1>(ctx, args),
-                                   extract_arg<1, T2>(ctx, args),
-                                   extract_arg<2, T3>(ctx, args)));
+                                  extract_arg<1, T2>(ctx, args),
+                                  extract_arg<2, T3>(ctx, args)));
 }
 
 template<typename Ret, typename T1, typename T2, typename T3, typename T4>
 KOS_OBJ_ID invoke_internal(context ctx, Ret (*fun)(T1, T2, T3, T4), KOS_OBJ_ID this_obj, array args)
 {
     return to_object_ptr(ctx, fun(extract_arg<0, T1>(ctx, args),
-                                   extract_arg<1, T2>(ctx, args),
-                                   extract_arg<2, T3>(ctx, args),
-                                   extract_arg<3, T4>(ctx, args)));
+                                  extract_arg<1, T2>(ctx, args),
+                                  extract_arg<2, T3>(ctx, args),
+                                  extract_arg<3, T4>(ctx, args)));
 }
 
 inline KOS_OBJ_ID invoke_internal(context ctx, void (*fun)(), KOS_OBJ_ID this_obj, array args)
@@ -1478,7 +1478,7 @@ KOS_OBJ_ID invoke_internal(context ctx, Ret (T::*fun)(T1, T2), KOS_OBJ_ID this_o
 {
     T* const obj = get_priv<T>(this_obj);
     return to_object_ptr(ctx, (obj->*fun)(extract_arg<0, T1>(ctx, args),
-                                           extract_arg<1, T2>(ctx, args)));
+                                          extract_arg<1, T2>(ctx, args)));
 }
 
 template<typename T, typename Ret, typename T1, typename T2, typename T3>
@@ -1486,8 +1486,8 @@ KOS_OBJ_ID invoke_internal(context ctx, Ret (T::*fun)(T1, T2, T3), KOS_OBJ_ID th
 {
     T* const obj = get_priv<T>(this_obj);
     return to_object_ptr(ctx, (obj->*fun)(extract_arg<0, T1>(ctx, args),
-                                           extract_arg<1, T2>(ctx, args),
-                                           extract_arg<2, T3>(ctx, args)));
+                                          extract_arg<1, T2>(ctx, args),
+                                          extract_arg<2, T3>(ctx, args)));
 }
 
 template<typename T, typename Ret, typename T1, typename T2, typename T3, typename T4>
@@ -1495,9 +1495,9 @@ KOS_OBJ_ID invoke_internal(context ctx, Ret (T::*fun)(T1, T2, T3, T4), KOS_OBJ_I
 {
     T* const obj = get_priv<T>(this_obj);
     return to_object_ptr(ctx, (obj->*fun)(extract_arg<0, T1>(ctx, args),
-                                           extract_arg<1, T2>(ctx, args),
-                                           extract_arg<2, T3>(ctx, args),
-                                           extract_arg<3, T4>(ctx, args)));
+                                          extract_arg<1, T2>(ctx, args),
+                                          extract_arg<2, T3>(ctx, args),
+                                          extract_arg<3, T4>(ctx, args)));
 }
 
 template<typename T>
@@ -1565,7 +1565,7 @@ KOS_OBJ_ID invoke_internal(context ctx, Ret (T::*fun)(T1, T2) const, KOS_OBJ_ID 
 {
     T* const obj = get_priv<T>(this_obj);
     return to_object_ptr(ctx, (obj->*fun)(extract_arg<0, T1>(ctx, args),
-                                           extract_arg<1, T2>(ctx, args)));
+                                          extract_arg<1, T2>(ctx, args)));
 }
 
 template<typename T, typename Ret, typename T1, typename T2, typename T3>
@@ -1573,8 +1573,8 @@ KOS_OBJ_ID invoke_internal(context ctx, Ret (T::*fun)(T1, T2, T3) const, KOS_OBJ
 {
     T* const obj = get_priv<T>(this_obj);
     return to_object_ptr(ctx, (obj->*fun)(extract_arg<0, T1>(ctx, args),
-                                           extract_arg<1, T2>(ctx, args),
-                                           extract_arg<2, T3>(ctx, args)));
+                                          extract_arg<1, T2>(ctx, args),
+                                          extract_arg<2, T3>(ctx, args)));
 }
 
 template<typename T, typename Ret, typename T1, typename T2, typename T3, typename T4>
@@ -1582,9 +1582,9 @@ KOS_OBJ_ID invoke_internal(context ctx, Ret (T::*fun)(T1, T2, T3, T4) const, KOS
 {
     T* const obj = get_priv<T>(this_obj);
     return to_object_ptr(ctx, (obj->*fun)(extract_arg<0, T1>(ctx, args),
-                                           extract_arg<1, T2>(ctx, args),
-                                           extract_arg<2, T3>(ctx, args),
-                                           extract_arg<3, T4>(ctx, args)));
+                                          extract_arg<1, T2>(ctx, args),
+                                          extract_arg<2, T3>(ctx, args),
+                                          extract_arg<3, T4>(ctx, args)));
 }
 
 template<typename T>

@@ -51,7 +51,7 @@ static void atomic_fill_ptr(KOS_ATOMIC(KOS_OBJ_ID) *dest,
 
 static KOS_ARRAY_STORAGE *alloc_buffer(KOS_CONTEXT ctx, uint32_t capacity)
 {
-    KOS_ARRAY_STORAGE *buf            = 0;
+    KOS_ARRAY_STORAGE *buf            = KOS_NULL;
     const uint32_t     buf_alloc_size = KOS_buffer_alloc_size(capacity);
 
     if (capacity < KOS_MAX_ARRAY_SIZE)
@@ -81,7 +81,7 @@ KOS_OBJ_ID KOS_new_array(KOS_CONTEXT ctx,
     const uint32_t buf_alloc_size = size ? KOS_buffer_alloc_size(size) : 0;
     const int      buf_built_in   = array_obj_size + buf_alloc_size <= 256U;
     const uint32_t alloc_size     = buf_built_in ? array_obj_size + buf_alloc_size : array_obj_size;
-    KOS_ARRAY     *array          = 0;
+    KOS_ARRAY     *array          = KOS_NULL;
 
     if (size < KOS_MAX_ARRAY_SIZE)
         array = (KOS_ARRAY *)kos_alloc_object(ctx,
@@ -92,7 +92,7 @@ KOS_OBJ_ID KOS_new_array(KOS_CONTEXT ctx,
         KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
 
     if (array) {
-        KOS_ARRAY_STORAGE *storage = 0;
+        KOS_ARRAY_STORAGE *storage = KOS_NULL;
 
         KOS_atomic_write_relaxed_u32(array->flags, 0);
 
@@ -130,7 +130,7 @@ KOS_OBJ_ID KOS_new_array(KOS_CONTEXT ctx,
                 KOS_atomic_write_relaxed_ptr(array->data, OBJID(ARRAY_STORAGE, storage));
             }
             else
-                array = 0;
+                array = KOS_NULL;
 
             KOS_destroy_top_local(ctx, &saved_array);
         }
@@ -157,13 +157,13 @@ KOS_OBJ_ID KOS_new_array(KOS_CONTEXT ctx,
 static KOS_ARRAY_STORAGE *get_data(KOS_OBJ_ID obj_id)
 {
     const KOS_OBJ_ID buf_obj = kos_get_array_storage(obj_id);
-    return IS_BAD_PTR(buf_obj) ? 0 : OBJPTR(ARRAY_STORAGE, buf_obj);
+    return IS_BAD_PTR(buf_obj) ? KOS_NULL : OBJPTR(ARRAY_STORAGE, buf_obj);
 }
 
 static KOS_ARRAY_STORAGE *get_next(KOS_ARRAY_STORAGE *storage)
 {
     const KOS_OBJ_ID buf_obj = KOS_atomic_read_acquire_obj(storage->next);
-    return IS_BAD_PTR(buf_obj) ? 0 : OBJPTR(ARRAY_STORAGE, buf_obj);
+    return IS_BAD_PTR(buf_obj) ? KOS_NULL : OBJPTR(ARRAY_STORAGE, buf_obj);
 }
 
 static void copy_buf(KOS_CONTEXT        ctx,
@@ -614,7 +614,7 @@ int KOS_array_insert(KOS_CONTEXT ctx,
     KOS_LOCAL          src;
     KOS_LOCAL          dest;
     KOS_ARRAY_STORAGE *dest_buf;
-    KOS_ARRAY_STORAGE *src_buf = 0;
+    KOS_ARRAY_STORAGE *src_buf = KOS_NULL;
 
     assert( ! IS_BAD_PTR(src_obj_id));
     assert( ! IS_BAD_PTR(dest_obj_id));

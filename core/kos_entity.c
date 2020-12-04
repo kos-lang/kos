@@ -78,7 +78,7 @@ KOS_OBJ_ID KOS_new_function(KOS_CONTEXT ctx)
         func->name                  = KOS_STR_EMPTY;
         func->closures              = KOS_VOID;
         func->defaults              = KOS_VOID;
-        func->handler               = 0;
+        func->handler               = KOS_NULL;
         func->generator_stack_frame = KOS_BADPTR;
         func->instr_offs            = ~0U;
 
@@ -211,7 +211,7 @@ KOS_OBJ_ID KOS_new_class(KOS_CONTEXT ctx, KOS_OBJ_ID proto_obj)
         OBJPTR(CLASS, func.o)->name       = KOS_STR_EMPTY;
         OBJPTR(CLASS, func.o)->closures   = KOS_VOID;
         OBJPTR(CLASS, func.o)->defaults   = KOS_VOID;
-        OBJPTR(CLASS, func.o)->handler    = 0;
+        OBJPTR(CLASS, func.o)->handler    = KOS_NULL;
         OBJPTR(CLASS, func.o)->instr_offs = ~0U;
         KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, func.o)->prototype, proto.o);
         KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, func.o)->props,     KOS_BADPTR);

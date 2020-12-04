@@ -5,6 +5,7 @@
 #ifndef KOS_ATOMIC_H_INCLUDED
 #define KOS_ATOMIC_H_INCLUDED
 
+#include "kos_defs.h"
 #include <stdint.h>
 
 /* WAR bug in gcc 4.8 */
@@ -16,21 +17,6 @@
 #if defined(__clang__) && defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 #   if !__has_include(<stdatomic.h>)
 #       define __STDC_NO_ATOMICS__
-#   endif
-#endif
-
-/* Detect C++11 support */
-#if defined(__cplusplus)
-#   if ! defined(KOS_CPP11)
-#       if __cplusplus >= 201103L
-#           define KOS_CPP11 1
-#       elif defined(_MSC_VER) && _MSC_VER >= 1900
-#           define KOS_CPP11 1
-#       endif
-#   endif
-#else
-#   if defined(KOS_CPP11)
-#       undef KOS_CPP11
 #   endif
 #endif
 

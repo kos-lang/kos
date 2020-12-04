@@ -96,10 +96,10 @@ uint32_t KOS_module_func_get_code_size(KOS_MODULE *module,
 }
 #endif
 
-#define TRY_ADD_GLOBAL(ctx, module, name, value)                                     \
-do {                                                                                 \
-    KOS_DECLARE_STATIC_CONST_STRING(str_name, name);                                 \
-    TRY(KOS_module_add_global((ctx), (module), KOS_CONST_ID(str_name), (value), 0)); \
+#define TRY_ADD_GLOBAL(ctx, module, name, value)                                            \
+do {                                                                                        \
+    KOS_DECLARE_STATIC_CONST_STRING(str_name, name);                                        \
+    TRY(KOS_module_add_global((ctx), (module), KOS_CONST_ID(str_name), (value), KOS_NULL)); \
 } while (0)
 
 #define TRY_ADD_FUNCTION(ctx, module, name, handler, min_args)           \
@@ -148,7 +148,7 @@ do {                                                                            
 do {                                                                   \
     KOS_DECLARE_STATIC_CONST_STRING(str_name, name);                   \
     TRY(KOS_module_add_global((ctx), (module), KOS_CONST_ID(str_name), \
-                              TO_SMALL_INT((int)(value)), 0));         \
+                              TO_SMALL_INT((int)(value)), KOS_NULL));  \
 } while (0)
 
 #ifdef KOS_EXTERNAL_MODULES

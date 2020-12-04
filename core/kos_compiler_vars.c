@@ -261,8 +261,8 @@ static int add_scope_ref(KOS_COMP_UNIT *program,
         if (ref) {
 
             ref->closure         = outer_closure;
-            ref->vars_reg        = 0;
-            ref->args_reg        = 0;
+            ref->vars_reg        = KOS_NULL;
+            ref->args_reg        = KOS_NULL;
             ref->exported_locals = 0;
             ref->exported_args   = 0;
 
@@ -282,7 +282,7 @@ static int lookup_and_mark_var(KOS_COMP_UNIT *program,
                                KOS_VAR      **out_var)
 {
     int        error;
-    KOS_VAR   *var             = 0;
+    KOS_VAR   *var             = KOS_NULL;
     KOS_SCOPE *scope           = &program->cur_frame->scope;
     KOS_SCOPE *local_fun_scope = scope;
 
@@ -293,7 +293,7 @@ static int lookup_and_mark_var(KOS_COMP_UNIT *program,
         var = kos_find_var(scope->vars, &node->token);
         if (var && var->is_active)
             break;
-        var = 0;
+        var = KOS_NULL;
     }
 
     /* Mark variable as independent */
@@ -604,7 +604,7 @@ static int left_hand_side(KOS_COMP_UNIT *program,
 
         if (node->type == NT_IDENTIFIER) {
 
-            KOS_VAR *var = 0;
+            KOS_VAR *var = KOS_NULL;
 
             if (lookup_local_var(program, node, &var) != KOS_SUCCESS)
                 TRY(lookup_and_mark_var(program, node, &var));
@@ -989,10 +989,10 @@ static int visit_node(KOS_COMP_UNIT *program,
             error = KOS_SUCCESS;
             break;
         case NT_FUNCTION_LITERAL:
-            error = function_literal(program, node, 0);
+            error = function_literal(program, node, KOS_NULL);
             break;
         case NT_CLASS_LITERAL:
-            error = class_literal(program, node, 0);
+            error = class_literal(program, node, KOS_NULL);
             break;
         case NT_ASSIGNMENT:
             error = assignment(program, node);
@@ -1164,7 +1164,7 @@ static int deactivate(KOS_RED_BLACK_NODE *node,
 
 void kos_deactivate_vars(KOS_SCOPE *scope)
 {
-    kos_red_black_walk(scope->vars, deactivate, 0);
+    kos_red_black_walk(scope->vars, deactivate, KOS_NULL);
 }
 
 int kos_compiler_process_vars(KOS_COMP_UNIT *program,

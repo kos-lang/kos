@@ -70,7 +70,7 @@ static KOS_OBJ_ID new_string(KOS_CONTEXT     ctx,
                              unsigned        length,
                              KOS_UTF8_ESCAPE escape)
 {
-    KOS_STRING      *str       = 0;
+    KOS_STRING      *str       = KOS_NULL;
     KOS_STRING_FLAGS elem_size = KOS_STRING_ELEM_8;
 
     if (length > 4U * 0xFFFFU)
@@ -193,7 +193,7 @@ KOS_OBJ_ID KOS_new_string_from_codes(KOS_CONTEXT ctx,
     uint32_t         length;
     uint32_t         i;
     KOS_STRING_FLAGS elem_size = KOS_STRING_ELEM_8;
-    KOS_STRING      *ret       = 0;
+    KOS_STRING      *ret       = KOS_NULL;
     void            *str_buf;
 
     assert(GET_OBJ_TYPE(codes) == OBJ_ARRAY);
@@ -304,7 +304,7 @@ KOS_OBJ_ID KOS_new_string_from_buffer(KOS_CONTEXT ctx,
                                       unsigned    begin,
                                       unsigned    end)
 {
-    KOS_STRING      *str       = 0;
+    KOS_STRING      *str       = KOS_NULL;
     KOS_STRING_FLAGS elem_size = KOS_STRING_ELEM_8;
     KOS_LOCAL        utf8_buf;
     uint32_t         size;
@@ -451,7 +451,7 @@ int KOS_string_to_cstr_vec(KOS_CONTEXT ctx,
 
     if (KOS_get_string_length(obj_id) > 0) {
 
-        str_len = KOS_string_to_utf8(obj_id, 0, 0);
+        str_len = KOS_string_to_utf8(obj_id, KOS_NULL, 0);
         assert(str_len > 0);
 
         if (str_len == ~0U) {
@@ -877,7 +877,7 @@ KOS_OBJ_ID KOS_string_get_char(KOS_CONTEXT ctx,
                                KOS_OBJ_ID  obj_id,
                                int         idx)
 {
-    KOS_STRING *new_str = 0;
+    KOS_STRING *new_str = KOS_NULL;
 
     assert( ! IS_BAD_PTR(obj_id));
 

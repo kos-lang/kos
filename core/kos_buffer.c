@@ -104,7 +104,7 @@ KOS_OBJ_ID KOS_new_buffer(KOS_CONTEXT ctx,
 static KOS_BUFFER_STORAGE *get_data(KOS_OBJ_ID obj_id)
 {
     const KOS_OBJ_ID buf_obj = KOS_atomic_read_acquire_obj(OBJPTR(BUFFER, obj_id)->data);
-    return IS_BAD_PTR(buf_obj) ? 0 : OBJPTR(BUFFER_STORAGE, buf_obj);
+    return IS_BAD_PTR(buf_obj) ? KOS_NULL : OBJPTR(BUFFER_STORAGE, buf_obj);
 }
 
 static KOS_OBJ_ID get_storage(KOS_OBJ_ID obj_id)
@@ -214,7 +214,7 @@ int KOS_buffer_resize(KOS_CONTEXT ctx,
 uint8_t *KOS_buffer_data(KOS_CONTEXT ctx,
                          KOS_OBJ_ID  obj_id)
 {
-    uint8_t *ret = 0;
+    uint8_t *ret = KOS_NULL;
 
     assert( ! IS_BAD_PTR(obj_id));
 
@@ -255,7 +255,7 @@ cleanup:
 uint8_t *KOS_buffer_data_volatile(KOS_CONTEXT ctx,
                                   KOS_OBJ_ID  obj_id)
 {
-    uint8_t *ret = 0;
+    uint8_t *ret = KOS_NULL;
 
     assert( ! IS_BAD_PTR(obj_id));
 
@@ -282,7 +282,7 @@ uint8_t *KOS_buffer_make_room(KOS_CONTEXT ctx,
                               KOS_OBJ_ID  obj_id,
                               unsigned    size_delta)
 {
-    uint8_t *ret = 0;
+    uint8_t *ret = KOS_NULL;
 
     assert( ! IS_BAD_PTR(obj_id));
 

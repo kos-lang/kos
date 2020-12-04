@@ -15,7 +15,7 @@ void *KOS_malloc(size_t size)
     void *ptr;
 
     if (kos_seq_fail())
-        return 0;
+        return KOS_NULL;
 
     ptr = malloc(size);
 
@@ -27,7 +27,7 @@ void *KOS_malloc(size_t size)
 void *KOS_realloc(void *ptr, size_t size)
 {
     if (kos_seq_fail())
-        return 0;
+        return KOS_NULL;
 
     PROF_FREE(ptr)
 
@@ -51,7 +51,7 @@ void *KOS_malloc_aligned(size_t size, size_t alignment)
     void *ptr;
 
     if (kos_seq_fail())
-        return 0;
+        return KOS_NULL;
 
     ptr = _aligned_malloc(size, alignment);
 
@@ -71,13 +71,13 @@ void KOS_free_aligned(void *ptr)
 
 void *KOS_malloc_aligned(size_t size, size_t alignment)
 {
-    void *ptr = 0;
+    void *ptr = KOS_NULL;
 
     if (kos_seq_fail())
-        return 0;
+        return KOS_NULL;
 
     if (posix_memalign(&ptr, alignment, size))
-        return 0;
+        return KOS_NULL;
 
     PROF_MALLOC(ptr, size)
 

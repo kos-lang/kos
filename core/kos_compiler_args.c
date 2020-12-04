@@ -231,7 +231,7 @@ static void update_arguments(KOS_COMP_UNIT *program,
     scope->num_indep_args = max_indep_arg + 1;
     scope->have_rest      = have_rest;
     if ( ! have_ellipsis)
-        scope->ellipsis = 0;
+        scope->ellipsis = KOS_NULL;
     assert( ! have_ellipsis || scope->ellipsis);
 }
 
@@ -361,7 +361,7 @@ cleanup:
 static void identifier(KOS_COMP_UNIT      *program,
                        const KOS_AST_NODE *node)
 {
-    KOS_VAR *var = 0;
+    KOS_VAR *var = KOS_NULL;
     lookup_var(program, node, 1, &var);
     assert(var);
 }
@@ -416,7 +416,7 @@ static int assignment(KOS_COMP_UNIT *program,
 
         if (node->type == NT_IDENTIFIER) {
 
-            KOS_VAR *var = 0;
+            KOS_VAR *var = KOS_NULL;
 
             lookup_var(program, node, is_lhs, &var);
 
@@ -526,11 +526,11 @@ static int visit_node(KOS_COMP_UNIT *program,
             break;
 
         case NT_FUNCTION_LITERAL:
-            error = function_literal(program, node, 0);
+            error = function_literal(program, node, KOS_NULL);
             break;
 
         case NT_CLASS_LITERAL:
-            error = class_literal(program, node, 0);
+            error = class_literal(program, node, KOS_NULL);
             break;
 
         case NT_IDENTIFIER:

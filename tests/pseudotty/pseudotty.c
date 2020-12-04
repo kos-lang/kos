@@ -318,7 +318,7 @@ static uint64_t get_time_ms(void)
     uint64_t       time_ms = 0;
     struct timeval tv;
 
-    if ( ! gettimeofday(&tv, 0)) {
+    if ( ! gettimeofday(&tv, NULL)) {
         time_ms =  (int64_t)tv.tv_sec * 1000;
         time_ms += (int64_t)tv.tv_usec / 1000;
     }

@@ -103,7 +103,7 @@ static KOS_THREAD *alloc_thread(KOS_CONTEXT ctx,
                                 KOS_OBJ_ID  args_obj)
 {
     KOS_INSTANCE  *inst        = ctx->inst;
-    KOS_THREAD    *thread      = 0;
+    KOS_THREAD    *thread      = KOS_NULL;
     const uint32_t max_threads = inst->threads.max_threads;
     uint32_t       can_create;
     uint32_t       i;
@@ -112,7 +112,7 @@ static KOS_THREAD *alloc_thread(KOS_CONTEXT ctx,
 
     if ( ! thread) {
         KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
-        return 0;
+        return KOS_NULL;
     }
 
     thread->inst        = inst;
@@ -163,7 +163,7 @@ static KOS_THREAD *alloc_thread(KOS_CONTEXT ctx,
                                             : KOS_CONST_ID(str_shutdown));
 
         KOS_free(thread);
-        thread = 0;
+        thread = KOS_NULL;
     }
 
     return thread;
@@ -205,7 +205,7 @@ static void remove_thread(KOS_THREAD *thread)
 
         assert(KOS_atomic_read_relaxed_ptr(inst->threads.threads[thread_idx]) == thread);
 
-        KOS_atomic_write_relaxed_ptr(inst->threads.threads[thread_idx], (KOS_THREAD *)0);
+        KOS_atomic_write_relaxed_ptr(inst->threads.threads[thread_idx], (KOS_THREAD *)KOS_NULL);
 
         kos_unlock_mutex(&inst->threads.new_mutex);
 
@@ -256,7 +256,7 @@ int kos_join_finished_threads(KOS_CONTEXT                      ctx,
 
     while (i < max_threads) {
 
-        KOS_THREAD *thread     = 0;
+        KOS_THREAD *thread     = KOS_NULL;
         int         new_locked = 1;
 
         if (i == 0) {
@@ -401,11 +401,11 @@ KOS_THREAD *kos_thread_create(KOS_CONTEXT ctx,
     int         error  = KOS_SUCCESS;
 
     if ( ! thread)
-        return 0;
+        return KOS_NULL;
 
 #ifdef _WIN32
     thread->thread_handle = kos_seq_fail() ? 0 :
-        CreateThread(0,
+        CreateThread(KOS_NULL,
                      0,
                      thread_proc,
                      thread,
@@ -418,7 +418,7 @@ KOS_THREAD *kos_thread_create(KOS_CONTEXT ctx,
 #else
 
     if (kos_seq_fail() || pthread_create(&thread->thread_handle,
-                                         0,
+                                         KOS_NULL,
                                          thread_proc,
                                          thread))
         error = KOS_ERROR_OUT_OF_MEMORY;
@@ -429,7 +429,7 @@ KOS_THREAD *kos_thread_create(KOS_CONTEXT ctx,
 
         remove_thread(thread);
 
-        thread = 0;
+        thread = KOS_NULL;
     }
 
     return thread;
@@ -452,7 +452,7 @@ KOS_OBJ_ID kos_thread_join(KOS_CONTEXT ctx,
     WaitForSingleObject(thread->thread_handle, INFINITE);
     CloseHandle(thread->thread_handle);
 #else
-    pthread_join(thread->thread_handle, NULL);
+    pthread_join(thread->thread_handle, KOS_NULL);
 #endif
 
     error = KOS_resume_context(ctx);
@@ -646,10 +646,10 @@ int kos_create_mutex(KOS_MUTEX *mutex)
     *mutex = (KOS_MUTEX)KOS_malloc(sizeof(struct KOS_MUTEX_OBJECT_S));
 
     if (*mutex) {
-        if (kos_seq_fail() || pthread_mutex_init(&(*mutex)->mutex, 0)) {
+        if (kos_seq_fail() || pthread_mutex_init(&(*mutex)->mutex, KOS_NULL)) {
             KOS_free(*mutex);
-            *mutex = 0;
-            error = KOS_ERROR_OUT_OF_MEMORY;
+            *mutex = KOS_NULL;
+            error  = KOS_ERROR_OUT_OF_MEMORY;
         }
     }
     else
@@ -711,9 +711,9 @@ int kos_create_cond_var(KOS_COND_VAR *cond_var)
     *cond_var = (KOS_COND_VAR)KOS_malloc(sizeof(struct KOS_COND_VAR_OBJECT_S));
 
     if (*cond_var) {
-        if (kos_seq_fail() || pthread_cond_init(&(*cond_var)->cond, 0)) {
+        if (kos_seq_fail() || pthread_cond_init(&(*cond_var)->cond, KOS_NULL)) {
             KOS_free(*cond_var);
-            *cond_var = 0;
+            *cond_var = KOS_NULL;
             error = KOS_ERROR_OUT_OF_MEMORY;
         }
     }
@@ -800,7 +800,7 @@ int kos_tls_create(KOS_TLS_KEY *key)
     KOS_TLS_KEY new_key = (KOS_TLS_KEY)KOS_malloc(sizeof(struct KOS_TLS_OBJECT_S));
 
     if (new_key) {
-        if (kos_seq_fail() || pthread_key_create(&new_key->key, 0)) {
+        if (kos_seq_fail() || pthread_key_create(&new_key->key, KOS_NULL)) {
             KOS_free(new_key);
             error = KOS_ERROR_OUT_OF_MEMORY;
         }

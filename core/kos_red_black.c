@@ -3,6 +3,7 @@
  */
 
 #include "kos_red_black.h"
+#include "../inc/kos_defs.h"
 #include "../inc/kos_error.h"
 #include <stdio.h>
 #include <assert.h>
@@ -69,7 +70,7 @@ static void insert_binary(KOS_RED_BLACK_NODE       **node,
                           KOS_RED_BLACK_NODE        *new_node,
                           KOS_RED_BLACK_COMPARE_NODE compare)
 {
-    KOS_RED_BLACK_NODE *parent = 0;
+    KOS_RED_BLACK_NODE *parent = KOS_NULL;
 
     while (*node) {
         parent = *node;
@@ -140,8 +141,8 @@ void kos_red_black_insert(KOS_RED_BLACK_NODE       **out_root,
                           KOS_RED_BLACK_COMPARE_NODE compare)
 {
     new_node->red   = 1;
-    new_node->left  = 0;
-    new_node->right = 0;
+    new_node->left  = KOS_NULL;
+    new_node->right = KOS_NULL;
 
     insert_binary(out_root, new_node, compare);
 
@@ -197,7 +198,7 @@ void kos_red_black_delete(KOS_RED_BLACK_NODE **out_root,
 {
     KOS_RED_BLACK_NODE *succ;
     KOS_RED_BLACK_NODE *parent;
-    KOS_RED_BLACK_NODE  leaf = { 0, 0, 0, /*red=*/ 3 };
+    KOS_RED_BLACK_NODE  leaf = { KOS_NULL, KOS_NULL, KOS_NULL, /*red=*/ 3 };
     KOS_RED_BLACK_NODE *root = *out_root;
 
     /* If deleted node has two children, swap it with the successor and delete the successor */
@@ -212,7 +213,7 @@ void kos_red_black_delete(KOS_RED_BLACK_NODE **out_root,
 
         a           = node->left;
         succ->left  = a;
-        node->left  = 0;
+        node->left  = KOS_NULL;
         a->parent   = succ;
 
         a           = node->right;
@@ -259,8 +260,8 @@ void kos_red_black_delete(KOS_RED_BLACK_NODE **out_root,
     /* Use dummy leaf node if the deleted node has no children */
     if ( ! succ) {
         succ = &leaf;
-        leaf.left  = 0;
-        leaf.right = 0;
+        leaf.left  = KOS_NULL;
+        leaf.right = KOS_NULL;
         leaf.red   = 0;
     }
 
@@ -361,12 +362,12 @@ void kos_red_black_delete(KOS_RED_BLACK_NODE **out_root,
         if (leaf.parent) {
             parent = leaf.parent;
             if (parent->left == &leaf)
-                parent->left  = 0;
+                parent->left  = KOS_NULL;
             else
-                parent->right = 0;
+                parent->right = KOS_NULL;
         }
         else
-            root = 0;
+            root = KOS_NULL;
     }
 
     if (root)

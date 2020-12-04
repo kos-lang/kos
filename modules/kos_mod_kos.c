@@ -198,7 +198,7 @@ static KOS_OBJ_ID raw_lexer(KOS_CONTEXT ctx,
 
             KOS_TOKEN *cur_token = &kos_lexer->token;
 
-            kos_lexer->lexer.error_str = 0;
+            kos_lexer->lexer.error_str = KOS_NULL;
 
             cur_token->type    = TT_WHITESPACE;
             cur_token->keyword = KW_NONE;

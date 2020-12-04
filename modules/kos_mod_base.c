@@ -246,7 +246,7 @@ static int create_class(KOS_CONTEXT          ctx,
                               module.o,
                               str_name,
                               func_obj,
-                              0));
+                              KOS_NULL));
 
 cleanup:
     KOS_destroy_top_local(ctx, &module);
@@ -693,7 +693,7 @@ static KOS_OBJ_ID string_constructor(KOS_CONTEXT ctx,
                                         TRY(KOS_array_resize(ctx, codes.o, 0));
                                     }
 
-                                    TRY(KOS_array_push(ctx, codes.o, TO_SMALL_INT((int)value), 0));
+                                    TRY(KOS_array_push(ctx, codes.o, TO_SMALL_INT((int)value), KOS_NULL));
                                     break;
                                 }
 
@@ -707,7 +707,7 @@ static KOS_OBJ_ID string_constructor(KOS_CONTEXT ctx,
                                         KOS_OBJ_ID str = KOS_new_string_from_codes(ctx, codes.o);
                                         TRY_OBJID(str);
 
-                                        TRY(KOS_array_push(ctx, substrings.o, str, 0));
+                                        TRY(KOS_array_push(ctx, substrings.o, str, KOS_NULL));
 
                                         TRY(KOS_array_resize(ctx, codes.o, 0));
                                     }
@@ -721,7 +721,7 @@ static KOS_OBJ_ID string_constructor(KOS_CONTEXT ctx,
                                         TRY_OBJID(ret.o);
                                     }
 
-                                    TRY(KOS_array_push(ctx, substrings.o, ret.o, 0));
+                                    TRY(KOS_array_push(ctx, substrings.o, ret.o, KOS_NULL));
                                     break;
 
                                 default:
@@ -733,7 +733,7 @@ static KOS_OBJ_ID string_constructor(KOS_CONTEXT ctx,
                             KOS_OBJ_ID str = KOS_new_string_from_codes(ctx, codes.o);
                             TRY_OBJID(str);
 
-                            TRY(KOS_array_push(ctx, substrings.o, str, 0));
+                            TRY(KOS_array_push(ctx, substrings.o, str, KOS_NULL));
 
                             TRY(KOS_array_resize(ctx, codes.o, 0));
                         }
@@ -810,7 +810,7 @@ static KOS_OBJ_ID stringify(KOS_CONTEXT ctx,
     KOS_init_local_with(ctx, &args, args_obj);
 
     if (num_args == 0)
-        ret = KOS_new_string(ctx, 0, 0);
+        ret = KOS_new_string(ctx, KOS_NULL, 0);
 
     else {
 
@@ -1086,7 +1086,7 @@ static KOS_OBJ_ID array_constructor(KOS_CONTEXT ctx,
                         TRY(KOS_array_write(ctx, ret.o, 0, gen_args.o));
                     }
                     else
-                        TRY(KOS_array_push(ctx, ret.o, gen_args.o, 0));
+                        TRY(KOS_array_push(ctx, ret.o, gen_args.o, KOS_NULL));
 
                     ++cur_size;
                 }
@@ -1117,7 +1117,7 @@ static KOS_OBJ_ID array_constructor(KOS_CONTEXT ctx,
                             TRY(KOS_array_write(ctx, ret.o, 0, gen_ret.o));
                         }
                         else
-                            TRY(KOS_array_push(ctx, ret.o, gen_ret.o, 0));
+                            TRY(KOS_array_push(ctx, ret.o, gen_ret.o, KOS_NULL));
 
                         gen_ret.o = KOS_BADPTR;
 
@@ -1258,7 +1258,7 @@ static KOS_OBJ_ID buffer_constructor(KOS_CONTEXT ctx,
             case OBJ_ARRAY: {
                 const uint32_t size = KOS_get_array_size(arg.o);
                 uint32_t       i;
-                uint8_t       *data = 0;
+                uint8_t       *data = KOS_NULL;
 
                 if ( ! size)
                     break;
@@ -1287,7 +1287,7 @@ static KOS_OBJ_ID buffer_constructor(KOS_CONTEXT ctx,
             }
 
             case OBJ_STRING: {
-                const uint32_t size = KOS_string_to_utf8(arg.o, 0, 0);
+                const uint32_t size = KOS_string_to_utf8(arg.o, KOS_NULL, 0);
                 uint8_t       *data;
 
                 if (size == ~0U)
@@ -1737,7 +1737,7 @@ static KOS_OBJ_ID async(KOS_CONTEXT ctx,
             ctx->inst->prototypes.thread_proto);
     TRY_OBJID(thread_obj.o);
 
-    KOS_object_set_private_ptr(thread_obj.o, (void *)0);
+    KOS_object_set_private_ptr(thread_obj.o, (void *)KOS_NULL);
 
     arg_this.o = KOS_array_read(ctx, arg_args.o, 0);
     TRY_OBJID(arg_this.o);
@@ -1808,7 +1808,7 @@ static KOS_OBJ_ID wait(KOS_CONTEXT ctx,
         return KOS_BADPTR;
     }
 
-    thread = (KOS_THREAD *)KOS_object_swap_private_ptr(this_obj, (void *)0);
+    thread = (KOS_THREAD *)KOS_object_swap_private_ptr(this_obj, (void *)KOS_NULL);
 
     if ( ! thread) {
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_already_joined));
@@ -2809,7 +2809,7 @@ static int pack_format(KOS_CONTEXT               ctx,
 {
     int        error  = KOS_SUCCESS;
     int        big_end;
-    uint8_t   *dst    = 0;
+    uint8_t   *dst    = KOS_NULL;
     KOS_VECTOR str_buf;
     KOS_LOCAL  buffer;
 
@@ -2974,7 +2974,7 @@ static int pack_format(KOS_CONTEXT               ctx,
 
             for ( ; count; count--) {
                 KOS_OBJ_ID     value_obj = KOS_array_read(ctx, fmt->data.o, fmt->idx++);
-                const uint8_t *src       = 0;
+                const uint8_t *src       = KOS_NULL;
                 uint32_t       src_size;
                 uint32_t       copy_size;
 
@@ -3173,7 +3173,7 @@ static int unpack_format(KOS_CONTEXT               ctx,
 
                 TRY_OBJID(obj);
 
-                TRY(KOS_array_push(ctx, fmt->data.o, obj, 0));
+                TRY(KOS_array_push(ctx, fmt->data.o, obj, KOS_NULL));
 
                 offs += size;
             }
@@ -3195,7 +3195,7 @@ static int unpack_format(KOS_CONTEXT               ctx,
                     memcpy(data, &KOS_buffer_data_const(buffer.o)[offs], size);
                 }
 
-                TRY(KOS_array_push(ctx, fmt->data.o, obj, 0));
+                TRY(KOS_array_push(ctx, fmt->data.o, obj, KOS_NULL));
 
                 offs += size;
             }
@@ -3210,11 +3210,11 @@ static int unpack_format(KOS_CONTEXT               ctx,
                 if (size)
                     obj = KOS_new_string_from_buffer(ctx, buffer.o, offs, offs + size);
                 else
-                    obj = KOS_new_string(ctx, 0, 0);
+                    obj = KOS_new_string(ctx, KOS_NULL, 0);
 
                 TRY_OBJID(obj);
 
-                TRY(KOS_array_push(ctx, fmt->data.o, obj, 0));
+                TRY(KOS_array_push(ctx, fmt->data.o, obj, KOS_NULL));
 
                 offs += size;
             }

@@ -98,7 +98,7 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
 {
     int        error        = KOS_SUCCESS;
     KOS_OBJ_ID filename_obj;
-    FILE      *file         = 0;
+    FILE      *file         = KOS_NULL;
     KOS_LOCAL  this_;
     KOS_LOCAL  args;
     KOS_LOCAL  ret;
@@ -152,7 +152,7 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
     KOS_resume_context(ctx);
 
     if ( ! file) {
-        KOS_raise_errno(ctx, NULL);
+        KOS_raise_errno(ctx, KOS_NULL);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
@@ -169,7 +169,7 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
     OBJPTR(OBJECT, ret.o)->finalize = finalize;
 
     KOS_object_set_private_ptr(ret.o, file);
-    file = 0;
+    file = KOS_NULL;
 
 cleanup:
     KOS_vector_destroy(&flags_cstr);
@@ -213,12 +213,12 @@ static KOS_OBJ_ID kos_close(KOS_CONTEXT ctx,
                             KOS_OBJ_ID  this_obj,
                             KOS_OBJ_ID  args_obj)
 {
-    FILE *file  = 0;
+    FILE *file  = KOS_NULL;
     int   error = get_file_object(ctx, this_obj, &file, 0);
 
     if ( ! error && file) {
         fclose(file);
-        KOS_object_set_private_ptr(this_obj, (void *)0);
+        KOS_object_set_private_ptr(this_obj, (void *)KOS_NULL);
     }
 
     return error ? KOS_BADPTR : KOS_VOID;
@@ -243,7 +243,7 @@ static KOS_OBJ_ID print(KOS_CONTEXT ctx,
                         KOS_OBJ_ID  this_obj,
                         KOS_OBJ_ID  args_obj)
 {
-    FILE      *file  = 0;
+    FILE      *file  = KOS_NULL;
     int        error = get_file_object(ctx, this_obj, &file, 0);
     KOS_VECTOR cstr;
 
@@ -303,7 +303,7 @@ static KOS_OBJ_ID read_line(KOS_CONTEXT ctx,
                             KOS_OBJ_ID  args_obj)
 {
     int        error      = KOS_SUCCESS;
-    FILE      *file       = 0;
+    FILE      *file       = KOS_NULL;
     int        size_delta = 4096;
     int        last_size  = 0;
     int        num_read;
@@ -346,7 +346,7 @@ static KOS_OBJ_ID read_line(KOS_CONTEXT ctx,
         if ( ! ret) {
             if (ferror(file)) {
                 KOS_resume_context(ctx);
-                KOS_raise_errno(ctx, NULL);
+                KOS_raise_errno(ctx, KOS_NULL);
                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
             }
             else
@@ -393,7 +393,7 @@ static KOS_OBJ_ID read_some(KOS_CONTEXT ctx,
                             KOS_OBJ_ID  args_obj)
 {
     int        error = KOS_SUCCESS;
-    FILE      *file  = 0;
+    FILE      *file  = KOS_NULL;
     KOS_LOCAL  args;
     KOS_LOCAL  buf;
     uint8_t   *data;
@@ -453,7 +453,7 @@ static KOS_OBJ_ID read_some(KOS_CONTEXT ctx,
     TRY(KOS_buffer_resize(ctx, buf.o, (unsigned)(offset + num_read)));
 
     if (num_read < (size_t)to_read && ferror(file)) {
-        KOS_raise_errno(ctx, NULL);
+        KOS_raise_errno(ctx, KOS_NULL);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
@@ -484,9 +484,9 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
                             KOS_OBJ_ID  this_obj,
                             KOS_OBJ_ID  args_obj)
 {
-    int            error      = KOS_SUCCESS;
-    const uint32_t num_args   = KOS_get_array_size(args_obj);
-    FILE      *    file       = 0;
+    int            error    = KOS_SUCCESS;
+    const uint32_t num_args = KOS_get_array_size(args_obj);
+    FILE          *file     = KOS_NULL;
     uint32_t       i_arg;
     KOS_VECTOR     cstr;
     KOS_LOCAL      print_args;
@@ -540,7 +540,7 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
             }
 
             if (num_writ < to_write) {
-                KOS_raise_errno(ctx, NULL);
+                KOS_raise_errno(ctx, KOS_NULL);
                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
             }
         }
@@ -564,7 +564,7 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
             }
 
             if (num_writ < cstr.size - 1) {
-                KOS_raise_errno(ctx, NULL);
+                KOS_raise_errno(ctx, KOS_NULL);
                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
             }
 
@@ -593,7 +593,7 @@ static KOS_OBJ_ID get_file_eof(KOS_CONTEXT ctx,
                                KOS_OBJ_ID  this_obj,
                                KOS_OBJ_ID  args_obj)
 {
-    FILE *file   = 0;
+    FILE *file   = KOS_NULL;
     int   error  = get_file_object(ctx, this_obj, &file, 1);
     int   status = 0;
 
@@ -614,7 +614,7 @@ static KOS_OBJ_ID get_file_error(KOS_CONTEXT ctx,
                                  KOS_OBJ_ID  this_obj,
                                  KOS_OBJ_ID  args_obj)
 {
-    FILE *file   = 0;
+    FILE *file   = KOS_NULL;
     int   error  = get_file_object(ctx, this_obj, &file, 1);
     int   status = 0;
 
@@ -634,9 +634,9 @@ static KOS_OBJ_ID get_file_fd(KOS_CONTEXT ctx,
                               KOS_OBJ_ID  this_obj,
                               KOS_OBJ_ID  args_obj)
 {
-    FILE *file   = 0;
+    FILE *file   = KOS_NULL;
     int   error  = get_file_object(ctx, this_obj, &file, 1);
-    int   fd = 0;
+    int   fd     = 0;
 
 #ifdef _WIN32
 #   define kos_fileno _fileno
@@ -704,7 +704,7 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
                                 KOS_OBJ_ID  this_obj,
                                 KOS_OBJ_ID  args_obj)
 {
-    FILE     *file  = 0;
+    FILE     *file  = KOS_NULL;
     int       error = get_file_object(ctx, this_obj, &file, 1);
     KOS_LOCAL info;
     KOS_LOCAL aux;
@@ -802,7 +802,7 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
         KOS_resume_context(ctx);
 
         if (error) {
-            KOS_raise_errno(ctx, NULL);
+            KOS_raise_errno(ctx, KOS_NULL);
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
 
@@ -868,7 +868,7 @@ static KOS_OBJ_ID get_file_size(KOS_CONTEXT ctx,
                                 KOS_OBJ_ID  args_obj)
 {
     int   error = KOS_SUCCESS;
-    FILE *file  = 0;
+    FILE *file  = KOS_NULL;
     long  orig_pos;
     long  size  = 0;
 
@@ -876,23 +876,23 @@ static KOS_OBJ_ID get_file_size(KOS_CONTEXT ctx,
 
     orig_pos = ftell(file);
     if (orig_pos < 0) {
-        KOS_raise_errno(ctx, NULL);
+        KOS_raise_errno(ctx, KOS_NULL);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
     if (fseek(file, 0, SEEK_END)) {
-        KOS_raise_errno(ctx, NULL);
+        KOS_raise_errno(ctx, KOS_NULL);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
     size = ftell(file);
     if (size < 0) {
-        KOS_raise_errno(ctx, NULL);
+        KOS_raise_errno(ctx, KOS_NULL);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
     if (fseek(file, orig_pos, SEEK_SET)) {
-        KOS_raise_errno(ctx, NULL);
+        KOS_raise_errno(ctx, KOS_NULL);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
@@ -915,7 +915,7 @@ static KOS_OBJ_ID get_file_pos(KOS_CONTEXT ctx,
                                KOS_OBJ_ID  this_obj,
                                KOS_OBJ_ID  args_obj)
 {
-    FILE *file  = 0;
+    FILE *file  = KOS_NULL;
     int   error = KOS_SUCCESS;
     long  pos   = 0;
 
@@ -928,7 +928,7 @@ static KOS_OBJ_ID get_file_pos(KOS_CONTEXT ctx,
     KOS_resume_context(ctx);
 
     if (pos < 0) {
-        KOS_raise_errno(ctx, NULL);
+        KOS_raise_errno(ctx, KOS_NULL);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
@@ -958,7 +958,7 @@ static KOS_OBJ_ID set_file_pos(KOS_CONTEXT ctx,
                                KOS_OBJ_ID  args_obj)
 {
     int        error  = KOS_SUCCESS;
-    FILE      *file   = 0;
+    FILE      *file   = KOS_NULL;
     int        whence = SEEK_SET;
     int64_t    pos;
     KOS_OBJ_ID arg;
@@ -980,7 +980,7 @@ static KOS_OBJ_ID set_file_pos(KOS_CONTEXT ctx,
     KOS_suspend_context(ctx);
 
     if (fseek(file, (long)pos, whence)) {
-        KOS_raise_errno(ctx, NULL);
+        KOS_raise_errno(ctx, KOS_NULL);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
@@ -1011,7 +1011,7 @@ static int add_std_file(KOS_CONTEXT ctx,
 
     KOS_object_set_private_ptr(obj, file);
 
-    error = KOS_module_add_global(ctx, module.o, name.o, obj, 0);
+    error = KOS_module_add_global(ctx, module.o, name.o, obj, KOS_NULL);
 
 cleanup:
     KOS_destroy_top_locals(ctx, &name, &module);

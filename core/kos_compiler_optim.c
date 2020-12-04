@@ -36,7 +36,7 @@ static void collapse(KOS_AST_NODE    *node,
                      const char      *begin,
                      uint16_t         length)
 {
-    node->children      = 0;
+    node->children      = KOS_NULL;
     node->type          = node_type;
     node->token.type    = token_type;
     node->token.keyword = keyword;
@@ -171,14 +171,14 @@ static void lookup_var(KOS_COMP_UNIT      *program,
 const KOS_AST_NODE *kos_get_const(KOS_COMP_UNIT      *program,
                                   const KOS_AST_NODE *node)
 {
-    KOS_VAR *var = 0;
+    KOS_VAR *var = KOS_NULL;
 
     if ( ! node || node->type != NT_IDENTIFIER)
         return node;
 
-    lookup_var(program, node, 1, &var, 0);
+    lookup_var(program, node, 1, &var, KOS_NULL);
 
-    return var->is_const ? var->value : 0;
+    return var->is_const ? var->value : KOS_NULL;
 }
 
 int kos_node_is_truthy(KOS_COMP_UNIT      *program,
@@ -263,7 +263,7 @@ static KOS_SCOPE *push_scope(KOS_COMP_UNIT      *program,
 
     assert(scope->parent_scope == program->scope_stack);
 
-    kos_red_black_walk(scope->vars, reset_var_state, 0);
+    kos_red_black_walk(scope->vars, reset_var_state, KOS_NULL);
 
     program->scope_stack = scope;
 
@@ -438,7 +438,7 @@ static int process_scope(KOS_COMP_UNIT *program,
             break;
 
         if (*is_terminal && program->optimize && node->next) {
-            node->next = 0;
+            node->next = KOS_NULL;
             ++program->num_optimizations;
         }
 
@@ -473,16 +473,16 @@ static int if_stmt(KOS_COMP_UNIT *program,
 
     if (is_truthy) {
         if (node->next->next) {
-            node->next->next = 0;
+            node->next->next = KOS_NULL;
             ++program->num_optimizations;
         }
     }
     else if (is_falsy) {
-        collapse(node, NT_BOOL_LITERAL, TT_KEYWORD, KW_TRUE, 0, 0);
+        collapse(node, NT_BOOL_LITERAL, TT_KEYWORD, KW_TRUE, KOS_NULL, 0);
         if (node->next->next)
             node->next = node->next->next;
         else
-            collapse(node->next, NT_EMPTY, TT_IDENTIFIER, KW_NONE, 0, 0);
+            collapse(node->next, NT_EMPTY, TT_IDENTIFIER, KW_NONE, KOS_NULL, 0);
         ++program->num_optimizations;
         is_truthy = 1;
     }
@@ -523,7 +523,7 @@ static int repeat_stmt(KOS_COMP_UNIT *program,
 
     if (*is_terminal && program->optimize) {
         if (node->token.keyword != KW_FALSE) {
-            collapse(node, NT_BOOL_LITERAL, TT_KEYWORD, KW_FALSE, 0, 0);
+            collapse(node, NT_BOOL_LITERAL, TT_KEYWORD, KW_FALSE, KOS_NULL, 0);
             ++program->num_optimizations;
         }
     }
@@ -562,7 +562,7 @@ static int for_stmt(KOS_COMP_UNIT *program,
     node = node->next;
     assert(node);
     if (is_falsy && node->type != NT_EMPTY) {
-        collapse(node, NT_EMPTY, TT_IDENTIFIER, KW_NONE, 0, 0);
+        collapse(node, NT_EMPTY, TT_IDENTIFIER, KW_NONE, KOS_NULL, 0);
         ++program->num_optimizations;
     }
 
@@ -573,7 +573,7 @@ static int for_stmt(KOS_COMP_UNIT *program,
     assert( ! node->next->next);
 
     if (is_falsy && node->next->type != NT_EMPTY) {
-        collapse(node->next, NT_EMPTY, TT_IDENTIFIER, KW_NONE, 0, 0);
+        collapse(node->next, NT_EMPTY, TT_IDENTIFIER, KW_NONE, KOS_NULL, 0);
         ++program->num_optimizations;
     }
 
@@ -583,7 +583,7 @@ static int for_stmt(KOS_COMP_UNIT *program,
         *is_terminal = TERM_NONE;
 
     if (*is_terminal && program->optimize && node->type != NT_EMPTY) {
-        collapse(node, NT_EMPTY, TT_IDENTIFIER, KW_NONE, 0, 0);
+        collapse(node, NT_EMPTY, TT_IDENTIFIER, KW_NONE, KOS_NULL, 0);
         ++program->num_optimizations;
     }
 
@@ -601,7 +601,7 @@ static int try_stmt(KOS_COMP_UNIT *program,
     int t3    = TERM_NONE;
 
     const KOS_NODE_TYPE node_type    = (KOS_NODE_TYPE)node->type;
-    KOS_AST_NODE       *finally_node = 0;
+    KOS_AST_NODE       *finally_node = KOS_NULL;
 
     push_scope(program, node);
 
@@ -635,7 +635,7 @@ static int try_stmt(KOS_COMP_UNIT *program,
         assert( ! var_node->next);
         assert(var_node->type == NT_IDENTIFIER);
 
-        lookup_var(program, var_node, 0, &var, 0);
+        lookup_var(program, var_node, 0, &var, KOS_NULL);
 
         assert(var);
         assert(var->is_active == VAR_INACTIVE);
@@ -731,7 +731,7 @@ static int case_stmt(KOS_COMP_UNIT *program,
     TRY(visit_node(program, node, is_terminal));
 
     if (*is_terminal && node->next)
-        collapse(node->next, NT_EMPTY, TT_IDENTIFIER, KW_NONE, 0, 0);
+        collapse(node->next, NT_EMPTY, TT_IDENTIFIER, KW_NONE, KOS_NULL, 0);
 
 cleanup:
     return error;
@@ -797,7 +797,7 @@ static int parameter_defaults(KOS_COMP_UNIT *program,
 
             TRY(visit_node(program, def_node, &is_terminal));
 
-            lookup_var(program, node->children, 1, &var, 0);
+            lookup_var(program, node->children, 1, &var, KOS_NULL);
             assert(var);
 
             ++num_def;
@@ -813,7 +813,7 @@ static int parameter_defaults(KOS_COMP_UNIT *program,
 
         KOS_VAR *var;
 
-        lookup_var(program, node->children, 1, &var, 0);
+        lookup_var(program, node->children, 1, &var, KOS_NULL);
         assert(var);
 
         assert(var->num_reads || ! var->num_assignments);
@@ -1142,7 +1142,7 @@ static int assignment(KOS_COMP_UNIT *program,
 
         if (node->type == NT_IDENTIFIER) {
 
-            KOS_VAR *var = 0;
+            KOS_VAR *var = KOS_NULL;
             int      is_local;
 
             lookup_var(program, node, is_lhs, &var, &is_local);
@@ -1156,7 +1156,7 @@ static int assignment(KOS_COMP_UNIT *program,
             }
 
             if ( ! var->num_reads_prev && var->type != VAR_GLOBAL) {
-                collapse(node, NT_VOID_LITERAL, TT_KEYWORD, KW_VOID, 0, 0);
+                collapse(node, NT_VOID_LITERAL, TT_KEYWORD, KW_VOID, KOS_NULL, 0);
                 ++program->num_optimizations;
             }
             else {
@@ -1521,7 +1521,7 @@ static void collapse_typeof(KOS_COMP_UNIT      *program,
                             const KOS_AST_NODE *a)
 {
     const KOS_NODE_TYPE a_type   = (KOS_NODE_TYPE)a->type;
-    const char         *type     = 0;
+    const char         *type     = KOS_NULL;
     uint16_t            type_len = 0;
 
     switch (a_type) {
@@ -1597,9 +1597,9 @@ static int operator_token(KOS_COMP_UNIT *program,
     int                 t;
     KOS_AST_NODE       *a     = node->children;
     KOS_AST_NODE       *b;
-    KOS_AST_NODE       *c     = 0;
+    KOS_AST_NODE       *c     = KOS_NULL;
     const KOS_AST_NODE *ca;
-    const KOS_AST_NODE *cb    = 0;
+    const KOS_AST_NODE *cb    = KOS_NULL;
     KOS_NODE_TYPE       a_type;
     KOS_NODE_TYPE       b_type;
 
@@ -1685,11 +1685,11 @@ static int operator_token(KOS_COMP_UNIT *program,
 
         case OT_LOGNOT: {
             if (kos_node_is_truthy(program, ca) && a->token.keyword != KW_FALSE) {
-                collapse(node, NT_BOOL_LITERAL, TT_KEYWORD, KW_FALSE, 0, 0);
+                collapse(node, NT_BOOL_LITERAL, TT_KEYWORD, KW_FALSE, KOS_NULL, 0);
                 ++program->num_optimizations;
             }
             else if (kos_node_is_falsy(program, ca) && a->token.keyword != KW_TRUE) {
-                collapse(node, NT_BOOL_LITERAL, TT_KEYWORD, KW_TRUE, 0, 0);
+                collapse(node, NT_BOOL_LITERAL, TT_KEYWORD, KW_TRUE, KOS_NULL, 0);
                 ++program->num_optimizations;
             }
             break;
@@ -2036,11 +2036,11 @@ static int visit_node(KOS_COMP_UNIT *program,
             break;
 
         case NT_FUNCTION_LITERAL:
-            error = function_literal(program, node, 0);
+            error = function_literal(program, node, KOS_NULL);
             break;
 
         case NT_CLASS_LITERAL:
-            error = class_literal(program, node, 0);
+            error = class_literal(program, node, KOS_NULL);
             break;
 
         case NT_IDENTIFIER:

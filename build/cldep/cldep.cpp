@@ -66,7 +66,7 @@ bool create_pipe(Handle* read, Handle* write)
 {
     SECURITY_ATTRIBUTES sa  = { };
     sa.nLength              = sizeof(sa);
-    sa.lpSecurityDescriptor = 0;
+    sa.lpSecurityDescriptor = KOS_NULL;
     sa.bInheritHandle       = TRUE;
 
     HANDLE read_handle  = INVALID_HANDLE_VALUE;
@@ -143,7 +143,7 @@ class DepGenerator {
                                &rule[0],
                                (DWORD)rule.size(),
                                &num_written,
-                               0) || num_written != rule.size()) {
+                               KOS_NULL) || num_written != rule.size()) {
                     printf("Error: Failed to write dep file \"%s\"\n", dep_file_name_.c_str());
                     return false;
                 }
@@ -158,7 +158,7 @@ class DepGenerator {
                                &line[0],
                                (DWORD)line.size(),
                                &num_written,
-                               0) || num_written != line.size()) {
+                               KOS_NULL) || num_written != line.size()) {
                     printf("Error: Failed to write to console\n");
                     return false;
                 }
@@ -254,7 +254,7 @@ int main(int argc, char *argv[])
     HANDLE dep_file = CreateFile(dep_file_name.c_str(),
                                  GENERIC_WRITE,
                                  0,
-                                 0,
+                                 KOS_NULL,
                                  CREATE_ALWAYS,
                                  FILE_ATTRIBUTE_NORMAL,
                                  0);
@@ -276,14 +276,14 @@ int main(int argc, char *argv[])
 
     DWORD exit_code = 1;
 
-    if (CreateProcess(0,
+    if (CreateProcess(KOS_NULL,
                       &cmd_line[0],
-                      0,
-                      0,
+                      KOS_NULL,
+                      KOS_NULL,
                       TRUE,
                       0,
-                      0,
-                      0,
+                      KOS_NULL,
+                      KOS_NULL,
                       &startup_info,
                       &process_info)) {
 
@@ -299,7 +299,7 @@ int main(int argc, char *argv[])
 
         for (;;) {
             DWORD num_read = 0;
-            if (!ReadFile(output, buf, sizeof(buf), &num_read, 0) || num_read == 0) {
+            if (!ReadFile(output, buf, sizeof(buf), &num_read, KOS_NULL) || num_read == 0) {
                 if (GetLastError() == ERROR_BROKEN_PIPE)
                     break;
                 printf("Error: Failed to read compiler output\n");

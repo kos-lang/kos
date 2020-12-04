@@ -108,7 +108,7 @@ int kos_unix_open(const char *filename, int flags)
 void kos_filebuf_init(KOS_FILEBUF *file_buf)
 {
     assert(file_buf);
-    file_buf->buffer = 0;
+    file_buf->buffer = KOS_NULL;
     file_buf->size   = 0;
 }
 
@@ -119,7 +119,7 @@ int kos_load_file(const char  *filename,
     int    error;
     long   lsize;
     size_t size;
-    FILE  *file = 0;
+    FILE  *file = KOS_NULL;
 
     assert(filename);
     assert(file_buf);
@@ -128,7 +128,7 @@ int kos_load_file(const char  *filename,
 
     TRY(is_file(filename));
 
-    file = kos_seq_fail() ? NULL :
+    file = kos_seq_fail() ? KOS_NULL :
            fopen(filename, "rb" KOS_FOPEN_CLOEXEC);
     if ( ! file)
         RAISE_ERROR(KOS_ERROR_ERRNO);
@@ -156,7 +156,7 @@ int kos_load_file(const char  *filename,
     if (size != fread((char *)file_buf->buffer, 1, size, file)) {
         PROF_FREE((void *)file_buf->buffer)
         free((void *)file_buf->buffer);
-        file_buf->buffer = 0;
+        file_buf->buffer = KOS_NULL;
         RAISE_ERROR(KOS_ERROR_ERRNO);
     }
 
@@ -175,7 +175,7 @@ void kos_unload_file(KOS_FILEBUF *file_buf)
     if (file_buf->buffer) {
         PROF_FREE((void *)file_buf->buffer)
         free((void *)file_buf->buffer);
-        file_buf->buffer = 0;
+        file_buf->buffer = KOS_NULL;
         file_buf->size   = 0;
     }
 }
@@ -183,7 +183,7 @@ void kos_unload_file(KOS_FILEBUF *file_buf)
 void kos_filebuf_init(KOS_FILEBUF *file_buf)
 {
     assert(file_buf);
-    file_buf->buffer = 0;
+    file_buf->buffer = KOS_NULL;
     file_buf->size   = 0;
 }
 
@@ -193,7 +193,7 @@ int kos_load_file(const char  *filename,
     int         error = KOS_SUCCESS;
     int         fd    = -1;
     struct stat st;
-    void       *addr  = 0;
+    void       *addr  = KOS_NULL;
 
     assert(filename);
     assert(file_buf);
@@ -209,7 +209,7 @@ int kos_load_file(const char  *filename,
 
     if (st.st_size) {
         addr = kos_seq_fail() ? MAP_FAILED :
-               mmap(0, st.st_size, PROT_READ, MAP_FILE | MAP_SHARED, fd, 0);
+               mmap(KOS_NULL, st.st_size, PROT_READ, MAP_FILE | MAP_SHARED, fd, 0);
         if (addr == MAP_FAILED)
             RAISE_ERROR(KOS_ERROR_ERRNO);
     }
@@ -229,7 +229,7 @@ void kos_unload_file(KOS_FILEBUF *file_buf)
     assert(file_buf);
     if (file_buf->buffer) {
         munmap((void *)file_buf->buffer, file_buf->size);
-        file_buf->buffer = 0;
+        file_buf->buffer = KOS_NULL;
         file_buf->size   = 0;
     }
 }
@@ -246,7 +246,7 @@ int kos_get_absolute_path(KOS_VECTOR *path)
     char *resolved_path;
 
 #ifdef _WIN32
-    resolved_path = _fullpath(0, path->buffer, 0);
+    resolved_path = _fullpath(KOS_NULL, path->buffer, 0);
 #   define need_free 1
 #else
 #   ifdef PATH_MAX
@@ -313,7 +313,7 @@ int kos_executable_path(KOS_VECTOR *buf)
     int  error = KOS_ERROR_NOT_FOUND;
     char path_buf[MAX_PATH];
 
-    const DWORD size = GetModuleFileName(NULL, path_buf, sizeof(path_buf));
+    const DWORD size = GetModuleFileName(KOS_NULL, path_buf, sizeof(path_buf));
 
     if (size < MAX_PATH) {
 
@@ -335,7 +335,7 @@ int kos_executable_path(KOS_VECTOR *buf)
     int      error = KOS_ERROR_NOT_FOUND;
     uint32_t size  = 0;
 
-    if (_NSGetExecutablePath(0, &size) == -1) {
+    if (_NSGetExecutablePath(KOS_NULL, &size) == -1) {
 
         error = KOS_vector_resize(buf, (size_t)size);
 
@@ -461,7 +461,7 @@ int64_t kos_get_time_us(void)
     int64_t        time_us = 0;
     struct timeval tv;
 
-    if (!gettimeofday(&tv, 0)) {
+    if (!gettimeofday(&tv, KOS_NULL)) {
 
         time_us = (int64_t)tv.tv_sec * 1000000;
 
