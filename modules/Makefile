@@ -40,6 +40,9 @@ endif
 c_files_math = kos_mod_math.c
 $(eval $(call EXTERNAL_MODULE,math))
 
+c_files_os = kos_mod_os.c
+$(eval $(call EXTERNAL_MODULE,os))
+
 c_files_re = kos_mod_re.c
 $(eval $(call EXTERNAL_MODULE,re))
 
