@@ -4,12 +4,12 @@
 
 #include "../inc/kos_entity.h"
 #include "../inc/kos_array.h"
+#include "../inc/kos_const_strings.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_memory.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_object.h"
 #include "../inc/kos_string.h"
-#include "kos_const_strings.h"
 #include "kos_heap.h"
 #include "kos_object_internal.h"
 #include <limits.h>

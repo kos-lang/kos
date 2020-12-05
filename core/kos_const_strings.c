@@ -2,7 +2,7 @@
  * Copyright (c) 2014-2020 Chris Dragan
  */
 
-#include "kos_const_strings.h"
+#include "../inc/kos_const_strings.h"
 
 #ifdef __cplusplus
 extern "C" {

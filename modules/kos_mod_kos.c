@@ -4,6 +4,7 @@
 
 #include "../inc/kos_array.h"
 #include "../inc/kos_buffer.h"
+#include "../inc/kos_const_strings.h"
 #include "../inc/kos_instance.h"
 #include "../inc/kos_entity.h"
 #include "../inc/kos_error.h"
@@ -13,7 +14,6 @@
 #include "../inc/kos_string.h"
 #include "../inc/kos_utils.h"
 #include "../inc/kos_version.h"
-#include "../core/kos_const_strings.h"
 #include "../core/kos_heap.h"
 #include "../core/kos_lexer.h"
 #include "../core/kos_object_internal.h"

@@ -3,6 +3,7 @@
  */
 
 #include "../inc/kos_array.h"
+#include "../inc/kos_const_strings.h"
 #include "../inc/kos_instance.h"
 #include "../inc/kos_entity.h"
 #include "../inc/kos_error.h"
@@ -11,7 +12,6 @@
 #include "../inc/kos_object.h"
 #include "../inc/kos_string.h"
 #include "../inc/kos_threads.h"
-#include "../core/kos_const_strings.h"
 #include "../core/kos_misc.h"
 #include "../core/kos_try.h"
 #include <math.h>

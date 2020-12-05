@@ -4,11 +4,11 @@
 
 #include "kos_test_tools.h"
 #include "../inc/kos_array.h"
+#include "../inc/kos_const_strings.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_instance.h"
 #include "../inc/kos_memory.h"
 #include "../core/kos_config.h"
-#include "../core/kos_const_strings.h"
 #include "../core/kos_system.h"
 #include "../core/kos_try.h"
 

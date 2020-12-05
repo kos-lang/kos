@@ -4,11 +4,11 @@
 
 #include "kos_threads_internal.h"
 #include "../inc/kos_array.h"
+#include "../inc/kos_const_strings.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_instance.h"
 #include "../inc/kos_malloc.h"
 #include "../inc/kos_utils.h"
-#include "kos_const_strings.h"
 #include "kos_debug.h"
 #include "kos_heap.h"
 #include "kos_object_internal.h"

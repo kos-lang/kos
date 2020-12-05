@@ -4,13 +4,13 @@
 
 #include "../inc/kos_array.h"
 #include "../inc/kos_bytecode.h"
+#include "../inc/kos_const_strings.h"
 #include "../inc/kos_instance.h"
 #include "../inc/kos_entity.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_object.h"
 #include "../inc/kos_string.h"
 #include "../core/kos_config.h"
-#include "../core/kos_const_strings.h"
 #include "../core/kos_object_internal.h"
 #include "../core/kos_vm.h"
 #include <stdio.h>

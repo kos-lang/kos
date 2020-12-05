@@ -5,13 +5,13 @@
 #include "../inc/kos_string.h"
 #include "../inc/kos_array.h"
 #include "../inc/kos_buffer.h"
+#include "../inc/kos_const_strings.h"
 #include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_memory.h"
 #include "../inc/kos_object.h"
 #include "../inc/kos_utf8.h"
 #include "../inc/kos_utils.h"
-#include "../core/kos_const_strings.h"
 #include "../core/kos_object_internal.h"
 #include <stdio.h>
 #include <string.h>
