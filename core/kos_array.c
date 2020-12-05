@@ -18,7 +18,7 @@
 #include "kos_try.h"
 #include <assert.h>
 
-KOS_DECLARE_ALIGNED(32, const struct KOS_CONST_ARRAY_S kos_empty_array) =
+KOS_API_VAR_DEF KOS_DECLARE_ALIGNED(32, const struct KOS_CONST_ARRAY_S KOS_empty_array) =
     { { { 0, 0 } }, { OBJ_ARRAY, 0, KOS_READ_ONLY, KOS_BADPTR } };
 
 KOS_DECLARE_STATIC_CONST_STRING(str_err_empty,         "array is empty");

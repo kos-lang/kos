@@ -863,7 +863,7 @@ static int vector_append_object(KOS_CONTEXT        ctx,
             KOS_OBJ_ID actual = KOS_call_function(ctx,
                                                   OBJPTR(DYNAMIC_PROP, value.o)->getter,
                                                   OBJPTR(ITERATOR, walk.o)->obj,
-                                                  KOS_CONST_ID(kos_empty_array));
+                                                  KOS_EMPTY_ARRAY);
             if (IS_BAD_PTR(actual)) {
                 assert(KOS_is_exception_pending(ctx));
                 KOS_clear_exception(ctx);
@@ -1255,7 +1255,7 @@ int KOS_array_push_expand(KOS_CONTEXT ctx,
 
             if (state != KOS_GEN_DONE) {
                 for (;;) {
-                    KOS_OBJ_ID ret = KOS_call_generator(ctx, value.o, KOS_VOID, KOS_CONST_ID(kos_empty_array));
+                    KOS_OBJ_ID ret = KOS_call_generator(ctx, value.o, KOS_VOID, KOS_EMPTY_ARRAY);
                     if (IS_BAD_PTR(ret)) { /* end of iterator */
                         if (KOS_is_exception_pending(ctx))
                             error = KOS_ERROR_EXCEPTION;
@@ -1671,7 +1671,7 @@ int KOS_iterator_next(KOS_CONTEXT ctx,
                 KOS_init_local_with(ctx, &iter, iter_id);
                 KOS_init_local_with(ctx, &obj,  obj_id);
 
-                obj_id = KOS_call_generator(ctx, obj.o, KOS_VOID, KOS_CONST_ID(kos_empty_array));
+                obj_id = KOS_call_generator(ctx, obj.o, KOS_VOID, KOS_EMPTY_ARRAY);
 
                 iter_id = KOS_destroy_top_locals(ctx, &obj, &iter);
 

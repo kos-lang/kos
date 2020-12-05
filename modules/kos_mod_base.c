@@ -152,7 +152,7 @@ static KOS_OBJ_ID object_iterator(KOS_CONTEXT      ctx,
                 value.o = KOS_call_function(ctx,
                                             OBJPTR(DYNAMIC_PROP, value.o)->getter,
                                             OBJPTR(ITERATOR, walk.o)->obj,
-                                            KOS_CONST_ID(kos_empty_array));
+                                            KOS_EMPTY_ARRAY);
                 if (IS_BAD_PTR(value.o)) {
                     assert(KOS_is_exception_pending(ctx));
                     KOS_clear_exception(ctx);
@@ -665,7 +665,7 @@ static KOS_OBJ_ID string_constructor(KOS_CONTEXT ctx,
                         for (;;) {
                             KOS_TYPE type;
 
-                            ret.o = KOS_call_generator(ctx, obj.o, KOS_VOID, KOS_CONST_ID(kos_empty_array));
+                            ret.o = KOS_call_generator(ctx, obj.o, KOS_VOID, KOS_EMPTY_ARRAY);
                             if (IS_BAD_PTR(ret.o)) { /* end of iterator */
                                 if (KOS_is_exception_pending(ctx))
                                     RAISE_ERROR(KOS_ERROR_EXCEPTION);
@@ -1064,7 +1064,7 @@ static KOS_OBJ_ID array_constructor(KOS_CONTEXT ctx,
                         walk_val.o = KOS_call_function(ctx,
                                                        OBJPTR(DYNAMIC_PROP, walk_val.o)->getter,
                                                        OBJPTR(ITERATOR, walk.o)->obj,
-                                                       KOS_CONST_ID(kos_empty_array));
+                                                       KOS_EMPTY_ARRAY);
                         if (IS_BAD_PTR(walk_val.o)) {
                             assert(KOS_is_exception_pending(ctx));
                             KOS_clear_exception(ctx);
@@ -1103,7 +1103,7 @@ static KOS_OBJ_ID array_constructor(KOS_CONTEXT ctx,
 
                     for (;;) {
 
-                        gen_ret.o = KOS_call_generator(ctx, arg.o, KOS_VOID, KOS_CONST_ID(kos_empty_array));
+                        gen_ret.o = KOS_call_generator(ctx, arg.o, KOS_VOID, KOS_EMPTY_ARRAY);
                         if (IS_BAD_PTR(gen_ret.o)) { /* end of iterator */
                             if (KOS_is_exception_pending(ctx))
                                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
@@ -1338,7 +1338,7 @@ static KOS_OBJ_ID buffer_constructor(KOS_CONTEXT ctx,
                         int64_t  value;
                         uint8_t *data;
 
-                        KOS_OBJ_ID ret_val = KOS_call_generator(ctx, arg.o, KOS_VOID, KOS_CONST_ID(kos_empty_array));
+                        KOS_OBJ_ID ret_val = KOS_call_generator(ctx, arg.o, KOS_VOID, KOS_EMPTY_ARRAY);
                         if (IS_BAD_PTR(ret_val)) { /* end of iterator */
                             if (KOS_is_exception_pending(ctx))
                                 RAISE_ERROR(KOS_ERROR_EXCEPTION);

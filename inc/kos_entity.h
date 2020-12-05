@@ -274,6 +274,16 @@ struct KOS_CONST_STRING_S {
     } object;
 };
 
+struct KOS_CONST_ARRAY_S {
+    struct KOS_CONST_OBJECT_ALIGNMENT_S align;
+    struct {
+        uintptr_t  size_and_type;
+        uint32_t   size;
+        uint32_t   flags;
+        KOS_OBJ_ID data;
+    } object;
+};
+
 #define DECLARE_CONST_OBJECT(name, type, value)                     \
     KOS_DECLARE_ALIGNED(32, const struct KOS_CONST_OBJECT_S name) = \
     { { { 0, 0 } }, { (type), (value) } }
@@ -313,15 +323,17 @@ extern "C" {
 KOS_API extern const struct KOS_CONST_OBJECT_S KOS_void;
 KOS_API extern const struct KOS_CONST_OBJECT_S KOS_false;
 KOS_API extern const struct KOS_CONST_OBJECT_S KOS_true;
+KOS_API extern const struct KOS_CONST_ARRAY_S  KOS_empty_array;
 
 #ifdef __cplusplus
 }
 #endif
 
-#define KOS_VOID    KOS_CONST_ID(KOS_void)
-#define KOS_FALSE   KOS_CONST_ID(KOS_false)
-#define KOS_TRUE    KOS_CONST_ID(KOS_true)
-#define KOS_BOOL(v) ( (v) ? KOS_TRUE : KOS_FALSE )
+#define KOS_VOID        KOS_CONST_ID(KOS_void)
+#define KOS_FALSE       KOS_CONST_ID(KOS_false)
+#define KOS_TRUE        KOS_CONST_ID(KOS_true)
+#define KOS_BOOL(v)     ( (v) ? KOS_TRUE : KOS_FALSE )
+#define KOS_EMPTY_ARRAY KOS_CONST_ID(KOS_empty_array)
 
 typedef void (*KOS_FINALIZE)(KOS_CONTEXT ctx,
                              void       *priv);

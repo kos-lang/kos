@@ -1729,7 +1729,7 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
                                          (uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode));
                         out = OBJPTR(DYNAMIC_PROP, out)->getter;
 
-                        out = KOS_call_function(ctx, out, src, KOS_CONST_ID(kos_empty_array));
+                        out = KOS_call_function(ctx, out, src, KOS_EMPTY_ARRAY);
 
                         assert(ctx->regs_idx == regs_idx);
                     }
@@ -1880,7 +1880,7 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
                                      (uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode));
                     out = OBJPTR(DYNAMIC_PROP, out)->getter;
 
-                    out = KOS_call_function(ctx, out, obj, KOS_CONST_ID(kos_empty_array));
+                    out = KOS_call_function(ctx, out, obj, KOS_EMPTY_ARRAY);
                     TRY_OBJID(out);
 
                     assert(ctx->regs_idx == regs_idx);
@@ -3004,7 +3004,7 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
                         KOS_OBJ_ID this_obj = KOS_VOID;
 
                         error = prepare_call(ctx, instr, func.o, &this_obj,
-                                             KOS_CONST_ID(kos_empty_array), 0, 0, (uint8_t)rdest);
+                                             KOS_EMPTY_ARRAY, 0, 0, (uint8_t)rdest);
                         if (error) {
                             KOS_destroy_top_locals(ctx, &func, &iter);
                             goto cleanup;
@@ -3070,7 +3070,7 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
                             value = KOS_call_function(ctx,
                                                       value,
                                                       KOS_atomic_read_relaxed_obj(OBJPTR(ITERATOR, iter.o)->obj),
-                                                      KOS_CONST_ID(kos_empty_array));
+                                                      KOS_EMPTY_ARRAY);
                             TRY_OBJID(value);
 
                             assert(ctx->regs_idx == regs_idx);

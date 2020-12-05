@@ -210,18 +210,6 @@ static inline KOS_OBJ_ID kos_get_array_storage(KOS_OBJ_ID obj_id)
 int kos_array_copy_storage(KOS_CONTEXT ctx,
                            KOS_OBJ_ID  obj_id);
 
-struct KOS_CONST_ARRAY_S {
-    struct KOS_CONST_OBJECT_ALIGNMENT_S align;
-    struct {
-        uintptr_t  size_and_type;
-        uint32_t   size;
-        uint32_t   flags;
-        KOS_OBJ_ID data;
-    } object;
-};
-
-extern const struct KOS_CONST_ARRAY_S kos_empty_array;
-
 /*==========================================================================*/
 /* KOS_BUFFER                                                               */
 /*==========================================================================*/
