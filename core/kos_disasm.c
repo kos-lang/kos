@@ -539,5 +539,7 @@ void kos_disassemble(const char                           *filename,
             size -= instr_size;
     }
 
+    fflush(stdout);
+
     KOS_vector_destroy(&const_buf);
 }

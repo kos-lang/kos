@@ -1162,6 +1162,8 @@ static void disassemble(struct RE_OBJ *re, const char *re_cstr)
 
         printf("%08X:%-25s %-17s%s\n", (unsigned)offs, bytes, desc->str_instr, buf);
     }
+
+    fflush(stdout);
 }
 
 static void finalize(KOS_CONTEXT ctx, void *priv)
