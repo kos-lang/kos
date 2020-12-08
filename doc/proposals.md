@@ -15,9 +15,13 @@
 
 * Use _ as operator for empty extraction instead of void, like in Python
 
+* Allow _ in parameters of the target of -> stream operator
+
 * Now that we handle x... - throw error if too many args are provided!
 
 * Reduce need for passing module objects, e.g. when creating builtin dyn props
+
+* Allow referencing module objects from the language, add a way to extract list of modules
 
 * Add string.prototype.swapcase()
 
