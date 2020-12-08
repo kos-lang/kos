@@ -222,6 +222,7 @@ static int get_env_array(KOS_CONTEXT           ctx,
     /* If inheriting environment, join vars from environment with overrides from the call */
     if (inherit_env) {
 
+#ifndef _WIN32
         char **env = environ;
 
         in_obj.o = obj_id;
@@ -250,6 +251,7 @@ static int get_env_array(KOS_CONTEXT           ctx,
                 ++est_num_env;
             }
         }
+#endif
 
         in_obj.o = KOS_new_iterator(ctx, in_obj.o, KOS_SHALLOW);
         TRY_OBJID(in_obj.o);

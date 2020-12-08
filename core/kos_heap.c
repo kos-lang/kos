@@ -162,7 +162,7 @@ int kos_heap_init(KOS_INSTANCE *inst)
     heap->malloc_size     = 0;
     heap->max_heap_size   = KOS_MAX_HEAP_SIZE;
     heap->max_malloc_size = KOS_MAX_HEAP_SIZE;
-    heap->gc_threshold    = KOS_MAX_HEAP_SIZE * KOS_GC_THRESHOLD / 100U;
+    heap->gc_threshold    = (uint32_t)(((uint64_t)KOS_MAX_HEAP_SIZE * KOS_GC_THRESHOLD) / 100U);
     heap->free_pages      = KOS_NULL;
     heap->used_pages.head = KOS_NULL;
     heap->used_pages.tail = KOS_NULL;
