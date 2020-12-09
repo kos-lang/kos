@@ -18,45 +18,59 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifndef _WIN32
+#ifdef _WIN32
+#   define WIN32_LEAN_AND_MEAN
+#   pragma warning( push )
+#   pragma warning( disable : 4255 4668 )
+#   include <windows.h>
+#   pragma warning( pop )
+#   pragma warning( disable : 4996 ) /* 'sscanf': This function may be unsafe */
+#else
 #   include <errno.h>
 #   include <sys/ioctl.h>
 #   include <termios.h>
 #   include <unistd.h>
 #endif
 
-#define install_ctrlc_signal(handler, old_action) \
-    install_signal(SIGINT, (handler), (old_action))
-
-#define restore_ctrlc_signal(old_action) restore_signal(SIGINT, (old_action))
+static int check_error(FILE *file)
+{
+    return ferror(file) ? KOS_ERROR_ERRNO : KOS_SUCCESS_RETURN;
+}
 
 #ifdef _WIN32
 
-#pragma warning( disable : 4611 ) /* interaction between '_setjmp' and C++ object destruction is non-portable */
-
-static jmp_buf jmpbuf;
-
-static void ctrlc_signal_handler(int sig)
+static int console_write(const char *data,
+                         size_t      size)
 {
-    if (sig == SIGINT)
-        longjmp(jmpbuf, sig);
+    DWORD num_written = 0;
+    if ( ! WriteConsole(GetStdHandle(STD_OUTPUT_HANDLE),
+                        data,
+                        (DWORD)size,
+                        &num_written,
+                        KOS_NULL) || (num_written != size))
+        return KOS_SUCCESS_RETURN;
+
+    return KOS_SUCCESS;
 }
 
-typedef void (*signal_handler)(int);
-
-#define set_jump() setjmp(jmpbuf)
-
-static int install_signal(int sig, signal_handler handler, signal_handler *old_action)
+static int console_read(void)
 {
-    *old_action = signal(sig, handler);
+    uint8_t c        = 0;
+    DWORD   num_read = 0;
 
-    return ((*old_action == SIG_ERR) || kos_seq_fail()) ? KOS_ERROR_ERRNO : KOS_SUCCESS;
+    if ( ! ReadConsole(GetStdHandle(STD_INPUT_HANDLE),
+                       &c,
+                       1,
+                       &num_read,
+                       KOS_NULL))
+    {
+        return EOF;
+    }
+
+    return c;
 }
 
-static void restore_signal(int sig, signal_handler *old_action)
-{
-    (void)signal(sig, *old_action);
-}
+#define is_term_set() 1
 
 #else
 
@@ -79,101 +93,36 @@ static void restore_signal(int sig, signal_handler *old_action)
     (void)sigaction(sig, old_action, KOS_NULL);
 }
 
+static int console_write(const char *data,
+                         size_t      size)
+{
+    if (fwrite(data, 1, size, stdout) != size)
+        return check_error(stdout);
+
+    return KOS_SUCCESS;
+}
+
+#define console_read getchar
+
+#define is_term_set() getenv("TERM")
+
 #endif
-
-#ifdef _WIN32
-
-static const char str_prompt_first_line[]      = "> ";
-static const char str_prompt_subsequent_line[] = "_ ";
-
-int kos_getline_init(KOS_GETLINE *state)
-{
-    state->interactive = kos_is_stdin_interactive();
-    return KOS_SUCCESS;
-}
-
-int kos_getline(KOS_GETLINE      *state,
-                enum KOS_PROMPT_E prompt,
-                KOS_VECTOR       *buf)
-{
-    if (state->interactive)
-        printf("%s", prompt == PROMPT_FIRST_LINE ? str_prompt_first_line
-                                                 : str_prompt_subsequent_line);
-
-    for (;;) {
-        const size_t   old_size  = buf->size;
-        const size_t   increment = 4096U;
-        size_t         num_read;
-        signal_handler old_signal;
-        char*          ret_buf;
-
-        if (KOS_vector_resize(buf, old_size + increment)) {
-            fprintf(stderr, "Out of memory\n");
-            return KOS_ERROR_OUT_OF_MEMORY;
-        }
-
-        if ( ! set_jump()) {
-            install_ctrlc_signal(ctrlc_signal_handler, &old_signal);
-
-            ret_buf = fgets(buf->buffer + old_size, (int)increment, stdin);
-
-            restore_ctrlc_signal(&old_signal);
-        }
-        else {
-            printf("\n");
-            restore_ctrlc_signal(&old_signal);
-            ret_buf = buf->buffer + old_size;
-            *ret_buf = 0;
-            buf->size = old_size;
-            return KOS_ERROR_INTERRUPTED;
-        }
-
-        if ( ! ret_buf) {
-
-            buf->size = old_size;
-
-            if (feof(stdin))
-                return KOS_SUCCESS_RETURN;
-
-            fprintf(stderr, "Failed reading from stdin\n");
-            return KOS_ERROR_ERRNO;
-        }
-
-        num_read = strlen(buf->buffer + old_size);
-
-        buf->size = old_size + num_read;
-
-        if (num_read + 1 < increment)
-            break;
-    }
-
-    return KOS_SUCCESS;
-}
-
-#else
-
-static KOS_ATOMIC(uint32_t) window_dimensions_changed;
-
-static void sig_winch(int sig)
-{
-    assert(sig == SIGWINCH);
-
-    KOS_atomic_write_relaxed_u32(window_dimensions_changed, 1);
-}
-
-static int check_error(FILE *file)
-{
-    return ferror(file) ? KOS_ERROR_ERRNO : KOS_SUCCESS_RETURN;
-}
 
 static int send_char(char c)
 {
-    return (putchar(c) != EOF) ? KOS_SUCCESS : check_error(stdout);
+    return console_write(&c, 1);
 }
 
 static int send_escape(unsigned param, char code)
 {
-    return fprintf(stdout, "\x1B[%u%c", param, code) > 3 ? KOS_SUCCESS : check_error(stdout);
+    char      esc[16];
+    const int len   = snprintf(esc, sizeof(esc), "\x1B[%u%c", param, code);
+    int       error = KOS_SUCCESS_RETURN;
+
+    if ((size_t)len < sizeof(esc))
+        error = console_write(esc, (size_t)len);
+
+    return error;
 }
 
 static int move_cursor_right(unsigned offset)
@@ -194,7 +143,7 @@ static int receive_cursor_pos(unsigned *pos)
     unsigned  cols  = 0;
     char      buf[16];
 
-    c = getchar();
+    c = console_read();
 
     if (c == EOF)
         return check_error(stdin);
@@ -205,7 +154,7 @@ static int receive_cursor_pos(unsigned *pos)
     }
 
     do {
-        c = getchar();
+        c = console_read();
 
         if (c == EOF)
             return check_error(stdin);
@@ -224,7 +173,64 @@ static int receive_cursor_pos(unsigned *pos)
     return KOS_SUCCESS;
 }
 
-static unsigned get_num_columns()
+#ifdef _WIN32
+static unsigned get_num_columns(void)
+{
+    CONSOLE_SCREEN_BUFFER_INFO info;
+    if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &info))
+        return info.dwSize.X;
+
+    /* Default to 80 columns */
+    return 80;
+}
+
+typedef struct {
+    DWORD input_mode;
+    DWORD output_mode;
+} TERM_INFO;
+
+static TERM_INFO old_term_info;
+
+static int init_terminal(TERM_INFO *old_info)
+{
+    const HANDLE h_input  = GetStdHandle(STD_INPUT_HANDLE);
+    const HANDLE h_output = GetStdHandle(STD_OUTPUT_HANDLE);
+
+    /* TODO report errors properly */
+
+    if ((h_input == INVALID_HANDLE_VALUE) || (h_output == INVALID_HANDLE_VALUE))
+        return KOS_ERROR_ERRNO;
+
+    if ( ! GetConsoleMode(h_input, &old_info->input_mode))
+        return KOS_ERROR_ERRNO;
+
+    if ( ! GetConsoleMode(h_output, &old_info->output_mode))
+        return KOS_ERROR_ERRNO;
+
+    if ( ! SetConsoleMode(h_input, ENABLE_VIRTUAL_TERMINAL_INPUT))
+        return KOS_ERROR_ERRNO;
+
+    if ( ! SetConsoleMode(h_output, ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING)) {
+        SetConsoleMode(h_input, old_info->input_mode);
+        return KOS_ERROR_ERRNO;
+    }
+
+    return KOS_SUCCESS;
+}
+
+static void restore_terminal(TERM_INFO *old_info)
+{
+    SetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), old_info->input_mode);
+    SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), old_info->output_mode);
+}
+
+#define notify_window_dimensions_changed() do { } while (0)
+
+#define window_dimensions_changed() 1U
+
+#else
+
+static unsigned get_num_columns(void)
 {
     static int     esc_cursor_failed = 0;
     struct winsize ws;
@@ -280,6 +286,25 @@ static TERM_INFO old_term_info;
 
 static signal_handler old_sig_winch;
 
+static KOS_ATOMIC(uint32_t) window_dimensions_changed_flag;
+
+static void notify_window_dimensions_changed()
+{
+    KOS_atomic_write_relaxed_u32(window_dimensions_changed_flag, 1);
+}
+
+static uint32_t window_dimensions_changed()
+{
+    return KOS_atomic_swap_u32(window_dimensions_changed_flag, 0);
+}
+
+static void sig_winch(int sig)
+{
+    assert(sig == SIGWINCH);
+
+    notify_window_dimensions_changed();
+}
+
 static int init_terminal(TERM_INFO *old_info)
 {
     int error = KOS_ERROR_ERRNO;
@@ -314,6 +339,8 @@ static void restore_terminal(TERM_INFO *old_info)
 
     (void)tcsetattr(fileno(stdin), TCSANOW, old_info);
 }
+
+#endif
 
 typedef struct KOS_GETLINE_HISTORY_NODE_S HIST_NODE;
 
@@ -432,6 +459,7 @@ static int clear_and_redraw(struct TERM_EDIT *edit)
     unsigned          cursor_delta = 0;
     unsigned          num_left     = edit->num_columns - edit->prompt_size + 1;
     unsigned          num_to_write;
+    int               error;
 
     assert(edit->cursor_pos.logical  <= edit->line_size);
     assert(edit->cursor_pos.physical <= edit->line->size);
@@ -444,8 +472,9 @@ static int clear_and_redraw(struct TERM_EDIT *edit)
     while (edit->cursor_pos.logical > edit->last_visible_column)
         decrement_pos(edit, &edit->cursor_pos);
 
-    if (fwrite(edit->prompt, 1, edit->prompt_size, stdout) != edit->prompt_size)
-        return check_error(stdout);
+    error = console_write(edit->prompt, edit->prompt_size);
+    if (error)
+        return error;
 
     assert(cur <= end);
 
@@ -465,14 +494,15 @@ static int clear_and_redraw(struct TERM_EDIT *edit)
 
         cursor_delta -= cursor_rel;
 
-        if (fwrite(begin, 1, num_to_write, stdout) != num_to_write)
-            return check_error(stdout);
+        error = console_write(begin, num_to_write);
+        if (error)
+            return error;
 
         if ( ! edit->interactive)
             return KOS_SUCCESS;
 
         if (num_left) {
-            const int error = send_escape(0, 'K');
+            error = send_escape(0, 'K');
             if (error)
                 return error;
         }
@@ -787,8 +817,8 @@ static int save_to_temp_history(struct TERM_EDIT *edit)
             new_node->prev->next = new_node;
     }
 
-    node->size      = edit->line->size;
-    node->line_size = edit->line_size;
+    node->size      = (uint16_t)edit->line->size;
+    node->line_size = (uint16_t)edit->line_size;
 
     memcpy(&node->buffer[0], edit->line->buffer, edit->line->size);
 
@@ -990,11 +1020,14 @@ static int action_clear_line(struct TERM_EDIT *edit)
 static int action_clear_screen(struct TERM_EDIT *edit)
 {
     static const char clear_escape[] = "\x1B[H\x1B[2J";
+    int               error;
 
-    if (fwrite(clear_escape, 1, sizeof(clear_escape) - 1, stdout) != sizeof(clear_escape) - 1)
-        return check_error(stdout);
+    error = console_write(clear_escape, sizeof(clear_escape) - 1);
 
-    return clear_and_redraw(edit);
+    if ( ! error)
+        error = clear_and_redraw(edit);
+
+    return error;
 }
 
 static int insert_char(struct TERM_EDIT *edit, char c)
@@ -1036,6 +1069,9 @@ static int insert_char(struct TERM_EDIT *edit, char c)
 
 static int action_stop_process(struct TERM_EDIT *edit)
 {
+#ifdef _WIN32
+    return KOS_SUCCESS;
+#else
     int error;
 
     if (edit->interactive)
@@ -1056,6 +1092,7 @@ static int action_stop_process(struct TERM_EDIT *edit)
     }
 
     return clear_and_redraw(edit);
+#endif
 }
 
 static int action_tab_complete(struct TERM_EDIT *edit)
@@ -1066,7 +1103,7 @@ static int action_tab_complete(struct TERM_EDIT *edit)
 
 static int dispatch_esc(struct TERM_EDIT *edit)
 {
-    int c = getchar();
+    int c = console_read();
 
     switch (c) {
 
@@ -1075,7 +1112,7 @@ static int dispatch_esc(struct TERM_EDIT *edit)
 
         case 'O': {
 
-            c = getchar();
+            c = console_read();
 
             switch (c) {
                 case EOF: return check_error(stdin);
@@ -1093,7 +1130,7 @@ static int dispatch_esc(struct TERM_EDIT *edit)
 
         case '[': {
 
-            c = getchar();
+            c = console_read();
 
             switch (c) {
 
@@ -1103,7 +1140,7 @@ static int dispatch_esc(struct TERM_EDIT *edit)
                     int after_semicolon = 0;
 
                     do {
-                        c = getchar();
+                        c = console_read();
 
                         switch (c) {
 
@@ -1182,7 +1219,7 @@ static int dispatch_key(struct TERM_EDIT *edit, int *key)
             /* fall-through */
         case KEY_LF:
             *key = KEY_ENTER;
-            return (fwrite("\r\n", 1, 2, stdout) == 2) ? KOS_SUCCESS : check_error(stdout);
+            return console_write("\r\n", 2);
 
         case EOF:           return check_error(stdin);
         case KEY_ESC:       return dispatch_esc(edit);
@@ -1233,18 +1270,18 @@ int kos_getline(KOS_GETLINE      *state,
     KOS_mempool_init(&edit.temp_allocator);
     error = init_history(&edit, state->head);
 
-    if ( ! error && kos_is_stdin_interactive() && getenv("TERM")) {
+    if ( ! error && kos_is_stdin_interactive() && is_term_set()) {
 
         edit.interactive = 1;
 
         error = init_terminal(&old_term_info);
     }
 
-    KOS_atomic_write_relaxed_u32(window_dimensions_changed, 1);
+    notify_window_dimensions_changed();
 
     while ( ! error && (key != KEY_ENTER)) {
 
-        if (KOS_atomic_swap_u32(window_dimensions_changed, 0)) {
+        if (window_dimensions_changed()) {
 
             const unsigned min_width = edit.prompt_size + 2;
             const unsigned max_width = 9999U;
@@ -1259,7 +1296,7 @@ int kos_getline(KOS_GETLINE      *state,
 
         if ( ! error) {
 
-            key = getchar();
+            key = console_read();
 
             error = dispatch_key(&edit, &key);
         }
@@ -1282,5 +1319,3 @@ int kos_getline(KOS_GETLINE      *state,
 
     return error;
 }
-
-#endif
