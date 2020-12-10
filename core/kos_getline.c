@@ -39,16 +39,25 @@ static int check_error(FILE *file)
 
 #ifdef _WIN32
 
+static int win_console_interactive = 0;
+
 static int console_write(const char *data,
                          size_t      size)
 {
-    DWORD num_written = 0;
-    if ( ! WriteConsole(GetStdHandle(STD_OUTPUT_HANDLE),
-                        data,
-                        (DWORD)size,
-                        &num_written,
-                        KOS_NULL) || (num_written != size))
-        return KOS_SUCCESS_RETURN;
+    if (win_console_interactive) {
+
+        DWORD num_written = 0;
+        if ( ! WriteConsole(GetStdHandle(STD_OUTPUT_HANDLE),
+                            data,
+                            (DWORD)size,
+                            &num_written,
+                            KOS_NULL) || (num_written != size))
+            return KOS_SUCCESS_RETURN;
+    }
+    else {
+        if (fwrite(data, 1, size, stdout) != size)
+            return check_error(stdout);
+    }
 
     return KOS_SUCCESS;
 }
@@ -58,14 +67,15 @@ static int console_read(void)
     uint8_t c        = 0;
     DWORD   num_read = 0;
 
+    if ( ! win_console_interactive)
+        return getchar();
+
     if ( ! ReadConsole(GetStdHandle(STD_INPUT_HANDLE),
                        &c,
                        1,
                        &num_read,
                        KOS_NULL))
-    {
         return EOF;
-    }
 
     return c;
 }
@@ -191,6 +201,11 @@ typedef struct {
 
 static TERM_INFO old_term_info;
 
+static BOOL WINAPI ctrl_c_handler(DWORD ctrl_type)
+{
+    return ctrl_type == CTRL_C_EVENT;
+}
+
 static int init_terminal(TERM_INFO *old_info)
 {
     const HANDLE h_input  = GetStdHandle(STD_INPUT_HANDLE);
@@ -207,7 +222,7 @@ static int init_terminal(TERM_INFO *old_info)
     if ( ! GetConsoleMode(h_output, &old_info->output_mode))
         return KOS_ERROR_ERRNO;
 
-    if ( ! SetConsoleMode(h_input, ENABLE_VIRTUAL_TERMINAL_INPUT))
+    if ( ! SetConsoleMode(h_input, ENABLE_WINDOW_INPUT | ENABLE_VIRTUAL_TERMINAL_INPUT))
         return KOS_ERROR_ERRNO;
 
     if ( ! SetConsoleMode(h_output, ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING)) {
@@ -215,12 +230,16 @@ static int init_terminal(TERM_INFO *old_info)
         return KOS_ERROR_ERRNO;
     }
 
+    SetConsoleCtrlHandler(ctrl_c_handler, TRUE);
+
     return KOS_SUCCESS;
 }
 
 static void restore_terminal(TERM_INFO *old_info)
 {
-    SetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), old_info->input_mode);
+    SetConsoleCtrlHandler(ctrl_c_handler, FALSE);
+
+    SetConsoleMode(GetStdHandle(STD_INPUT_HANDLE),  old_info->input_mode);
     SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), old_info->output_mode);
 }
 
@@ -1276,6 +1295,10 @@ int kos_getline(KOS_GETLINE      *state,
 
         error = init_terminal(&old_term_info);
     }
+
+#ifdef _WIN32
+    win_console_interactive = edit.interactive;
+#endif
 
     notify_window_dimensions_changed();
 
