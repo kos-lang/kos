@@ -145,44 +145,6 @@ static int move_cursor_left(unsigned offset)
     return send_escape(offset, 'D');
 }
 
-static int receive_cursor_pos(unsigned *pos)
-{
-    int       c;
-    unsigned  i     = 0;
-    unsigned  rows  = 0;
-    unsigned  cols  = 0;
-    char      buf[16];
-
-    c = console_read();
-
-    if (c == EOF)
-        return check_error(stdin);
-
-    if (c != 0x1B) {
-        ungetc(c, stdin);
-        return KOS_ERROR_ERRNO;
-    }
-
-    do {
-        c = console_read();
-
-        if (c == EOF)
-            return check_error(stdin);
-
-        buf[i++] = (char)c;
-
-    } while (((c < 'A') || (c > 'Z')) && (i < sizeof(buf) - 1));
-
-    buf[i] = 0;
-
-    if (sscanf(buf, "[%u;%uR", &rows, &cols) != 2)
-        return KOS_ERROR_ERRNO;
-
-    *pos = cols;
-
-    return KOS_SUCCESS;
-}
-
 #ifdef _WIN32
 static unsigned get_num_columns(void)
 {
@@ -248,6 +210,44 @@ static void restore_terminal(TERM_INFO *old_info)
 #define window_dimensions_changed() 1U
 
 #else
+
+static int receive_cursor_pos(unsigned *pos)
+{
+    int       c;
+    unsigned  i     = 0;
+    unsigned  rows  = 0;
+    unsigned  cols  = 0;
+    char      buf[16];
+
+    c = console_read();
+
+    if (c == EOF)
+        return check_error(stdin);
+
+    if (c != 0x1B) {
+        ungetc(c, stdin);
+        return KOS_ERROR_ERRNO;
+    }
+
+    do {
+        c = console_read();
+
+        if (c == EOF)
+            return check_error(stdin);
+
+        buf[i++] = (char)c;
+
+    } while (((c < 'A') || (c > 'Z')) && (i < sizeof(buf) - 1));
+
+    buf[i] = 0;
+
+    if (sscanf(buf, "[%u;%uR", &rows, &cols) != 2)
+        return KOS_ERROR_ERRNO;
+
+    *pos = cols;
+
+    return KOS_SUCCESS;
+}
 
 static unsigned get_num_columns(void)
 {
