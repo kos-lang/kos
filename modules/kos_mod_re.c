@@ -1840,9 +1840,9 @@ cleanup:
     return error ? KOS_BADPTR : regex.o;
 }
 
-/* @item re re.prototype.search()
+/* @item re re.prototype.find()
  *
- *     re.prototype.search(string, pos=0, end_pos=void)
+ *     re.prototype.find(string, pos=0, end_pos=void)
  *
  * Finds the first location in the `string` which matches the regular
  * expression object.
@@ -1863,11 +1863,11 @@ cleanup:
  *
  * Example:
  *
- *     > re(r"down.*(rabbit)").search("tumbling down the rabbit hole")
+ *     > re(r"down.*(rabbit)").find("tumbling down the rabbit hole")
  */
-static KOS_OBJ_ID re_search(KOS_CONTEXT ctx,
-                            KOS_OBJ_ID  this_obj,
-                            KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID re_find(KOS_CONTEXT ctx,
+                          KOS_OBJ_ID  this_obj,
+                          KOS_OBJ_ID  args_obj)
 {
     int                  error     = KOS_SUCCESS;
     uint32_t             begin_pos = 0;
@@ -1942,8 +1942,8 @@ KOS_INIT_MODULE(re)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     KOS_init_local_with(ctx, &module, module_obj);
     KOS_init_local(     ctx, &proto);
 
-    TRY_ADD_CONSTRUCTOR(    ctx, module.o,          "re_uncached", re_ctor,   1, &proto.o);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "search",      re_search, 1);
+    TRY_ADD_CONSTRUCTOR(    ctx, module.o,          "re_uncached", re_ctor, 1, &proto.o);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "find",        re_find, 1);
 
 cleanup:
     KOS_destroy_top_locals(ctx, &proto, &module);

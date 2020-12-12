@@ -23,7 +23,7 @@ fun find_all(regex, str)
     const found = []
     var pos = 0
     loop {
-        const match = regex.search(str, pos)
+        const match = regex.find(str, pos)
         if ! match {
             break
         }
@@ -88,218 +88,218 @@ do {
 
 do {
     const r = re.re("[-]")
-    assert check(r.search("abc-d"), 3, 4)
+    assert check(r.find("abc-d"), 3, 4)
 }
 
 do {
     const r = re.re("[^-]+")
-    assert check(r.search("-ab.c-"), 1, 5)
+    assert check(r.find("-ab.c-"), 1, 5)
 }
 
 do {
     const r = re.re("^a.b$")
-    assert check(r.search("acb"), 0, 3)
-    assert check(r.search("aab"), 0, 3)
-    assert check(r.search("abb"), 0, 3)
-    assert check(r.search("a.b"), 0, 3)
-    assert check(r.search("a\x{80}b"), 0, 3)
-    assert check(r.search("a\x{10000}b"), 0, 3)
-    assert check(r.search("xyazbqm", 2, -2), 2, 5)
-    assert check(r.search("XY\nazb\nqm"), 3, 6)
-    assert r.search("") == void
-    assert r.search("aacb") == void
-    assert r.search("acbb") == void
-    assert r.search("ac") == void
-    assert r.search("acB") == void
-    assert r.search("cb") == void
-    assert r.search("Acb") == void
-    assert r.search("xyazbqm", 2) == void
-    assert r.search("xyazbqm", 2, void) == void
+    assert check(r.find("acb"), 0, 3)
+    assert check(r.find("aab"), 0, 3)
+    assert check(r.find("abb"), 0, 3)
+    assert check(r.find("a.b"), 0, 3)
+    assert check(r.find("a\x{80}b"), 0, 3)
+    assert check(r.find("a\x{10000}b"), 0, 3)
+    assert check(r.find("xyazbqm", 2, -2), 2, 5)
+    assert check(r.find("XY\nazb\nqm"), 3, 6)
+    assert r.find("") == void
+    assert r.find("aacb") == void
+    assert r.find("acbb") == void
+    assert r.find("ac") == void
+    assert r.find("acB") == void
+    assert r.find("cb") == void
+    assert r.find("Acb") == void
+    assert r.find("xyazbqm", 2) == void
+    assert r.find("xyazbqm", 2, void) == void
 }
 
 do {
     const r = re.re("x.\x{10000}")
-    assert check(r.search("xy\x{10000}"), 0, 3)
-    assert check(r.search("xxxxx.\x{10000}\x{10000}\x{10000}"), 4, 7)
-    assert check(r.search("\x{10000}x.\x{10000}xxxx"), 1, 4)
-    assert check(r.search("ABxz\x{10000}qm", 2), 2, 5)
-    assert r.search("ABxz\x{10000}qm", 2, void)
-    assert r.search("ABxz\x{10000}qm", 2, -2)
-    assert r.search("") == void
-    assert r.search("x") == void
-    assert r.search("x\x{80}") == void
-    assert r.search("x\x{10000}") == void
-    assert r.search("xy\x{80}\x{10000}") == void
-    assert r.search("ABxz\x{10000}qm", 3, -2) == void
-    assert r.search("ABxz\x{10000}qm", 2, -3) == void
+    assert check(r.find("xy\x{10000}"), 0, 3)
+    assert check(r.find("xxxxx.\x{10000}\x{10000}\x{10000}"), 4, 7)
+    assert check(r.find("\x{10000}x.\x{10000}xxxx"), 1, 4)
+    assert check(r.find("ABxz\x{10000}qm", 2), 2, 5)
+    assert r.find("ABxz\x{10000}qm", 2, void)
+    assert r.find("ABxz\x{10000}qm", 2, -2)
+    assert r.find("") == void
+    assert r.find("x") == void
+    assert r.find("x\x{80}") == void
+    assert r.find("x\x{10000}") == void
+    assert r.find("xy\x{80}\x{10000}") == void
+    assert r.find("ABxz\x{10000}qm", 3, -2) == void
+    assert r.find("ABxz\x{10000}qm", 2, -3) == void
 }
 
 do {
     const r = re.re("")
-    assert check(r.search(""), 0, 0)
-    assert check(r.search("a"), 0, 0)
-    assert check(r.search("abcdefgh"), 0, 0)
+    assert check(r.find(""), 0, 0)
+    assert check(r.find("a"), 0, 0)
+    assert check(r.find("abcdefgh"), 0, 0)
 }
 
 do {
     const r = re.re("^")
-    assert check(r.search(""), 0, 0)
-    assert check(r.search("a"), 0, 0)
-    assert check(r.search("abcdefgh"), 0, 0)
+    assert check(r.find(""), 0, 0)
+    assert check(r.find("a"), 0, 0)
+    assert check(r.find("abcdefgh"), 0, 0)
 }
 
 do {
     const r = re.re("$")
-    assert check(r.search(""), 0, 0)
-    assert check(r.search("a"), 1, 1)
-    assert check(r.search("abcdefgh"), 8, 8)
+    assert check(r.find(""), 0, 0)
+    assert check(r.find("a"), 1, 1)
+    assert check(r.find("abcdefgh"), 8, 8)
 }
 
 do {
     const r = re.re("")
-    expect_fail(() => r.search())
-    expect_fail(() => r.search(1))
-    expect_fail(() => r.search(void))
-    expect_fail(() => r.search([]))
-    expect_fail(() => r.search("x", void))
-    expect_fail(() => r.search("x", void, 1))
-    expect_fail(() => r.search("x", 1, ""))
+    expect_fail(() => r.find())
+    expect_fail(() => r.find(1))
+    expect_fail(() => r.find(void))
+    expect_fail(() => r.find([]))
+    expect_fail(() => r.find("x", void))
+    expect_fail(() => r.find("x", void, 1))
+    expect_fail(() => r.find("x", 1, ""))
 }
 
 do {
     const r = re.re("ab|cd|ef")
-    assert check(r.search("ab"), 0, 2)
-    assert check(r.search("cd"), 0, 2)
-    assert check(r.search("ef"), 0, 2)
-    assert check(r.search("abcdef"), 0, 2)
-    assert check(r.search("xaby"), 1, 3)
-    assert check(r.search("xcdy"), 1, 3)
-    assert check(r.search("xefy"), 1, 3)
-    assert r.search("bc") == void
-    assert r.search("xy") == void
-    assert r.search("xay") == void
-    assert r.search("xby") == void
-    assert r.search("xdy") == void
-    assert r.search("xey") == void
+    assert check(r.find("ab"), 0, 2)
+    assert check(r.find("cd"), 0, 2)
+    assert check(r.find("ef"), 0, 2)
+    assert check(r.find("abcdef"), 0, 2)
+    assert check(r.find("xaby"), 1, 3)
+    assert check(r.find("xcdy"), 1, 3)
+    assert check(r.find("xefy"), 1, 3)
+    assert r.find("bc") == void
+    assert r.find("xy") == void
+    assert r.find("xay") == void
+    assert r.find("xby") == void
+    assert r.find("xdy") == void
+    assert r.find("xey") == void
 }
 
 do {
     const r = re.re("a||b")
-    assert check(r.search(""), 0, 0)
-    assert check(r.search("a"), 0, 1)
-    assert check(r.search("b"), 0, 0)
-    assert check(r.search("c"), 0, 0)
-    assert check(r.search("de"), 0, 0)
+    assert check(r.find(""), 0, 0)
+    assert check(r.find("a"), 0, 1)
+    assert check(r.find("b"), 0, 0)
+    assert check(r.find("c"), 0, 0)
+    assert check(r.find("de"), 0, 0)
 }
 
 do {
     const r = re.re("^12|a(bc|d)$")
-    assert check(r.search("12x"), 0, 2)
-    assert check(r.search("xabc"), 1, 4)
-    assert check(r.search("_xx_ad"), 4, 6)
-    assert r.search("_12x") == void
-    assert r.search("ab") == void
-    assert r.search("xabcd") == void
-    assert r.search("_xx_adb") == void
-    assert r.search("xa") == void
+    assert check(r.find("12x"), 0, 2)
+    assert check(r.find("xabc"), 1, 4)
+    assert check(r.find("_xx_ad"), 4, 6)
+    assert r.find("_12x") == void
+    assert r.find("ab") == void
+    assert r.find("xabcd") == void
+    assert r.find("_xx_adb") == void
+    assert r.find("xa") == void
 }
 
 do {
     const r = re.re("ab*?c")
-    assert check(r.search("xacy"), 1, 3)
-    assert check(r.search("xabcy"), 1, 4)
-    assert check(r.search("xabbbbcy"), 1, 7)
-    assert check(r.search("xabbbcyabcz"), 1, 6)
-    assert r.search("xbcy") == void
-    assert r.search("xaby") == void
+    assert check(r.find("xacy"), 1, 3)
+    assert check(r.find("xabcy"), 1, 4)
+    assert check(r.find("xabbbbcy"), 1, 7)
+    assert check(r.find("xabbbcyabcz"), 1, 6)
+    assert r.find("xbcy") == void
+    assert r.find("xaby") == void
 }
 
 do {
     const r = re.re("ab+?c")
-    assert r.search("xacy") == void
-    assert check(r.search("xabcy"), 1, 4)
-    assert check(r.search("xabbbbcy"), 1, 7)
-    assert r.search("xbcy") == void
-    assert r.search("xaby") == void
+    assert r.find("xacy") == void
+    assert check(r.find("xabcy"), 1, 4)
+    assert check(r.find("xabbbbcy"), 1, 7)
+    assert r.find("xbcy") == void
+    assert r.find("xaby") == void
 }
 
 do {
     const r = re.re("ab{3,5}?c")
-    assert r.search("xacy") == void
-    assert r.search("xabcy") == void
-    assert r.search("xabbcy") == void
-    assert check(r.search("xabbbcy"), 1, 6)
-    assert check(r.search("xabbbbcy"), 1, 7)
-    assert check(r.search("xabbbbbcy"), 1, 8)
-    assert r.search("xabbbbbbcy") == void
-    assert r.search("xabbbbbbbcy") == void
-    assert r.search("xbcy") == void
-    assert r.search("xaby") == void
+    assert r.find("xacy") == void
+    assert r.find("xabcy") == void
+    assert r.find("xabbcy") == void
+    assert check(r.find("xabbbcy"), 1, 6)
+    assert check(r.find("xabbbbcy"), 1, 7)
+    assert check(r.find("xabbbbbcy"), 1, 8)
+    assert r.find("xabbbbbbcy") == void
+    assert r.find("xabbbbbbbcy") == void
+    assert r.find("xbcy") == void
+    assert r.find("xaby") == void
 }
 
 do {
     const r = re.re("ab*c")
-    assert check(r.search("xacy"), 1, 3)
-    assert check(r.search("xabcy"), 1, 4)
-    assert check(r.search("xabbbbcy"), 1, 7)
-    assert r.search("xbcy") == void
-    assert r.search("xaby") == void
+    assert check(r.find("xacy"), 1, 3)
+    assert check(r.find("xabcy"), 1, 4)
+    assert check(r.find("xabbbbcy"), 1, 7)
+    assert r.find("xbcy") == void
+    assert r.find("xaby") == void
 }
 
 do {
     const r = re.re("ab+c")
-    assert r.search("xacy") == void
-    assert check(r.search("xabcy"), 1, 4)
-    assert check(r.search("xabbbbcy"), 1, 7)
-    assert r.search("xbcy") == void
-    assert r.search("xaby") == void
+    assert r.find("xacy") == void
+    assert check(r.find("xabcy"), 1, 4)
+    assert check(r.find("xabbbbcy"), 1, 7)
+    assert r.find("xbcy") == void
+    assert r.find("xaby") == void
 }
 
 do {
     const r = re.re("ab{3,5}c")
-    assert r.search("xacy") == void
-    assert r.search("xabcy") == void
-    assert r.search("xabbcy") == void
-    assert check(r.search("xabbbcy"), 1, 6)
-    assert check(r.search("xabbbbcy"), 1, 7)
-    assert check(r.search("xabbbbbcy"), 1, 8)
-    assert r.search("xabbbbbbcy") == void
-    assert r.search("xabbbbbbbcy") == void
-    assert r.search("xbcy") == void
-    assert r.search("xaby") == void
+    assert r.find("xacy") == void
+    assert r.find("xabcy") == void
+    assert r.find("xabbcy") == void
+    assert check(r.find("xabbbcy"), 1, 6)
+    assert check(r.find("xabbbbcy"), 1, 7)
+    assert check(r.find("xabbbbbcy"), 1, 8)
+    assert r.find("xabbbbbbcy") == void
+    assert r.find("xabbbbbbbcy") == void
+    assert r.find("xbcy") == void
+    assert r.find("xaby") == void
 }
 
 do {
     const r = re.re("a(b|cd)??e")
-    assert check(r.search("xaey"), 1, 3)
-    assert check(r.search("xabey"), 1, 4)
-    assert check(r.search("xacdey"), 1, 5)
-    assert r.search("xabbey") == void
-    assert r.search("xabcdey") == void
-    assert r.search("xacdcdey") == void
+    assert check(r.find("xaey"), 1, 3)
+    assert check(r.find("xabey"), 1, 4)
+    assert check(r.find("xacdey"), 1, 5)
+    assert r.find("xabbey") == void
+    assert r.find("xabcdey") == void
+    assert r.find("xacdcdey") == void
 }
 
 do {
     const r = re.re("a(b|cd)?e")
-    assert check(r.search("xaey"), 1, 3)
-    assert check(r.search("xabey"), 1, 4)
-    assert check(r.search("xacdey"), 1, 5)
-    assert r.search("xabbey") == void
-    assert r.search("xabcdey") == void
-    assert r.search("xacdcdey") == void
+    assert check(r.find("xaey"), 1, 3)
+    assert check(r.find("xabey"), 1, 4)
+    assert check(r.find("xacdey"), 1, 5)
+    assert r.find("xabbey") == void
+    assert r.find("xabcdey") == void
+    assert r.find("xacdcdey") == void
 }
 
 do {
     const lazy   = re.re("a(b|c)+?c")
     const greedy = re.re("a(b|c)+c")
-    assert check(lazy.search("aaabbcccd"), 2, 6)
-    assert check(greedy.search("aaabbcccd"), 2, 8)
+    assert check(lazy.find("aaabbcccd"), 2, 6)
+    assert check(greedy.find("aaabbcccd"), 2, 8)
 }
 
 do {
     const rg = re.re("(ab)|(cd)e|(x|yz|w)")
 
-    const a1 = rg.search("1234ab56")
+    const a1 = rg.find("1234ab56")
     assert a1.begin == 4
     assert a1.end   == 6
     assert a1.groups.size == 3
@@ -309,7 +309,7 @@ do {
     assert a1.groups[0].begin == 4
     assert a1.groups[0].end   == 6
 
-    const a2 = rg.search("12acdef56")
+    const a2 = rg.find("12acdef56")
     assert a2.begin == 3
     assert a2.end   == 6
     assert a2.groups.size == 3
@@ -319,7 +319,7 @@ do {
     assert a2.groups[1].begin == 3
     assert a2.groups[1].end   == 5
 
-    const a3 = rg.search("12acdfyz56")
+    const a3 = rg.find("12acdfyz56")
     assert a3.begin == 6
     assert a3.end   == 8
     assert a3.groups.size == 3
@@ -333,7 +333,7 @@ do {
 do {
     const rg = re.re("(a(b|c|d)*e)f")
 
-    const a = rg.search("0123aaabcbdbcefgh")
+    const a = rg.find("0123aaabcbdbcefgh")
     assert a.begin == 6
     assert a.end   == 15
     assert a.groups.size     == 2
@@ -348,29 +348,29 @@ do {
 do {
     const r = re.re("[a]")
 
-    const a = r.search("ABCbcdefg01234")
+    const a = r.find("ABCbcdefg01234")
     assert a == void
 
-    assert check(r.search("xyzabcabc"), 3, 4)
+    assert check(r.find("xyzabcabc"), 3, 4)
 }
 
 do {
     const r = re.re("[a-cb-ed-fb-c]*")
 
-    assert check(r.search("this afabac dab"), 0, 0)
-    assert check(r.search("afabac dab"), 0, 6)
+    assert check(r.find("this afabac dab"), 0, 0)
+    assert check(r.find("afabac dab"), 0, 6)
 }
 
 do {
     const r = re.re("[a-cb-ed-fb-c]+")
 
-    assert check(r.search("this afabac dab"), 5, 11)
+    assert check(r.find("this afabac dab"), 5, 11)
 }
 
 do {
     const r = re.re("[^a-cb-ed-fb-c]+")
 
-    assert check(r.search("afabac this bac"), 6, 12)
+    assert check(r.find("afabac this bac"), 6, 12)
 }
 
 do {
@@ -450,13 +450,13 @@ do {
 
 do {
     const r = re.re(r"\\")
-    check(r.search("abc\\d"), 3, 4)
-    assert r.search("abc_d") == void
+    check(r.find("abc\\d"), 3, 4)
+    assert r.find("abc_d") == void
 }
 
 do {
     const r = re.re(r"x\d")
-    check(r.search("abc9dx9e"), 5, 7)
+    check(r.find("abc9dx9e"), 5, 7)
 }
 
 do {
@@ -476,61 +476,61 @@ do {
 
 do {
     const r = re.re(r"\<")
-    assert r.search("") == void
-    assert r.search(" ") == void
-    assert r.search("+-*/") == void
-    assert check(r.search("a"), 0, 0)
-    assert check(r.search(" a"), 1, 1)
-    assert check(r.search(" +=012 "), 3, 3)
+    assert r.find("") == void
+    assert r.find(" ") == void
+    assert r.find("+-*/") == void
+    assert check(r.find("a"), 0, 0)
+    assert check(r.find(" a"), 1, 1)
+    assert check(r.find(" +=012 "), 3, 3)
 }
 
 do {
     const r = re.re(r"\>")
-    assert r.search("") == void
-    assert r.search(" ") == void
-    assert r.search("+-*/") == void
-    assert check(r.search("a"), 1, 1)
-    assert check(r.search(" a "), 2, 2)
-    assert check(r.search(" +=012+ "), 6, 6)
+    assert r.find("") == void
+    assert r.find(" ") == void
+    assert r.find("+-*/") == void
+    assert check(r.find("a"), 1, 1)
+    assert check(r.find(" a "), 2, 2)
+    assert check(r.find(" +=012+ "), 6, 6)
 }
 
 do {
     const r = re.re(r"\b")
-    assert r.search("") == void
-    assert r.search(" ") == void
-    assert r.search("+-*/") == void
-    assert check(r.search("a"), 0, 0)
-    assert check(r.search("a", 1), 1, 1)
-    assert check(r.search(" a ", 1), 1, 1)
-    assert check(r.search(" a ", 2), 2, 2)
-    assert check(r.search(" +=012+ "), 3, 3)
-    assert check(r.search(" +=012+ ", 4), 6, 6)
+    assert r.find("") == void
+    assert r.find(" ") == void
+    assert r.find("+-*/") == void
+    assert check(r.find("a"), 0, 0)
+    assert check(r.find("a", 1), 1, 1)
+    assert check(r.find(" a ", 1), 1, 1)
+    assert check(r.find(" a ", 2), 2, 2)
+    assert check(r.find(" +=012+ "), 3, 3)
+    assert check(r.find(" +=012+ ", 4), 6, 6)
 }
 
 do {
     const r = re.re(r"\B")
-    assert check(r.search(""), 0, 0)
-    assert check(r.search(" "), 0, 0)
-    assert check(r.search("+-*/"), 0, 0)
-    assert r.search("a") == void
-    assert r.search("a b c d") == void
-    assert check(r.search("a b cd e"), 5, 5)
-    assert check(r.search("a b c  e"), 6, 6)
+    assert check(r.find(""), 0, 0)
+    assert check(r.find(" "), 0, 0)
+    assert check(r.find("+-*/"), 0, 0)
+    assert r.find("a") == void
+    assert r.find("a b c d") == void
+    assert check(r.find("a b cd e"), 5, 5)
+    assert check(r.find("a b c  e"), 6, 6)
 }
 
 do {
     const r = re.re(r"\<.*\>")
-    assert check(r.search("....abc..."), 4, 7)
+    assert check(r.find("....abc..."), 4, 7)
 }
 
 do {
     const r = re.re(r"\b.*\b")
-    assert check(r.search("....abc..."), 4, 7)
+    assert check(r.find("....abc..."), 4, 7)
 }
 
 do {
     const r = re.re(r"\B.*\B")
-    assert check(r.search("a b cdef g"), 5, 7)
+    assert check(r.find("a b cdef g"), 5, 7)
 }
 
 do {

@@ -12,8 +12,8 @@ public class re
         this.regex  = cache[regex]
         this.string = regex
     }
-    search(args...) {
-        return this.regex.search(args...)
+    find(args...) {
+        return this.regex.find(args...)
     }
 }
 

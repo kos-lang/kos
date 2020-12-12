@@ -184,6 +184,8 @@ Table of Contents
     * [sin()](#sin)
     * [sqrt()](#sqrt)
     * [tan()](#tan)
+  * [os](#os)
+      * [os.spawn()](#osspawn)
   * [random](#random)
     * [rand\_float()](#rand_float)
     * [rand\_integer()](#rand_integer)
@@ -195,7 +197,7 @@ Table of Contents
   * [re](#re)
     * [clear\_cache()](#clear_cache)
     * [re()](#re)
-      * [re.prototype.search()](#reprototypesearch)
+      * [re.prototype.find()](#reprototypefind)
 <!--te-->
 base
 ====
@@ -3808,6 +3810,36 @@ Example:
     > math.tan(math.pi / 4)
     1.0
 
+os
+==
+
+os.spawn()
+----------
+
+    os.spawn(spawn_desc)
+
+Spawns a new process described by `spawn_desc`.
+
+`spawn_desc` is an object containing the following properties:
+ * program        - Path to the program to start, or name of the program on PATH.
+ * args           - (Optional) Array of arguments for the program.  If not specified,
+                    an empty list of arguments is passed to the spawned program.
+ * env            - (Optional) Object containing envionment variables for the spawned program.
+                    The object is walked in a shallow manner to extract the environment.
+                    If `inherit_env` is `true`, these are added on top of the current process's
+                    environment.
+ * cwd            - (Optional) Directory to start the program in.
+ * inherit_env    - (Optional) If `true` the current process's environment is passed to
+                    the spawned program together with environment variables from `env`.
+                    Otherwise only environment variables from `env` are passed (if any).
+                    Defaults to `true`.
+ * capture_stdout - (Optional) If `true`, stdout is captured into a string.
+ * capture_stderr - (Optional) If `true`, stderr is captured into a string.
+ * stdin          - (Optional) File object open for reading or a string or buffer
+                    which is fed into the spawned program on stdin.
+ * stdout         - (Optional) File object open for writing.
+ * stderr         - (Optional) File object open for writing.
+
 random
 ======
 
@@ -3993,10 +4025,10 @@ Example:
 
     > re("...")
 
-re.prototype.search()
----------------------
+re.prototype.find()
+-------------------
 
-    re.prototype.search(string, pos=0, end_pos=void)
+    re.prototype.find(string, pos=0, end_pos=void)
 
 Finds the first location in the `string` which matches the regular
 expression object.
@@ -4017,5 +4049,5 @@ found.
 
 Example:
 
-    > re(r"down.*(rabbit)").search("tumbling down the rabbit hole")
+    > re(r"down.*(rabbit)").find("tumbling down the rabbit hole")
 
