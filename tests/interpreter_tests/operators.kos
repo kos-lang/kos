@@ -820,6 +820,18 @@ do {
     assert negate("x")   == false
 }
 
+do {
+    fun ok
+    {
+        return true
+    }
+
+    assert ok() == true
+    assert ! ok() == false
+    assert "\( ok() )" == "true"
+    assert "\( ! ok() )" == "false"
+}
+
 ##############################################################################
 # <<
 do {

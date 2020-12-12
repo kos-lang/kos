@@ -3355,7 +3355,7 @@ static int log_not(KOS_COMP_UNIT      *program,
     int      error;
     int      jump_offs;
     unsigned negated = 0;
-    KOS_REG *src     = *reg;
+    KOS_REG *src     = KOS_NULL;
 
     node = node->children;
     assert(node);
@@ -3364,7 +3364,15 @@ static int log_not(KOS_COMP_UNIT      *program,
     TRY(visit_cond_node(program, node, &src, &negated));
     assert(src);
 
-    TRY(gen_dest_reg(program, reg, src));
+    TRY(gen_reg(program, reg));
+
+    if (src == *reg) {
+        src = KOS_NULL;
+
+        TRY(gen_reg(program, &src));
+
+        TRY(gen_instr2(program, INSTR_MOVE, src->reg, (*reg)->reg));
+    }
 
     TRY(gen_instr1(program, INSTR_LOAD_FALSE, (*reg)->reg));
 
@@ -3375,8 +3383,7 @@ static int log_not(KOS_COMP_UNIT      *program,
 
     update_jump_offs(program, jump_offs, program->cur_offs);
 
-    if (src != *reg)
-        free_reg(program, src);
+    free_reg(program, src);
 
 cleanup:
     return error;
