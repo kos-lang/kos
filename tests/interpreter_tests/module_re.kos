@@ -551,3 +551,22 @@ do {
     assert result[1] == " - "
     assert result[2] == "&"
 }
+
+do {
+    const r = re.re("[a-z.](\d+)[a-z.](\d+)[a-z.]")
+    const result = r.find("xyz123.456abc")
+    assert result.match == "z123.456a"
+    assert result.match_groups.size == 2
+    assert result.match_groups[0] == "123"
+    assert result.match_groups[1] == "456"
+}
+
+do {
+    const r = re.re("a((_)|(\d))b")
+    const result = r.find("1_2a3bc")
+    assert result.match == "a3b"
+    assert result.match_groups.size == 3
+    assert result.match_groups[0] == "3"
+    assert result.match_groups[1] == void
+    assert result.match_groups[2] == "3"
+}

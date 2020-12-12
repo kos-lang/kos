@@ -23,6 +23,8 @@ KOS_DECLARE_STATIC_CONST_STRING(str_err_regex_not_a_string, "regular expression 
 KOS_DECLARE_STATIC_CONST_STRING(str_begin,                  "begin");
 KOS_DECLARE_STATIC_CONST_STRING(str_end,                    "end");
 KOS_DECLARE_STATIC_CONST_STRING(str_groups,                 "groups");
+KOS_DECLARE_STATIC_CONST_STRING(str_match,                  "match");
+KOS_DECLARE_STATIC_CONST_STRING(str_match_groups,           "match_groups");
 KOS_DECLARE_STATIC_CONST_STRING(str_string,                 "string");
 
 /*
@@ -123,30 +125,6 @@ KOS_DECLARE_STATIC_CONST_STRING(str_string,                 "string");
  * Group ::= "(" [ GroupOpt ] AlternateMatchSequence ")"
  *
  * GroupOpt ::= TODO
- *
- *
- * Instructions
- * ------------
- *
- * - group
- *      BEGIN_GROUP <group.no> - save string index in group slot
- *      END_GROUP <group.no> - save string index in group slot
- * - alternative
- *      FORK <jump.offs> - push current string index and jump offset, used to retry if matching fails
- *          -- TODO how to undo group matches during back tracking?
- *      JUMP <jump.offs>
- * - count
- *      (GREEDY|LAZY)_COUNT <jump.offs> <min> <max> <lazy|greedy>
- *          - if greedy (default), at every iteration, push the skip jump on the stack
- *            and try to match the inside of the loop
- *          - if lazy, at every iteration, push the inside of the loop on the stack
- *            and execute the jump skipping the loop
- *
- *    +---------+
- *    v         |
- *  --+--> a -> + -+->
- *    |            ^
- *    +------------+
  */
 
 enum RE_FLAG {
@@ -1406,10 +1384,14 @@ static int match_class(uint32_t             code,
 
 static int create_found_groups(KOS_CONTEXT                      ctx,
                                KOS_OBJ_ID                       groups_obj,
+                               KOS_OBJ_ID                       match_groups_obj,
+                               KOS_OBJ_ID                       str_obj,
                                const struct RE_OBJ             *re,
                                const struct RE_POSS_STACK_ITEM *found)
 {
     KOS_LOCAL       groups;
+    KOS_LOCAL       match_groups;
+    KOS_LOCAL       str;
     KOS_LOCAL       group;
     const uint16_t *group_ptr;
     const uint16_t *end_ptr;
@@ -1417,6 +1399,8 @@ static int create_found_groups(KOS_CONTEXT                      ctx,
     int             error = KOS_SUCCESS;
 
     KOS_init_local_with(ctx, &groups, groups_obj);
+    KOS_init_local_with(ctx, &match_groups, match_groups_obj);
+    KOS_init_local_with(ctx, &str, str_obj);
     KOS_init_local(ctx, &group);
 
     group_ptr = &found->counts_and_groups[re->num_counts];
@@ -1431,14 +1415,21 @@ static int create_found_groups(KOS_CONTEXT                      ctx,
 
         if ((begin != 0xFFFFU) && (end != 0xFFFFU)) {
 
+            KOS_OBJ_ID match_obj;
+
             group.o = KOS_new_object(ctx);
             TRY_OBJID(group.o);
 
+            TRY(KOS_array_write(ctx, groups.o, i, group.o));
+
             TRY(KOS_set_property(ctx, group.o, KOS_CONST_ID(str_begin), TO_SMALL_INT(begin)));
             TRY(KOS_set_property(ctx, group.o, KOS_CONST_ID(str_end),   TO_SMALL_INT(end)));
-        }
 
-        TRY(KOS_array_write(ctx, groups.o, i, group.o));
+            match_obj = KOS_string_slice(ctx, str.o, begin, end);
+            TRY_OBJID(match_obj);
+
+            TRY(KOS_array_write(ctx, match_groups.o, i, match_obj));
+        }
     }
 
 cleanup:
@@ -1487,14 +1478,18 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
     const uint16_t *const bytecode_end = bytecode + re->bytecode_size;
     KOS_OBJ_ID            retval       = KOS_VOID;
     KOS_LOCAL             ret;
+    KOS_LOCAL             str;
+    KOS_LOCAL             match_groups;
     KOS_LOCAL             groups;
     KOS_STRING_ITER       iter;
     int                   error        = KOS_SUCCESS;
 
-    KOS_init_locals(ctx, 2, &groups, &ret);
+    KOS_init_locals(ctx, 4, &groups, &match_groups, &str, &ret);
     TRY(reset_possibility_stack(poss_stack, ctx, re));
 
-    KOS_init_string_iter(&iter, str_obj);
+    str.o = str_obj;
+
+    KOS_init_string_iter(&iter, str.o);
     iter.end = iter.ptr + ((uintptr_t)end_pos << iter.elem_size);
     iter.ptr += (uintptr_t)pos << iter.elem_size;
 
@@ -1573,7 +1568,7 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
             BEGIN_INSTRUCTION(MATCH_LINE_BEGIN): {
                 KOS_STRING_ITER iter0;
 
-                KOS_init_string_iter(&iter0, str_obj);
+                KOS_init_string_iter(&iter0, str.o);
                 iter0.ptr += (uintptr_t)begin_pos << iter0.elem_size;
 
                 if (iter.ptr > iter0.ptr) {
@@ -1603,7 +1598,7 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
                 uint32_t        prev_code;
                 KOS_STRING_ITER iter0;
 
-                KOS_init_string_iter(&iter0, str_obj);
+                KOS_init_string_iter(&iter0, str.o);
 
                 prev_code = (iter.ptr > iter0.ptr) ? peek_prev_char(&iter) : ' ';
                 cur_code  = peek_next_char(&iter);
@@ -1625,7 +1620,7 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
             BEGIN_INSTRUCTION(BEGIN_GROUP): {
                 const uint16_t group_id = bytecode[1];
 
-                get_group(poss_stack, re->num_counts, group_id)[0] = get_iter_pos(str_obj, &iter);
+                get_group(poss_stack, re->num_counts, group_id)[0] = get_iter_pos(str.o, &iter);
 
                 bytecode += 2;
                 NEXT_INSTRUCTION;
@@ -1634,7 +1629,7 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
             BEGIN_INSTRUCTION(END_GROUP): {
                 const uint16_t group_id = bytecode[1];
 
-                get_group(poss_stack, re->num_counts, group_id)[1] = get_iter_pos(str_obj, &iter);
+                get_group(poss_stack, re->num_counts, group_id)[1] = get_iter_pos(str.o, &iter);
 
                 bytecode += 2;
                 NEXT_INSTRUCTION;
@@ -1772,16 +1767,28 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
     ret.o = KOS_new_object(ctx);
     TRY_OBJID(ret.o);
 
+    TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_string), str.o));
+
     TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_begin), TO_SMALL_INT(pos)));
     TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_end),   TO_SMALL_INT(end_pos)));
+
+    {
+        const KOS_OBJ_ID match_obj = KOS_string_slice(ctx, str.o, pos, end_pos);
+        TRY_OBJID(match_obj);
+        TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_match), match_obj));
+    }
 
     groups.o = KOS_new_array(ctx, re->num_groups);
     TRY_OBJID(groups.o);
     TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_groups), groups.o));
 
+    match_groups.o = KOS_new_array(ctx, re->num_groups);
+    TRY_OBJID(match_groups.o);
+    TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_match_groups), match_groups.o));
+
     assert(poss_stack->current);
     if (re->num_groups)
-        TRY(create_found_groups(ctx, groups.o, re, poss_stack->current));
+        TRY(create_found_groups(ctx, groups.o, match_groups.o, str.o, re, poss_stack->current));
 
     retval = ret.o;
 
@@ -1874,13 +1881,15 @@ static KOS_OBJ_ID re_find(KOS_CONTEXT ctx,
     uint32_t             end_pos;
     uint32_t             pos;
     KOS_LOCAL            str;
-    KOS_OBJ_ID           match_obj = KOS_BADPTR;
+    KOS_LOCAL            match;
     struct RE_POSS_STACK poss_stack;
     struct RE_OBJ       *re;
 
     assert(KOS_get_array_size(args_obj) > 0);
 
     init_possibility_stack(&poss_stack);
+
+    KOS_init_local(ctx, &match);
 
     KOS_init_local_with(ctx, &str, KOS_array_read(ctx, args_obj, 0));
     TRY_OBJID(str.o);
@@ -1921,16 +1930,16 @@ static KOS_OBJ_ID re_find(KOS_CONTEXT ctx,
 
     for (pos = begin_pos; pos <= end_pos; pos++) {
         /* TODO optimize the case when the re begins with ^: don't look beyond begin_pos */
-        match_obj = match_string(ctx, re, str.o, begin_pos, pos, end_pos, &poss_stack);
-        if (match_obj != KOS_VOID)
+        match.o = match_string(ctx, re, str.o, begin_pos, pos, end_pos, &poss_stack);
+        if (match.o != KOS_VOID)
             break;
     }
 
 cleanup:
-    KOS_destroy_top_local(ctx, &str);
+    match.o = KOS_destroy_top_locals(ctx, &str, &match);
     destroy_possibility_stack(&poss_stack);
 
-    return error ? KOS_BADPTR : match_obj;
+    return error ? KOS_BADPTR : match.o;
 }
 
 KOS_INIT_MODULE(re)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
