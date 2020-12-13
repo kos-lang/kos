@@ -52,6 +52,6 @@ doc: default
 
 defs: default
 	@echo Extract defs
-	@env $(out_dir_base_rel)/interpreter/kos$(exe_suffix) build/extract_defs.kos core/kos_lang inc/*h core/kos_const_strings.h
+	@env $(out_dir_base_rel)/interpreter/kos$(exe_suffix) build/extract_defs.kos core/kos_lang inc/*h
 
 .PHONY: cldep clean_gcov defs doc install modules_ext test fuzz time_us $(modules)

@@ -1551,9 +1551,9 @@ void KOS_raise_printf(KOS_CONTEXT ctx,
         KOS_raise_exception(ctx, str);
 }
 
-void KOS_raise_errno(KOS_CONTEXT ctx, const char *prefix)
+void KOS_raise_errno_value(KOS_CONTEXT ctx, const char *prefix, int error_value)
 {
-    const char *const error_str = strerror(errno);
+    const char *const error_str = strerror(error_value);
 
     if (prefix)
         KOS_raise_printf(ctx, "%s: %s", prefix, error_str ? error_str : "");
@@ -1566,6 +1566,11 @@ void KOS_raise_errno(KOS_CONTEXT ctx, const char *prefix)
         if ( ! IS_BAD_PTR(error_obj))
             KOS_raise_exception(ctx, error_obj);
     }
+}
+
+void KOS_raise_errno(KOS_CONTEXT ctx, const char *prefix)
+{
+    KOS_raise_errno_value(ctx, prefix, errno);
 }
 
 KOS_OBJ_ID KOS_new_iterator_copy(KOS_CONTEXT ctx,

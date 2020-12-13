@@ -123,6 +123,9 @@ KOS_API
 void KOS_raise_errno(KOS_CONTEXT ctx, const char *prefix);
 
 KOS_API
+void KOS_raise_errno_value(KOS_CONTEXT ctx, const char *prefix, int error_value);
+
+KOS_API
 int64_t KOS_fix_index(int64_t idx, unsigned length);
 
 #ifdef __cplusplus

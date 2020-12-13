@@ -96,6 +96,7 @@ _KOS_object_to_string_or_cstr_vec
 _KOS_print_exception
 _KOS_print_to_cstr_vec
 _KOS_raise_errno
+_KOS_raise_errno_value
 _KOS_raise_exception
 _KOS_raise_exception_cstring
 _KOS_raise_generator_end

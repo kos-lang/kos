@@ -97,6 +97,7 @@
     KOS_print_exception;
     KOS_print_to_cstr_vec;
     KOS_raise_errno;
+    KOS_raise_errno_value;
     KOS_raise_exception;
     KOS_raise_exception_cstring;
     KOS_raise_generator_end;
