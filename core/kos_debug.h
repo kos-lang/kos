@@ -5,7 +5,7 @@
 #ifndef KOS_DEBUG_H_INCLUDED
 #define KOS_DEBUG_H_INCLUDED
 
-#ifdef CONFIG_SEQFAIL
+#if defined(CONFIG_SEQFAIL) && !defined(KOS_PUBLIC_API)
 
 int kos_seq_fail(void);
 
