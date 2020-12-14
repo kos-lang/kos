@@ -253,6 +253,8 @@ static int get_env_array(KOS_CONTEXT           ctx,
                 ++est_num_env;
             }
         }
+#else
+        in_obj.o = obj_id;
 #endif
 
         in_obj.o = KOS_new_iterator(ctx, in_obj.o, KOS_SHALLOW);
