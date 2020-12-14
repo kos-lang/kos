@@ -11,7 +11,7 @@
 #   define KOS_EXTERN_C
 #endif
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 #   define KOS_EXPORT_SYMBOL
 #   define KOS_IMPORT_SYMBOL __declspec(dllimport)
 #elif defined(__GNUC__)
@@ -32,7 +32,7 @@
 #   define KOS_API KOS_EXPORT_SYMBOL
 #endif
 
-#if !defined(_WIN32) || !defined(KOS_PUBLIC_API)
+#if !defined(_MSC_VER) || !defined(KOS_PUBLIC_API)
 #   define KOS_API_VAR_DEF
 #else
 #   define KOS_API_VAR_DEF KOS_API
