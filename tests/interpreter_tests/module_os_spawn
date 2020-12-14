@@ -21,8 +21,7 @@ remove_cr()
 }
 
 KOS="$1"
-OUTPUT="$2/interactive"
-SIGNATURE="^Kos .* interactive interpreter"
+OUTPUT="$2/module_os_spawn"
 
 run()
 {
