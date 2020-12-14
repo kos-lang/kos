@@ -201,8 +201,22 @@ cleanup:
     return error;
 }
 
-#ifndef _WIN32
+#ifdef _WIN32
+static char **get_cur_env()
+{
+    static char *fake_env = KOS_NULL;
+
+    return &fake_env;
+}
+
+#else
+
 extern char **environ;
+
+static char **get_cur_env()
+{
+    return environ;
+}
 #endif
 
 static int get_env_array(KOS_CONTEXT           ctx,
@@ -224,8 +238,7 @@ static int get_env_array(KOS_CONTEXT           ctx,
     /* If inheriting environment, join vars from environment with overrides from the call */
     if (inherit_env) {
 
-#ifndef _WIN32
-        char **env = environ;
+        char **env = get_cur_env();
 
         in_obj.o = obj_id;
 
@@ -253,9 +266,6 @@ static int get_env_array(KOS_CONTEXT           ctx,
                 ++est_num_env;
             }
         }
-#else
-        in_obj.o = obj_id;
-#endif
 
         in_obj.o = KOS_new_iterator(ctx, in_obj.o, KOS_SHALLOW);
         TRY_OBJID(in_obj.o);
