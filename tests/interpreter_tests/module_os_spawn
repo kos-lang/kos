@@ -1,0 +1,53 @@
+#!/bin/sh
+
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2014-2020 Chris Dragan
+
+set -e
+
+if [ $# -ne 2 ]; then
+    echo "Usage: $0 <kos> <output_dir>"
+    exit 1
+fi
+
+UNAME=`uname -s`
+case "$UNAME" in
+    CYGWIN*|MINGW*|MSYS*) UNAME="Windows" ;;
+esac
+
+remove_cr()
+{
+    tr -d '\r'
+}
+
+KOS="$1"
+OUTPUT="$2/interactive"
+SIGNATURE="^Kos .* interactive interpreter"
+
+run()
+{
+    "$KOS" -c "$1" | remove_cr > "$OUTPUT"
+}
+
+run_shell()
+{
+    run 'import os; os.spawn({program: "/bin/sh", args: ["-c", "'"$*"'"]})'
+}
+
+# TODO On Windows we could use cmd.exe, but os.spawn() does not support PATH lookups yet
+if [ "$UNAME" = "Windows" ]; then
+    exit 0
+fi
+
+##############################################################################
+# Run simple shell script via /bin/sh
+
+run_shell "echo 'Hello, Kos!'" > "$OUTPUT"
+
+CONTENTS=`cat "$OUTPUT"`
+
+if [ "$CONTENTS" != "Hello, Kos!" ]; then
+    echo "$LINENO: Error: Expected output to contain: \"Hello, Kos\", but it is different" >&2
+    cat "$OUTPUT"
+    exit 1
+fi

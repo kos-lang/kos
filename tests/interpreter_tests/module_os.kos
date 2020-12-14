@@ -1,0 +1,105 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2014-2020 Chris Dragan
+
+import base
+import test_tools.expect_fail
+import fs
+import os
+
+##############################################################################
+# os.spawn
+
+fun have_program(pathname)
+{
+    if ! fs.is_file(pathname) {
+        return false
+    }
+
+    try {
+        os.spawn({program: pathname})
+        return true
+    }
+    catch const e {
+        base.print(pathname, "failed:", e.value)
+    }
+
+    return false
+}
+
+const bin_true = have_program("/usr/bin/true") ? "/usr/bin/true" :
+                 have_program("/bin/true")     ? "/bin/true"     :
+                 void
+
+do {
+    expect_fail(() => os.spawn())
+    expect_fail(() => os.spawn({program: void}))
+    expect_fail(() => os.spawn({program: 0}))
+    expect_fail(() => os.spawn({program: []}))
+    expect_fail(() => os.spawn({program: [bin_true]}))
+    expect_fail(() => os.spawn({program: [bin_true[1:].split("/")...]}))
+    expect_fail(() => os.spawn({program: "no such program %%%"}))
+}
+
+if bin_true {
+
+    # args must be an array of strings
+    expect_fail(() => os.spawn({
+        program: bin_true,
+        args: {}
+    }))
+    expect_fail(() => os.spawn({
+        program: bin_true,
+        args: void
+    }))
+    expect_fail(() => os.spawn({
+        program: bin_true,
+        args: 1
+    }))
+    expect_fail(() => os.spawn({
+        program: bin_true,
+        args: [1]
+    }))
+    expect_fail(() => os.spawn({
+        program: bin_true,
+        args: [true]
+    }))
+    os.spawn({program: bin_true, args: []})
+
+    # env must be an object containing strings
+    expect_fail(() => os.spawn({
+        program: bin_true,
+        env: []
+    }))
+    expect_fail(() => os.spawn({
+        program: bin_true,
+        env: void
+    }))
+    expect_fail(() => os.spawn({
+        program: bin_true,
+        env: 1
+    }))
+    expect_fail(() => os.spawn({
+        program: bin_true,
+        env: {STH: 1}
+    }))
+    expect_fail(() => os.spawn({
+        program: bin_true,
+        env: {STH: true}
+    }))
+    os.spawn({program: bin_true, env: {}})
+    os.spawn({program: bin_true, env: {}, args: []})
+    os.spawn({program: bin_true, env: {STH: "OK1"}, args: []})
+
+    # inherit_env must be a boolean
+    expect_fail(() => os.spawn({
+        program: bin_true,
+        inherit_env: {}
+    }))
+    expect_fail(() => os.spawn({
+        program: bin_true,
+        inherit_env: void
+    }))
+    os.spawn({program: bin_true, inherit_env: true})
+    os.spawn({program: bin_true, inherit_env: false})
+    os.spawn({program: bin_true, inherit_env: false, env: {STH: "OK2"}})
+}

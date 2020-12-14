@@ -152,6 +152,7 @@ interactive_scripts  = disasm
 interactive_scripts += interactive
 interactive_scripts += module_base_print
 interactive_scripts += module_loading
+interactive_scripts += module_os_spawn
 
 $(interactive_scripts):
 	@echo Test $@
