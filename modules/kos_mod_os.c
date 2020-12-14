@@ -12,13 +12,15 @@
 #include "../inc/kos_object.h"
 #include "../inc/kos_string.h"
 #include "../inc/kos_utils.h"
+#include "../core/kos_debug.h"
 #include "../core/kos_try.h"
 #include <string.h>
 
 #ifdef _WIN32
 #else
-#   include <stdio.h>  /* TODO for perror() - delete this line */
-#   include <stdlib.h> /* TODO for exit() - delete this line */
+#   include <errno.h>
+#   include <fcntl.h>
+#   include <stdlib.h>
 #   include <unistd.h>
 #endif
 
@@ -461,8 +463,20 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
 #else
     {
         pid_t child_pid;
+        int   exec_status_fd[2];
+        int   err_value = 0;
 
         KOS_suspend_context(ctx);
+
+        if ((pipe(exec_status_fd) != 0) || kos_seq_fail()) {
+            KOS_resume_context(ctx);
+            KOS_raise_errno(ctx, "pipe creation failed");
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+
+        fcntl(exec_status_fd[1], F_SETFD, FD_CLOEXEC);
+        fcntl(exec_status_fd[0], F_SETFD, FD_CLOEXEC);
+
         child_pid = fork();
 
         if (child_pid == -1) {
@@ -472,12 +486,28 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
         }
 
         if (child_pid == 0) {
+            close(exec_status_fd[0]);
+
             execve(program_cstr, args_array, env_array);
-            perror("execve failed");
-            exit(0);
+
+            err_value = errno;
+            write(exec_status_fd[1], &err_value, sizeof(err_value));
+            exit(1);
         }
 
+        close(exec_status_fd[1]);
+
+        if ((size_t)read(exec_status_fd[0], &err_value, sizeof(err_value)) != sizeof(err_value))
+            err_value = 0;
+
+        close(exec_status_fd[0]);
+
         KOS_resume_context(ctx);
+
+        if (err_value) {
+            KOS_raise_errno_value(ctx, "exec failed", err_value);
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
     }
 #endif
 
