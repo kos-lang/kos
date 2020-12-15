@@ -202,7 +202,7 @@ cleanup:
 }
 
 #ifdef _WIN32
-static char **get_cur_env()
+static char **get_cur_env(void)
 {
     static char *fake_env = KOS_NULL;
 
@@ -213,7 +213,7 @@ static char **get_cur_env()
 
 extern char **environ;
 
-static char **get_cur_env()
+static char **get_cur_env(void)
 {
     return environ;
 }
@@ -503,7 +503,7 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
             execve(program_cstr, args_array, env_array);
 
             err_value = errno;
-            write(exec_status_fd[1], &err_value, sizeof(err_value));
+            (void)write(exec_status_fd[1], &err_value, sizeof(err_value));
             exit(1);
         }
 
