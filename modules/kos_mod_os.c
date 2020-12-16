@@ -498,13 +498,15 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
         }
 
         if (child_pid == 0) {
+            int exit_code;
+
             close(exec_status_fd[0]);
 
             execve(program_cstr, args_array, env_array);
 
             err_value = errno;
-            (void)write(exec_status_fd[1], &err_value, sizeof(err_value));
-            exit(1);
+            exit_code = (write(exec_status_fd[1], &err_value, sizeof(err_value)) == sizeof(err_value)) ? 1 : 2;
+            exit(exit_code);
         }
 
         close(exec_status_fd[1]);
