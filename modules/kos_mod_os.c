@@ -246,11 +246,11 @@ static int get_env_array(KOS_CONTEXT           ctx,
         TRY_OBJID(obj.o);
 
         for ( ; *env; ++env) {
-            KOS_OBJ_ID   value;
-            char        *name_str = *env;
-            char        *val_str  = strchr(name_str, '=');
-            const size_t name_len = val_str ? (val_str - name_str) : 0;
-            const size_t val_len  = val_str ? strlen(val_str + 1) : 0;
+            KOS_OBJ_ID     value;
+            char          *name_str = *env;
+            char          *val_str  = strchr(name_str, '=');
+            const unsigned name_len = val_str ? (unsigned)(val_str - name_str) : 0U;
+            const unsigned val_len  = val_str ? (unsigned)strlen(val_str + 1) : 0U;
 
             if (val_str) {
                 ++val_str;
@@ -471,7 +471,7 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
 
 #ifdef _WIN32
     KOS_raise_printf(ctx, "spawn not supported on Windows yet");
-    goto cleanup;
+    RAISE_ERROR(KOS_ERROR_EXCEPTION);
 #else
     {
         pid_t child_pid;
