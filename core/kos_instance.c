@@ -259,6 +259,7 @@ static void setup_init_module(KOS_MODULE *init_module)
     init_module->global_names   = KOS_BADPTR;
     init_module->globals        = KOS_BADPTR;
     init_module->module_names   = KOS_BADPTR;
+    init_module->priv           = KOS_BADPTR;
     init_module->bytecode       = KOS_NULL;
     init_module->line_addrs     = KOS_NULL;
     init_module->func_addrs     = KOS_NULL;

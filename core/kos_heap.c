@@ -1645,6 +1645,8 @@ static int mark_children_gray(KOS_MARK_CONTEXT *mark_ctx,
             TRY(mark_object_black(mark_ctx, OBJPTR(MODULE, obj_id)->global_names));
             TRY(mark_object_black(mark_ctx, OBJPTR(MODULE, obj_id)->globals));
             TRY(mark_object_black(mark_ctx, OBJPTR(MODULE, obj_id)->module_names));
+            TRY(mark_object_black(mark_ctx, KOS_atomic_read_relaxed_obj(
+                                            OBJPTR(MODULE, obj_id)->priv)));
             break;
 
         case OBJ_STACK: {
@@ -2205,6 +2207,7 @@ static void update_child_ptrs(KOS_OBJ_HEADER *hdr)
             update_child_ptr(&((KOS_MODULE *)hdr)->global_names);
             update_child_ptr(&((KOS_MODULE *)hdr)->globals);
             update_child_ptr(&((KOS_MODULE *)hdr)->module_names);
+            update_child_ptr((KOS_OBJ_ID *)&((KOS_MODULE *)hdr)->priv);
             break;
 
         case OBJ_STACK:

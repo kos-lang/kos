@@ -1027,6 +1027,11 @@ static int verify_module(KOS_OBJ_ID obj_id)
     TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
     TEST(OBJPTR(INTEGER, v)->value == 68);
 
+    v = OBJPTR(MODULE, obj_id)->priv;
+    TEST( ! IS_BAD_PTR(v));
+    TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
+    TEST(OBJPTR(INTEGER, v)->value == 68);
+
     return 0;
 }
 
@@ -1055,6 +1060,7 @@ static KOS_OBJ_ID alloc_module(KOS_CONTEXT  ctx,
     OBJPTR(MODULE, obj_id[0])->global_names   = obj_id[4];
     OBJPTR(MODULE, obj_id[0])->globals        = obj_id[5];
     OBJPTR(MODULE, obj_id[0])->module_names   = obj_id[6];
+    OBJPTR(MODULE, obj_id[0])->priv           = obj_id[6];
     OBJPTR(MODULE, obj_id[0])->flags          = 0;
     OBJPTR(MODULE, obj_id[0])->inst           = 0;
     OBJPTR(MODULE, obj_id[0])->bytecode       = 0;

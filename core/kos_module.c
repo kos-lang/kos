@@ -356,6 +356,7 @@ static KOS_OBJ_ID alloc_module(KOS_CONTEXT ctx,
     OBJPTR(MODULE, module.o)->global_names = KOS_BADPTR;
     OBJPTR(MODULE, module.o)->globals      = KOS_BADPTR;
     OBJPTR(MODULE, module.o)->module_names = KOS_BADPTR;
+    OBJPTR(MODULE, module.o)->priv         = KOS_BADPTR;
 
     obj.o = KOS_new_object(ctx);
     TRY_OBJID(obj.o);

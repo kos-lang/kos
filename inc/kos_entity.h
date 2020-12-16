@@ -448,6 +448,7 @@ typedef struct KOS_MODULE_S {
     KOS_OBJ_ID              global_names;
     KOS_OBJ_ID              globals;
     KOS_OBJ_ID              module_names; /* Map of directly referenced modules to their indices, for REPL */
+    KOS_ATOMIC(KOS_OBJ_ID)  priv;
     const uint8_t          *bytecode;
     const KOS_LINE_ADDR    *line_addrs;
     const KOS_FUNC_ADDR    *func_addrs;
