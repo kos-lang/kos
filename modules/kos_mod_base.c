@@ -4837,7 +4837,7 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(array),      "resize",        resize,            1);
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(array),      "slice",         slice,             2);
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(array),      "sort",          sort,              0);
-    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(array),      "size",          get_array_size,    0);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(array),      "size",          get_array_size,    KOS_NULL);
 
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(buffer),     "copy_buffer",   copy_buffer,       1);
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(buffer),     "fill",          fill,              1);
@@ -4846,20 +4846,20 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(buffer),     "resize",        resize,            1);
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(buffer),     "slice",         slice,             2);
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(buffer),     "unpack",        unpack,            1);
-    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(buffer),     "size",          get_buffer_size,   0);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(buffer),     "size",          get_buffer_size,   KOS_NULL);
 
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(exception),  "print",         print_exception,   0);
 
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(function),   "apply",         apply,             2);
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(function),   "async",         async,             2);
-    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(function),   "instructions",  get_instructions,  0);
-    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(function),   "line",          get_function_line, 0);
-    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(function),   "name",          get_function_name, 0);
-    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(function),   "offset",        get_function_offs, 0);
-    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(function),   "registers",     get_registers,     0);
-    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(function),   "size",          get_code_size,     0);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(function),   "instructions",  get_instructions,  KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(function),   "line",          get_function_line, KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(function),   "name",          get_function_name, KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(function),   "offset",        get_function_offs, KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(function),   "registers",     get_registers,     KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(function),   "size",          get_code_size,     KOS_NULL);
 
-    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(generator),  "state",         get_gen_state,     0);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(generator),  "state",         get_gen_state,     KOS_NULL);
 
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),     "ends_with",     ends_with,         1);
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),     "find",          find,              1);
@@ -4873,7 +4873,7 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),     "slice",         slice,             2);
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),     "starts_with",   starts_with,       1);
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),     "uppercase",     uppercase,         0);
-    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(string),     "size",          get_string_size,   0);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(string),     "size",          get_string_size,   KOS_NULL);
 
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(thread),     "wait",          wait,              0);
 
