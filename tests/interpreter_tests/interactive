@@ -383,8 +383,9 @@ fi
 
 COUNT=$(wc -l < "$OUTPUT")
 
-if [ $COUNT -ne 6 ]; then
-    echo "$LINENO: Error: Expected 6 lines of output" >&2
+HELP_LINES=7
+if [ $COUNT -ne $HELP_LINES ]; then
+    echo "$LINENO: Error: Expected $HELP_LINES lines of output" >&2
     cat "$OUTPUT"
     exit 1
 fi

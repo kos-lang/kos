@@ -12,6 +12,7 @@
 #include "../inc/kos_version.h"
 #include "../core/kos_getline.h"
 #include "../core/kos_heap.h"
+#include "../core/kos_misc.h"
 #include "../core/kos_parser.h"
 #include "../core/kos_perf.h"
 #include "../core/kos_system.h"
@@ -48,6 +49,7 @@ int main(int argc, char *argv[])
     int          i_module    = 0;
     int          i_first_arg = 0;
     int          interactive = -1;
+    uint32_t     mem_size    = 0;
     uint32_t     flags       = 0;
     KOS_INSTANCE inst;
     KOS_CONTEXT  ctx;
@@ -98,6 +100,28 @@ int main(int argc, char *argv[])
                 break;
             }
 
+            if (is_option(arg, "m", "memsize")) {
+                const char *ms_begin;
+                int64_t     value;
+
+                if ((argc - i_first_arg) == 1) {
+                    fprintf(stderr, "Argument expected for the -m option\n");
+                    error = KOS_ERROR_NOT_FOUND;
+                    goto cleanup;
+                }
+                ms_begin = argv[i_first_arg + 1];
+                error = kos_parse_int(ms_begin, ms_begin + strlen(ms_begin), &value);
+                if (error || (value < 2) || (value > 4096)) {
+                    fprintf(stderr, "Invalid value passed with the -m option\n");
+                    goto cleanup;
+                }
+                /* <<20 because it is in MB, however we divide it into two halves
+                 * for the heap and for malloc area, so only <<19. */
+                mem_size = (uint32_t)value << 19;
+                i_first_arg += 2;
+                continue;
+            }
+
             if (is_option(arg, "v", "verbose")) {
                 flags |= KOS_INST_VERBOSE;
                 ++i_first_arg;
@@ -135,6 +159,11 @@ int main(int argc, char *argv[])
     if (error) {
         fprintf(stderr, "Failed to initialize interpreter\n");
         goto cleanup;
+    }
+
+    if (mem_size) {
+        inst.heap.max_heap_size   = mem_size;
+        inst.heap.max_malloc_size = mem_size;
     }
 
     inst_ok = 1;
@@ -281,8 +310,9 @@ static void print_usage(void)
     printf("Usage: kos [option...] [-c cmd | file] [arg...]\n");
     printf("\n");
     printf("Options:\n");
-    printf("  -v, --verbose     Enable verbose output\n");
-    printf("  -vv               Enable more verbose output\n");
+    printf("  -m M, --memsize M   Total size of heaps in MB\n");
+    printf("  -v, --verbose       Enable verbose output\n");
+    printf("  -vv                 Enable more verbose output\n");
     printf("\n");
 }
 
