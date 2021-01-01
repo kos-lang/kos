@@ -14,7 +14,7 @@ for further details on how you can contribute.
 MIT License
 -----------
 
-Copyright (c) 2014-2020 Chris Dragan
+Copyright (c) 2014-2021 Chris Dragan
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to

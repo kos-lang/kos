@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: MIT
- * Copyright (c) 2014-2020 Chris Dragan
+ * Copyright (c) 2014-2021 Chris Dragan
  */
 
 #include "../core/kos_heap.h"
