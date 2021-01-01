@@ -1042,12 +1042,12 @@ int kos_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "release",   kos_close,      0);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "seek",      set_file_pos,   1);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "write",     kos_write,      0);
-    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "eof",       get_file_eof,   0);
-    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "error",     get_file_error, 0);
-    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "fd",        get_file_fd,    0);
-    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "info",      get_file_info,  0);
-    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "position",  get_file_pos,   0);
-    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "size",      get_file_size,  0);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "eof",       get_file_eof,   KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "error",     get_file_error, KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "fd",        get_file_fd,    KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "info",      get_file_info,  KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "position",  get_file_pos,   KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "size",      get_file_size,  KOS_NULL);
 
     /* @item io stderr
      *
