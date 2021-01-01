@@ -3638,10 +3638,14 @@ static int delete_op(KOS_COMP_UNIT      *program,
     }
     else {
 
-        TRY(visit_node(program, node, reg));
-        assert(*reg);
+        KOS_REG *prop_reg = KOS_NULL;
 
-        TRY(gen_instr2(program, INSTR_DEL, obj->reg, (*reg)->reg));
+        TRY(visit_node(program, node, &prop_reg));
+        assert(prop_reg);
+
+        TRY(gen_instr2(program, INSTR_DEL, obj->reg, prop_reg->reg));
+
+        free_reg(program, prop_reg);
     }
 
     free_reg(program, obj);

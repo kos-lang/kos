@@ -1325,3 +1325,14 @@ do {
     assert typeof ctor == "class"
     assert ctor == derived
 }
+
+# delete with variable being property name
+do {
+    var name = 0
+    const obj = { a: 1 }
+    for const k, v in obj {
+        delete obj[k]
+        name = k
+    }
+    assert name == "a"
+}
