@@ -38,7 +38,10 @@ KOS_DECLARE_STATIC_CONST_STRING(str_status,             "status");
 KOS_DECLARE_STATIC_CONST_STRING(str_stopped,            "stopped");
 
 struct KOS_WAIT_S {
-#ifndef _WIN32
+#ifdef _WIN32
+    HANDLE h_process;
+    DWORD  pid;
+#else
     pid_t pid;
 #endif
 };
@@ -453,12 +456,14 @@ cleanup:
     return error ? KOS_BADPTR : obj_id;
 }
 
-static int check_wait_proto(KOS_CONTEXT ctx,
-                            KOS_OBJ_ID  obj_id)
+static int get_wait_info(KOS_CONTEXT         ctx,
+                         KOS_OBJ_ID          obj_id,
+                         struct KOS_WAIT_S **out_wait_info)
 {
-    KOS_LOCAL  obj;
-    KOS_OBJ_ID proto_id;
-    int        error = KOS_SUCCESS;
+    KOS_LOCAL          obj;
+    KOS_OBJ_ID         proto_id;
+    struct KOS_WAIT_S *wait_info;
+    int                error = KOS_SUCCESS;
 
     KOS_init_local_with(ctx, &obj, obj_id);
 
@@ -468,8 +473,12 @@ static int check_wait_proto(KOS_CONTEXT ctx,
     if ( ! KOS_has_prototype(ctx, obj.o, proto_id))
         RAISE_EXCEPTION_STR(str_err_not_spawned);
 
-    if ( ! KOS_object_get_private_ptr(obj.o))
+    wait_info = (struct KOS_WAIT_S *)KOS_object_get_private_ptr(obj.o);
+
+    if ( ! wait_info)
         RAISE_EXCEPTION_STR(str_err_not_spawned);
+
+    *out_wait_info = wait_info;
 
 cleanup:
     KOS_destroy_top_local(ctx, &obj);
@@ -514,7 +523,7 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
                         KOS_OBJ_ID  args_obj)
 {
     int                  error = KOS_SUCCESS;
-    KOS_LOCAL            wait;
+    KOS_LOCAL            process;
     KOS_LOCAL            desc;
     struct KOS_MEMPOOL_S alloc;
     KOS_OBJ_ID           value_obj;
@@ -530,14 +539,14 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
     assert(KOS_get_array_size(args_obj) > 0);
 
     KOS_mempool_init(&alloc);
-    KOS_init_local(ctx, &wait);
+    KOS_init_local(ctx, &process);
     KOS_init_local_with(ctx, &desc, KOS_array_read(ctx, args_obj, 0));
 
     /* Create return object which can be used to manage the child process */
-    wait.o = create_wait_object(ctx);
-    TRY_OBJID(wait.o);
+    process.o = create_wait_object(ctx);
+    TRY_OBJID(process.o);
 
-    wait_info = (struct KOS_WAIT_S *)KOS_object_get_private_ptr(wait.o);
+    wait_info = (struct KOS_WAIT_S *)KOS_object_get_private_ptr(process.o);
 
     /* Get 'program' */
     value_obj = get_opt_property(ctx, desc.o, KOS_CONST_ID(str_program), KOS_DEEP, OBJ_STRING,
@@ -634,10 +643,10 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
 #endif
 
 cleanup:
-    wait.o = KOS_destroy_top_locals(ctx, &desc, &wait);
+    process.o = KOS_destroy_top_locals(ctx, &desc, &process);
     KOS_mempool_destroy(&alloc);
 
-    return error ? KOS_BADPTR : wait.o;
+    return error ? KOS_BADPTR : process.o;
 }
 
 /* @item os process.wait()
@@ -677,13 +686,12 @@ static KOS_OBJ_ID wait_for_child(KOS_CONTEXT ctx,
     KOS_LOCAL          ret;
     int                error = KOS_SUCCESS;
 
-    KOS_init_local_with(ctx, &ret, KOS_new_object(ctx));
+    KOS_init_local(ctx, &ret);
 
+    TRY(get_wait_info(ctx, this_obj, &wait_info));
+
+    ret.o = KOS_new_object(ctx);
     TRY_OBJID(ret.o);
-
-    TRY(check_wait_proto(ctx, this_obj));
-
-    wait_info = (struct KOS_WAIT_S *)KOS_object_get_private_ptr(this_obj);
 
 #ifndef _WIN32
     for (;;) {
@@ -768,14 +776,10 @@ static KOS_OBJ_ID get_pid(KOS_CONTEXT ctx,
     struct KOS_WAIT_S *wait_info;
     int                error = KOS_SUCCESS;
 
-    TRY(check_wait_proto(ctx, this_obj));
+    TRY(get_wait_info(ctx, this_obj, &wait_info));
 
-    wait_info = (struct KOS_WAIT_S *)KOS_object_get_private_ptr(this_obj);
-
-#ifndef _WIN32
     pid = KOS_new_int(ctx, (int64_t)wait_info->pid);
     TRY_OBJID(pid);
-#endif
 
 cleanup:
     return error ? KOS_BADPTR : pid;
