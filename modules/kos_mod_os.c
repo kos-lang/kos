@@ -21,16 +21,27 @@
 #   include <errno.h>
 #   include <fcntl.h>
 #   include <stdlib.h>
+#   include <sys/wait.h>
 #   include <unistd.h>
 #endif
 
-KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_string, "invalid string");
 KOS_DECLARE_STATIC_CONST_STRING(str_args,               "args");
 KOS_DECLARE_STATIC_CONST_STRING(str_cwd,                "cwd");
 KOS_DECLARE_STATIC_CONST_STRING(str_env,                "env");
 KOS_DECLARE_STATIC_CONST_STRING(str_eq,                 "=");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_string, "invalid string");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_spawned,    "object is not a spawned process");
 KOS_DECLARE_STATIC_CONST_STRING(str_inherit_env,        "inherit_env");
 KOS_DECLARE_STATIC_CONST_STRING(str_program,            "program");
+KOS_DECLARE_STATIC_CONST_STRING(str_signal,             "signal");
+KOS_DECLARE_STATIC_CONST_STRING(str_status,             "status");
+KOS_DECLARE_STATIC_CONST_STRING(str_stopped,            "stopped");
+
+struct KOS_WAIT_S {
+#ifndef _WIN32
+    pid_t pid;
+#endif
+};
 
 static const char *get_type_name(KOS_TYPE type)
 {
@@ -387,6 +398,85 @@ cleanup:
     return error;
 }
 
+static void wait_finalize(KOS_CONTEXT ctx,
+                          void       *priv)
+{
+    if (priv)
+        KOS_free((struct KOS_WAIT_S *)priv);
+}
+
+static KOS_OBJ_ID get_wait_proto(KOS_CONTEXT ctx)
+{
+    int        error  = KOS_SUCCESS;
+    KOS_OBJ_ID obj_id = KOS_get_module(ctx);
+
+    TRY_OBJID(obj_id);
+    assert(GET_OBJ_TYPE(obj_id) == OBJ_MODULE);
+
+    obj_id = KOS_atomic_read_relaxed_obj(OBJPTR(MODULE, obj_id)->priv);
+    if (obj_id != KOS_BADPTR) {
+        obj_id = KOS_array_read(ctx, obj_id, 0);
+        TRY_OBJID(obj_id);
+    }
+    else
+        obj_id = KOS_VOID;
+
+cleanup:
+    return error ? KOS_BADPTR : obj_id;
+}
+
+static KOS_OBJ_ID create_wait_object(KOS_CONTEXT ctx)
+{
+    KOS_OBJ_ID         obj_id;
+    struct KOS_WAIT_S *wait_info;
+    int                error = KOS_SUCCESS;
+
+    obj_id = get_wait_proto(ctx);
+    TRY_OBJID(obj_id);
+
+    obj_id = KOS_new_object_with_prototype(ctx, obj_id);
+    TRY_OBJID(obj_id);
+
+    wait_info = (struct KOS_WAIT_S *)KOS_malloc(sizeof(struct KOS_WAIT_S));
+    if ( ! wait_info) {
+        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+
+    memset(wait_info, 0, sizeof(*wait_info));
+
+    KOS_object_set_private_ptr(obj_id, wait_info);
+
+    OBJPTR(OBJECT, obj_id)->finalize = wait_finalize;
+
+cleanup:
+    return error ? KOS_BADPTR : obj_id;
+}
+
+static int check_wait_proto(KOS_CONTEXT ctx,
+                            KOS_OBJ_ID  obj_id)
+{
+    KOS_LOCAL  obj;
+    KOS_OBJ_ID proto_id;
+    int        error = KOS_SUCCESS;
+
+    KOS_init_local_with(ctx, &obj, obj_id);
+
+    proto_id = get_wait_proto(ctx);
+    TRY_OBJID(proto_id);
+
+    if ( ! KOS_has_prototype(ctx, obj.o, proto_id))
+        RAISE_EXCEPTION_STR(str_err_not_spawned);
+
+    if ( ! KOS_object_get_private_ptr(obj.o))
+        RAISE_EXCEPTION_STR(str_err_not_spawned);
+
+cleanup:
+    KOS_destroy_top_local(ctx, &obj);
+
+    return error;
+}
+
 /* @item os os.spawn()
  *
  *     os.spawn(spawn_desc)
@@ -412,16 +502,24 @@ cleanup:
  *                     which is fed into the spawned program on stdin.
  *  * stdout         - (Optional) File object open for writing.
  *  * stderr         - (Optional) File object open for writing.
+ *
+ * Returns a `process` object which can be used to obtain information about the spawned child process.
+ * The process object contains the following fields:
+ *
+ *  * [pid](#processpid)     The pid of the spawned child process.
+ *  * [wait()](#processwait) The wait function, which can be used to wait for the process to finish.
  */
 static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
                         KOS_OBJ_ID  this_obj,
                         KOS_OBJ_ID  args_obj)
 {
     int                  error = KOS_SUCCESS;
+    KOS_LOCAL            wait;
     KOS_LOCAL            desc;
     struct KOS_MEMPOOL_S alloc;
     KOS_OBJ_ID           value_obj;
     KOS_OBJ_ID           inherit_env;
+    struct KOS_WAIT_S   *wait_info;
     char                *program_cstr = KOS_NULL;
     char                *cwd          = KOS_NULL;
     char               **args_array   = KOS_NULL;
@@ -432,7 +530,14 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
     assert(KOS_get_array_size(args_obj) > 0);
 
     KOS_mempool_init(&alloc);
+    KOS_init_local(ctx, &wait);
     KOS_init_local_with(ctx, &desc, KOS_array_read(ctx, args_obj, 0));
+
+    /* Create return object which can be used to manage the child process */
+    wait.o = create_wait_object(ctx);
+    TRY_OBJID(wait.o);
+
+    wait_info = (struct KOS_WAIT_S *)KOS_object_get_private_ptr(wait.o);
 
     /* Get 'program' */
     value_obj = get_opt_property(ctx, desc.o, KOS_CONST_ID(str_program), KOS_DEEP, OBJ_STRING,
@@ -516,6 +621,9 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
 
         close(exec_status_fd[0]);
 
+        if ( ! err_value)
+            wait_info->pid = child_pid;
+
         KOS_resume_context(ctx);
 
         if (err_value) {
@@ -526,23 +634,181 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
 #endif
 
 cleanup:
-    KOS_destroy_top_local(ctx, &desc);
+    wait.o = KOS_destroy_top_locals(ctx, &desc, &wait);
     KOS_mempool_destroy(&alloc);
 
-    return error ? KOS_BADPTR : KOS_VOID;
+    return error ? KOS_BADPTR : wait.o;
+}
+
+/* @item os process.wait()
+ *
+ *     process.wait()
+ *
+ * Member of the process object returned by [os.spawn()](#osspawn).
+ *
+ * Waits for the process to finish.
+ *
+ * If the wait succeeded, returns a status object, containing the following properties:
+ *
+ *  * status    Exit code of the process.  If the process exited with a signal or stopped,
+ *              it is 128 plus signal number.
+ *  * signal    If the process exited with a signal or stopped, contains then number of
+ *              the signal, otherwise contains `void`.
+ *  * stopped   If the process was stopped by a signal, contains `true`, otherwise if the
+ *              process exited (with or without a signal) contains `false`.
+ *
+ * If the wait failed, e.g. if it was already called and the process was not stopped,
+ * this function throws an exception.
+ *
+ * This function will return in three following situations:
+ *
+ *  # The process exits normally, in which case the `status` property of the returned object
+ *    contains the exit code.
+ *  # The process exits via a signal (e.g. crashes), in which case the `status` property is
+ *    128 + the number of the signal and the `signal` property is the signal number.
+ *  # The process is stopped, in which case the `stopped` property is set to `true`.  In this
+ *    case the `wait()` function can be called again to wait for the process to finish.
+ */
+static KOS_OBJ_ID wait_for_child(KOS_CONTEXT ctx,
+                                 KOS_OBJ_ID  this_obj,
+                                 KOS_OBJ_ID  args_obj)
+{
+    struct KOS_WAIT_S *wait_info;
+    KOS_LOCAL          ret;
+    int                error = KOS_SUCCESS;
+
+    KOS_init_local_with(ctx, &ret, KOS_new_object(ctx));
+
+    TRY_OBJID(ret.o);
+
+    TRY(check_wait_proto(ctx, this_obj));
+
+    wait_info = (struct KOS_WAIT_S *)KOS_object_get_private_ptr(this_obj);
+
+#ifndef _WIN32
+    for (;;) {
+        pid_t ret_pid;
+        int   status;
+
+        KOS_suspend_context(ctx);
+
+        ret_pid = wait(&status);
+
+        KOS_resume_context(ctx);
+
+        if (ret_pid == -1) {
+            KOS_raise_errno(ctx, "wait failed");
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+
+        if (ret_pid != wait_info->pid)
+            continue;
+
+        if (WIFEXITED(status)) {
+            const uint8_t exit_code = (uint8_t)WEXITSTATUS(status);
+
+            TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_status), TO_SMALL_INT(exit_code)));
+
+            TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_signal), KOS_VOID));
+
+            TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_stopped), KOS_FALSE));
+        }
+        else {
+            int        sign;
+            KOS_OBJ_ID stopped;
+            KOS_OBJ_ID value;
+
+            if (WIFSIGNALED(status)) {
+                sign    = (int)WTERMSIG(status);
+                stopped = KOS_FALSE;
+            }
+            else {
+                assert(WIFSTOPPED(status));
+                sign    = (int)WSTOPSIG(status);
+                stopped = KOS_TRUE;
+            }
+
+            value = KOS_new_int(ctx, (int64_t)sign);
+            TRY_OBJID(value);
+
+            TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_signal), value));
+
+            /* Exit code is 128 + signal */
+            value = KOS_new_int(ctx, 128 + (int64_t)sign);
+            TRY_OBJID(value);
+
+            TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_status), value));
+
+            TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_stopped), stopped));
+        }
+
+        break;
+    }
+#endif
+
+cleanup:
+    ret.o = KOS_destroy_top_local(ctx, &ret);
+
+    return error ? KOS_BADPTR : ret.o;
+}
+
+/* @item os process.pid
+ *
+ *     process.pid()
+ *
+ * Member of the process object returned by [os.spawn()](#osspawn).
+ *
+ * The pid of the spawned process.
+ */
+static KOS_OBJ_ID get_pid(KOS_CONTEXT ctx,
+                          KOS_OBJ_ID  this_obj,
+                          KOS_OBJ_ID  args_obj)
+{
+    KOS_OBJ_ID         pid   = KOS_VOID;
+    struct KOS_WAIT_S *wait_info;
+    int                error = KOS_SUCCESS;
+
+    TRY(check_wait_proto(ctx, this_obj));
+
+    wait_info = (struct KOS_WAIT_S *)KOS_object_get_private_ptr(this_obj);
+
+#ifndef _WIN32
+    pid = KOS_new_int(ctx, (int64_t)wait_info->pid);
+    TRY_OBJID(pid);
+#endif
+
+cleanup:
+    return error ? KOS_BADPTR : pid;
 }
 
 KOS_INIT_MODULE(os)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 {
     int       error = KOS_SUCCESS;
     KOS_LOCAL module;
+    KOS_LOCAL priv;
+    KOS_LOCAL wait_proto;
+    KOS_LOCAL wait_func;
 
     KOS_init_local_with(ctx, &module, module_obj);
+    KOS_init_locals(ctx, 3, &wait_func, &priv, &wait_proto);
 
-    TRY_ADD_FUNCTION(ctx, module.o, "spawn", spawn, 1);
+    priv.o = KOS_new_array(ctx, 1);
+    TRY_OBJID(priv.o);
+
+    KOS_atomic_write_relaxed_ptr(OBJPTR(MODULE, module.o)->priv, priv.o);
+
+    wait_proto.o = KOS_new_object(ctx);
+    TRY_OBJID(wait_proto.o);
+
+    TRY(KOS_array_write(ctx, priv.o, 0, wait_proto.o));
+
+    TRY_ADD_FUNCTION(       ctx, module.o,               "spawn", spawn,          1);
+
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, wait_proto.o, "wait",  wait_for_child, 0);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, wait_proto.o, "pid",   get_pid,        0);
 
 cleanup:
-    KOS_destroy_top_local(ctx, &module);
+    KOS_destroy_top_locals(ctx, &wait_func, &module);
 
     return error;
 }

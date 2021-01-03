@@ -186,6 +186,8 @@ Table of Contents
     * [tan()](#tan)
   * [os](#os)
       * [os.spawn()](#osspawn)
+      * [process.pid](#processpid)
+      * [process.wait()](#processwait)
   * [random](#random)
     * [rand\_float()](#rand_float)
     * [rand\_integer()](#rand_integer)
@@ -3839,6 +3841,51 @@ Spawns a new process described by `spawn_desc`.
                     which is fed into the spawned program on stdin.
  * stdout         - (Optional) File object open for writing.
  * stderr         - (Optional) File object open for writing.
+
+Returns a `process` object which can be used to obtain information about the spawned child process.
+The process object contains the following fields:
+
+ * [pid](#processpid)     The pid of the spawned child process.
+ * [wait()](#processwait) The wait function, which can be used to wait for the process to finish.
+
+process.pid
+-----------
+
+    process.pid()
+
+Member of the process object returned by [os.spawn()](#osspawn).
+
+The pid of the spawned process.
+
+process.wait()
+--------------
+
+    process.wait()
+
+Member of the process object returned by [os.spawn()](#osspawn).
+
+Waits for the process to finish.
+
+If the wait succeeded, returns a status object, containing the following properties:
+
+ * status    Exit code of the process.  If the process exited with a signal or stopped,
+             it is 128 plus signal number.
+ * signal    If the process exited with a signal or stopped, contains then number of
+             the signal, otherwise contains `void`.
+ * stopped   If the process was stopped by a signal, contains `true`, otherwise if the
+             process exited (with or without a signal) contains `false`.
+
+If the wait failed, e.g. if it was already called and the process was not stopped,
+this function throws an exception.
+
+This function will return in three following situations:
+
+ # The process exits normally, in which case the `status` property of the returned object
+   contains the exit code.
+ # The process exits via a signal (e.g. crashes), in which case the `status` property is
+   128 + the number of the signal and the `signal` property is the signal number.
+ # The process is stopped, in which case the `stopped` property is set to `true`.  In this
+   case the `wait()` function can be called again to wait for the process to finish.
 
 random
 ======

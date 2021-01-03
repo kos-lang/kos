@@ -30,6 +30,10 @@ const bin_true = have_program("/usr/bin/true") ? "/usr/bin/true" :
                  have_program("/bin/true")     ? "/bin/true"     :
                  void
 
+const bin_false = have_program("/usr/bin/false") ? "/usr/bin/false" :
+                  have_program("/bin/false")     ? "/bin/false"     :
+                  void
+
 do {
     expect_fail(() => os.spawn())
     expect_fail(() => os.spawn({program: void}))
@@ -102,4 +106,33 @@ if bin_true {
     os.spawn({program: bin_true, inherit_env: true})
     os.spawn({program: bin_true, inherit_env: false})
     os.spawn({program: bin_true, inherit_env: false, env: {STH: "OK2"}})
+
+    # os.spawn() returns a wait object
+    do {
+        const process = os.spawn({program: bin_true})
+
+        assert process.pid > 1
+
+        const ret = process.wait()
+        assert typeof ret == "object"
+        assert ret.status  == 0
+        assert ret.signal  == void
+        assert ret.stopped == false
+
+        expect_fail(() => process.wait())
+    }
+
+    # Check non-zero status
+    if bin_false {
+        const process = os.spawn({program: bin_false})
+
+        assert process.pid > 1
+
+        const ret = process.wait()
+        assert ret.status  != 0
+        assert ret.signal  == void
+        assert ret.stopped == false
+
+        expect_fail(() => process.wait())
+    }
 }
