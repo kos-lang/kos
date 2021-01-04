@@ -17,6 +17,11 @@
 #include <string.h>
 
 #ifdef _WIN32
+#   define WIN32_LEAN_AND_MEAN
+#   pragma warning( push )
+#   pragma warning( disable : 4255 4668 )
+#   include <windows.h>
+#   pragma warning( pop )
 #else
 #   include <errno.h>
 #   include <fcntl.h>
