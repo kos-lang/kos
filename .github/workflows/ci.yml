@@ -17,7 +17,6 @@ jobs:
           - ubuntu-20.04
           - ubuntu-18.04
           - ubuntu-16.04
-          - macos-11.0
           - macos-10.15
         test:
           - c89
@@ -70,9 +69,16 @@ jobs:
         with:
           path-type: inherit
       - uses: actions/checkout@v2
+      - name: Show
+        shell: cmd
+        run: |
+          dir "C:\Program Files (x86)"
+          dir "C:\Program Files (x86)\Microsoft Visual Studio"
+          dir "C:\Program Files (x86)\Microsoft Visual Studio\2019"
+          dir "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise"
       - name: Setup
         shell: cmd
-        run: call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvarsall.bat" ${{ matrix.target }}
+        run: call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" ${{ matrix.target }}
       - name: Environment
         shell: msys2 {0}
         run: set
