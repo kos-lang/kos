@@ -68,9 +68,11 @@ jobs:
         with:
           path-type: inherit
       - uses: actions/checkout@v2
+      - name: Remove link.exe from MSYS2
+        shell: msys2 {0}
+        run: rm /bin/link.exe
       - name: Test
         shell: cmd
         run: |
           call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" ${{ matrix.target }}
-          msys2 -c "rm /bin/link.exe"
           msys2 -c "tests/run ${{ matrix.test }}"
