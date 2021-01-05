@@ -33,8 +33,7 @@ jobs:
     strategy:
       matrix:
         test:
-          - asan
-          - seqfail
+          - asan seqfail
           - madgc
           - asan slowdispatch
           - asan deepstack
