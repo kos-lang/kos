@@ -2,21 +2,75 @@ name: CI
 
 on:
   push:
-    branches: [ master, develop ]
+    branches:
+      - master
+      - develop
   pull_request:
-    branches: [ develop ]
+    branches:
+      - develop
 
 jobs:
-  build:
+  basic_test:
     strategy:
       matrix:
-        os: [ubuntu-16.04, ubuntu-18.04, ubuntu-20.04, macos-10.15, macos-11.0]
+        os:
+          - ubuntu-20.04
+          - ubuntu-18.04
+          - ubuntu-16.04
+          - macos-11.0
+          - macos-10.15
 
     runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Debug
-      run: tests/run c89
-    - name: Release
-      run: tests/run release
+      - uses: actions/checkout@v2
+      - name: Debug
+        run: tests/run c89
+      - name: Release
+        run: tests/run release
+
+  full_test:
+    runs-on: ubuntu-20.04
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: C++14
+        run: tests/run cpp14
+      - name: Address Sanitizer
+        run: tests/run asan
+      - name: Sequential Fail
+        run: tests/run seqfail
+      - name: Mad GC
+        run: tests/run madgc
+      - name: Slow Dispatch
+        run: tests/run asan slowdispatch
+      - name: Deep Stack
+        run: tests/run asan deepstack
+      - name: Valgrind
+        run: tests/run valgrind
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: msys2/setup-msys2@v2
+      - name: Native Environment (Early)
+        shell: cmd
+        run: set
+      - name: MSYS2 Environment (Early)
+        shell: msys2 {0}
+        run: |
+          set
+          which cl.exe
+          which link.exe
+      - name: Setup
+        shell: cmd
+        run: call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvarsall.bat" x86
+      - name: Native Environment
+        shell: cmd
+        run: set
+      - name: MSYS2 Environment
+        shell: msys2 {0}
+        run: |
+          set
+          which cl.exe
+          which link.exe
