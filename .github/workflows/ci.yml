@@ -19,58 +19,63 @@ jobs:
           - ubuntu-16.04
           - macos-11.0
           - macos-10.15
+        test:
+          - c89
+          - release
 
     runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v2
-      - name: Debug
-        run: tests/run c89
-      - name: Release
-        run: tests/run release
+      - name: Test
+        run: tests/run ${{ matrix.test }}
 
   full_test:
+    strategy:
+      matrix:
+        test:
+          - asan
+          - seqfail
+          - madgc
+          - asan slowdispatch
+          - asan deepstack
+          - valgrind
+
     runs-on: ubuntu-20.04
 
     steps:
       - uses: actions/checkout@v2
-      - name: C++14
-        run: tests/run cpp14
-      - name: Address Sanitizer
-        run: tests/run asan
-      - name: Sequential Fail
-        run: tests/run seqfail
-      - name: Mad GC
-        run: tests/run madgc
-      - name: Slow Dispatch
-        run: tests/run asan slowdispatch
-      - name: Deep Stack
-        run: tests/run asan deepstack
-      - name: Valgrind
-        run: tests/run valgrind
+      - name: Install Valgrind
+        if: ${{ matrix.test == 'valgrind' }}
+        run: |
+          sudo apt update
+          sudo apt install valgrind
+      - name: Test
+        run: tests/run ${{ matrix.test }}
 
   windows:
+    strategy:
+      matrix:
+        target:
+          - x86
+          - x64
+        test:
+          - c89
+          - release
+
     runs-on: windows-latest
+
     steps:
       - uses: msys2/setup-msys2@v2
-      - name: Native Environment (Early)
-        shell: cmd
-        run: set
-      - name: MSYS2 Environment (Early)
-        shell: msys2 {0}
-        run: |
-          set
-          which cl.exe
-          which link.exe
+        with:
+          path-type: inherit
+      - uses: actions/checkout@v2
       - name: Setup
         shell: cmd
-        run: call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvarsall.bat" x86
-      - name: Native Environment
-        shell: cmd
-        run: set
-      - name: MSYS2 Environment
+        run: call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvarsall.bat" ${{ matrix.target }}
+      - name: Environment
         shell: msys2 {0}
-        run: |
-          set
-          which cl.exe
-          which link.exe
+        run: set
+      - name: Test
+        shell: msys2 {0}
+        run: tests/run ${{ matrix.test }}
