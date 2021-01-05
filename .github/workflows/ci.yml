@@ -69,19 +69,29 @@ jobs:
         with:
           path-type: inherit
       - uses: actions/checkout@v2
-      - name: Show
+      - name: Show Environment
         shell: cmd
         run: |
           dir "C:\Program Files (x86)"
           dir "C:\Program Files (x86)\Microsoft Visual Studio"
-          dir "C:\Program Files (x86)\Microsoft Visual Studio\2019"
-          dir "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise"
-      - name: Setup
-        shell: cmd
-        run: call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" ${{ matrix.target }}
-      - name: Environment
-        shell: msys2 {0}
-        run: set
+          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" ${{ matrix.target }}
+          set
+          msys2 -c set
+          msys2 -c "which cl"
       - name: Test
-        shell: msys2 {0}
-        run: tests/run ${{ matrix.test }}
+        shell: cmd
+        run: |
+          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" ${{ matrix.target }}
+          msys2 -c "tests/run ${{ matrix.test }}"
+
+  coveralls:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Test
+        run: tests/run gcov
+      - name: Coveralls
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
