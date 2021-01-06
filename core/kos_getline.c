@@ -12,7 +12,6 @@
 #include "kos_math.h"
 #include "kos_misc.h"
 #include "kos_utf8_internal.h"
-#include <setjmp.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
