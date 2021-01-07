@@ -1061,11 +1061,12 @@ static KOS_OBJ_ID alloc_module(KOS_CONTEXT  ctx,
     OBJPTR(MODULE, obj_id[0])->globals        = obj_id[5];
     OBJPTR(MODULE, obj_id[0])->module_names   = obj_id[6];
     OBJPTR(MODULE, obj_id[0])->priv           = obj_id[6];
+    OBJPTR(MODULE, obj_id[0])->finalize       = KOS_NULL;
     OBJPTR(MODULE, obj_id[0])->flags          = 0;
-    OBJPTR(MODULE, obj_id[0])->inst           = 0;
-    OBJPTR(MODULE, obj_id[0])->bytecode       = 0;
-    OBJPTR(MODULE, obj_id[0])->line_addrs     = 0;
-    OBJPTR(MODULE, obj_id[0])->func_addrs     = 0;
+    OBJPTR(MODULE, obj_id[0])->inst           = KOS_NULL;
+    OBJPTR(MODULE, obj_id[0])->bytecode       = KOS_NULL;
+    OBJPTR(MODULE, obj_id[0])->line_addrs     = KOS_NULL;
+    OBJPTR(MODULE, obj_id[0])->func_addrs     = KOS_NULL;
     OBJPTR(MODULE, obj_id[0])->num_line_addrs = 0;
     OBJPTR(MODULE, obj_id[0])->num_func_addrs = 0;
     OBJPTR(MODULE, obj_id[0])->bytecode_size  = 0;

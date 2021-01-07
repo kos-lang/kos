@@ -260,6 +260,7 @@ static void setup_init_module(KOS_MODULE *init_module)
     init_module->globals        = KOS_BADPTR;
     init_module->module_names   = KOS_BADPTR;
     init_module->priv           = KOS_BADPTR;
+    init_module->finalize       = KOS_NULL;
     init_module->bytecode       = KOS_NULL;
     init_module->line_addrs     = KOS_NULL;
     init_module->func_addrs     = KOS_NULL;
@@ -463,6 +464,8 @@ void KOS_instance_destroy(KOS_INSTANCE *inst)
         if (IS_BAD_PTR(module_obj))
             KOS_clear_exception(ctx);
         else if (GET_OBJ_TYPE(module_obj) == OBJ_MODULE) {
+            if (OBJPTR(MODULE, module_obj)->finalize)
+                OBJPTR(MODULE, module_obj)->finalize(ctx, module_obj);
             if ((OBJPTR(MODULE, module_obj)->flags & KOS_MODULE_OWN_BYTECODE))
                 KOS_free((void *)OBJPTR(MODULE, module_obj)->bytecode);
             if ((OBJPTR(MODULE, module_obj)->flags & KOS_MODULE_OWN_LINE_ADDRS))
