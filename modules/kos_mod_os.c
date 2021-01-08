@@ -600,8 +600,9 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
         KOS_suspend_context(ctx);
 
         if ((pipe(exec_status_fd) != 0) || kos_seq_fail()) {
+            err_value = errno;
             KOS_resume_context(ctx);
-            KOS_raise_errno(ctx, "pipe creation failed");
+            KOS_raise_errno_value(ctx, "pipe creation failed", err_value);
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
 
@@ -611,8 +612,9 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
         child_pid = fork();
 
         if (child_pid == -1) {
+            err_value = errno;
             KOS_resume_context(ctx);
-            KOS_raise_errno(ctx, "fork failed");
+            KOS_raise_errno_value(ctx, "fork failed", err_value);
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
 
@@ -702,15 +704,19 @@ static KOS_OBJ_ID wait_for_child(KOS_CONTEXT ctx,
     for (;;) {
         pid_t ret_pid;
         int   status;
+        int   stored_errno = 0;
 
         KOS_suspend_context(ctx);
 
         ret_pid = wait(&status);
 
+        if (ret_pid == -1)
+            stored_errno = errno;
+
         KOS_resume_context(ctx);
 
         if (ret_pid == -1) {
-            KOS_raise_errno(ctx, "wait failed");
+            KOS_raise_errno_value(ctx, "wait failed", stored_errno);
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
 

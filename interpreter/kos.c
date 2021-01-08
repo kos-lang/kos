@@ -18,6 +18,7 @@
 #include "../core/kos_system.h"
 #include "../core/kos_try.h"
 #include <assert.h>
+#include <errno.h>
 #include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -361,9 +362,10 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
     PROF_ZONE(MODULE)
 
     int         error;
+    int         genline_init = 0;
+    int         stored_errno = 0;
     KOS_GETLINE state;
     KOS_LOCAL   print_args;
-    int         genline_init = 0;
     KOS_VECTOR  tmp_buf;
 
     KOS_vector_init(&tmp_buf);
@@ -386,7 +388,15 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
     for (;;) {
         KOS_OBJ_ID ret;
 
+        KOS_suspend_context(ctx);
+
         error = kos_getline(&state, PROMPT_FIRST_LINE, buf);
+
+        if (error == KOS_ERROR_ERRNO)
+            stored_errno = errno;
+
+        KOS_resume_context(ctx);
+
         if (error) {
             if (error == KOS_ERROR_INTERRUPTED)
                 continue;
@@ -403,7 +413,15 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
 
             tmp_buf.size = 0;
 
+            KOS_suspend_context(ctx);
+
             error = kos_getline(&state, PROMPT_SUBSEQUENT_LINE, &tmp_buf);
+
+            if (error == KOS_ERROR_ERRNO)
+                stored_errno = errno;
+
+            KOS_resume_context(ctx);
+
             if (error) {
                 assert(error == KOS_ERROR_OUT_OF_MEMORY ||
                        error == KOS_ERROR_INTERRUPTED   ||
@@ -464,7 +482,7 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
     }
 
     if (error == KOS_ERROR_ERRNO) {
-        KOS_raise_errno(ctx, KOS_NULL);
+        KOS_raise_errno_value(ctx, KOS_NULL, stored_errno);
         error = KOS_ERROR_EXCEPTION;
     }
 

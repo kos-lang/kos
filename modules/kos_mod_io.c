@@ -15,6 +15,7 @@
 #include "../core/kos_object_internal.h"
 #include "../core/kos_system.h"
 #include "../core/kos_try.h"
+#include <errno.h>
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
@@ -97,6 +98,7 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
                            KOS_OBJ_ID  args_obj)
 {
     int        error        = KOS_SUCCESS;
+    int        stored_errno = 0;
     KOS_OBJ_ID filename_obj;
     FILE      *file         = KOS_NULL;
     KOS_LOCAL  this_;
@@ -149,10 +151,13 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
         fcntl(fileno(file), F_SETFD, FD_CLOEXEC);
 #endif
 
+    if ( ! file)
+        stored_errno = errno;
+
     KOS_resume_context(ctx);
 
     if ( ! file) {
-        KOS_raise_errno(ctx, KOS_NULL);
+        KOS_raise_errno_value(ctx, KOS_NULL, stored_errno);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
@@ -345,8 +350,9 @@ static KOS_OBJ_ID read_line(KOS_CONTEXT ctx,
 
         if ( ! ret) {
             if (ferror(file)) {
+                const int stored_errno = errno;
                 KOS_resume_context(ctx);
-                KOS_raise_errno(ctx, KOS_NULL);
+                KOS_raise_errno_value(ctx, KOS_NULL, stored_errno);
                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
             }
             else
@@ -392,8 +398,9 @@ static KOS_OBJ_ID read_some(KOS_CONTEXT ctx,
                             KOS_OBJ_ID  this_obj,
                             KOS_OBJ_ID  args_obj)
 {
-    int        error = KOS_SUCCESS;
-    FILE      *file  = KOS_NULL;
+    int        error        = KOS_SUCCESS;
+    int        stored_errno = 0;
+    FILE      *file         = KOS_NULL;
     KOS_LOCAL  args;
     KOS_LOCAL  buf;
     uint8_t   *data;
@@ -446,14 +453,17 @@ static KOS_OBJ_ID read_some(KOS_CONTEXT ctx,
 
     num_read = fread(data + offset, 1, (size_t)to_read, file);
 
+    if (num_read < (size_t)to_read && ferror(file))
+        stored_errno = errno;
+
     KOS_resume_context(ctx);
 
     assert(num_read <= (size_t)to_read);
 
     TRY(KOS_buffer_resize(ctx, buf.o, (unsigned)(offset + num_read)));
 
-    if (num_read < (size_t)to_read && ferror(file)) {
-        KOS_raise_errno(ctx, KOS_NULL);
+    if (stored_errno) {
+        KOS_raise_errno_value(ctx, KOS_NULL, stored_errno);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
@@ -505,7 +515,8 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
 
     for (i_arg = 0; i_arg < num_args; i_arg++) {
 
-        size_t num_writ = 0;
+        size_t num_writ     = 0;
+        int    stored_errno = 0;
 
         arg.o = KOS_array_read(ctx, args.o, i_arg);
         TRY_OBJID(arg.o);
@@ -536,11 +547,14 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
 
                 num_writ = fwrite(data, 1, to_write, file);
 
+                if (num_writ < to_write)
+                    stored_errno = errno;
+
                 KOS_resume_context(ctx);
             }
 
-            if (num_writ < to_write) {
-                KOS_raise_errno(ctx, KOS_NULL);
+            if (stored_errno) {
+                KOS_raise_errno_value(ctx, KOS_NULL, stored_errno);
                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
             }
         }
@@ -560,11 +574,14 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
 
                 num_writ = fwrite(cstr.buffer, 1, cstr.size - 1, file);
 
+                if (num_writ < cstr.size - 1)
+                    stored_errno = errno;
+
                 KOS_resume_context(ctx);
             }
 
-            if (num_writ < cstr.size - 1) {
-                KOS_raise_errno(ctx, KOS_NULL);
+            if (stored_errno) {
+                KOS_raise_errno_value(ctx, KOS_NULL, stored_errno);
                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
             }
 
@@ -784,6 +801,7 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
             TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_file)));
 #else
         struct stat st;
+        int         stored_errno = 0;
 
         KOS_DECLARE_STATIC_CONST_STRING(str_type,         "type");
         KOS_DECLARE_STATIC_CONST_STRING(str_type_file,    "file");
@@ -799,10 +817,13 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
 
         error = fstat(fileno(file), &st);
 
+        if (error)
+            stored_errno = errno;
+
         KOS_resume_context(ctx);
 
         if (error) {
-            KOS_raise_errno(ctx, KOS_NULL);
+            KOS_raise_errno_value(ctx, KOS_NULL, stored_errno);
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
 
@@ -874,6 +895,8 @@ static KOS_OBJ_ID get_file_size(KOS_CONTEXT ctx,
 
     TRY(get_file_object(ctx, this_obj, &file, 1));
 
+    /* TODO use fstat */
+
     orig_pos = ftell(file);
     if (orig_pos < 0) {
         KOS_raise_errno(ctx, KOS_NULL);
@@ -915,9 +938,10 @@ static KOS_OBJ_ID get_file_pos(KOS_CONTEXT ctx,
                                KOS_OBJ_ID  this_obj,
                                KOS_OBJ_ID  args_obj)
 {
-    FILE *file  = KOS_NULL;
-    int   error = KOS_SUCCESS;
-    long  pos   = 0;
+    FILE *file         = KOS_NULL;
+    int   error        = KOS_SUCCESS;
+    int   stored_errno = 0;
+    long  pos          = 0;
 
     TRY(get_file_object(ctx, this_obj, &file, 1));
 
@@ -925,10 +949,13 @@ static KOS_OBJ_ID get_file_pos(KOS_CONTEXT ctx,
 
     pos = ftell(file);
 
+    if (pos < 0)
+        stored_errno = errno;
+
     KOS_resume_context(ctx);
 
-    if (pos < 0) {
-        KOS_raise_errno(ctx, KOS_NULL);
+    if (stored_errno) {
+        KOS_raise_errno_value(ctx, KOS_NULL, stored_errno);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
@@ -980,7 +1007,9 @@ static KOS_OBJ_ID set_file_pos(KOS_CONTEXT ctx,
     KOS_suspend_context(ctx);
 
     if (fseek(file, (long)pos, whence)) {
-        KOS_raise_errno(ctx, KOS_NULL);
+        const int stored_errno = errno;
+        KOS_resume_context(ctx);
+        KOS_raise_errno_value(ctx, KOS_NULL, stored_errno);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
