@@ -1,0 +1,83 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2014-2021 Chris Dragan
+
+import base
+import test_tools.expect_fail
+import gc
+import io
+import fs
+import os
+
+##############################################################################
+# os.spawn
+
+fun have_program(pathname)
+{
+    if ! fs.is_file(pathname) {
+        return false
+    }
+
+    try {
+        os.spawn({program: pathname, args: ["0"]})
+        return true
+    }
+    catch const e {
+        base.print(pathname, "failed:", e.value)
+    }
+
+    return false
+}
+
+const bin_sleep = have_program("/usr/bin/sleep") ? "/usr/bin/sleep" :
+                  have_program("/bin/sleep")     ? "/bin/sleep"     :
+                  void
+
+fun sleep(time_s)
+{
+    var pid = -1
+
+    if bin_sleep {
+        var process = os.spawn({program: bin_sleep, args: ["\(time_s)"]})
+        pid = process.pid
+        process = void
+    }
+
+    return pid
+}
+
+for const i in base.range(20) {
+    sleep(0.1 + i * 0.1)
+}
+
+gc.collect_garbage()
+
+##############################################################################
+# async
+
+do {
+    var thread = async sleep(1)
+    thread = void
+
+    gc.collect_garbage()
+}
+
+##############################################################################
+# io.open
+
+do {
+    const name = "__gc_test_file"
+
+    fs.remove(name)
+    assert ! fs.is_file(name)
+
+    do {
+        var f = io.create(name)
+        f.write("x")
+        f = void
+    }
+
+    gc.collect_garbage()
+
+    assert fs.is_file(name)
+    fs.remove(name)
+}
