@@ -463,7 +463,7 @@ static void destroy_zombies(int sig)
 
             for (idx = 0; idx < pids->capacity; idx++) {
 
-                const pid_t pid = to_pid(KOS_atomic_swap_ptr(pids->pids[idx], KOS_NULL));
+                const pid_t pid = to_pid(KOS_atomic_swap_ptr(pids->pids[idx], (void *)KOS_NULL));
 
                 if (pid > 0) {
                     KOS_atomic_add_i32(pids->num_pids, -1);
@@ -478,7 +478,7 @@ static void destroy_zombies(int sig)
     }
 }
 
-static KOS_ATOMIC(uint32_t) sig_child_installed = 0U;
+static KOS_ATOMIC(uint32_t) sig_child_installed;
 
 static void handle_sig_child()
 {
@@ -499,7 +499,7 @@ static int reserve_pid_slot(uint32_t array_idx, pid_t pid)
 {
     const uint32_t      new_capacity = array_idx ? 1024U : 32U;
     const size_t        new_size     = sizeof(struct PID_ARRAY) + (new_capacity - 1U) * sizeof(void *);
-    const PID_ARRAY_PTR new_array    = KOS_malloc(new_size);
+    const PID_ARRAY_PTR new_array    = (PID_ARRAY_PTR)KOS_malloc(new_size);
     int                 error        = KOS_ERROR_OUT_OF_MEMORY;
 
     if (new_array) {
@@ -508,7 +508,7 @@ static int reserve_pid_slot(uint32_t array_idx, pid_t pid)
 
         new_array->capacity = new_capacity;
 
-        if (KOS_atomic_cas_strong_ptr(zombie_pids[array_idx], KOS_NULL, new_array))
+        if (KOS_atomic_cas_strong_ptr(zombie_pids[array_idx], (PID_ARRAY_PTR)KOS_NULL, new_array))
             error = KOS_SUCCESS;
         else
             KOS_free(new_array);
@@ -530,7 +530,7 @@ static int append_to_pid_slot(PID_ARRAY_PTR pids, pid_t pid)
 
     for (idx = 0; idx < pids->capacity; idx++) {
 
-        if (KOS_atomic_cas_strong_ptr(pids->pids[idx], KOS_NULL, conv.ptr)) {
+        if (KOS_atomic_cas_strong_ptr(pids->pids[idx], (void *)KOS_NULL, conv.ptr)) {
             KOS_atomic_add_i32(pids->num_pids, 1);
             error = KOS_SUCCESS;
             break;
@@ -588,7 +588,7 @@ static void cleanup_wait_list(KOS_CONTEXT ctx, KOS_OBJ_ID module)
             if (pids != &dummy_pids) {
                 KOS_free(pids);
 
-                KOS_atomic_write_relaxed_ptr(zombie_pids[array_idx], KOS_NULL);
+                KOS_atomic_write_relaxed_ptr(zombie_pids[array_idx], (PID_ARRAY_PTR)KOS_NULL);
             }
         }
     }
