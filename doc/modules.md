@@ -187,9 +187,9 @@ Table of Contents
     * [sqrt()](#sqrt)
     * [tan()](#tan)
   * [os](#os)
-      * [os.spawn()](#osspawn)
       * [process.pid](#processpid)
       * [process.wait()](#processwait)
+    * [spawn()](#spawn)
   * [random](#random)
     * [rand\_float()](#rand_float)
     * [rand\_integer()](#rand_integer)
@@ -3832,39 +3832,6 @@ Example:
 os
 ==
 
-os.spawn()
-----------
-
-    os.spawn(spawn_desc)
-
-Spawns a new process described by `spawn_desc`.
-
-`spawn_desc` is an object containing the following properties:
- * program        - Path to the program to start, or name of the program on PATH.
- * args           - (Optional) Array of arguments for the program.  If not specified,
-                    an empty list of arguments is passed to the spawned program.
- * env            - (Optional) Object containing envionment variables for the spawned program.
-                    The object is walked in a shallow manner to extract the environment.
-                    If `inherit_env` is `true`, these are added on top of the current process's
-                    environment.
- * cwd            - (Optional) Directory to start the program in.
- * inherit_env    - (Optional) If `true` the current process's environment is passed to
-                    the spawned program together with environment variables from `env`.
-                    Otherwise only environment variables from `env` are passed (if any).
-                    Defaults to `true`.
- * capture_stdout - (Optional) If `true`, stdout is captured into a string.
- * capture_stderr - (Optional) If `true`, stderr is captured into a string.
- * stdin          - (Optional) File object open for reading or a string or buffer
-                    which is fed into the spawned program on stdin.
- * stdout         - (Optional) File object open for writing.
- * stderr         - (Optional) File object open for writing.
-
-Returns a `process` object which can be used to obtain information about the spawned child process.
-The process object contains the following fields:
-
- * [pid](#processpid)     The pid of the spawned child process.
- * [wait()](#processwait) The wait function, which can be used to wait for the process to finish.
-
 process.pid
 -----------
 
@@ -3903,6 +3870,39 @@ This function will return in three following situations:
    128 + the number of the signal and the `signal` property is the signal number.
  # The process is stopped, in which case the `stopped` property is set to `true`.  In this
    case the `wait()` function can be called again to wait for the process to finish.
+
+spawn()
+-------
+
+    spawn(spawn_desc)
+
+Spawns a new process described by `spawn_desc`.
+
+`spawn_desc` is an object containing the following properties:
+ * program        - Path to the program to start, or name of the program on PATH.
+ * args           - (Optional) Array of arguments for the program.  If not specified,
+                    an empty list of arguments is passed to the spawned program.
+ * env            - (Optional) Object containing envionment variables for the spawned program.
+                    The object is walked in a shallow manner to extract the environment.
+                    If `inherit_env` is `true`, these are added on top of the current process's
+                    environment.
+ * cwd            - (Optional) Directory to start the program in.
+ * inherit_env    - (Optional) If `true` the current process's environment is passed to
+                    the spawned program together with environment variables from `env`.
+                    Otherwise only environment variables from `env` are passed (if any).
+                    Defaults to `true`.
+ * capture_stdout - (Optional) If `true`, stdout is captured into a string.
+ * capture_stderr - (Optional) If `true`, stderr is captured into a string.
+ * stdin          - (Optional) File object open for reading or a string or buffer
+                    which is fed into the spawned program on stdin.
+ * stdout         - (Optional) File object open for writing.
+ * stderr         - (Optional) File object open for writing.
+
+Returns a `process` object which can be used to obtain information about the spawned child process.
+The process object contains the following fields:
+
+ * [pid](#processpid)     The pid of the spawned child process.
+ * [wait()](#processwait) The wait function, which can be used to wait for the process to finish.
 
 random
 ======

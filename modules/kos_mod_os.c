@@ -686,9 +686,9 @@ cleanup:
     return error;
 }
 
-/* @item os os.spawn()
+/* @item os spawn()
  *
- *     os.spawn(spawn_desc)
+ *     spawn(spawn_desc)
  *
  * Spawns a new process described by `spawn_desc`.
  *
