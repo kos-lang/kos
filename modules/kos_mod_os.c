@@ -497,21 +497,23 @@ static void handle_sig_child()
 
 static int reserve_pid_slot(uint32_t array_idx, pid_t pid)
 {
-    const uint32_t      new_capacity = array_idx ? 1024U : 32U;
-    const size_t        new_size     = sizeof(struct PID_ARRAY) + (new_capacity - 1U) * sizeof(void *);
-    const PID_ARRAY_PTR new_array    = (PID_ARRAY_PTR)KOS_malloc(new_size);
-    int                 error        = KOS_ERROR_OUT_OF_MEMORY;
+    const uint32_t new_capacity = array_idx ? 1024U : 32U;
+    const size_t   new_size     = sizeof(struct PID_ARRAY) + (new_capacity - 1U) * sizeof(void *);
+    void          *alloc_ptr    = KOS_malloc(new_size);
+    int            error        = KOS_ERROR_OUT_OF_MEMORY;
 
-    if (new_array) {
+    if (alloc_ptr) {
 
-        memset(new_array, 0, new_size);
+        const PID_ARRAY_PTR new_array = (PID_ARRAY_PTR)alloc_ptr;
+
+        memset(alloc_ptr, 0, new_size);
 
         new_array->capacity = new_capacity;
 
         if (KOS_atomic_cas_strong_ptr(zombie_pids[array_idx], (PID_ARRAY_PTR)KOS_NULL, new_array))
             error = KOS_SUCCESS;
         else
-            KOS_free(new_array);
+            KOS_free(alloc_ptr);
     }
 
     return error;
