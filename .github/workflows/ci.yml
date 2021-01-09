@@ -60,7 +60,10 @@ jobs:
         if: ${{ matrix.test == 'gcov' }}
         run: |
           mkdir -p coverage
-          lcov --capture --directory . --output-file coverage/lcov.info
+          lcov -c -d core -o coverage/core.info
+          lcov -c -d modules -o coverage/modules.info
+          lcov -c -d interpreter -o coverage/interpreter.info
+          lcov -a coverage/core.info -a coverage/modules.info -a coverage/interpreter.info -o coverage/lcov.info
       - name: Coveralls
         if: ${{ matrix.test == 'gcov' }}
         uses: coverallsapp/github-action@master
