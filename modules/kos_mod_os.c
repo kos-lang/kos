@@ -474,7 +474,7 @@ static void destroy_zombies(int sig)
         }
 
         if (pids != &dummy_pids)
-            KOS_atomic_swap_ptr(zombie_pids[array_idx], pids);
+            KOS_atomic_write_relaxed_ptr(zombie_pids[array_idx], pids);
     }
 }
 
@@ -1016,7 +1016,9 @@ KOS_INIT_MODULE(os)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, wait_proto.o, "wait",  wait_for_child, 0);
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, wait_proto.o, "pid",   get_pid,        0);
 
+#ifndef _WIN32
     KOS_atomic_add_i32(num_os_modules, 1);
+#endif
 
 cleanup:
     KOS_destroy_top_locals(ctx, &wait_func, &module);
