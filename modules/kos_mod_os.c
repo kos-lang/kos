@@ -25,6 +25,7 @@
 #else
 #   include <errno.h>
 #   include <fcntl.h>
+#   include <signal.h>
 #   include <stdlib.h>
 #   include <sys/wait.h>
 #   include <unistd.h>
@@ -406,11 +407,203 @@ cleanup:
     return error;
 }
 
+#ifdef _WIN32
+
+static void release_pid(struct KOS_WAIT_S *wait_info)
+{
+}
+
+#else
+
+struct PID_ARRAY {
+    uint32_t            capacity;
+    KOS_ATOMIC(int32_t) num_pids;
+    KOS_ATOMIC(void *)  pids[1];
+};
+typedef struct PID_ARRAY *PID_ARRAY_PTR;
+
+static KOS_ATOMIC(PID_ARRAY_PTR) zombie_pids[4];
+static KOS_ATOMIC(int32_t)       num_os_modules;
+static struct PID_ARRAY          dummy_pids; /* Placeholder for signal handler */
+
+union PID_TO_PTR {
+    void *ptr;
+    pid_t pid;
+};
+
+static pid_t to_pid(void *ptr)
+{
+    union PID_TO_PTR conv;
+
+    conv.ptr = ptr;
+
+    return conv.pid;
+}
+
+static pid_t check_pid(pid_t pid)
+{
+    int status;
+
+    return waitpid(pid, &status, WNOHANG);
+}
+
+static void destroy_zombies(int sig)
+{
+    size_t array_idx;
+
+    assert(sig == SIGCHLD);
+
+    for (array_idx = 0; array_idx < sizeof(zombie_pids) / sizeof(zombie_pids[0]); array_idx++) {
+
+        const PID_ARRAY_PTR pids = (PID_ARRAY_PTR)KOS_atomic_swap_ptr(zombie_pids[array_idx], &dummy_pids);
+
+        if (pids) {
+
+            uint32_t idx;
+
+            for (idx = 0; idx < pids->capacity; idx++) {
+
+                const pid_t pid = to_pid(KOS_atomic_swap_ptr(pids->pids[idx], KOS_NULL));
+
+                if (pid > 0) {
+                    KOS_atomic_add_i32(pids->num_pids, -1);
+
+                    check_pid(pid);
+                }
+            }
+        }
+
+        if (pids != &dummy_pids)
+            KOS_atomic_swap_ptr(zombie_pids[array_idx], pids);
+    }
+}
+
+static KOS_ATOMIC(uint32_t) sig_child_installed = 0U;
+
+static void handle_sig_child()
+{
+    if (KOS_atomic_cas_strong_u32(sig_child_installed, 0U, 1U)) {
+
+        struct sigaction sa;
+
+        memset(&sa, 0, sizeof(sa));
+        sa.sa_handler = destroy_zombies;
+        sa.sa_flags   = SA_RESTART | SA_NOCLDSTOP;
+        sigemptyset(&sa.sa_mask);
+
+        sigaction(SIGCHLD, &sa, KOS_NULL);
+    }
+}
+
+static int reserve_pid_slot(uint32_t array_idx, pid_t pid)
+{
+    const uint32_t      new_capacity = array_idx ? 1024U : 32U;
+    const size_t        new_size     = sizeof(struct PID_ARRAY) + (new_capacity - 1U) * sizeof(void *);
+    const PID_ARRAY_PTR new_array    = KOS_malloc(new_size);
+    int                 error        = KOS_ERROR_OUT_OF_MEMORY;
+
+    if (new_array) {
+
+        memset(new_array, 0, new_size);
+
+        new_array->capacity = new_capacity;
+
+        if (KOS_atomic_cas_strong_ptr(zombie_pids[array_idx], KOS_NULL, new_array))
+            error = KOS_SUCCESS;
+        else
+            KOS_free(new_array);
+    }
+
+    return error;
+}
+
+static int append_to_pid_slot(PID_ARRAY_PTR pids, pid_t pid)
+{
+    union PID_TO_PTR conv;
+    uint32_t         idx;
+    int              error = KOS_ERROR_OUT_OF_MEMORY;
+
+    if (KOS_atomic_read_relaxed_u32(*(KOS_ATOMIC(uint32_t) *)&pids->num_pids) == pids->capacity)
+        return error;
+
+    conv.pid = pid;
+
+    for (idx = 0; idx < pids->capacity; idx++) {
+
+        if (KOS_atomic_cas_strong_ptr(pids->pids[idx], KOS_NULL, conv.ptr)) {
+            KOS_atomic_add_i32(pids->num_pids, 1);
+            error = KOS_SUCCESS;
+            break;
+        }
+    }
+
+    return error;
+}
+
+/* If the wait object is being destroyed, try to wait on the child process to finish.
+ * The waitpid() function clears the state of the child that has finished.  If the parent
+ * process does not call waitpid(), a finished child will remain in a zombie state.
+ * If the child is still running, we put the pid of the child on the zombie_pids list,
+ * so that its state can get cleaned up later. */
+static void release_pid(struct KOS_WAIT_S *wait_info)
+{
+    const pid_t ret_pid = check_pid(wait_info->pid);
+
+    if (ret_pid == 0) {
+
+        uint32_t array_idx;
+
+        for (array_idx = 0; array_idx < sizeof(zombie_pids) / sizeof(zombie_pids[0]); array_idx++) {
+
+            const PID_ARRAY_PTR pids = (PID_ARRAY_PTR)KOS_atomic_read_relaxed_ptr(zombie_pids[array_idx]);
+
+            if (pids != &dummy_pids) {
+                if ( ! pids) {
+                    if ( ! reserve_pid_slot(array_idx, wait_info->pid))
+                        break;
+                }
+                else {
+                    if ( ! append_to_pid_slot(pids, wait_info->pid))
+                        break;
+                }
+            }
+        }
+
+        handle_sig_child();
+    }
+}
+
+static void cleanup_wait_list(KOS_CONTEXT ctx, KOS_OBJ_ID module)
+{
+    /* If there are multiple instances, multiple os modules can be loaded.
+     * Perform the cleanup only after the last os module is unloaded. */
+    if (KOS_atomic_add_i32(num_os_modules, -1) == 1) {
+
+        size_t array_idx;
+
+        for (array_idx = 0; array_idx < sizeof(zombie_pids) / sizeof(zombie_pids[0]); array_idx++) {
+
+            const PID_ARRAY_PTR pids = (PID_ARRAY_PTR)KOS_atomic_swap_ptr(zombie_pids[array_idx], &dummy_pids);
+
+            if (pids != &dummy_pids) {
+                KOS_free(pids);
+
+                KOS_atomic_write_relaxed_ptr(zombie_pids[array_idx], KOS_NULL);
+            }
+        }
+    }
+}
+
+#endif
+
 static void wait_finalize(KOS_CONTEXT ctx,
                           void       *priv)
 {
-    if (priv)
+    if (priv) {
+        release_pid((struct KOS_WAIT_S *)priv);
+
         KOS_free((struct KOS_WAIT_S *)priv);
+    }
 }
 
 static KOS_OBJ_ID get_wait_proto(KOS_CONTEXT ctx)
@@ -701,14 +894,14 @@ static KOS_OBJ_ID wait_for_child(KOS_CONTEXT ctx,
     TRY_OBJID(ret.o);
 
 #ifndef _WIN32
-    for (;;) {
+    {
         pid_t ret_pid;
         int   status;
         int   stored_errno = 0;
 
         KOS_suspend_context(ctx);
 
-        ret_pid = wait(&status);
+        ret_pid = waitpid(wait_info->pid, &status, 0);
 
         if (ret_pid == -1)
             stored_errno = errno;
@@ -720,8 +913,7 @@ static KOS_OBJ_ID wait_for_child(KOS_CONTEXT ctx,
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
 
-        if (ret_pid != wait_info->pid)
-            continue;
+        assert(ret_pid == wait_info->pid);
 
         if (WIFEXITED(status)) {
             const uint8_t exit_code = (uint8_t)WEXITSTATUS(status);
@@ -760,8 +952,6 @@ static KOS_OBJ_ID wait_for_child(KOS_CONTEXT ctx,
 
             TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_stopped), stopped));
         }
-
-        break;
     }
 #endif
 
@@ -807,6 +997,10 @@ KOS_INIT_MODULE(os)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     KOS_init_local_with(ctx, &module, module_obj);
     KOS_init_locals(ctx, 3, &wait_func, &priv, &wait_proto);
 
+#ifndef _WIN32
+    OBJPTR(MODULE, module_obj)->finalize = cleanup_wait_list;
+#endif
+
     priv.o = KOS_new_array(ctx, 1);
     TRY_OBJID(priv.o);
 
@@ -821,6 +1015,8 @@ KOS_INIT_MODULE(os)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, wait_proto.o, "wait",  wait_for_child, 0);
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, wait_proto.o, "pid",   get_pid,        0);
+
+    KOS_atomic_add_i32(num_os_modules, 1);
 
 cleanup:
     KOS_destroy_top_locals(ctx, &wait_func, &module);
