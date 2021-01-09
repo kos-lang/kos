@@ -38,7 +38,7 @@ jobs:
           - asan slowdispatch
           - asan deepstack
           - valgrind
-          - gcov
+          - lcov
 
     runs-on: ubuntu-20.04
 
@@ -50,25 +50,18 @@ jobs:
           sudo apt update
           sudo apt install valgrind
       - name: Install lcov
-        if: ${{ matrix.test == 'gcov' }}
+        if: ${{ matrix.test == 'lcov' }}
         run: |
           sudo apt update
           sudo apt install lcov
       - name: Test
         run: tests/run ${{ matrix.test }}
-      - name: Gather Coverage Data
-        if: ${{ matrix.test == 'gcov' }}
-        run: |
-          mkdir -p coverage
-          lcov -c -d core -o coverage/core.info
-          lcov -c -d modules -o coverage/modules.info
-          lcov -c -d interpreter -o coverage/interpreter.info
-          lcov -a coverage/core.info -a coverage/modules.info -a coverage/interpreter.info -o coverage/lcov.info
       - name: Coveralls
-        if: ${{ matrix.test == 'gcov' }}
+        if: ${{ matrix.test == 'lcov' }}
         uses: coverallsapp/github-action@master
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: Out/debug/kos.info
 
   windows:
     strategy:
