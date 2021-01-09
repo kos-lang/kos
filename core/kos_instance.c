@@ -447,6 +447,7 @@ void KOS_instance_destroy(KOS_INSTANCE *inst)
     uint32_t    i;
     uint32_t    num_modules = KOS_get_array_size(inst->modules.modules);
     KOS_CONTEXT ctx         = &inst->threads.main_thread;
+    KOS_VECTOR  finalizers;
 
     kos_validate_context(ctx);
 
@@ -459,13 +460,19 @@ void KOS_instance_destroy(KOS_INSTANCE *inst)
         fprintf(stderr, "Out of memory\n");
     }
 
+    KOS_vector_init(&finalizers);
+
     for (i = 0; i < num_modules; i++) {
         KOS_OBJ_ID module_obj = KOS_array_read(ctx, inst->modules.modules, (int)i);
         if (IS_BAD_PTR(module_obj))
             KOS_clear_exception(ctx);
         else if (GET_OBJ_TYPE(module_obj) == OBJ_MODULE) {
-            if (OBJPTR(MODULE, module_obj)->finalize)
-                OBJPTR(MODULE, module_obj)->finalize(ctx, module_obj);
+            if (OBJPTR(MODULE, module_obj)->finalize) {
+                const size_t old_size = finalizers.size;
+                const size_t new_size = old_size + sizeof(KOS_MODULE_FINALIZE);
+                if ( ! KOS_vector_resize(&finalizers, new_size))
+                    memcpy(&finalizers.buffer[old_size], &OBJPTR(MODULE, module_obj)->finalize, sizeof(KOS_MODULE_FINALIZE));
+            }
             if ((OBJPTR(MODULE, module_obj)->flags & KOS_MODULE_OWN_BYTECODE))
                 KOS_free((void *)OBJPTR(MODULE, module_obj)->bytecode);
             if ((OBJPTR(MODULE, module_obj)->flags & KOS_MODULE_OWN_LINE_ADDRS))
@@ -480,6 +487,16 @@ void KOS_instance_destroy(KOS_INSTANCE *inst)
     }
 
     kos_heap_destroy(inst);
+
+    if (finalizers.size) {
+        KOS_MODULE_FINALIZE       *finalize = (KOS_MODULE_FINALIZE *)finalizers.buffer;
+        KOS_MODULE_FINALIZE *const end      = (KOS_MODULE_FINALIZE *)(finalizers.buffer + finalizers.size);
+
+        for ( ; finalize < end; ++finalize)
+            (*finalize)();
+    }
+
+    KOS_vector_destroy(&finalizers);
 
     if (inst->modules.libs) {
         uint32_t      idx;

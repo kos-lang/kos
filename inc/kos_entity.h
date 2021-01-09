@@ -438,7 +438,7 @@ typedef struct KOS_FUNC_ADDR_S {
     uint32_t code_size; /* Number of bytes used by the function's bytecode         */
 } KOS_FUNC_ADDR;
 
-typedef void (*KOS_MODULE_FINALIZER)(KOS_CONTEXT ctx, KOS_OBJ_ID module);
+typedef void (*KOS_MODULE_FINALIZE)(void);
 
 typedef struct KOS_MODULE_S {
     KOS_OBJ_HEADER          header;
@@ -451,7 +451,7 @@ typedef struct KOS_MODULE_S {
     KOS_OBJ_ID              globals;
     KOS_OBJ_ID              module_names; /* Map of directly referenced modules to their indices, for REPL */
     KOS_ATOMIC(KOS_OBJ_ID)  priv;
-    KOS_MODULE_FINALIZER    finalize;     /* Function to call when unloading the module */
+    KOS_MODULE_FINALIZE     finalize;     /* Function to call when unloading the module */
     const uint8_t          *bytecode;
     const KOS_LINE_ADDR    *line_addrs;
     const KOS_FUNC_ADDR    *func_addrs;

@@ -575,7 +575,7 @@ static void release_pid(struct KOS_WAIT_S *wait_info)
     }
 }
 
-static void cleanup_wait_list(KOS_CONTEXT ctx, KOS_OBJ_ID module)
+static void cleanup_wait_list(void)
 {
     /* If there are multiple instances, multiple os modules can be loaded.
      * Perform the cleanup only after the last os module is unloaded. */
