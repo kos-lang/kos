@@ -37,15 +37,6 @@ jobs:
         script:
           - tests/run cpp14 release
 
-      - name: "Coverage"
-        if: branch != coverity_scan
-        before_install:
-          - pip install --user cpp-coveralls
-        script:
-          - tests/run gcov
-        after_success:
-          - coveralls --exclude tests --no-gcov
-
       - name: "Coverity"
         if: branch = coverity_scan
         addons:
