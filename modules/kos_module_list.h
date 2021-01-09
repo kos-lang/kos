@@ -15,6 +15,7 @@
 MODULE_DEF(base)
 MODULE_DEF(datetime)
 MODULE_DEF(fs)
+MODULE_DEF(gc)
 MODULE_DEF(io)
 MODULE_DEF(kos)
 EXTERN_DEF(math)

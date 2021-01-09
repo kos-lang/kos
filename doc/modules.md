@@ -123,6 +123,8 @@ Table of Contents
   * [fs](#fs)
     * [is\_file()](#is_file)
     * [remove()](#remove)
+  * [gc](#gc)
+    * [collect\_garbage()](#collect_garbage)
   * [io](#io)
     * [append()](#append)
     * [append\_flag](#append_flag)
@@ -2933,6 +2935,21 @@ Deletes a file `pathname`.
 Returns `true` if the file was successfuly deleted or `false` if
 the file could not be deleted or if it did not exist in the first
 place.
+
+gc
+==
+
+collect_garbage()
+-----------------
+
+    collect_garbage()
+
+Runs the garbage collector.
+
+Returns an object containing statistics from the garbage collection cycle.
+
+Throws an exception if there was an error, for example if the heap
+ran out of memory.
 
 io
 ==
