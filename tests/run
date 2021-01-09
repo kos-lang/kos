@@ -56,6 +56,7 @@ while [ $# -gt 0 ]; do
         asan)         RUN_ASAN=1     ;;
         valgrind)     RUN_VALGRIND=1 ;;
         gcov)         RUN_GCOV=1     ;;
+        lcov)         RUN_GCOV=2     ;;
         seqfail)      RUN_SEQFAIL=1  ;;
         madgc)        RUN_MADGC=1    ;;
         default)      set_defaults   ;;
@@ -215,12 +216,13 @@ if [ "$RUN_RELEASE" = "1" ]; then
     unset builtin_modules
 fi
 
-if [ "$RUN_GCOV" = "1" ]; then
+if [ "$RUN_GCOV" != "0" ]; then
     if [ "$UNAME" = "Windows" ]; then
         echo "Error: gcov not supported on Windows!" >&2
         exit 1
     fi
     export gcov=1
+    [ "$RUN_GCOV" = "2" ] && export lcov=1
     export debug=1
     export seqfail=1
     export builtin_modules=0

@@ -230,8 +230,17 @@ endef
 
 $(foreach module, $(gcov_modules), $(eval $(call GCOV_RULE,$(module))))
 
+lcov ?= 0
+
+ifeq ($(lcov), 0)
 gcov: $(addprefix gcov., $(gcov_modules))
 	@find $(out_dir_base)/ -name "*.gcno" -o -name "*.gcda" -exec rm '{}' +
+else
+gcov: simple_test $(all_tests)
+	@echo Lcov kos.info
+	@lcov --capture --directory .. --output-file $(out_dir_base)/kos.info
+	@find $(out_dir_base)/ -name "*.gcno" -o -name "*.gcda" -exec rm '{}' +
+endif
 
 gcov.pre.clean:
 	@find $(out_dir_base)/ -name "*.gcno" -o -name "*.gcda" -exec rm '{}' +
