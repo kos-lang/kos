@@ -67,13 +67,11 @@ jobs:
       - uses: msys2/setup-msys2@v2
         with:
           path-type: inherit
+          install: base-devel
       - uses: actions/checkout@v2
       - name: Remove link.exe from MSYS2
         shell: msys2 {0}
         run: rm -f /bin/link.exe
-      - name: Remove diff.exe from Git
-        shell: msys2 {0}
-        run: rm -f "C:/Program Files/Git/usr/bin/diff.exe"
       - name: Test
         shell: cmd
         run: |
