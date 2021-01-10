@@ -13,6 +13,7 @@ RUN_VALGRIND=0
 RUN_GCOV=0
 RUN_SEQFAIL=0
 RUN_MADGC=0
+KEEP_OUTPUT=0
 
 UNAME=$(uname -s)
 
@@ -59,6 +60,7 @@ while [ $# -gt 0 ]; do
         lcov)         RUN_GCOV=2     ;;
         seqfail)      RUN_SEQFAIL=1  ;;
         madgc)        RUN_MADGC=1    ;;
+        keepoutput)   KEEP_OUTPUT=1  ;;
         default)      set_defaults   ;;
         slowdispatch) export fastdispatch=0 ;;
         deepstack)    export deepstack=1    ;;
@@ -231,6 +233,7 @@ if [ "$RUN_GCOV" != "0" ]; then
     unset debug
     unset seqfail
     unset builtin_modules
-else
-    rm -rf Out
+    KEEP_OUTPUT=1
 fi
+
+[ "$KEEP_OUTPUT" != "0" ] || rm -rf Out
