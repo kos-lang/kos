@@ -528,6 +528,9 @@ static int append_to_pid_slot(PID_ARRAY_PTR pids, pid_t pid)
     if (KOS_atomic_read_relaxed_u32(*(KOS_ATOMIC(uint32_t) *)&pids->num_pids) == pids->capacity)
         return error;
 
+    assert(sizeof(conv.ptr) >= sizeof(conv.pid));
+
+    memset(&conv, 0, sizeof(conv));
     conv.pid = pid;
 
     for (idx = 0; idx < pids->capacity; idx++) {
