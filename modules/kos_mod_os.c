@@ -348,7 +348,7 @@ static int get_env_array(KOS_CONTEXT           ctx,
         unsigned       key_len;
         unsigned       val_len;
         unsigned       buf_size;
-        int            eq_pos   = -1;
+        int            eq_pos   = 0;
         const KOS_TYPE val_type = GET_OBJ_TYPE(KOS_get_walk_value(in_obj.o));
 
         assert( ! IS_BAD_PTR(KOS_get_walk_key(in_obj.o)));
