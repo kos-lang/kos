@@ -414,12 +414,12 @@ static int main_inner(kos::context ctx)
             args["b"]      = 20;
 
             const int a22 = kos::obj_id_converter(ctx, ctx.call(add, args));
-            assert(a22 == 22);
+            TEST(a22 == 22);
 
             args["second"] = false;
 
             const int a11 = kos::obj_id_converter(ctx, ctx.call(add, args));
-            assert(a11 == 11);
+            TEST(a11 == 11);
         }
 
         /* Test named args - one non-default and first default arg */
@@ -429,12 +429,12 @@ static int main_inner(kos::context ctx)
             args["a"]      = 10;
 
             const int a202 = kos::obj_id_converter(ctx, ctx.call(add, args));
-            assert(a202 == 202);
+            TEST(a202 == 202);
 
             args["second"] = false;
 
             const int a11 = kos::obj_id_converter(ctx, ctx.call(add, args));
-            assert(a11 == 11);
+            TEST(a11 == 11);
         }
 
         /* Test named args - one non-default and second default arg */
@@ -444,12 +444,12 @@ static int main_inner(kos::context ctx)
             args["b"]      = 10;
 
             const int a12 = kos::obj_id_converter(ctx, ctx.call(add, args));
-            assert(a12 == 12);
+            TEST(a12 == 12);
 
             args["second"] = false;
 
             const int a101 = kos::obj_id_converter(ctx, ctx.call(add, args));
-            assert(a101 == 101);
+            TEST(a101 == 101);
         }
 
         /* Test named args - missing non-default arg */
