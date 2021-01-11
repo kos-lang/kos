@@ -71,7 +71,9 @@ jobs:
           - x64
         test:
           - c89
+          - cpp14
           - release
+          - seqfail
 
     runs-on: windows-latest
 
