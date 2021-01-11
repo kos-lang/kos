@@ -25,22 +25,25 @@
 #include <math.h>
 #include <string.h>
 
-KOS_DECLARE_STATIC_CONST_STRING(str_err_args_not_array,      "function arguments are not an array");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_cannot_yield,        "function is not a generator");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_corrupted_defaults,  "argument defaults are corrupted");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_div_by_zero,         "division by zero");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_generator_running,   "generator is running");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_byte_value,  "buffer element value out of range");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_index,       "index out of range");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_instruction, "invalid instruction");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_no_setter,           "property is read-only");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_not_callable,        "object is not callable");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_not_class,           "base object is not a class");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_not_generator,       "function is not a generator");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_not_indexable,       "object is not indexable");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_slice_not_function,  "slice is not a function");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_too_few_args,        "not enough arguments passed to a function");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_unsup_operand_types, "unsupported operand types");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_args_not_array,           "function arguments are not an array");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_cannot_yield,             "function is not a generator");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_corrupted_defaults,       "argument defaults are corrupted");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_div_by_zero,              "division by zero");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_generator_running,        "generator is running");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_byte_value,       "buffer element value out of range");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_index,            "index out of range");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_instruction,      "invalid instruction");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_named_args_not_supported, "function does not support named arguments");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_no_setter,                "property is read-only");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_callable,             "object is not callable");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_class,                "base object is not a class");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_generator,            "function is not a generator");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_indexable,            "object is not indexable");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_slice_not_function,       "slice is not a function");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_too_few_args,             "not enough arguments passed to a function");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_unsup_operand_types,      "unsupported operand types");
+
+DECLARE_STATIC_CONST_OBJECT(args_placeholder, OBJ_OPAQUE, 0xF0);
 
 static KOS_OBJ_ID add_integer(KOS_CONTEXT ctx,
                               int64_t     a,
@@ -786,11 +789,150 @@ static KOS_OBJ_ID create_this(KOS_CONTEXT ctx, KOS_OBJ_ID func_obj)
     return KOS_new_object_with_prototype(ctx, proto_obj);
 }
 
+static KOS_OBJ_ID set_default_args_for_handler(KOS_CONTEXT ctx,
+                                               KOS_OBJ_ID  func_obj,
+                                               KOS_OBJ_ID  args_obj)
+{
+    assert((GET_OBJ_TYPE(func_obj) == OBJ_FUNCTION) || (GET_OBJ_TYPE(func_obj) == OBJ_CLASS));
+    assert(GET_OBJ_TYPE(args_obj) == OBJ_ARRAY);
+    assert(OBJPTR(FUNCTION, func_obj)->handler);
+
+    if (OBJPTR(FUNCTION, func_obj)->opts.num_def_args) {
+
+        const uint32_t min_args     = OBJPTR(FUNCTION, func_obj)->opts.min_args;
+        const uint32_t max_args     = min_args + OBJPTR(FUNCTION, func_obj)->opts.num_def_args;
+        const uint32_t cur_num_args = KOS_get_array_size(args_obj);
+
+        if (cur_num_args < max_args) {
+            KOS_LOCAL args;
+
+            KOS_init_local_with(ctx, &args, args_obj);
+
+            if (KOS_array_insert(ctx,
+                                 args.o,
+                                 cur_num_args,
+                                 MAX_INT64,
+                                 OBJPTR(FUNCTION, func_obj)->defaults,
+                                 cur_num_args - min_args,
+                                 MAX_INT64) != KOS_SUCCESS)
+                args.o = KOS_BADPTR;
+
+            args_obj = KOS_destroy_top_local(ctx, &args);
+        }
+    }
+
+    return args_obj;
+}
+
+static KOS_OBJ_ID get_named_args(KOS_CONTEXT ctx,
+                                 KOS_OBJ_ID  func_obj,
+                                 KOS_OBJ_ID  args_obj)
+{
+    KOS_LOCAL      args;
+    KOS_LOCAL      input;
+    KOS_LOCAL      func;
+    KOS_VECTOR     cstr;
+    int            error     = KOS_SUCCESS;
+    uint32_t       num_found = 0; /* Number of input args       */
+    uint32_t       end_found = 0; /* Max arg index found plus 1 */
+    const uint32_t min_args  = OBJPTR(FUNCTION, func_obj)->opts.min_args;
+    const uint32_t max_args  = OBJPTR(FUNCTION, func_obj)->opts.num_def_args + min_args;
+    uint32_t       i;
+
+    KOS_init_local(     ctx, &args);
+    KOS_init_local_with(ctx, &input, args_obj);
+    KOS_init_local_with(ctx, &func,  func_obj);
+
+    KOS_vector_init(&cstr);
+
+    if (OBJPTR(FUNCTION, func.o)->arg_map == KOS_VOID)
+        RAISE_EXCEPTION_STR(str_err_named_args_not_supported);
+
+    args.o = KOS_new_array(ctx, max_args);
+    TRY_OBJID(args.o);
+
+    for (i = 0; i < max_args; i++)
+        TRY(KOS_array_write(ctx, args.o, i, KOS_CONST_ID(args_placeholder)));
+
+    input.o = KOS_new_iterator(ctx, input.o, KOS_SHALLOW);
+    TRY_OBJID(input.o);
+
+    while ( ! KOS_iterator_next(ctx, input.o)) {
+
+        uint32_t         idx;
+        const KOS_OBJ_ID idx_id = KOS_get_property(ctx,
+                                                   OBJPTR(FUNCTION, func.o)->arg_map,
+                                                   KOS_get_walk_key(input.o));
+
+        ++num_found;
+
+        if (IS_BAD_PTR(idx_id)) {
+            TRY(KOS_string_to_cstr_vec(ctx, KOS_get_walk_key(input.o), &cstr));
+            KOS_raise_printf(ctx, "invalid function parameter: '%s'", cstr.buffer);
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+
+        assert(IS_SMALL_INT(idx_id));
+        assert(GET_SMALL_INT(idx_id) >= 0);
+        assert(GET_SMALL_INT(idx_id) < ~0U);
+        assert(num_found <= max_args);
+
+        idx       = (uint32_t)GET_SMALL_INT(idx_id);
+        end_found = KOS_max(end_found, idx + 1U);
+
+        TRY(KOS_array_write(ctx, args.o, (int64_t)idx, KOS_get_walk_value(input.o)));
+    }
+
+    for (i = 0; i < min_args; i++) {
+
+        KOS_OBJ_ID value = KOS_array_read(ctx, args.o, i);
+        TRY_OBJID(value);
+
+        if (value == KOS_CONST_ID(args_placeholder)) {
+            value = KOS_get_named_arg(ctx, func.o, i);
+            TRY_OBJID(value);
+
+            TRY(KOS_string_to_cstr_vec(ctx, value, &cstr));
+            KOS_raise_printf(ctx, "missing function parameter: '%s'", cstr.buffer);
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+    }
+
+    for ( ; i < end_found; i++) {
+
+        KOS_OBJ_ID value = KOS_array_read(ctx, args.o, i);
+        TRY_OBJID(value);
+
+        if (value == KOS_CONST_ID(args_placeholder)) {
+            value = KOS_array_read(ctx, OBJPTR(FUNCTION, func.o)->defaults, i - min_args);
+            TRY_OBJID(value);
+
+            TRY(KOS_array_write(ctx, args.o, i, value));
+        }
+    }
+
+    if (i < max_args)
+        TRY(KOS_array_insert(ctx,
+                             args.o,
+                             i,
+                             max_args,
+                             OBJPTR(FUNCTION, func.o)->defaults,
+                             i - min_args,
+                             MAX_INT64));
+
+cleanup:
+    KOS_vector_destroy(&cstr);
+
+    args.o = KOS_destroy_top_locals(ctx, &func, &args);
+
+    return error ? KOS_BADPTR : args.o;
+}
+
 static int prepare_call(KOS_CONTEXT        ctx,
                         KOS_BYTECODE_INSTR instr,
                         KOS_OBJ_ID         func_obj,
                         KOS_OBJ_ID        *this_obj,
-                        KOS_OBJ_ID         args_obj,
+                        KOS_OBJ_ID        *args_obj,
                         uint32_t           rarg1,
                         unsigned           num_args,
                         uint8_t            ret_reg)
@@ -805,7 +947,7 @@ static int prepare_call(KOS_CONTEXT        ctx,
     KOS_LOCAL          func;
     KOS_LOCAL          args;
 
-    KOS_init_local_with(ctx, &args, args_obj);
+    KOS_init_local_with(ctx, &args, *args_obj);
     KOS_init_local_with(ctx, &func, func_obj);
 
     assert(IS_BAD_PTR(stack_obj) || ! kos_is_heap_object(stack_obj));
@@ -832,8 +974,16 @@ static int prepare_call(KOS_CONTEXT        ctx,
             RAISE_EXCEPTION_STR(str_err_too_few_args);
     }
     else {
-        if (GET_OBJ_TYPE(args.o) != OBJ_ARRAY)
-            RAISE_EXCEPTION_STR(str_err_args_not_array);
+        const KOS_TYPE type = GET_OBJ_TYPE(args.o);
+
+        if (type != OBJ_ARRAY) {
+            if (type == OBJ_OBJECT) {
+                args.o = get_named_args(ctx, func.o, args.o);
+                TRY_OBJID(args.o);
+            }
+            else
+                RAISE_EXCEPTION_STR(str_err_args_not_array);
+        }
 
         if (KOS_get_array_size(args.o) < OBJPTR(FUNCTION, func.o)->opts.min_args)
             RAISE_EXCEPTION_STR(str_err_too_few_args);
@@ -861,6 +1011,15 @@ static int prepare_call(KOS_CONTEXT        ctx,
                                    regs_idx + rarg1,
                                    num_args,
                                    *this_obj));
+            else {
+                if (IS_BAD_PTR(args.o)) {
+                    args.o = make_args(ctx, stack_obj, regs_idx + rarg1, num_args);
+                    TRY_OBJID(args.o);
+                }
+
+                args.o = set_default_args_for_handler(ctx, func.o, args.o);
+                TRY_OBJID(args.o);
+            }
 
             break;
         }
@@ -888,6 +1047,10 @@ static int prepare_call(KOS_CONTEXT        ctx,
                     args.o = make_args(ctx, stack_obj, regs_idx + rarg1, num_args);
                     TRY_OBJID(args.o);
                 }
+
+                args.o = set_default_args_for_handler(ctx, func.o, args.o);
+                TRY_OBJID(args.o);
+
                 set_handler_reg(ctx, args.o);
             }
 
@@ -934,8 +1097,17 @@ static int prepare_call(KOS_CONTEXT        ctx,
                     write_to_yield_reg(ctx, value);
                 }
             }
-            else
+            else {
                 *this_obj = get_handler_reg(ctx);
+
+                if (IS_BAD_PTR(args.o)) {
+                    args.o = make_args(ctx, stack_obj, regs_idx + rarg1, num_args);
+                    TRY_OBJID(args.o);
+                }
+
+                args.o = set_default_args_for_handler(ctx, func.o, args.o);
+                TRY_OBJID(args.o);
+            }
 
             set_stack_flag(ctx, KOS_CAN_YIELD);
             break;
@@ -957,7 +1129,9 @@ cleanup:
         if (state_set)
             KOS_atomic_write_release_u32(OBJPTR(FUNCTION, func.o)->state, state);
     }
-    KOS_destroy_top_locals(ctx, &func, &args);
+
+    *args_obj = KOS_destroy_top_locals(ctx, &func, &args);
+
     return error;
 }
 
@@ -3002,9 +3176,10 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
                     if ((state == KOS_GEN_READY || state == KOS_GEN_ACTIVE) && ! OBJPTR(FUNCTION, func.o)->handler) {
 
                         KOS_OBJ_ID this_obj = KOS_VOID;
+                        KOS_OBJ_ID args_obj = KOS_EMPTY_ARRAY;
 
                         error = prepare_call(ctx, instr, func.o, &this_obj,
-                                             KOS_EMPTY_ARRAY, 0, 0, (uint8_t)rdest);
+                                             &args_obj, 0, 0, (uint8_t)rdest);
                         if (error) {
                             KOS_destroy_top_locals(ctx, &func, &iter);
                             goto cleanup;
@@ -3251,7 +3426,7 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
                 }
 
                 error = prepare_call(ctx, instr, func.o, &this_.o,
-                                     args.o, num_args ? rarg1 : 0, num_args,
+                                     &args.o, num_args ? rarg1 : 0, num_args,
                                      (uint8_t)rdest);
                 if (error) {
                     KOS_destroy_top_locals(ctx, &func, &args);
@@ -3301,9 +3476,6 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
 #endif
                     }
                     else {
-                        if (IS_BAD_PTR(args.o))
-                            args.o = make_args(ctx, stack, regs_idx + rarg1, num_args);
-
                         if (IS_BAD_PTR(args.o)) {
                             assert(KOS_is_exception_pending(ctx));
                             error = KOS_ERROR_EXCEPTION;
@@ -3682,7 +3854,7 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
         }
     }
 
-    error = prepare_call(ctx, INSTR_CALL, func.o, &this_.o, args.o, 0, 0, KOS_NO_REG);
+    error = prepare_call(ctx, INSTR_CALL, func.o, &this_.o, &args.o, 0, 0, KOS_NO_REG);
 
     if (error) {
         KOS_destroy_top_locals(ctx, &func, &ret);

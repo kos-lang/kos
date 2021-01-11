@@ -398,8 +398,9 @@ typedef struct KOS_FUNCTION_S {
     uint32_t             instr_offs;
     KOS_OBJ_ID           module;
     KOS_OBJ_ID           name;
-    KOS_OBJ_ID           closures;
-    KOS_OBJ_ID           defaults;
+    KOS_OBJ_ID           closures; /* Bound closures */
+    KOS_OBJ_ID           defaults; /* Bound default values for arguments */
+    KOS_OBJ_ID           arg_map;  /* Maps argument names to indexes */
     KOS_FUNCTION_HANDLER handler;
     KOS_OBJ_ID           generator_stack_frame;
 } KOS_FUNCTION;
@@ -411,8 +412,9 @@ typedef struct KOS_CLASS_S {
     uint32_t               instr_offs;
     KOS_OBJ_ID             module;
     KOS_OBJ_ID             name;
-    KOS_OBJ_ID             closures;
-    KOS_OBJ_ID             defaults;
+    KOS_OBJ_ID             closures; /* Bound closures */
+    KOS_OBJ_ID             defaults; /* Bound default values for arguments */
+    KOS_OBJ_ID             arg_map;  /* Maps argument names to indexes */
     KOS_FUNCTION_HANDLER   handler;
     KOS_ATOMIC(KOS_OBJ_ID) prototype;
     KOS_ATOMIC(KOS_OBJ_ID) props;
@@ -441,24 +443,24 @@ typedef struct KOS_FUNC_ADDR_S {
 typedef void (*KOS_MODULE_FINALIZE)(void);
 
 typedef struct KOS_MODULE_S {
-    KOS_OBJ_HEADER          header;
-    uint8_t                 flags;
-    KOS_OBJ_ID              name;
-    KOS_OBJ_ID              path;
-    KOS_INSTANCE           *inst;
-    KOS_OBJ_ID              constants;
-    KOS_OBJ_ID              global_names;
-    KOS_OBJ_ID              globals;
-    KOS_OBJ_ID              module_names; /* Map of directly referenced modules to their indices, for REPL */
-    KOS_ATOMIC(KOS_OBJ_ID)  priv;
-    KOS_MODULE_FINALIZE     finalize;     /* Function to call when unloading the module */
-    const uint8_t          *bytecode;
-    const KOS_LINE_ADDR    *line_addrs;
-    const KOS_FUNC_ADDR    *func_addrs;
-    uint32_t                num_line_addrs;
-    uint32_t                num_func_addrs;
-    uint32_t                bytecode_size;
-    uint32_t                main_idx;     /* Index of constant with main function */
+    KOS_OBJ_HEADER         header;
+    uint8_t                flags;
+    KOS_OBJ_ID             name;
+    KOS_OBJ_ID             path;
+    KOS_INSTANCE          *inst;
+    KOS_OBJ_ID             constants;
+    KOS_OBJ_ID             global_names;
+    KOS_OBJ_ID             globals;
+    KOS_OBJ_ID             module_names; /* Map of directly referenced modules to their indices, for REPL */
+    KOS_ATOMIC(KOS_OBJ_ID) priv;
+    KOS_MODULE_FINALIZE    finalize;     /* Function to call when unloading the module */
+    const uint8_t         *bytecode;
+    const KOS_LINE_ADDR   *line_addrs;
+    const KOS_FUNC_ADDR   *func_addrs;
+    uint32_t               num_line_addrs;
+    uint32_t               num_func_addrs;
+    uint32_t               bytecode_size;
+    uint32_t               main_idx;     /* Index of constant with main function */
 } KOS_MODULE;
 
 typedef struct KOS_DYNAMIC_PROP_S {
@@ -537,6 +539,10 @@ KOS_API
 int KOS_lock_object(KOS_CONTEXT ctx,
                     KOS_OBJ_ID  obj_id);
 
+KOS_API
+KOS_OBJ_ID KOS_get_named_arg(KOS_CONTEXT ctx,
+                             KOS_OBJ_ID  func_obj,
+                             uint32_t    i);
 #ifdef __cplusplus
 }
 #endif

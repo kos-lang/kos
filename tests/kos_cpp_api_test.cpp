@@ -37,11 +37,8 @@ void throw_string(const std::string& str)
 
 #define TEST(test) do { if ( ! (test)) { std::cout << "Failed: line " << __LINE__ << ": " << #test "\n"; return 1; } } while (0)
 
-int main()
-try {
-    kos::instance inst;
-    kos::context  ctx(inst);
-
+static int main_inner(kos::context ctx)
+{
     {
         const int a = from_object_ptr(ctx, TO_SMALL_INT(123));
         TEST(a == 123);
@@ -351,11 +348,131 @@ try {
 #else
         kos::function add = ctx.new_function<int64_t (*)(bool, int, int64_t), add_func>("add_func");
 #endif
-        const int a6 = add(false, 5, 10);
-        TEST(a6 == 6);
+        /* Test basic, full invocation */
+        {
+            const int a6 = add(false, 5, 10);
+            TEST(a6 == 6);
 
-        const int a12 = add(true, 5, 10);
-        TEST(a12 == 12);
+            const int a12 = add(true, 5, 10);
+            TEST(a12 == 12);
+        }
+
+        /* Test insufficient number of args */
+        {
+            bool exception = false;
+            try {
+                add(true, 5);
+            }
+            catch (const kos::exception& e) {
+                if (std::string(e.what()) == "not enough arguments passed to a function")
+                    exception = true;
+            }
+            TEST(exception);
+        }
+
+        /* Set up default args and argument map for testing */
+        {
+#ifdef KOS_CPP11
+            kos::array defaults = ctx.make_array(100, 200);
+#else
+            kos::array defaults = ctx.new_array(2);
+            defaults[0] = 100;
+            defaults[1] = 200;
+#endif
+
+            kos::object arg_map = ctx.new_object();
+            arg_map["second"] = 0;
+            arg_map["a"]      = 1;
+            arg_map["b"]      = 2;
+
+            OBJPTR(FUNCTION, add)->opts.min_args     = 1;
+            OBJPTR(FUNCTION, add)->opts.num_def_args = 2;
+            OBJPTR(FUNCTION, add)->defaults          = defaults;
+            OBJPTR(FUNCTION, add)->arg_map           = arg_map;
+        }
+
+        /* Test default args */
+        {
+            const int a101 = add(false);
+            TEST(a101 == 101);
+
+            const int a202 = add(true);
+            TEST(a202 == 202);
+
+            const int a301 = add(false, 300);
+            TEST(a301 == 301);
+
+            const int a202_again = add(true, 300);
+            TEST(a202_again == 202);
+        }
+
+        /* Test named args - all args */
+        {
+            kos::object args = ctx.new_object();
+            args["second"] = true;
+            args["a"]      = 10;
+            args["b"]      = 20;
+
+            const int a22 = kos::obj_id_converter(ctx, ctx.call(add, args));
+            assert(a22 == 22);
+
+            args["second"] = false;
+
+            const int a11 = kos::obj_id_converter(ctx, ctx.call(add, args));
+            assert(a11 == 11);
+        }
+
+        /* Test named args - one non-default and first default arg */
+        {
+            kos::object args = ctx.new_object();
+            args["second"] = true;
+            args["a"]      = 10;
+
+            const int a202 = kos::obj_id_converter(ctx, ctx.call(add, args));
+            assert(a202 == 202);
+
+            args["second"] = false;
+
+            const int a11 = kos::obj_id_converter(ctx, ctx.call(add, args));
+            assert(a11 == 11);
+        }
+
+        /* Test named args - one non-default and second default arg */
+        {
+            kos::object args = ctx.new_object();
+            args["second"] = true;
+            args["b"]      = 10;
+
+            const int a12 = kos::obj_id_converter(ctx, ctx.call(add, args));
+            assert(a12 == 12);
+
+            args["second"] = false;
+
+            const int a101 = kos::obj_id_converter(ctx, ctx.call(add, args));
+            assert(a101 == 101);
+        }
+
+        /* Test named args - missing non-default arg */
+        {
+            kos::object args = ctx.new_object();
+            args["a"]      = 10;
+            args["b"]      = 20;
+
+            bool exception = false;
+            try {
+                ctx.call(add, args);
+            }
+            catch (const kos::exception& e) {
+                if (std::string(e.what()) == "missing function parameter: 'second'")
+                    exception = true;
+            }
+            TEST(exception);
+        }
+
+        /* Lookup invalid arg index */
+        TEST(IS_BAD_PTR(KOS_get_named_arg(ctx, add, 3)));
+        TEST(KOS_is_exception_pending(ctx));
+        KOS_clear_exception(ctx);
     }
 
     {
@@ -508,7 +625,7 @@ try {
         kos::string name = to_object_ptr(ctx, "my_global");
 
         /* TODO replace this with a new module object */
-        KOS_OBJ_ID module = static_cast<KOS_INSTANCE*>(inst)->modules.init_module;
+        KOS_OBJ_ID module = static_cast<KOS_CONTEXT>(ctx)->inst->modules.init_module;
 
         ctx.add_global(module, name, TO_SMALL_INT(42));
 
@@ -560,7 +677,17 @@ try {
 
     return 0;
 }
-catch (const std::exception& e) {
-    std::cout << "exception: " << e.what() << "\n";
-    return 1;
+
+int main()
+{
+    kos::instance inst;
+    kos::context  ctx(inst);
+
+    try {
+        return main_inner(ctx);
+    }
+    catch (const std::exception& e) {
+        std::cout << "exception: " << e.what() << "\n";
+        return 1;
+    }
 }

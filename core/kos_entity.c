@@ -10,15 +10,18 @@
 #include "../inc/kos_module.h"
 #include "../inc/kos_object.h"
 #include "../inc/kos_string.h"
+#include "../inc/kos_utils.h"
 #include "kos_heap.h"
 #include "kos_object_internal.h"
+#include "kos_try.h"
 #include <limits.h>
 #include <string.h>
 #include <assert.h>
 
-static const char str_err_cannot_override_prototype[] = "cannot override prototype";
-static const char str_err_not_class[]                 = "object is not a class";
-KOS_DECLARE_STATIC_CONST_STRING(str_err_cannot_make_read_only, "cannot make object read only");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_cannot_make_read_only,     "cannot make object read only");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_cannot_override_prototype, "cannot override prototype");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_callable,              "object is not a function or class");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_class,                 "object is not a class");
 
 KOS_OBJ_ID KOS_new_int(KOS_CONTEXT ctx, int64_t value)
 {
@@ -78,6 +81,7 @@ KOS_OBJ_ID KOS_new_function(KOS_CONTEXT ctx)
         func->name                  = KOS_STR_EMPTY;
         func->closures              = KOS_VOID;
         func->defaults              = KOS_VOID;
+        func->arg_map               = KOS_VOID;
         func->handler               = KOS_NULL;
         func->generator_stack_frame = KOS_BADPTR;
         func->instr_offs            = ~0U;
@@ -118,6 +122,7 @@ KOS_OBJ_ID kos_copy_function(KOS_CONTEXT ctx,
         dest->name       = src->name;
         dest->closures   = src->closures;
         dest->defaults   = src->defaults;
+        dest->arg_map    = src->arg_map;
         dest->handler    = src->handler;
     }
 
@@ -141,7 +146,7 @@ static KOS_OBJ_ID get_prototype(KOS_CONTEXT ctx,
         assert( ! IS_BAD_PTR(ret));
     }
     else {
-        KOS_raise_exception_cstring(ctx, str_err_not_class);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_class));
         ret = KOS_BADPTR;
     }
 
@@ -169,11 +174,11 @@ static KOS_OBJ_ID set_prototype(KOS_CONTEXT ctx,
                 ret = this_obj;
             }
             else
-                KOS_raise_exception_cstring(ctx, str_err_cannot_override_prototype);
+                KOS_raise_exception(ctx, KOS_CONST_ID(str_err_cannot_override_prototype));
         }
     }
     else
-        KOS_raise_exception_cstring(ctx, str_err_not_class);
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_class));
 
     return ret;
 }
@@ -211,6 +216,7 @@ KOS_OBJ_ID KOS_new_class(KOS_CONTEXT ctx, KOS_OBJ_ID proto_obj)
         OBJPTR(CLASS, func.o)->name       = KOS_STR_EMPTY;
         OBJPTR(CLASS, func.o)->closures   = KOS_VOID;
         OBJPTR(CLASS, func.o)->defaults   = KOS_VOID;
+        OBJPTR(CLASS, func.o)->arg_map    = KOS_VOID;
         OBJPTR(CLASS, func.o)->handler    = KOS_NULL;
         OBJPTR(CLASS, func.o)->instr_offs = ~0U;
         KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, func.o)->prototype, proto.o);
@@ -333,7 +339,6 @@ int kos_is_truthy(KOS_OBJ_ID obj_id)
     return ret;
 }
 
-KOS_API
 int KOS_lock_object(KOS_CONTEXT ctx,
                     KOS_OBJ_ID  obj_id)
 {
@@ -367,4 +372,41 @@ int KOS_lock_object(KOS_CONTEXT ctx,
 
     KOS_raise_exception(ctx, KOS_CONST_ID(str_err_cannot_make_read_only));
     return KOS_ERROR_EXCEPTION;
+}
+
+KOS_OBJ_ID KOS_get_named_arg(KOS_CONTEXT ctx,
+                             KOS_OBJ_ID  func_obj,
+                             uint32_t    i)
+{
+    KOS_LOCAL iter;
+    KOS_TYPE  type;
+    int       error = KOS_SUCCESS;
+
+    KOS_init_local(ctx, &iter);
+
+    type = GET_OBJ_TYPE(func_obj);
+
+    if ((type != OBJ_FUNCTION) && (type != OBJ_CLASS))
+        RAISE_EXCEPTION_STR(str_err_not_callable);
+
+    iter.o = KOS_new_iterator(ctx, OBJPTR(FUNCTION, func_obj)->arg_map, KOS_SHALLOW);
+    TRY_OBJID(iter.o);
+
+    while ( ! KOS_iterator_next(ctx, iter.o)) {
+
+        const KOS_OBJ_ID idx_id = KOS_get_walk_value(iter.o);
+
+        if (IS_SMALL_INT(idx_id) && (idx_id == TO_SMALL_INT((int64_t)i))) {
+            iter.o = KOS_get_walk_key(iter.o);
+            goto cleanup;
+        }
+    }
+
+    KOS_raise_printf(ctx, "invalid argument index %u\n", i);
+    error = KOS_ERROR_EXCEPTION;
+
+cleanup:
+    iter.o = KOS_destroy_top_local(ctx, &iter);
+
+    return error ? KOS_BADPTR : iter.o;
 }

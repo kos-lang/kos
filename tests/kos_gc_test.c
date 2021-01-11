@@ -675,6 +675,11 @@ static int verify_function(KOS_OBJ_ID obj_id)
     TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
     TEST(OBJPTR(INTEGER, v)->value == 50);
 
+    v = OBJPTR(FUNCTION, obj_id)->arg_map;
+    TEST( ! IS_BAD_PTR(v));
+    TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
+    TEST(OBJPTR(INTEGER, v)->value == 50);
+
     TEST(OBJPTR(FUNCTION, obj_id)->handler == &handler);
 
     v = OBJPTR(FUNCTION, obj_id)->generator_stack_frame;
@@ -712,6 +717,7 @@ static KOS_OBJ_ID alloc_function(KOS_CONTEXT  ctx,
     OBJPTR(FUNCTION, obj_id[0])->name          = obj_id[1];
     OBJPTR(FUNCTION, obj_id[0])->closures      = obj_id[2];
     OBJPTR(FUNCTION, obj_id[0])->defaults      = obj_id[3];
+    OBJPTR(FUNCTION, obj_id[0])->arg_map       = obj_id[3];
     OBJPTR(FUNCTION, obj_id[0])->generator_stack_frame = obj_id[4];
 
     OBJPTR(INTEGER, obj_id[1])->value = 48;
@@ -747,6 +753,11 @@ static int verify_class(KOS_OBJ_ID obj_id)
     TEST(OBJPTR(INTEGER, v)->value == 53);
 
     v = OBJPTR(CLASS, obj_id)->defaults;
+    TEST( ! IS_BAD_PTR(v));
+    TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
+    TEST(OBJPTR(INTEGER, v)->value == 54);
+
+    v = OBJPTR(CLASS, obj_id)->arg_map;
     TEST( ! IS_BAD_PTR(v));
     TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
     TEST(OBJPTR(INTEGER, v)->value == 54);
@@ -799,6 +810,7 @@ static KOS_OBJ_ID alloc_class(KOS_CONTEXT  ctx,
     OBJPTR(CLASS, obj_id[0])->name          = obj_id[1];
     OBJPTR(CLASS, obj_id[0])->closures      = obj_id[2];
     OBJPTR(CLASS, obj_id[0])->defaults      = obj_id[3];
+    OBJPTR(CLASS, obj_id[0])->arg_map       = obj_id[3];
     KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, obj_id[0])->prototype, obj_id[4]);
     KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, obj_id[0])->props,     obj_id[5]);
 

@@ -1587,6 +1587,7 @@ static int mark_children_gray(KOS_MARK_CONTEXT *mark_ctx,
             TRY(mark_object_gray(mark_ctx, OBJPTR(FUNCTION, obj_id)->name));
             TRY(mark_object_gray(mark_ctx, OBJPTR(FUNCTION, obj_id)->closures));
             TRY(mark_object_gray(mark_ctx, OBJPTR(FUNCTION, obj_id)->defaults));
+            TRY(mark_object_gray(mark_ctx, OBJPTR(FUNCTION, obj_id)->arg_map));
             TRY(mark_object_gray(mark_ctx, OBJPTR(FUNCTION, obj_id)->generator_stack_frame));
             break;
 
@@ -1598,6 +1599,7 @@ static int mark_children_gray(KOS_MARK_CONTEXT *mark_ctx,
             TRY(mark_object_gray(mark_ctx, OBJPTR(CLASS, obj_id)->name));
             TRY(mark_object_gray(mark_ctx, OBJPTR(CLASS, obj_id)->closures));
             TRY(mark_object_gray(mark_ctx, OBJPTR(CLASS, obj_id)->defaults));
+            TRY(mark_object_gray(mark_ctx, OBJPTR(CLASS, obj_id)->arg_map));
             break;
 
         case OBJ_OBJECT_STORAGE: {
@@ -2174,6 +2176,7 @@ static void update_child_ptrs(KOS_OBJ_HEADER *hdr)
             update_child_ptr(&((KOS_FUNCTION *)hdr)->name);
             update_child_ptr(&((KOS_FUNCTION *)hdr)->closures);
             update_child_ptr(&((KOS_FUNCTION *)hdr)->defaults);
+            update_child_ptr(&((KOS_FUNCTION *)hdr)->arg_map);
             update_child_ptr(&((KOS_FUNCTION *)hdr)->generator_stack_frame);
             break;
 
@@ -2184,6 +2187,7 @@ static void update_child_ptrs(KOS_OBJ_HEADER *hdr)
             update_child_ptr(&((KOS_CLASS *)hdr)->name);
             update_child_ptr(&((KOS_CLASS *)hdr)->closures);
             update_child_ptr(&((KOS_CLASS *)hdr)->defaults);
+            update_child_ptr(&((KOS_CLASS *)hdr)->arg_map);
             break;
 
         case OBJ_DYNAMIC_PROP:
