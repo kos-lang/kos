@@ -1468,9 +1468,9 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
     KOS_STACK_FRAME   *stack_frame;
     int                error    = KOS_SUCCESS;
     int                depth    = 0; /* Number of calls inside exec_function() without affecting native stack */
-    uint32_t           regs_idx = ctx->regs_idx;
     unsigned           rdest;
 #ifndef NDEBUG
+    uint32_t           regs_idx = ctx->regs_idx;
     uint32_t           num_regs = get_num_regs(ctx);
 #endif
 
@@ -3189,9 +3189,9 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
 
                         out         = KOS_BADPTR;
                         stack       = ctx->stack;
-                        regs_idx    = ctx->regs_idx;
                         stack_frame = get_current_stack_frame(ctx);
 #ifndef NDEBUG
+                        regs_idx    = ctx->regs_idx;
                         num_regs    = get_num_regs(ctx);
 #endif
                         module      = get_module(stack_frame);
@@ -3458,9 +3458,9 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
                         out         = KOS_BADPTR;
                         error       = KOS_SUCCESS;
                         stack       = ctx->stack;
-                        regs_idx    = ctx->regs_idx;
                         stack_frame = get_current_stack_frame(ctx);
 #ifndef NDEBUG
+                        regs_idx    = ctx->regs_idx;
                         num_regs    = get_num_regs(ctx);
 #endif
                         module      = get_module(stack_frame);
@@ -3714,9 +3714,9 @@ handle_return:
                     error = KOS_ERROR_EXCEPTION;
 
                 stack       = ctx->stack;
-                regs_idx    = ctx->regs_idx;
                 stack_frame = get_current_stack_frame(ctx);
 #ifndef NDEBUG
+                regs_idx    = ctx->regs_idx;
                 num_regs    = get_num_regs(ctx);
 #endif
                 module      = get_module(stack_frame);
