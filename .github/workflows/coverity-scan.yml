@@ -1,0 +1,43 @@
+name: coverity-scan
+
+on:
+  push:
+    branches:
+      - coverity_scan
+
+jobs:
+  latest:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Coverity Build Tool
+        run: |
+          wget -q https://scan.coverity.com/download/cxx/linux64 --post-data "token=$TOKEN&project=kos-lang/kos" -O cov-analysis-linux64.tar.gz
+          mkdir cov-analysis-linux64
+          tar xzf cov-analysis-linux64.tar.gz --strip 1 -C cov-analysis-linux64
+        env:
+          TOKEN: ${{ secrets.COVERITY_SCAN_TOKEN }}
+
+      - name: Fix Permissions
+        run: |
+          chmod go-w $HOME
+          sudo chmod -R go-w /usr/share
+
+      - name: Build
+        run: |
+          export PATH=`pwd`/cov-analysis-linux64/bin:$PATH
+          cov-build --dir cov-int make -j $(grep -c ^processor /proc/cpuinfo)
+
+      - name: Submit
+        run: |
+          tar czvf kos.tgz cov-int
+          curl \
+            --form project=kos-lang/kos \
+            --form token=$TOKEN \
+            --form email=chris@chris.dragan.name \
+            --form file=@kos.tgz \
+            --form version=trunk \
+            --form description="Kos Programming Language" \
+            https://scan.coverity.com/builds?project=kos-lang/kos
+        env:
+          TOKEN: ${{ secrets.COVERITY_SCAN_TOKEN }}
