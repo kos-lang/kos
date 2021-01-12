@@ -479,6 +479,7 @@ static void destroy_zombies(int sig)
 }
 
 static KOS_ATOMIC(uint32_t) sig_child_installed;
+static struct sigaction     old_sig_child;
 
 static void handle_sig_child()
 {
@@ -491,7 +492,8 @@ static void handle_sig_child()
         sa.sa_flags   = SA_RESTART | SA_NOCLDSTOP;
         sigemptyset(&sa.sa_mask);
 
-        sigaction(SIGCHLD, &sa, KOS_NULL);
+        if (sigaction(SIGCHLD, &sa, &old_sig_child))
+            KOS_atomic_write_relaxed_u32(sig_child_installed, 0U);
     }
 }
 
@@ -595,6 +597,11 @@ static void cleanup_wait_list(void)
 
                 KOS_atomic_write_relaxed_ptr(zombie_pids[array_idx], (PID_ARRAY_PTR)KOS_NULL);
             }
+        }
+
+        if (KOS_atomic_read_relaxed_u32(sig_child_installed)) {
+            sigaction(SIGCHLD, &old_sig_child, KOS_NULL);
+            KOS_atomic_write_relaxed_u32(sig_child_installed, 0U);
         }
     }
 }
