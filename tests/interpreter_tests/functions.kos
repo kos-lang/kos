@@ -2110,6 +2110,31 @@ do {
     assert value == 56
 }
 
+# Named args
+do {
+    fun add(first, second)
+    {
+        return first + second
+    }
+
+    assert add(1, 2) == 3
+    assert add(second=3, first=10) == 13
+    expect_fail(fun { add(first=1) })
+    expect_fail(fun { add(second=1) })
+    expect_fail(fun { add(first=1, second=2, third=3) })
+
+    fun add_with_def(first, second = 1, third = 10, fourth = 100)
+    {
+        return first + second + third + fourth
+    }
+
+    assert add_with_def(0)                          == 111
+    assert add_with_def(first = 2000)               == 2111
+    assert add_with_def(second = 3, first = 4000)   == 4113
+    assert add_with_def(third = 20, first = 3000)   == 3121
+    assert add_with_def(first = 9000, fourth = 200) == 9211
+}
+
 ##############################################################################
 # Iterate over functions
 do {

@@ -62,6 +62,12 @@ static int class_literal(KOS_COMP_UNIT      *program,
                          KOS_VAR            *class_var,
                          KOS_REG           **reg);
 
+static int object_literal(KOS_COMP_UNIT      *program,
+                          const KOS_AST_NODE *node,
+                          KOS_REG           **reg,
+                          KOS_VAR            *class_var,
+                          KOS_REG            *prototype);
+
 static int gen_new_reg(KOS_COMP_UNIT *program,
                        KOS_REG      **out_reg)
 {
@@ -1159,27 +1165,33 @@ cleanup:
 
 static KOS_COMP_FUNCTION *alloc_func_constant(KOS_COMP_UNIT *program,
                                               KOS_FRAME     *frame,
-                                              uint32_t       str_idx)
+                                              uint32_t       str_idx,
+                                              uint8_t        num_named_args)
 {
     KOS_COMP_FUNCTION *constant;
+    const size_t       alloc_size = sizeof(KOS_COMP_FUNCTION) - sizeof(uint32_t)
+                                    + (num_named_args * sizeof(uint32_t));
 
-    constant = (KOS_COMP_FUNCTION *)KOS_mempool_alloc(&program->allocator,
-                                                      sizeof(KOS_COMP_FUNCTION));
+    assert(num_named_args <= KOS_MAX_REGS);
+
+    constant = (KOS_COMP_FUNCTION *)KOS_mempool_alloc(&program->allocator, alloc_size);
+
     if (constant) {
 
         assert(frame->num_regs <= KOS_MAX_REGS);
 
-        memset(constant, 0, sizeof(KOS_COMP_FUNCTION));
+        memset(constant, 0, alloc_size);
 
-        constant->header.type  = KOS_COMP_CONST_FUNCTION;
-        constant->name_str_idx = str_idx;
-        constant->num_regs     = (uint8_t)frame->num_regs;
-        constant->load_instr   = INSTR_BREAKPOINT;
-        constant->args_reg     = KOS_NO_REG;
-        constant->rest_reg     = KOS_NO_REG;
-        constant->ellipsis_reg = KOS_NO_REG;
-        constant->this_reg     = KOS_NO_REG;
-        constant->bind_reg     = KOS_NO_REG;
+        constant->header.type    = KOS_COMP_CONST_FUNCTION;
+        constant->name_str_idx   = str_idx;
+        constant->num_regs       = (uint8_t)frame->num_regs;
+        constant->load_instr     = INSTR_BREAKPOINT;
+        constant->args_reg       = KOS_NO_REG;
+        constant->rest_reg       = KOS_NO_REG;
+        constant->ellipsis_reg   = KOS_NO_REG;
+        constant->this_reg       = KOS_NO_REG;
+        constant->bind_reg       = KOS_NO_REG;
+        constant->num_named_args = num_named_args;
     }
 
     return constant;
@@ -1211,7 +1223,7 @@ static int finish_global_scope(KOS_COMP_UNIT *program,
 
     TRY(gen_str(program, &global, &str_idx));
 
-    constant = alloc_func_constant(program, program->cur_frame, (uint32_t)str_idx);
+    constant = alloc_func_constant(program, program->cur_frame, (uint32_t)str_idx, 0);
     if ( ! constant)
         RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
 
@@ -2942,6 +2954,32 @@ cleanup:
     return error;
 }
 
+static int gen_named_args(KOS_COMP_UNIT      *program,
+                          const KOS_AST_NODE *node,
+                          KOS_REG           **reg)
+{
+    assert(node);
+    assert(node->type == NT_NAMED_ARGUMENTS);
+
+    node = node->children;
+    assert(node);
+    assert(node->type == NT_OBJECT_LITERAL);
+    assert( ! node->next);
+
+    /* Special message inside object_literal() for named arguments */
+    return object_literal(program, node, reg, KOS_NULL, KOS_NULL);
+}
+
+static int gen_args_array(KOS_COMP_UNIT      *program,
+                          const KOS_AST_NODE *node,
+                          KOS_REG           **reg)
+{
+    if (node && (node->type == NT_NAMED_ARGUMENTS))
+        return gen_named_args(program, node, reg);
+    else
+        return gen_array(program, node, reg);
+}
+
 static int super_invocation(KOS_COMP_UNIT      *program,
                             const KOS_AST_NODE *node,
                             KOS_REG           **reg)
@@ -2964,7 +3002,7 @@ static int super_invocation(KOS_COMP_UNIT      *program,
         assert(node->type == NT_SUPER_CTOR_LITERAL);
         node = node->next;
 
-        TRY(gen_array(program, node, &args_regs[1]));
+        TRY(gen_args_array(program, node, &args_regs[1]));
     }
     else
         TRY(gen_instr2(program, INSTR_LOAD_ARRAY8, args_regs[1]->reg, 0));
@@ -3069,7 +3107,10 @@ static int invocation(KOS_COMP_UNIT      *program,
         node = node->next;
     }
 
-    num_contig_args = count_contig_arg_siblings(node);
+    if (node && (node->type == NT_NAMED_ARGUMENTS))
+        num_contig_args = MAX_CONTIG_REGS + 1;
+    else
+        num_contig_args = count_contig_arg_siblings(node);
 
     if (num_contig_args <= MAX_CONTIG_REGS) {
 
@@ -3149,7 +3190,7 @@ static int invocation(KOS_COMP_UNIT      *program,
     }
     else {
 
-        TRY(gen_array(program, node, &args));
+        TRY(gen_args_array(program, node, &args));
 
         if ( ! *reg && instr == INSTR_CALL)
             *reg = args;
@@ -3210,7 +3251,7 @@ static int async_op(KOS_COMP_UNIT      *program,
 
     node = node->next;
 
-    TRY(gen_array(program, node, &argn[1]));
+    TRY(gen_args_array(program, node, &argn[1]));
 
     memset(&token, 0, sizeof(token));
     token.begin  = str_async;
@@ -4637,6 +4678,37 @@ static int free_arg_regs(KOS_RED_BLACK_NODE *node,
     return KOS_SUCCESS;
 }
 
+static int prealloc_arg_names(KOS_COMP_UNIT      *program,
+                              const KOS_AST_NODE *node)
+{
+    int count = 0;
+
+    node = node->children;
+    assert(node);
+    assert(node->type == NT_NAME || node->type == NT_NAME_CONST);
+    node = node->next;
+    assert(node->type == NT_PARAMETERS);
+    node = node->children;
+
+    while (node && node->type != NT_ELLIPSIS) {
+
+        int arg_str_idx;
+
+        const KOS_AST_NODE *const ident_node =
+            node->type == NT_IDENTIFIER ? node : node->children;
+
+        if (gen_str(program, &ident_node->token, &arg_str_idx))
+            return 0;
+
+        node = node->next;
+        ++count;
+        if (count == KOS_MAX_REGS)
+            break;
+    }
+
+    return count;
+}
+
 static int gen_function(KOS_COMP_UNIT      *program,
                         const KOS_AST_NODE *node,
                         KOS_VAR            *fun_var,
@@ -4681,9 +4753,16 @@ static int gen_function(KOS_COMP_UNIT      *program,
     }
 
     /* Create constant template for LOAD.CONST */
-    constant = alloc_func_constant(program, frame, (uint32_t)str_idx);
-    if ( ! constant)
-        RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
+    {
+        /* Generate constants with argument names before the function constant */
+        const int num_args = prealloc_arg_names(program, fun_node);;
+        if (num_args < 0)
+            RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
+
+        constant = alloc_func_constant(program, frame, (uint32_t)str_idx, (uint8_t)num_args);
+        if ( ! constant)
+            RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
+    }
 
     frame->constant = constant;
 
@@ -4735,6 +4814,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
 
             KOS_AST_NODE *ident_node =
                 arg_node->type == NT_IDENTIFIER ? arg_node : arg_node->children;
+            int           arg_str_idx = 0;
 
             if (i >= KOS_MAX_REGS) {
                 program->error_token = &ident_node->token;
@@ -4749,6 +4829,10 @@ static int gen_function(KOS_COMP_UNIT      *program,
             assert(var == kos_find_var(scope->vars, &ident_node->token));
 
             assert(var->num_reads || ! var->num_assignments);
+
+            TRY(gen_str(program, &ident_node->token, &arg_str_idx));
+            assert(i < constant->num_named_args);
+            constant->arg_name_str_idx[i] = arg_str_idx;
 
             /* Enumerate all args with default values, even if they are unused,
              * because we need to execute code used for initializing them,

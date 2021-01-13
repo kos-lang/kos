@@ -1048,12 +1048,11 @@ Expressions
     AssignmentTarget ::= MutableAssignmentTarget |
                          VOID_LITERAL
 
-    RHSExpression ::= YieldExpression
+    RHSExpression ::= StreamExpression
+                    | AsyncExpression
+                    | YieldExpression
 
-    YieldExpression ::= StreamExpression
-                      | ( "yield" StreamExpression )
-                      | ( "yield" AsyncExpression )
-                      | AsyncExpression
+    YieldExpression ::= "yield" ( StreamExpression | AsyncExpression )
 
     AsyncExpression ::= AsyncInvocation
                       | AsyncStreamExpression
@@ -1202,9 +1201,15 @@ To avoid ambiguities, the opening parenthesis `(` cannot be the first
 non-whitespace, non-comment token on the line if the `Invocation` is
 part of the outermost `MemberExpression`.
 
-    ArgumentList ::= Argument ( "," Argument )*
+    ArgumentList ::= NamedArgumentList | UnnamedArgumentList
 
-    Argument ::= RHSExpression [ "..." ]
+    NamedArgumentList ::= NamedArgument ( "," NamedArgument )*
+
+    NamedArgument ::= Identifier "=" RHSExpression
+
+    UnnamedArgumentList ::= UnnamedArgument ( "," UnnamedArgument )*
+
+    UnnamedArgument ::= RHSExpression [ "..." ]
 
     Refinement ::= ( "[" RHSExpression "]" )
                  | ( "[" [ RHSExpression ] ":" [ RHSExpression ] "]" )

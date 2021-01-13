@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <string.h>
 
+static const char str_err_cannot_expand_named_arg[]   = "named arguments cannot be expanded";
 static const char str_err_duplicate_default[]         = "multiple 'default' labels in one switch";
 static const char str_err_eol_before_par[]            = "ambiguous syntax: end of line before '(' - consider adding a ';'";
 static const char str_err_eol_before_sq[]             = "ambiguous syntax: end of line before '[' - consider adding a ';'";
@@ -35,6 +36,8 @@ static const char str_err_expected_invocation[]       = "expected invocation";
 static const char str_err_expected_lambda_op[]        = "expected '=>'";
 static const char str_err_expected_member_expr[]      = "expected literal, identifier or '('";
 static const char str_err_expected_multi_assignment[] = "expected '=' after comma-separated variables or members";
+static const char str_err_expected_named_arg[]        = "expected named argument";
+static const char str_err_expected_named_assignment[] = "expected '=' after named argument";
 static const char str_err_expected_param_default[]    = "expected default value for parameter";
 static const char str_err_expected_paren_close[]      = "expected ')'";
 static const char str_err_expected_paren_open[]       = "expected '('";
@@ -1654,6 +1657,37 @@ cleanup:
     return error;
 }
 
+static int named_argument(KOS_PARSER *parser, KOS_AST_NODE **ret)
+{
+    KOS_AST_NODE *value_node;
+    int           error = KOS_SUCCESS;
+
+    TRY(next_token(parser));
+
+    if (parser->token.type != TT_IDENTIFIER) {
+        parser->error_str = str_err_expected_named_arg;
+        RAISE_ERROR(KOS_ERROR_PARSE_FAILED);
+    }
+
+    TRY(new_node(parser, ret, NT_PROPERTY));
+
+    TRY(push_node(parser, *ret, NT_STRING_LITERAL, KOS_NULL));
+
+    TRY(next_token(parser));
+
+    if (parser->token.op != OT_SET) {
+        parser->error_str = str_err_expected_named_assignment;
+        RAISE_ERROR(KOS_ERROR_PARSE_FAILED);
+    }
+
+    TRY(right_hand_side_expr(parser, &value_node));
+
+    ast_push(*ret, value_node);
+
+cleanup:
+    return error;
+}
+
 static int invocation(KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int error = KOS_SUCCESS;
@@ -1682,17 +1716,47 @@ static int invocation(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
     if (parser->token.sep != ST_PAREN_CLOSE) {
 
-        parser->unget = 1;
+        KOS_AST_NODE *args_container_node = *ret;
+        int           named_args          = 0;
+
+        if (parser->token.type == TT_IDENTIFIER) {
+
+            const KOS_TOKEN saved_token = parser->token;
+
+            TRY(next_token(parser));
+
+            if (parser->token.op == OT_SET)
+                named_args = 1;
+
+            kos_lexer_unget_token(&parser->lexer, &saved_token);
+            parser->unget = 0;
+
+            if (named_args) {
+                TRY(push_node(parser, *ret, NT_NAMED_ARGUMENTS, &args_container_node));
+
+                TRY(push_node(parser, args_container_node, NT_OBJECT_LITERAL, &args_container_node));
+            }
+        }
+        else
+            parser->unget = 1;
 
         for (;;) {
 
-            TRY(right_hand_side_expr(parser, &node));
+            if (named_args)
+                TRY(named_argument(parser, &node));
+            else
+                TRY(right_hand_side_expr(parser, &node));
 
             TRY(next_token(parser));
 
             if (parser->token.op == OT_MORE) {
 
                 KOS_AST_NODE *expanded = node;
+
+                if (named_args) {
+                    parser->error_str = str_err_cannot_expand_named_arg;
+                    RAISE_ERROR(KOS_ERROR_PARSE_FAILED);
+                }
 
                 node = KOS_NULL;
                 TRY(new_node(parser, &node, NT_EXPAND));
@@ -1702,7 +1766,7 @@ static int invocation(KOS_PARSER *parser, KOS_AST_NODE **ret)
                 TRY(next_token(parser));
             }
 
-            ast_push(*ret, node);
+            ast_push(args_container_node, node);
             node = KOS_NULL;
 
             if (parser->token.sep == ST_PAREN_CLOSE)
@@ -1710,8 +1774,7 @@ static int invocation(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
             if (parser->token.sep != ST_COMMA) {
                 parser->error_str = str_err_expected_comma;
-                error = KOS_ERROR_PARSE_FAILED;
-                goto cleanup;
+                RAISE_ERROR(KOS_ERROR_PARSE_FAILED);
             }
         }
     }

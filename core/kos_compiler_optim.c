@@ -2122,6 +2122,8 @@ static int visit_node(KOS_COMP_UNIT *program,
             /* fall through */
         case NT_EXPAND:
             /* fall through */
+        case NT_NAMED_ARGUMENTS:
+            /* fall through */
         case NT_IN:
             /* fall through */
         case NT_EXPRESSION_LIST:

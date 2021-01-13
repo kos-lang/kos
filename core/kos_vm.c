@@ -867,6 +867,7 @@ static KOS_OBJ_ID get_named_args(KOS_CONTEXT ctx,
         ++num_found;
 
         if (IS_BAD_PTR(idx_id)) {
+            KOS_clear_exception(ctx);
             TRY(KOS_string_to_cstr_vec(ctx, KOS_get_walk_key(input.o), &cstr));
             KOS_raise_printf(ctx, "invalid function parameter: '%s'", cstr.buffer);
             RAISE_ERROR(KOS_ERROR_EXCEPTION);

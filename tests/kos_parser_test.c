@@ -53,6 +53,7 @@ static const char *const node_types[] = {
     "ellipsis",
     "expand",
     "property",
+    "named_arguments",
     "in",
     "expression_list",
     "catch",

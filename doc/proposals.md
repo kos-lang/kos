@@ -51,9 +51,9 @@
 
 * ? Empty array, buffer, string, object (shallow) are all falsy
 
-* ? remove C-style for loop
+* remove C-style for loop
 
-* set/get:
+* ? set/get:
 
         var myobj = {
             prop: set fun { },
@@ -66,15 +66,10 @@
 
 * Add 'static' functions in classes.
 
-* Invocation with explicit argument names, e.g.:
-
-        var f = file.open(name="xyz", flags="r");
-
 * Allow invoking functions declared anywhere in current and outer scopes.
 
 * Optimizations:
 
-    - Add object iterator instructions, add universal iterator internal object.
     - Add compile-time resolution for range() (e.g. using special instruction).
     - Find line where a variable is no longer used, release register.
     - Don't reload constants if they are already in registers.

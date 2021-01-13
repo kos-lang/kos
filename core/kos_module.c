@@ -566,9 +566,11 @@ static int alloc_constants(KOS_CONTEXT    ctx,
     uint32_t        base_idx      = 0;
     KOS_COMP_CONST *constant      = program->first_constant;
     KOS_LOCAL       module;
+    KOS_LOCAL       obj;
     int             i;
 
     KOS_init_local_with(ctx, &module, module_obj);
+    KOS_init_local(     ctx, &obj);
 
     if (IS_BAD_PTR(OBJPTR(MODULE, module.o)->constants)) {
         const KOS_OBJ_ID constants = KOS_new_array(ctx, num_constants);
@@ -583,23 +585,23 @@ static int alloc_constants(KOS_CONTEXT    ctx,
 
     for (i = 0; constant; constant = constant->next, ++i) {
 
-        KOS_OBJ_ID obj_id = KOS_BADPTR;
+        obj.o = KOS_BADPTR;
 
         switch (constant->type) {
 
             default:
                 assert(constant->type == KOS_COMP_CONST_INTEGER);
-                obj_id = KOS_new_int(ctx, ((KOS_COMP_INTEGER *)constant)->value);
+                obj.o = KOS_new_int(ctx, ((KOS_COMP_INTEGER *)constant)->value);
                 break;
 
             case KOS_COMP_CONST_FLOAT:
-                obj_id = KOS_new_float(ctx, ((KOS_COMP_FLOAT *)constant)->value);
+                obj.o = KOS_new_float(ctx, ((KOS_COMP_FLOAT *)constant)->value);
                 break;
 
             case KOS_COMP_CONST_STRING: {
                 KOS_COMP_STRING *str = (KOS_COMP_STRING *)constant;
 
-                obj_id = str->escape == KOS_UTF8_WITH_ESCAPE
+                obj.o = str->escape == KOS_UTF8_WITH_ESCAPE
                        ? KOS_new_string_esc(ctx, str->str, str->length)
                        : KOS_new_string(ctx, str->str, str->length);
                 break;
@@ -607,21 +609,14 @@ static int alloc_constants(KOS_CONTEXT    ctx,
 
             case KOS_COMP_CONST_FUNCTION: {
                 KOS_COMP_FUNCTION *func_const = (KOS_COMP_FUNCTION *)constant;
-                KOS_FUNCTION      *func;
                 KOS_OBJ_ID         name;
+                uint8_t            arg_idx;
 
-                if (func_const->flags & KOS_COMP_FUN_CLASS) {
-                    obj_id = KOS_new_class(ctx, KOS_VOID);
-                    if (IS_BAD_PTR(obj_id))
-                        break;
-                    func = (KOS_FUNCTION *)OBJPTR(CLASS, obj_id);
-                }
-                else {
-                    obj_id = KOS_new_function(ctx);
-                    if (IS_BAD_PTR(obj_id))
-                        break;
-                    func = OBJPTR(FUNCTION, obj_id);
-                }
+                if (func_const->flags & KOS_COMP_FUN_CLASS)
+                    obj.o = KOS_new_class(ctx, KOS_VOID);
+                else
+                    obj.o = KOS_new_function(ctx);
+                TRY_OBJID(obj.o);
 
                 if (func_const->flags & KOS_COMP_FUN_ELLIPSIS) {
                     assert(func_const->ellipsis_reg != KOS_NO_REG);
@@ -636,42 +631,62 @@ static int alloc_constants(KOS_CONTEXT    ctx,
                     assert( ! func_const->closure_size);
                 }
 
-                func->opts.num_regs     = func_const->num_regs;
-                func->opts.closure_size = func_const->closure_size;
-                func->opts.min_args     = func_const->min_args;
-                func->opts.num_def_args = func_const->num_used_def_args;
-                func->opts.num_binds    = func_const->num_binds;
-                func->opts.args_reg     = func_const->args_reg;
-                func->opts.rest_reg     = func_const->rest_reg;
-                func->opts.ellipsis_reg = func_const->ellipsis_reg;
-                func->opts.this_reg     = func_const->this_reg;
-                func->opts.bind_reg     = func_const->bind_reg;
+                OBJPTR(FUNCTION, obj.o)->opts.num_regs     = func_const->num_regs;
+                OBJPTR(FUNCTION, obj.o)->opts.closure_size = func_const->closure_size;
+                OBJPTR(FUNCTION, obj.o)->opts.min_args     = func_const->min_args;
+                OBJPTR(FUNCTION, obj.o)->opts.num_def_args = func_const->num_used_def_args;
+                OBJPTR(FUNCTION, obj.o)->opts.num_binds    = func_const->num_binds;
+                OBJPTR(FUNCTION, obj.o)->opts.args_reg     = func_const->args_reg;
+                OBJPTR(FUNCTION, obj.o)->opts.rest_reg     = func_const->rest_reg;
+                OBJPTR(FUNCTION, obj.o)->opts.ellipsis_reg = func_const->ellipsis_reg;
+                OBJPTR(FUNCTION, obj.o)->opts.this_reg     = func_const->this_reg;
+                OBJPTR(FUNCTION, obj.o)->opts.bind_reg     = func_const->bind_reg;
 
-                func->instr_offs = OBJPTR(MODULE, module.o)->bytecode_size + func_const->offset;
-                func->module     = module.o;
+                OBJPTR(FUNCTION, obj.o)->instr_offs = OBJPTR(MODULE, module.o)->bytecode_size + func_const->offset;
+                OBJPTR(FUNCTION, obj.o)->module     = module.o;
 
                 name = KOS_array_read(ctx, OBJPTR(MODULE, module.o)->constants, (int)func_const->name_str_idx);
                 TRY_OBJID(name);
                 assert(GET_OBJ_TYPE(name) == OBJ_STRING);
-                func->name = name;
+                OBJPTR(FUNCTION, obj.o)->name = name;
+
+                if (func_const->num_named_args) {
+                    KOS_OBJ_ID arg_map = KOS_new_object(ctx);
+                    TRY_OBJID(arg_map);
+
+                    OBJPTR(FUNCTION, obj.o)->arg_map = arg_map;
+                }
+
+                for (arg_idx = 0; arg_idx < func_const->num_named_args; arg_idx++) {
+                    const uint32_t str_idx = func_const->arg_name_str_idx[arg_idx];
+
+                    name = KOS_array_read(ctx, OBJPTR(MODULE, module.o)->constants, (int)str_idx);
+                    TRY_OBJID(name);
+                    assert(GET_OBJ_TYPE(name) == OBJ_STRING);
+
+                    TRY(KOS_set_property(ctx,
+                                         OBJPTR(FUNCTION, obj.o)->arg_map,
+                                         name,
+                                         TO_SMALL_INT((int64_t)arg_idx)));
+                }
 
                 if (func_const->flags & KOS_COMP_FUN_GENERATOR)
-                    func->state = KOS_GEN_INIT;
+                    OBJPTR(FUNCTION, obj.o)->state = KOS_GEN_INIT;
                 break;
             }
 
             case KOS_COMP_CONST_PROTOTYPE:
-                obj_id = KOS_new_object(ctx);
+                obj.o = KOS_new_object(ctx);
                 break;
         }
 
-        TRY_OBJID(obj_id);
+        TRY_OBJID(obj.o);
 
-        TRY(KOS_array_write(ctx, OBJPTR(MODULE, module.o)->constants, base_idx + i, obj_id));
+        TRY(KOS_array_write(ctx, OBJPTR(MODULE, module.o)->constants, base_idx + i, obj.o));
     }
 
 cleanup:
-    KOS_destroy_top_local(ctx, &module);
+    KOS_destroy_top_locals(ctx, &obj, &module);
     return error;
 }
 
@@ -863,7 +878,7 @@ cleanup:
 
 int kos_comp_walk_globals(void                          *vframe,
                           int                            module_idx,
-                          KOS_COMP_WALL_GLOBALS_CALLBACK callback,
+                          KOS_COMP_WALK_GLOBALS_CALLBACK callback,
                           void                          *cookie)
 {
     int                 error  = KOS_SUCCESS;

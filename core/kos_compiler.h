@@ -194,6 +194,9 @@ typedef struct KOS_COMP_FUNCTION_S {
     uint8_t        ellipsis_reg;        /* Register containing ellipsis */
     uint8_t        this_reg;            /* Register containing 'this' */
     uint8_t        bind_reg;            /* First bound register */
+
+    uint8_t        num_named_args;
+    uint32_t       arg_name_str_idx[1]; /* Array of constant indexes containing argument names */
 } KOS_COMP_FUNCTION;
 
 typedef struct KOS_PRE_GLOBAL_S {
@@ -337,7 +340,7 @@ int kos_comp_get_global_idx(void       *ctx,
                             uint16_t    length,
                             int        *global_idx);
 
-typedef int (*KOS_COMP_WALL_GLOBALS_CALLBACK)(const char *global_name,
+typedef int (*KOS_COMP_WALK_GLOBALS_CALLBACK)(const char *global_name,
                                               uint16_t    global_length,
                                               int         module_idx,
                                               int         global_idx,
@@ -345,7 +348,7 @@ typedef int (*KOS_COMP_WALL_GLOBALS_CALLBACK)(const char *global_name,
 
 int kos_comp_walk_globals(void                          *ctx,
                           int                            module_idx,
-                          KOS_COMP_WALL_GLOBALS_CALLBACK callback,
+                          KOS_COMP_WALK_GLOBALS_CALLBACK callback,
                           void                          *cookie);
 
 #endif

@@ -40,10 +40,11 @@ typedef enum KOS_NODE_TYPE_U {
     NT_LEFT_HAND_SIDE,      /* first argument to assignment */
     NT_NAME,                /* function name, not referred to inside the function */
     NT_NAME_CONST,          /* function name, usable inside the function */
-    NT_PARAMETERS,          /* function arguments list */
+    NT_PARAMETERS,          /* declaration of function's argument list */
     NT_ELLIPSIS,            /* last, unbounded function argument */
-    NT_EXPAND,              /* expanded argument or array element */
+    NT_EXPAND,              /* expanded argument or array element or invocation argument */
     NT_PROPERTY,            /* property definition in object literal */
+    NT_NAMED_ARGUMENTS,     /* named arguments in invocation */
     NT_IN,                  /* the 'in' part of the for-in loop */
     NT_EXPRESSION_LIST,     /* pre-loop or post-loop expressions in for loop */
     NT_CATCH,               /* catch clause in a try statement */
