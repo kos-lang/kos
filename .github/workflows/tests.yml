@@ -17,12 +17,14 @@ jobs:
           - ubuntu-20.04
           - ubuntu-18.04
           - ubuntu-16.04
-          - macos-10.15
+          - macos-latest
         test:
           - c89
           - release
 
     runs-on: ${{ matrix.os }}
+
+    timeout-minutes: 5
 
     steps:
       - uses: actions/checkout@v2
@@ -41,6 +43,8 @@ jobs:
           - lcov
 
     runs-on: ubuntu-20.04
+
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v2
@@ -71,11 +75,12 @@ jobs:
           - x64
         test:
           - c89
-          - cpp14
           - release
           - seqfail
 
     runs-on: windows-latest
+
+    timeout-minutes: 10
 
     steps:
       - uses: msys2/setup-msys2@v2
