@@ -1172,8 +1172,6 @@ static KOS_COMP_FUNCTION *alloc_func_constant(KOS_COMP_UNIT *program,
     const size_t       alloc_size = sizeof(KOS_COMP_FUNCTION) - sizeof(uint32_t)
                                     + (num_named_args * sizeof(uint32_t));
 
-    assert(num_named_args <= KOS_MAX_REGS);
-
     constant = (KOS_COMP_FUNCTION *)KOS_mempool_alloc(&program->allocator, alloc_size);
 
     if (constant) {
@@ -4758,6 +4756,8 @@ static int gen_function(KOS_COMP_UNIT      *program,
         const int num_args = prealloc_arg_names(program, fun_node);;
         if (num_args < 0)
             RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
+
+        assert(num_args <= KOS_MAX_REGS);
 
         constant = alloc_func_constant(program, frame, (uint32_t)str_idx, (uint8_t)num_args);
         if ( ! constant)
