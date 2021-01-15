@@ -4323,10 +4323,10 @@ static KOS_OBJ_ID code(KOS_CONTEXT ctx,
                        KOS_OBJ_ID  this_obj,
                        KOS_OBJ_ID  args_obj)
 {
-    int64_t    idx   = 0;
+    int64_t    idx       = 0;
     KOS_OBJ_ID arg;
-    unsigned   char_code;
-    int        error = KOS_SUCCESS;
+    unsigned   char_code = 0;
+    int        error     = KOS_SUCCESS;
 
     arg = KOS_array_read(ctx, args_obj, 0);
     TRY_OBJID(arg);
