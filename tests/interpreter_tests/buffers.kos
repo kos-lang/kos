@@ -294,7 +294,7 @@ do {
         assert b[i] == 50
     }
 
-    b.fill(24, 100)
+    b.fill(100, 24)
     for var i = 0; i < b.size; i += 1 {
         if i < 24 {
             assert b[i] == 50
@@ -304,7 +304,7 @@ do {
         }
     }
 
-    b.fill(10, 20, 17)
+    b.fill(17, 10, 20)
     for var i = 0; i < b.size; i += 1 {
         if i < 10 {
             assert b[i] == 50
@@ -320,7 +320,7 @@ do {
         }
     }
 
-    b.fill(-24, void, 255.0)
+    b.fill(255.0, -24, void)
     for var i = 0; i < b.size; i += 1 {
         if i < 8 {
             assert b[i] == 50
@@ -331,20 +331,20 @@ do {
     }
 
     b.resize(4)
-    b.fill(void, void, 5)
+    b.fill(5, void, void)
     for var i = 0; i < b.size; i += 1 {
         assert b[i] == 5
     }
 
-    b.fill(void, 6)
+    b.fill(6, void)
     for var i = 0; i < b.size; i += 1 {
         assert b[i] == 6
     }
 
-    expect_fail(()=>b.fill(false, void, 0))
-    expect_fail(()=>b.fill(void, false, 0))
-    expect_fail(()=>b.fill(false, 0))
-    expect_fail(()=>b.fill(void, void, 256))
+    expect_fail(()=>b.fill(0, false, void))
+    expect_fail(()=>b.fill(0, void, false))
+    expect_fail(()=>b.fill(0, false))
+    expect_fail(()=>b.fill(256, void, void))
 }
 
 ##############################################################################
@@ -369,10 +369,10 @@ do {
         }
     }
 
-    b1.copy_buffer(b2)
+    b1.copy_buffer(0, b2)
     check_b1(2, 2, 2, 2, 2, 1, 1, 1, 1, 1)
 
-    b1.copy_buffer(b3)
+    b1.copy_buffer(void, b3)
     check_b1(3, 3, 3, 3, 3, 3, 3, 3, 3, 3)
 
     b1.copy_buffer(5, b2)
@@ -384,10 +384,10 @@ do {
     b1.copy_buffer(void, b4)
     check_b1(4, 4, 4, 3, 3, 2, 2, 2, 2, 2)
 
-    b1.copy_buffer(b2, 1)
+    b1.copy_buffer(0, b2, 1)
     check_b1(2, 2, 2, 2, 3, 2, 2, 2, 2, 2)
 
-    b1.copy_buffer(b4, void)
+    b1.copy_buffer(0, b4, void)
     check_b1(4, 4, 4, 2, 3, 2, 2, 2, 2, 2)
 
     b1.fill(0)
@@ -429,7 +429,7 @@ do {
     b1.copy_buffer(-6, b1)
     check_b1(0, 1, 2, 3, 0, 1, 2, 3, 4, 5) 
 
-    b1.copy_buffer(b1, 5, 10)
+    b1.copy_buffer(0, b1, 5, 10)
     check_b1(1, 2, 3, 4, 5, 1, 2, 3, 4, 5) 
 
     for var i = 0; i < b2.size; i += 1 {
@@ -982,7 +982,7 @@ do {
 
 do {
     const b = buffer([ 1, 2, 3, 4, 5, 6, 7, 8 ])
-    const a = b.unpack(2, "i1 i2 i1")
+    const a = b.unpack("i1 i2 i1", 2)
 
     assert typeof a    == "array"
     assert a.size      == 3

@@ -330,13 +330,13 @@ Examples:
 array.prototype.cas()
 ---------------------
 
-    array.prototype.cas(pos, old_val, new_val)
+    array.prototype.cas(pos, old_value, new_value)
 
 Atomic compare-and-swap for an array element.
 
-If array element at index `pos` equals to `old_val`, it is swapped
-with element `new_val`.  If the current array element at that index
-is not `old_val`, it is left unchanged.
+If array element at index `pos` equals to `old_value`, it is swapped
+with element `new_value`.  If the current array element at that index
+is not `old_value`, it is left unchanged.
 
 The compare-and-swap operation is performed atomically, but without any ordering
 guarantees.
@@ -348,9 +348,7 @@ Returns the element stored in the array at index `pos`.
 array.prototype.fill()
 ----------------------
 
-    array.prototype.fill(value)
-    array.prototype.fill(begin, value)
-    array.prototype.fill(begin, end, value)
+    array.prototype.fill(value, begin = 0, end = void)
 
 Fills specified portion of the array with a value.
 
@@ -431,7 +429,6 @@ Examples:
 array.prototype.insert_array()
 ------------------------------
 
-    array.prototype.insert_array(pos, array)
     array.prototype.insert_array(begin, end, array)
 
 Inserts elements from one array into `this` array, possibly replacing
@@ -605,8 +602,7 @@ Examples:
 array.prototype.sort()
 ----------------------
 
-    array.prototype.sort(key=void, reverse=false)
-    array.prototype.sort(reverse)
+    array.prototype.sort(key = void, reverse = false)
 
 Sorts array in-place.
 
@@ -709,14 +705,11 @@ Examples:
 buffer.prototype.copy_buffer()
 ------------------------------
 
-    buffer.prototype.copy_buffer(src_buf)
-    buffer.prototype.copy_buffer(src_buf, src_begin)
-    buffer.prototype.copy_buffer(src_buf, src_begin, src_end)
-    buffer.prototype.copy_buffer(dst_begin, src_buf)
-    buffer.prototype.copy_buffer(dst_begin, src_buf, src_begin)
-    buffer.prototype.copy_buffer(dst_begin, src_buf, src_begin, src_end)
+    buffer.prototype.copy_buffer(pos, source)
+    buffer.prototype.copy_buffer(pos, source, begin)
+    buffer.prototype.copy_buffer(pos, source, begin, end)
 
-Copies a range of bytes from source buffer to a buffer.
+Copies a range of bytes from source buffer to the buffer on which it is invoked.
 
 Returns the destination buffer being modified (`this`).
 
@@ -724,20 +717,19 @@ Stops copying once the last byte in the destination buffer is overwritten,
 the destination buffer is not grown even if more bytes from the source
 buffer could be copied.
 
-`dst_begin` is the position at which to start placing bytes from the source
-buffer.  `dst_begin` defaults to `0`.  If it is `void`, it is equivalent
-to `0`.  If it is negative, it is an offset from the end of the destination
-buffer.
+`pos` is the position at which to start placing bytes from the source
+buffer.  If it is `void`, it is equivalent to `0`.  If it is negative,
+it is an offset from the end of the destination buffer.
 
-`src_buf` is the source buffer to copy from.
+`source` is the source buffer to copy from.
 
-`src_begin` is the offset of the first byte in the source buffer to start
-copying from.  `src_begin` defaults to `0`.  If it is `void`, it is
+`begin` is the offset of the first byte in the source buffer to start
+copying from.  `begin` defaults to `0`.  If it is `void`, it is
 equivalent to `0`.  If it is negative, it is an offset from the end of
 the source buffer.
 
-`src_end` is the offset of the byte at which to stop copying from the
-source buffer.  This byte is not copied.  `src_end` defaults to the size
+`end` is the offset of the byte at which to stop copying from the
+source buffer.  This byte is not copied.  `end` defaults to the size
 of the source buffer.  If it is `void`, it is equivalent to the size
 of the source buffer.  If it is negative, it is an offset from the end
 of the source buffer.
@@ -752,9 +744,7 @@ Example:
 buffer.prototype.fill()
 -----------------------
 
-    buffer.prototype.fill(value)
-    buffer.prototype.fill(begin, value)
-    buffer.prototype.fill(begin, end, value)
+    buffer.prototype.fill(value, begin = 0, end = void)
 
 Fills specified portion of the buffer with a value.
 
@@ -1047,8 +1037,7 @@ Examples:
 buffer.prototype.unpack()
 -------------------------
 
-    buffer.prototype.unpack(pos, format)
-    buffer.prototype.unpack(format)
+    buffer.prototype.unpack(format, pos = 0)
 
 Unpacks values from their binary form from a buffer.
 
@@ -1358,16 +1347,16 @@ The prototype of `function.prototype` is `object.prototype`.
 function.prototype.apply()
 --------------------------
 
-    function.prototype.apply(this_object, args_array)
+    function.prototype.apply(this, args)
 
 Invokes a function with the specified this object and arguments.
 
 Returns the value returned by the function.
 
-The `this_object` argument is the object which is bound to the function as
+The `this` argument is the object which is bound to the function as
 `this` for this invocation.  It can be any object or `void`.
 
-The `args_array` argument is an array (can be empty) containing arguments for
+The `args` argument is an array (can be empty) containing arguments for
 the function.
 
 Example:
@@ -1379,16 +1368,16 @@ Example:
 function.prototype.async()
 --------------------------
 
-    function.prototype.async(this_object, args_array)
+    function.prototype.async(this, args)
 
 Invokes a function asynchronously on a new thread.
 
 Returns the created thread object.
 
-The `this_object` argument is the object which is bound to the function as
+The `this` argument is the object which is bound to the function as
 `this` for this invocation.  It can be any object or `void`.
 
-The `args_array` argument is an array (can be empty) containing arguments for
+The `args` argument is an array (can be empty) containing arguments for
 the function.
 
 Example:
@@ -2400,7 +2389,7 @@ Examples:
 string.prototype.lowercase()
 ----------------------------
 
-    string.prototype.lowercase(str)
+    string.prototype.lowercase()
 
 Returns a copy of the string with all alphabetical characters converted to
 lowercase.
@@ -2433,13 +2422,13 @@ Example:
 string.prototype.repeat()
 -------------------------
 
-    string.prototype.repeat(num)
+    string.prototype.repeat(count)
 
 Creates a repeated string.
 
-`num` is a non-negative number of times to repeat the string.
+`count` is a non-negative number of times to repeat the string.
 
-If `num` is a float, it is converted to integer using floor mode.
+If `count` is a float, it is converted to integer using floor mode.
 
 Examples:
 
@@ -2463,7 +2452,7 @@ Example:
 string.prototype.rfind()
 ------------------------
 
-    string.prototype.rfind(substr, pos = -1)
+    string.prototype.rfind(substr, pos = void)
 
 Performs a reverse search for a substring in a string, i.e. from right to
 left.
@@ -2475,7 +2464,7 @@ found.
 an exact match must be found.
 
 `pos` is the index in the string at which to begin the search.  It defaults
-to `-1`, which means the search by default starts from the last character of
+to `void`, which means the search by default starts from the last character of
 the string.  If `pos` is a float, it is converted to integer using floor
 mode.  If it is negative, it is an offset from the end of the string.
 
@@ -2519,7 +2508,7 @@ string.prototype.rscan()
 ------------------------
 
     string.prototype.rscan(chars, inclusive)
-    string.prototype.rscan(chars, pos = 0, inclusive = true)
+    string.prototype.rscan(chars, pos = void, inclusive = true)
 
 Scans the string for any matching characters in reverse direction, i.e. from
 right to left.
@@ -2532,7 +2521,7 @@ The search starts at position `pos` and stops as soon as any character
 from `chars` is found.
 
 `pos` is the index in the string at which to begin the search.  It defaults
-to `-1`, which means the search by default starts from the last character of
+to `void`, which means the search by default starts from the last character of
 the string.  If `pos` is a float, it is converted to integer using floor
 mode.  If it is negative, it is an offset from the end of the string.
 
@@ -2568,7 +2557,6 @@ Example:
 string.prototype.scan()
 -----------------------
 
-    string.prototype.scan(chars, inclusive)
     string.prototype.scan(chars, pos = 0, inclusive = true)
 
 Scans the string for any matching characters from left to right.
@@ -2730,7 +2718,7 @@ Example:
 string.prototype.uppercase()
 ----------------------------
 
-    string.prototype.uppercase(str)
+    string.prototype.uppercase()
 
 Returns a copy of the string with all alphabetical characters converted to
 uppercase.
@@ -2919,18 +2907,18 @@ fs
 is_file()
 ---------
 
-    is_file(pathname)
+    is_file(filename)
 
 Determines whether a file exists.
 
-Returns `true` if `pathname` exists and is a file, or `false` otherwise.
+Returns `true` if `filename` exists and is a file, or `false` otherwise.
 
 remove()
 --------
 
-    remove(pathname)
+    remove(filename)
 
-Deletes a file `pathname`.
+Deletes a file `filename`.
 
 Returns `true` if the file was successfuly deleted or `false` if
 the file could not be deleted or if it did not exist in the first
@@ -3012,13 +3000,13 @@ for reading and writing.
 file()
 ------
 
-    file(pathname, flags = rw)
+    file(filename, flags = rw)
 
 File object class.
 
 Returns opened file object.
 
-`pathname` is the path to the file.
+`filename` is the path to the file.
 
 `flags` is a string, which specifies file open mode compatible with
 the C `fopen()` function.  It is normally recommended to use the
@@ -3768,9 +3756,9 @@ The mathematical constant π=3.1415... represented as float.
 pow()
 -----
 
-    pow(num, power)
+    pow(number, power)
 
-Returns `num` raised to `power`.
+Returns `number` raised to `power`.
 
 The returned value is always a float.
 
@@ -4092,7 +4080,7 @@ Example:
 re.prototype.find()
 -------------------
 
-    re.prototype.find(string, pos=0, end_pos=void)
+    re.prototype.find(string, begin = 0, end = void)
 
 Finds the first location in the `string` which matches the regular
 expression object.
@@ -4100,12 +4088,12 @@ expression object.
 `string` is a string which matched against the regular expression
 object.
 
-`pos` is the starting position for the search.  `pos` defaults to `0`.
-`pos` also matches against `^`.
+`begin` is the starting position for the search.  `begin` defaults to `0`.
+`begin` also matches against `^`.
 
-`end_pos` is the ending position for the search, the regular expression
-will not be matched any characters at or after `end_pos`.  `end_pos`
-defaults to `void`, which indicates the end of the string.  `end_pos`
+`end` is the ending position for the search, the regular expression
+will not be matched any characters at or after `end`.  `end`
+defaults to `void`, which indicates the end of the string.  `end`
 also matches against `$`.
 
 Returns a match object if a match was found or `void` if no match was

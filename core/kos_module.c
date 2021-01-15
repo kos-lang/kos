@@ -1985,7 +1985,7 @@ int KOS_module_add_function(KOS_CONTEXT          ctx,
                             KOS_OBJ_ID           module_obj,
                             KOS_OBJ_ID           name_obj,
                             KOS_FUNCTION_HANDLER handler,
-                            int                  min_args,
+                            const KOS_ARG_DESC  *args,
                             KOS_FUNCTION_STATE   gen_state)
 {
     int        error  = KOS_SUCCESS;
@@ -1996,7 +1996,7 @@ int KOS_module_add_function(KOS_CONTEXT          ctx,
     KOS_init_local_with(ctx, &module, module_obj);
     KOS_init_local_with(ctx, &name,   name_obj);
 
-    func_obj = KOS_new_builtin_function(ctx, name_obj, handler, min_args);
+    func_obj = KOS_new_builtin_function(ctx, name_obj, handler, args);
 
     assert(GET_OBJ_TYPE(module.o) == OBJ_MODULE);
 
@@ -2020,7 +2020,7 @@ int KOS_module_add_constructor(KOS_CONTEXT          ctx,
                                KOS_OBJ_ID           module_obj,
                                KOS_OBJ_ID           name_obj,
                                KOS_FUNCTION_HANDLER handler,
-                               int                  min_args,
+                               const KOS_ARG_DESC  *args,
                                KOS_OBJ_ID          *ret_proto)
 {
     int       error = KOS_SUCCESS;
@@ -2034,7 +2034,7 @@ int KOS_module_add_constructor(KOS_CONTEXT          ctx,
     KOS_init_local_with(ctx, &module, module_obj);
     KOS_init_local_with(ctx, &name,   name_obj);
 
-    func.o = KOS_new_builtin_class(ctx, name_obj, handler, min_args);
+    func.o = KOS_new_builtin_class(ctx, name_obj, handler, args);
     TRY_OBJID(func.o);
 
     OBJPTR(CLASS, func.o)->module = module.o;
@@ -2058,7 +2058,7 @@ int KOS_module_add_member_function(KOS_CONTEXT          ctx,
                                    KOS_OBJ_ID           proto_obj,
                                    KOS_OBJ_ID           name_obj,
                                    KOS_FUNCTION_HANDLER handler,
-                                   int                  min_args,
+                                   const KOS_ARG_DESC  *args,
                                    KOS_FUNCTION_STATE   gen_state)
 {
     int        error = KOS_SUCCESS;
@@ -2073,7 +2073,7 @@ int KOS_module_add_member_function(KOS_CONTEXT          ctx,
     KOS_init_local_with(ctx, &proto,  proto_obj);
     KOS_init_local_with(ctx, &name,   name_obj);
 
-    func_obj = KOS_new_builtin_function(ctx, name_obj, handler, min_args);
+    func_obj = KOS_new_builtin_function(ctx, name_obj, handler, args);
     TRY_OBJID(func_obj);
 
     OBJPTR(FUNCTION, func_obj)->module = module.o;

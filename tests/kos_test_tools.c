@@ -23,7 +23,7 @@ int create_thread(KOS_CONTEXT          ctx,
 
     KOS_init_local(ctx, &func);
 
-    func.o = KOS_new_builtin_function(ctx, KOS_STR_EMPTY, proc, 0);
+    func.o = KOS_new_builtin_function(ctx, KOS_STR_EMPTY, proc, KOS_NULL);
     TRY_OBJID(func.o);
 
     args_obj = KOS_new_array(ctx, 0);

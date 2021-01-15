@@ -19,12 +19,13 @@
 #include <stdio.h>
 #include <string.h>
 
-KOS_DECLARE_STATIC_CONST_STRING(str_err_regex_not_a_string, "regular expression is not a string");
 KOS_DECLARE_STATIC_CONST_STRING(str_begin,                  "begin");
 KOS_DECLARE_STATIC_CONST_STRING(str_end,                    "end");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_regex_not_a_string, "regular expression is not a string");
 KOS_DECLARE_STATIC_CONST_STRING(str_groups,                 "groups");
 KOS_DECLARE_STATIC_CONST_STRING(str_match,                  "match");
 KOS_DECLARE_STATIC_CONST_STRING(str_match_groups,           "match_groups");
+KOS_DECLARE_STATIC_CONST_STRING(str_regex,                  "regex");
 KOS_DECLARE_STATIC_CONST_STRING(str_string,                 "string");
 
 /*
@@ -1820,6 +1821,11 @@ cleanup:
  *
  *     > re("...")
  */
+static const KOS_ARG_DESC re_uncached_args[2] = {
+    { KOS_CONST_ID(str_regex), KOS_BADPTR },
+    { KOS_BADPTR,              KOS_BADPTR }
+};
+
 static KOS_OBJ_ID re_ctor(KOS_CONTEXT ctx,
                           KOS_OBJ_ID  this_obj,
                           KOS_OBJ_ID  args_obj)
@@ -1828,7 +1834,7 @@ static KOS_OBJ_ID re_ctor(KOS_CONTEXT ctx,
     KOS_LOCAL regex_str;
     KOS_LOCAL regex;
 
-    assert(KOS_get_array_size(args_obj) > 0);
+    assert(KOS_get_array_size(args_obj) >= 1);
 
     KOS_init_locals(ctx, 2, &regex_str, &regex);
 
@@ -1853,7 +1859,7 @@ cleanup:
 
 /* @item re re.prototype.find()
  *
- *     re.prototype.find(string, pos=0, end_pos=void)
+ *     re.prototype.find(string, begin = 0, end = void)
  *
  * Finds the first location in the `string` which matches the regular
  * expression object.
@@ -1861,12 +1867,12 @@ cleanup:
  * `string` is a string which matched against the regular expression
  * object.
  *
- * `pos` is the starting position for the search.  `pos` defaults to `0`.
- * `pos` also matches against `^`.
+ * `begin` is the starting position for the search.  `begin` defaults to `0`.
+ * `begin` also matches against `^`.
  *
- * `end_pos` is the ending position for the search, the regular expression
- * will not be matched any characters at or after `end_pos`.  `end_pos`
- * defaults to `void`, which indicates the end of the string.  `end_pos`
+ * `end` is the ending position for the search, the regular expression
+ * will not be matched any characters at or after `end`.  `end`
+ * defaults to `void`, which indicates the end of the string.  `end`
  * also matches against `$`.
  *
  * Returns a match object if a match was found or `void` if no match was
@@ -1876,20 +1882,27 @@ cleanup:
  *
  *     > re(r"down.*(rabbit)").find("tumbling down the rabbit hole")
  */
+static const KOS_ARG_DESC find_args[4] = {
+    { KOS_CONST_ID(str_string), KOS_BADPTR      },
+    { KOS_CONST_ID(str_begin),  TO_SMALL_INT(0) },
+    { KOS_CONST_ID(str_end),    KOS_VOID        },
+    { KOS_BADPTR,               KOS_BADPTR      }
+};
+
 static KOS_OBJ_ID re_find(KOS_CONTEXT ctx,
                           KOS_OBJ_ID  this_obj,
                           KOS_OBJ_ID  args_obj)
 {
-    int                  error     = KOS_SUCCESS;
-    uint32_t             begin_pos = 0;
-    uint32_t             end_pos;
-    uint32_t             pos;
+    int                  error = KOS_SUCCESS;
+    int                  begin_pos;
+    int                  end_pos;
+    int                  pos;
     KOS_LOCAL            str;
     KOS_LOCAL            match;
     struct RE_POSS_STACK poss_stack;
     struct RE_OBJ       *re;
 
-    assert(KOS_get_array_size(args_obj) > 0);
+    assert(KOS_get_array_size(args_obj) >= 3);
 
     init_possibility_stack(&poss_stack);
 
@@ -1901,40 +1914,18 @@ static KOS_OBJ_ID re_find(KOS_CONTEXT ctx,
     if (GET_OBJ_TYPE(str.o) != OBJ_STRING)
         RAISE_EXCEPTION_STR(str_err_not_string);
 
-    end_pos = KOS_get_string_length(str.o);
+    end_pos = (int)KOS_get_string_length(str.o);
 
     re = (struct RE_OBJ *)KOS_object_get_private_ptr(this_obj);
     if ( ! re)
         RAISE_EXCEPTION_STR(str_err_not_re);
 
-    if (KOS_get_array_size(args_obj) > 1) {
-        KOS_OBJ_ID val = KOS_array_read(ctx, args_obj, 1);
-        int64_t    ival;
-
-        TRY_OBJID(val);
-
-        TRY(KOS_get_integer(ctx, val, &ival));
-
-        begin_pos = (uint32_t)KOS_fix_index(ival, end_pos);
-
-        if (KOS_get_array_size(args_obj) > 2) {
-            val = KOS_array_read(ctx, args_obj, 2);
-            TRY_OBJID(val);
-
-            if (val != KOS_VOID) {
-                TRY(KOS_get_integer(ctx, val, &ival));
-
-                end_pos = (uint32_t)KOS_fix_index(ival, end_pos);
-            }
-        }
-
-        if (end_pos < begin_pos)
-            end_pos = begin_pos;
-    }
+    TRY(KOS_get_index_arg(ctx, args_obj, 1, 0,         end_pos, KOS_VOID_INDEX_IS_BEGIN, &begin_pos));
+    TRY(KOS_get_index_arg(ctx, args_obj, 2, begin_pos, end_pos, KOS_VOID_INDEX_IS_END,   &end_pos));
 
     for (pos = begin_pos; pos <= end_pos; pos++) {
         /* TODO optimize the case when the re begins with ^: don't look beyond begin_pos */
-        match.o = match_string(ctx, re, str.o, begin_pos, pos, end_pos, &poss_stack);
+        match.o = match_string(ctx, re, str.o, (uint32_t)begin_pos, (uint32_t)pos, (uint32_t)end_pos, &poss_stack);
         if (match.o != KOS_VOID)
             break;
     }
@@ -1955,8 +1946,8 @@ KOS_INIT_MODULE(re)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     KOS_init_local_with(ctx, &module, module_obj);
     KOS_init_local(     ctx, &proto);
 
-    TRY_ADD_CONSTRUCTOR(    ctx, module.o,          "re_uncached", re_ctor, 1, &proto.o);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "find",        re_find, 1);
+    TRY_ADD_CONSTRUCTOR(    ctx, module.o,          "re_uncached", re_ctor, re_uncached_args, &proto.o);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "find",        re_find, find_args);
 
 cleanup:
     KOS_destroy_top_locals(ctx, &proto, &module);

@@ -1276,8 +1276,11 @@ inline buffer context::new_buffer(unsigned size)
 
 inline function context::new_function(const char* name, KOS_FUNCTION_HANDLER handler, int min_args)
 {
+    assert((min_args >= 0) && (min_args < 256));
     const KOS_OBJ_ID name_obj = check_error(KOS_new_cstring(ctx_, name));
-    return function(*this, check_error(KOS_new_builtin_function(ctx_, name_obj, handler, min_args)));
+    function fn(*this, check_error(KOS_new_builtin_function(ctx_, name_obj, handler, KOS_NULL)));
+    OBJPTR(FUNCTION, fn)->opts.min_args = (uint8_t)min_args;
+    return fn;
 }
 
 template<int i, typename T>

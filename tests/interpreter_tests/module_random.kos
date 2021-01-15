@@ -42,6 +42,8 @@ do {
     assert random.rand_integer(-10000, -10000) == -10000
 
     expect_fail(()=>random.rand_integer(1))
+    expect_fail(()=>random.rand_integer(min = 1))
+    expect_fail(()=>random.rand_integer(max = 1))
     expect_fail(()=>random.rand_integer(1, 0))
 }
 
@@ -62,7 +64,7 @@ do {
 
 # random.seed
 do {
-    expect_fail(()=>random.random(void))
+    expect_fail(()=>random.random(true))
     expect_fail(()=>random.random(10e19))
 
     const seed = random.rand_integer()

@@ -613,9 +613,9 @@ static KOS_OBJ_ID kos_is_nan(KOS_CONTEXT ctx,
 
 /* @item math pow()
  *
- *     pow(num, power)
+ *     pow(number, power)
  *
- * Returns `num` raised to `power`.
+ * Returns `number` raised to `power`.
  *
  * The returned value is always a float.
  *
@@ -793,6 +793,21 @@ cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
+KOS_DECLARE_STATIC_CONST_STRING(str_number, "number");
+
+static const KOS_ARG_DESC number_arg[2] = {
+    { KOS_CONST_ID(str_number), KOS_BADPTR },
+    { KOS_BADPTR,               KOS_BADPTR }
+};
+
+KOS_DECLARE_STATIC_CONST_STRING(str_power, "power");
+
+static const KOS_ARG_DESC pow_args[3] = {
+    { KOS_CONST_ID(str_number), KOS_BADPTR },
+    { KOS_CONST_ID(str_power),  KOS_BADPTR },
+    { KOS_BADPTR,               KOS_BADPTR }
+};
+
 KOS_INIT_MODULE(math)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 {
     int       error = KOS_SUCCESS;
@@ -836,24 +851,24 @@ KOS_INIT_MODULE(math)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
         TRY_ADD_GLOBAL(ctx, module.o, "nan", value_obj);
     }
 
-    TRY_ADD_FUNCTION(ctx, module.o, "abs",         kos_abs,         1);
-    TRY_ADD_FUNCTION(ctx, module.o, "acos",        kos_acos,        1);
-    TRY_ADD_FUNCTION(ctx, module.o, "asin",        kos_asin,        1);
-    TRY_ADD_FUNCTION(ctx, module.o, "atan",        kos_atan,        1);
-    TRY_ADD_FUNCTION(ctx, module.o, "ceil",        kos_ceil,        1);
-    TRY_ADD_FUNCTION(ctx, module.o, "cos",         kos_cos,         1);
-    TRY_ADD_FUNCTION(ctx, module.o, "exp",         kos_exp,         1);
-    TRY_ADD_FUNCTION(ctx, module.o, "expm1",       kos_expm1,       1);
-    TRY_ADD_FUNCTION(ctx, module.o, "floor",       kos_floor,       1);
-    TRY_ADD_FUNCTION(ctx, module.o, "log",         kos_log,         1);
-    TRY_ADD_FUNCTION(ctx, module.o, "log10",       kos_log10,       1);
-    TRY_ADD_FUNCTION(ctx, module.o, "log1p",       kos_log1p,       1);
-    TRY_ADD_FUNCTION(ctx, module.o, "is_infinity", kos_is_infinity, 1);
-    TRY_ADD_FUNCTION(ctx, module.o, "is_nan",      kos_is_nan,      1);
-    TRY_ADD_FUNCTION(ctx, module.o, "pow",         kos_pow,         2);
-    TRY_ADD_FUNCTION(ctx, module.o, "sin",         kos_sin,         1);
-    TRY_ADD_FUNCTION(ctx, module.o, "sqrt",        kos_sqrt,        1);
-    TRY_ADD_FUNCTION(ctx, module.o, "tan",         kos_tan,         1);
+    TRY_ADD_FUNCTION(ctx, module.o, "abs",         kos_abs,         number_arg);
+    TRY_ADD_FUNCTION(ctx, module.o, "acos",        kos_acos,        number_arg);
+    TRY_ADD_FUNCTION(ctx, module.o, "asin",        kos_asin,        number_arg);
+    TRY_ADD_FUNCTION(ctx, module.o, "atan",        kos_atan,        number_arg);
+    TRY_ADD_FUNCTION(ctx, module.o, "ceil",        kos_ceil,        number_arg);
+    TRY_ADD_FUNCTION(ctx, module.o, "cos",         kos_cos,         number_arg);
+    TRY_ADD_FUNCTION(ctx, module.o, "exp",         kos_exp,         number_arg);
+    TRY_ADD_FUNCTION(ctx, module.o, "expm1",       kos_expm1,       number_arg);
+    TRY_ADD_FUNCTION(ctx, module.o, "floor",       kos_floor,       number_arg);
+    TRY_ADD_FUNCTION(ctx, module.o, "log",         kos_log,         number_arg);
+    TRY_ADD_FUNCTION(ctx, module.o, "log10",       kos_log10,       number_arg);
+    TRY_ADD_FUNCTION(ctx, module.o, "log1p",       kos_log1p,       number_arg);
+    TRY_ADD_FUNCTION(ctx, module.o, "is_infinity", kos_is_infinity, number_arg);
+    TRY_ADD_FUNCTION(ctx, module.o, "is_nan",      kos_is_nan,      number_arg);
+    TRY_ADD_FUNCTION(ctx, module.o, "pow",         kos_pow,         pow_args);
+    TRY_ADD_FUNCTION(ctx, module.o, "sin",         kos_sin,         number_arg);
+    TRY_ADD_FUNCTION(ctx, module.o, "sqrt",        kos_sqrt,        number_arg);
+    TRY_ADD_FUNCTION(ctx, module.o, "tan",         kos_tan,         number_arg);
 
 cleanup:
     KOS_destroy_top_local(ctx, &module);

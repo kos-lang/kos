@@ -34,6 +34,12 @@ typedef enum KOS_COMPARE_RESULT_E {
     KOS_INDETERMINATE
 } KOS_COMPARE_RESULT;
 
+enum KOS_VOID_INDEX_E {
+    KOS_VOID_INDEX_INVALID,
+    KOS_VOID_INDEX_IS_BEGIN,
+    KOS_VOID_INDEX_IS_END
+};
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -48,6 +54,15 @@ KOS_API
 int KOS_get_integer(KOS_CONTEXT ctx,
                     KOS_OBJ_ID  obj_id,
                     int64_t    *ret);
+
+KOS_API
+int KOS_get_index_arg(KOS_CONTEXT           ctx,
+                      KOS_OBJ_ID            args_obj,
+                      int                   arg_idx,
+                      int                   begin_pos,
+                      int                   end_pos,
+                      enum KOS_VOID_INDEX_E void_index,
+                      int                  *found_pos);
 
 enum KOS_PRINT_WHERE_E {
     KOS_STDOUT,

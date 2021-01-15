@@ -161,8 +161,8 @@ do {
     expect_fail(() => r.find(1))
     expect_fail(() => r.find(void))
     expect_fail(() => r.find([]))
-    expect_fail(() => r.find("x", void))
-    expect_fail(() => r.find("x", void, 1))
+    expect_fail(() => r.find("x", true))
+    expect_fail(() => r.find("x", true, 1))
     expect_fail(() => r.find("x", 1, ""))
 }
 

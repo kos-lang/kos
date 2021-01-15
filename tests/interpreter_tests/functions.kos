@@ -2398,6 +2398,18 @@ do {
     assert arg_list[2] == 3
 }
 
+do {
+    fun some
+    {
+        return this.size
+    }
+
+    const str = "abcd"
+    assert str.size == 4
+    assert some.apply(str, []) == 4
+    assert some.apply(args = [], obj = str) == 4
+}
+
 ##############################################################################
 # function constuctors
 

@@ -56,6 +56,13 @@ static void finalize(KOS_CONTEXT ctx,
         KOS_free(priv);
 }
 
+KOS_DECLARE_STATIC_CONST_STRING(str_input, "input");
+
+static const KOS_ARG_DESC raw_lexer_args[2] = {
+    { KOS_CONST_ID(str_input), KOS_BADPTR },
+    { KOS_BADPTR,              KOS_BADPTR }
+};
+
 static KOS_OBJ_ID raw_lexer(KOS_CONTEXT ctx,
                             KOS_OBJ_ID  regs_obj,
                             KOS_OBJ_ID  args_obj)
@@ -337,7 +344,7 @@ int kos_module_kos_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 
     KOS_init_local_with(ctx, &module, module_obj);
 
-    TRY_ADD_GENERATOR(       ctx, module.o, "raw_lexer", raw_lexer, 1);
+    TRY_ADD_GENERATOR(       ctx, module.o, "raw_lexer", raw_lexer, raw_lexer_args);
 
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "version_major",        KOS_VERSION_MAJOR);
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "version_minor",        KOS_VERSION_MINOR);

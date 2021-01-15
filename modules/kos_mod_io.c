@@ -43,6 +43,8 @@ static const char str_err_not_buffer[]          = "argument to file.read_some is
 static const char str_err_not_buffer_or_str[]   = "argument to file.write is neither a buffer nor a string";
 static const char str_err_too_many_to_read[]    = "requested read size exceeds buffer size limit";
 
+KOS_DECLARE_STATIC_CONST_STRING(str_position, "position");
+
 static KOS_OBJ_ID get_file_pos(KOS_CONTEXT ctx,
                                KOS_OBJ_ID  this_obj,
                                KOS_OBJ_ID  args_obj);
@@ -72,13 +74,13 @@ static void finalize(KOS_CONTEXT ctx,
 
 /* @item io file()
  *
- *     file(pathname, flags = rw)
+ *     file(filename, flags = rw)
  *
  * File object class.
  *
  * Returns opened file object.
  *
- * `pathname` is the path to the file.
+ * `filename` is the path to the file.
  *
  * `flags` is a string, which specifies file open mode compatible with
  * the C `fopen()` function.  It is normally recommended to use the
@@ -93,6 +95,16 @@ static void finalize(KOS_CONTEXT ctx,
  *
  *     > with const f = io.file("my.txt", io.create_flag) { f.print("hello") }
  */
+KOS_DECLARE_STATIC_CONST_STRING(str_filename, "filename");
+KOS_DECLARE_STATIC_CONST_STRING(str_flags,    "flags");
+KOS_DECLARE_STATIC_CONST_STRING(str_rw,       "r+b");
+
+static const KOS_ARG_DESC open_args[3] = {
+    { KOS_CONST_ID(str_filename), KOS_BADPTR           },
+    { KOS_CONST_ID(str_flags),    KOS_CONST_ID(str_rw) },
+    { KOS_BADPTR,                 KOS_BADPTR           }
+};
+
 static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
                            KOS_OBJ_ID  this_obj,
                            KOS_OBJ_ID  args_obj)
@@ -100,6 +112,7 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
     int        error        = KOS_SUCCESS;
     int        stored_errno = 0;
     KOS_OBJ_ID filename_obj;
+    KOS_OBJ_ID flags_obj;
     FILE      *file         = KOS_NULL;
     KOS_LOCAL  this_;
     KOS_LOCAL  args;
@@ -107,7 +120,7 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
     KOS_VECTOR filename_cstr;
     KOS_VECTOR flags_cstr;
 
-    KOS_DECLARE_STATIC_CONST_STRING(str_position, "position");
+    assert(KOS_get_array_size(args_obj) >= 2);
 
     KOS_vector_init(&filename_cstr);
     KOS_vector_init(&flags_cstr);
@@ -127,24 +140,21 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
     /* TODO use own flags */
     /* TODO add flag to avoid cloexec */
 
-    if (KOS_get_array_size(args.o) > 1) {
-        KOS_OBJ_ID flags_obj = KOS_array_read(ctx, args.o, 1);
+    flags_obj = KOS_array_read(ctx, args.o, 1);
+    TRY_OBJID(flags_obj);
 
-        TRY_OBJID(flags_obj);
+    if (GET_OBJ_TYPE(flags_obj) != OBJ_STRING)
+        RAISE_EXCEPTION(str_err_bad_flags);
 
-        if (GET_OBJ_TYPE(flags_obj) != OBJ_STRING)
-            RAISE_EXCEPTION(str_err_bad_flags);
-
-        TRY(KOS_string_to_cstr_vec(ctx, flags_obj, &flags_cstr));
+    TRY(KOS_string_to_cstr_vec(ctx, flags_obj, &flags_cstr));
 
 #ifndef _WIN32
-        TRY(KOS_append_cstr(ctx, &flags_cstr, "e", 1));
+    TRY(KOS_append_cstr(ctx, &flags_cstr, "e", 1));
 #endif
-    }
 
     KOS_suspend_context(ctx);
 
-    file = fopen(filename_cstr.buffer, flags_cstr.size ? flags_cstr.buffer : "r+b" KOS_FOPEN_CLOEXEC);
+    file = fopen(filename_cstr.buffer, flags_cstr.buffer);
 
 #ifndef _WIN32
     if (file)
@@ -303,37 +313,42 @@ static int is_eol(char c)
  * This is a low-level function, `file.prototype.read_lines()` is a better choice
  * in most cases.
  */
+KOS_DECLARE_STATIC_CONST_STRING(str_reserved_size, "reserved_size");
+
+static const KOS_ARG_DESC read_line_args[2] = {
+    { KOS_CONST_ID(str_reserved_size), TO_SMALL_INT(4096) },
+    { KOS_BADPTR,                      KOS_BADPTR         }
+};
+
 static KOS_OBJ_ID read_line(KOS_CONTEXT ctx,
                             KOS_OBJ_ID  this_obj,
                             KOS_OBJ_ID  args_obj)
 {
     int        error      = KOS_SUCCESS;
     FILE      *file       = KOS_NULL;
-    int        size_delta = 4096;
+    int        size_delta;
     int        last_size  = 0;
     int        num_read;
+    int64_t    iarg       = 0;
+    KOS_OBJ_ID arg;
     KOS_VECTOR buf;
     KOS_OBJ_ID line       = KOS_BADPTR;
+
+    assert(KOS_get_array_size(args_obj) >= 1);
 
     KOS_vector_init(&buf);
 
     TRY(get_file_object(ctx, this_obj, &file, 1));
 
-    if (KOS_get_array_size(args_obj) > 0) {
+    arg = KOS_array_read(ctx, args_obj, 0);
+    TRY_OBJID(arg);
 
-        int64_t iarg = 0;
+    TRY(KOS_get_integer(ctx, arg, &iarg));
 
-        KOS_OBJ_ID arg = KOS_array_read(ctx, args_obj, 0);
+    if (iarg <= 0 || iarg > INT_MAX-1)
+        RAISE_EXCEPTION(str_err_invalid_buffer_size);
 
-        TRY_OBJID(arg);
-
-        TRY(KOS_get_integer(ctx, arg, &iarg));
-
-        if (iarg <= 0 || iarg > INT_MAX-1)
-            RAISE_EXCEPTION(str_err_invalid_buffer_size);
-
-        size_delta = (int)iarg + 1;
-    }
+    size_delta = (int)iarg + 1;
 
     KOS_suspend_context(ctx);
 
@@ -394,6 +409,15 @@ cleanup:
  * This is a low-level function, `file.prototype.read()` is a better choice
  * in most cases.
  */
+KOS_DECLARE_STATIC_CONST_STRING(str_size,   "size");
+KOS_DECLARE_STATIC_CONST_STRING(str_buffer, "buffer");
+
+static const KOS_ARG_DESC read_some_args[3] = {
+    { KOS_CONST_ID(str_size),   TO_SMALL_INT(4096) },
+    { KOS_CONST_ID(str_buffer), KOS_VOID           },
+    { KOS_BADPTR,               KOS_BADPTR         }
+};
+
 static KOS_OBJ_ID read_some(KOS_CONTEXT ctx,
                             KOS_OBJ_ID  this_obj,
                             KOS_OBJ_ID  args_obj)
@@ -403,39 +427,34 @@ static KOS_OBJ_ID read_some(KOS_CONTEXT ctx,
     FILE      *file         = KOS_NULL;
     KOS_LOCAL  args;
     KOS_LOCAL  buf;
+    KOS_OBJ_ID arg;
     uint8_t   *data;
     uint32_t   offset;
     int64_t    to_read;
     size_t     num_read;
+
+    assert(KOS_get_array_size(args_obj) >= 2);
 
     KOS_init_local(     ctx, &buf);
     KOS_init_local_with(ctx, &args, args_obj);
 
     TRY(get_file_object(ctx, this_obj, &file, 1));
 
-    if (KOS_get_array_size(args.o) > 0) {
-        KOS_OBJ_ID arg = KOS_array_read(ctx, args.o, 0);
+    arg = KOS_array_read(ctx, args.o, 0);
+    TRY_OBJID(arg);
 
-        TRY_OBJID(arg);
-
-        TRY(KOS_get_integer(ctx, arg, &to_read));
-    }
-    else
-        to_read = 0x1000U;
+    TRY(KOS_get_integer(ctx, arg, &to_read));
 
     if (to_read < 1)
         to_read = 1;
 
-    if (KOS_get_array_size(args.o) > 1) {
-        buf.o = KOS_array_read(ctx, args.o, 1);
+    buf.o = KOS_array_read(ctx, args.o, 1);
+    TRY_OBJID(buf.o);
 
-        TRY_OBJID(buf.o);
-
-        if (GET_OBJ_TYPE(buf.o) != OBJ_BUFFER)
-            RAISE_EXCEPTION(str_err_not_buffer);
-    }
-    else
+    if (buf.o == KOS_VOID)
         buf.o = KOS_new_buffer(ctx, 0);
+    else if (GET_OBJ_TYPE(buf.o) != OBJ_BUFFER)
+        RAISE_EXCEPTION(str_err_not_buffer);
 
     offset = KOS_get_buffer_size(buf.o);
 
@@ -980,6 +999,13 @@ cleanup:
  * Each open file object also has a `postition` property which can be
  * written to in order to move the file pointer instead of invoking `seek`.
  */
+KOS_DECLARE_STATIC_CONST_STRING(str_pos, "pos");
+
+static const KOS_ARG_DESC set_file_pos_args[2] = {
+    { KOS_CONST_ID(str_pos), KOS_BADPTR },
+    { KOS_BADPTR,            KOS_BADPTR }
+};
+
 static KOS_OBJ_ID set_file_pos(KOS_CONTEXT ctx,
                                KOS_OBJ_ID  this_obj,
                                KOS_OBJ_ID  args_obj)
@@ -990,6 +1016,8 @@ static KOS_OBJ_ID set_file_pos(KOS_CONTEXT ctx,
     int64_t    pos;
     KOS_OBJ_ID arg;
     KOS_LOCAL  this_;
+
+    assert(KOS_get_array_size(args_obj) >= 1);
 
     TRY(get_file_object(ctx, this_obj, &file, 1));
 
@@ -1063,14 +1091,14 @@ int kos_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     KOS_init_local_with(ctx, &module, module_obj);
     KOS_init_local(     ctx, &proto);
 
-    TRY_ADD_CONSTRUCTOR(    ctx, module.o,          "file",      kos_open,       1, &proto.o);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "close",     kos_close,      0);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "print",     print,          0);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "read_line", read_line,      0);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "read_some", read_some,      0);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "release",   kos_close,      0);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "seek",      set_file_pos,   1);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "write",     kos_write,      0);
+    TRY_ADD_CONSTRUCTOR(    ctx, module.o,          "file",      kos_open,       open_args, &proto.o);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "close",     kos_close,      KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "print",     print,          KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "read_line", read_line,      read_line_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "read_some", read_some,      read_some_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "release",   kos_close,      KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "seek",      set_file_pos,   set_file_pos_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "write",     kos_write,      KOS_NULL);
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "eof",       get_file_eof,   KOS_NULL);
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "error",     get_file_error, KOS_NULL);
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "fd",        get_file_fd,    KOS_NULL);

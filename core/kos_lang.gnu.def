@@ -32,6 +32,7 @@
     KOS_free;
     KOS_free_aligned;
     KOS_get_file_name;
+    KOS_get_index_arg;
     KOS_get_integer;
     KOS_get_module;
     KOS_get_named_arg;

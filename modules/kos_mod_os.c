@@ -728,6 +728,14 @@ cleanup:
  *  * [pid](#processpid)     The pid of the spawned child process.
  *  * [wait()](#processwait) The wait function, which can be used to wait for the process to finish.
  */
+/* TODO change to individual args instead of an object */
+KOS_DECLARE_STATIC_CONST_STRING(str_spawn_desc, "spawn_desc");
+
+static const KOS_ARG_DESC spawn_args[2] = {
+    { KOS_CONST_ID(str_spawn_desc), KOS_BADPTR },
+    { KOS_BADPTR,                   KOS_BADPTR }
+};
+
 static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
                         KOS_OBJ_ID  this_obj,
                         KOS_OBJ_ID  args_obj)
@@ -1023,9 +1031,9 @@ KOS_INIT_MODULE(os)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 
     TRY(KOS_array_write(ctx, priv.o, 0, wait_proto.o));
 
-    TRY_ADD_FUNCTION(       ctx, module.o,               "spawn", spawn,          1);
+    TRY_ADD_FUNCTION(       ctx, module.o,               "spawn", spawn,          spawn_args);
 
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, wait_proto.o, "wait",  wait_for_child, 0);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, wait_proto.o, "wait",  wait_for_child, KOS_NULL);
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, wait_proto.o, "pid",   get_pid,        0);
 
 #ifndef _WIN32

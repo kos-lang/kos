@@ -8,7 +8,7 @@ fun remove_indentation(lines)
 {
     var min_spaces = 0x10000
     for const s in lines {
-        const pos = s.scan(" \t", false)
+        const pos = s.scan(chars =" \t", inclusive = false)
         if pos > -1 && pos < min_spaces {
             min_spaces = pos
         }
@@ -100,7 +100,7 @@ class create_docs {
 
             remove_indentation(comment)
 
-            while comment.size && comment[0].scan(" \r\n\t", false) == -1 {
+            while comment.size && comment[0].scan(chars = " \r\n\t", inclusive = false) == -1 {
                 comment = comment[1:]
             }
 
@@ -118,7 +118,7 @@ class create_docs {
 
             comment = comment[1:]
 
-            while comment.size && comment[0].scan(" \r\n\t", false) == -1 {
+            while comment.size && comment[0].scan(chars = " \r\n\t", inclusive = false) == -1 {
                 comment = comment[1:]
             }
 

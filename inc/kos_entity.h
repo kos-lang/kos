@@ -488,6 +488,11 @@ typedef struct KOS_ITERATOR_S {
     KOS_ATOMIC(KOS_OBJ_ID) last_value;
 } KOS_ITERATOR;
 
+typedef struct KOS_ARG_DESC_S {
+    KOS_OBJ_ID name;
+    KOS_OBJ_ID default_value;
+} KOS_ARG_DESC;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -511,13 +516,13 @@ KOS_API
 KOS_OBJ_ID KOS_new_builtin_function(KOS_CONTEXT          ctx,
                                     KOS_OBJ_ID           name_obj,
                                     KOS_FUNCTION_HANDLER handler,
-                                    int                  min_args);
+                                    const KOS_ARG_DESC  *args);
 
 KOS_API
 KOS_OBJ_ID KOS_new_builtin_class(KOS_CONTEXT          ctx,
                                  KOS_OBJ_ID           name_obj,
                                  KOS_FUNCTION_HANDLER handler,
-                                 int                  min_args);
+                                 const KOS_ARG_DESC  *args);
 
 KOS_API
 KOS_OBJ_ID KOS_new_dynamic_prop(KOS_CONTEXT ctx);

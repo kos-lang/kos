@@ -158,6 +158,65 @@ int KOS_get_integer(KOS_CONTEXT ctx,
     return error;
 }
 
+int64_t KOS_fix_index(int64_t idx, unsigned length)
+{
+    if (idx < 0)
+        idx += length;
+
+    if (idx < 0)
+        idx = 0;
+    else if (idx > (int64_t)length)
+        idx = length;
+
+    return idx;
+}
+
+int KOS_get_index_arg(KOS_CONTEXT           ctx,
+                      KOS_OBJ_ID            args_obj,
+                      int                   arg_idx,
+                      int                   begin_pos,
+                      int                   end_pos,
+                      enum KOS_VOID_INDEX_E void_index,
+                      int                  *found_pos)
+{
+    int64_t          ival;
+    const KOS_OBJ_ID val_id = KOS_array_read(ctx, args_obj, arg_idx);
+    int              error  = KOS_SUCCESS;
+
+    TRY_OBJID(val_id);
+
+    assert(end_pos >= 0);
+
+    if (val_id == KOS_VOID) {
+        switch (void_index) {
+            case KOS_VOID_INDEX_IS_BEGIN:
+                *found_pos = begin_pos;
+                return KOS_SUCCESS;
+
+            case KOS_VOID_INDEX_IS_END:
+                *found_pos = end_pos;
+                return KOS_SUCCESS;
+
+            default:
+                break;
+        }
+    }
+
+    TRY(KOS_get_integer(ctx, val_id, &ival));
+
+    if (ival < 0)
+        ival += end_pos;
+    if (ival < begin_pos)
+        ival = begin_pos;
+    else if (ival > end_pos)
+        ival = end_pos;
+
+    *found_pos = (int)ival;
+
+cleanup:
+    return error;
+}
+
 static KOS_OBJ_ID get_exception_string(KOS_CONTEXT ctx,
                                        KOS_OBJ_ID  exception)
 {
@@ -1803,17 +1862,4 @@ int KOS_iterator_next(KOS_CONTEXT ctx,
     KOS_atomic_write_release_ptr(OBJPTR(ITERATOR, iter_id)->last_value, KOS_BADPTR);
 
     return KOS_ERROR_NOT_FOUND;
-}
-
-int64_t KOS_fix_index(int64_t idx, unsigned length)
-{
-    if (idx < 0)
-        idx += length;
-
-    if (idx < 0)
-        idx = 0;
-    else if (idx > (int64_t)length)
-        idx = length;
-
-    return idx;
 }

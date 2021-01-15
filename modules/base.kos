@@ -716,7 +716,7 @@ public const eol = "\n\r\v\f\x1C\x1D\x1E\x85\x{2028}\x{2029}"
  */
 string.prototype.lstrip = fun(chars = whitespace)
 {
-    const pos = this.scan(chars, false)
+    const pos = this.scan(chars, 0, false)
     if pos != -1 {
         return this[pos :]
     }
@@ -742,7 +742,7 @@ string.prototype.lstrip = fun(chars = whitespace)
  */
 string.prototype.rstrip = fun(chars = whitespace)
 {
-    const pos = this.rscan(chars, false)
+    const pos = this.rscan(chars, void, false)
     return this[: pos + 1]
 }
 
@@ -765,9 +765,9 @@ string.prototype.rstrip = fun(chars = whitespace)
  */
 string.prototype.strip = fun(chars = whitespace)
 {
-    const lpos = this.scan(chars, false)
+    const lpos = this.scan(chars, 0, false)
     if lpos != -1 {
-        const rpos = this.rscan(chars, false)
+        const rpos = this.rscan(chars, void, false)
         return this[lpos : rpos + 1]
     }
     return ""
@@ -816,7 +816,7 @@ string.prototype.split = fun(sep = void, max_split = -1)
     if sep == void {
         const chars = whitespace
 
-        var pos = this.scan(chars, false)
+        var pos = this.scan(chars, 0, false)
         if pos == -1 {
             return
         }

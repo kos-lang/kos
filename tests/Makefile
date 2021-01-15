@@ -212,7 +212,7 @@ sequential_fail.$1:
 sequential_test_list += sequential_fail.$1
 endef
 
-last_seq_fail_point = 6800
+last_seq_fail_point = 7200
 
 $(foreach seq_fail_point, $(shell seq 0 200 $(last_seq_fail_point)), $(eval $(call SEQFAIL_RULE,$(seq_fail_point))))
 

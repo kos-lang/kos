@@ -35,11 +35,11 @@ static void fix_path_separators(KOS_VECTOR *buf)
 
 /* @item fs is_file()
  *
- *     is_file(pathname)
+ *     is_file(filename)
  *
  * Determines whether a file exists.
  *
- * Returns `true` if `pathname` exists and is a file, or `false` otherwise.
+ * Returns `true` if `filename` exists and is a file, or `false` otherwise.
  */
 static KOS_OBJ_ID is_file(KOS_CONTEXT ctx,
                           KOS_OBJ_ID  this_obj,
@@ -68,9 +68,9 @@ cleanup:
 
 /* @item fs remove()
  *
- *     remove(pathname)
+ *     remove(filename)
  *
- * Deletes a file `pathname`.
+ * Deletes a file `filename`.
  *
  * Returns `true` if the file was successfuly deleted or `false` if
  * the file could not be deleted or if it did not exist in the first
@@ -105,6 +105,13 @@ cleanup:
     return ret;
 }
 
+KOS_DECLARE_STATIC_CONST_STRING(str_filename, "filename");
+
+static const KOS_ARG_DESC filename_arg[2] = {
+    { KOS_CONST_ID(str_filename), KOS_BADPTR },
+    { KOS_BADPTR,                 KOS_BADPTR }
+};
+
 int kos_module_fs_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 {
     int       error = KOS_SUCCESS;
@@ -112,8 +119,8 @@ int kos_module_fs_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 
     KOS_init_local_with(ctx, &module, module_obj);
 
-    TRY_ADD_FUNCTION(ctx, module.o, "is_file", is_file, 1);
-    TRY_ADD_FUNCTION(ctx, module.o, "remove",  remove,  1);
+    TRY_ADD_FUNCTION(ctx, module.o, "is_file", is_file, filename_arg);
+    TRY_ADD_FUNCTION(ctx, module.o, "remove",  remove,  filename_arg);
 
 cleanup:
     KOS_destroy_top_local(ctx, &module);

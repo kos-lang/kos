@@ -348,7 +348,7 @@ do {
         assert a.size == 1
         assert a[0] == 12
 
-        expect_fail(() => f.read_some(1, void))
+        expect_fail(() => f.read_some(1, true))
         expect_fail(() => f.read_some(1, 1))
         expect_fail(() => f.read_some(1, [0]))
         expect_fail(() => f.read_some(1, "0"))

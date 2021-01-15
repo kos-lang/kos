@@ -1141,7 +1141,7 @@ do {
 do {
     const a = [1, 2, 3]
     const b = [4, 5, 6]
-    a.insert_array(1, b)
+    a.insert_array(1, 1, b)
     assert a.size == 6
     assert b.size == 3
     assert a[0] == 1
@@ -1153,7 +1153,7 @@ do {
 }
 
 do {
-    expect_fail(()=>base.array.prototype.insert_array.apply(void, [1,2]))
+    expect_fail(()=>base.array.prototype.insert_array.apply(void, [1,2,[]]))
 }
 
 ##############################################################################
@@ -1186,7 +1186,7 @@ do {
         assert e == "abc"
     }
 
-    a.fill(-3, 42)
+    a.fill(42, -3)
 
     for var i = 0; i < a.size; i += 1 {
         if i < 7 {
@@ -1198,7 +1198,7 @@ do {
     }
 
     const obj = { x : 1, y : 2 }
-    a.fill(2, 8, obj)
+    a.fill(obj, 2, 8)
 
     for var i = 0; i < a.size; i += 1 {
         if i < 2 {
@@ -1240,7 +1240,7 @@ do {
 
 do {
     const a = [3, 10, 5, 1]
-    const b = a.sort(true)
+    const b = a.sort(reverse = true)
     assert a == b
     assert a[0] == 10
     assert a[1] == 5
@@ -1254,7 +1254,7 @@ do {
 
 do {
     const a = ["base", 101, "array", 42, 60, "sort", -10, "size"]
-    const b = a.sort(x => typeof x, true)
+    const b = a.sort(reverse = true, key = x => typeof x)
     assert a == b
     assert a[0] == "size"
     assert a[1] == "sort"
