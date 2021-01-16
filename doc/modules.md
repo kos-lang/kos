@@ -187,8 +187,9 @@ Table of Contents
     * [sqrt()](#sqrt)
     * [tan()](#tan)
   * [os](#os)
-      * [process.pid](#processpid)
-      * [process.wait()](#processwait)
+    * [process()](#process)
+      * [process.prototype.pid](#processprototypepid)
+      * [process.prototype.wait()](#processprototypewait)
     * [spawn()](#spawn)
   * [random](#random)
     * [rand\_float()](#rand_float)
@@ -3820,19 +3821,31 @@ Example:
 os
 ==
 
-process.pid
------------
+process()
+---------
 
-    process.pid()
+    process()
+
+Process class.
+
+This class cannot be directly instantiated.  The objects of this class are
+returned from `os.spawn()`.
+
+Calling this class directly throws an exception.
+
+process.prototype.pid
+---------------------
+
+    process.prototype.pid()
 
 Member of the process object returned by [os.spawn()](#osspawn).
 
 The pid of the spawned process.
 
-process.wait()
---------------
+process.prototype.wait()
+------------------------
 
-    process.wait()
+    process.prototype.wait()
 
 Member of the process object returned by [os.spawn()](#osspawn).
 

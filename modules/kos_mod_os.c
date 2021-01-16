@@ -39,6 +39,7 @@ KOS_DECLARE_STATIC_CONST_STRING(str_env,                "env");
 KOS_DECLARE_STATIC_CONST_STRING(str_eq,                 "=");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_string, "invalid string");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_spawned,    "object is not a spawned process");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_use_spawn,      "use os.spawn() to launch processes");
 KOS_DECLARE_STATIC_CONST_STRING(str_inherit_env,        "inherit_env");
 KOS_DECLARE_STATIC_CONST_STRING(str_program,            "program");
 KOS_DECLARE_STATIC_CONST_STRING(str_signal,             "signal");
@@ -822,9 +823,28 @@ cleanup:
     return error ? KOS_BADPTR : process.o;
 }
 
-/* @item os process.wait()
+/* @item os process()
  *
- *     process.wait()
+ *     process()
+ *
+ * Process class.
+ *
+ * This class cannot be directly instantiated.  The objects of this class are
+ * returned from `os.spawn()`.
+ *
+ * Calling this class directly throws an exception.
+ */
+static KOS_OBJ_ID process_ctor(KOS_CONTEXT ctx,
+                               KOS_OBJ_ID  this_obj,
+                               KOS_OBJ_ID  args_obj)
+{
+    KOS_raise_exception(ctx, KOS_CONST_ID(str_err_use_spawn));
+    return KOS_BADPTR;
+}
+
+/* @item os process.prototype.wait()
+ *
+ *     process.prototype.wait()
  *
  * Member of the process object returned by [os.spawn()](#osspawn).
  *
@@ -934,9 +954,9 @@ cleanup:
     return error ? KOS_BADPTR : ret.o;
 }
 
-/* @item os process.pid
+/* @item os process.prototype.pid
  *
- *     process.pid()
+ *     process.prototype.pid()
  *
  * Member of the process object returned by [os.spawn()](#osspawn).
  *
@@ -993,15 +1013,13 @@ KOS_INIT_MODULE(os)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 
     KOS_atomic_write_relaxed_ptr(OBJPTR(MODULE, module.o)->priv, priv.o);
 
-    wait_proto.o = KOS_new_object(ctx);
-    TRY_OBJID(wait_proto.o);
+    TRY_ADD_FUNCTION(       ctx, module.o,               "spawn",   spawn,          spawn_args);
+
+    TRY_ADD_CONSTRUCTOR(    ctx, module.o,               "process", process_ctor,   KOS_NULL, &wait_proto.o);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, wait_proto.o, "wait",    wait_for_child, KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, wait_proto.o, "pid",     get_pid,        0);
 
     TRY(KOS_array_write(ctx, priv.o, 0, wait_proto.o));
-
-    TRY_ADD_FUNCTION(       ctx, module.o,               "spawn", spawn,          spawn_args);
-
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, wait_proto.o, "wait",  wait_for_child, KOS_NULL);
-    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, wait_proto.o, "pid",   get_pid,        0);
 
 #ifndef _WIN32
     KOS_atomic_add_i32(num_os_modules, 1);

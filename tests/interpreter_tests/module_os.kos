@@ -78,6 +78,7 @@ if bin_true {
     do {
         const process = os.spawn(bin_true)
 
+        assert process instanceof os.process
         assert process.pid > 1
 
         const ret = process.wait()
@@ -93,6 +94,7 @@ if bin_true {
     if bin_false {
         const process = os.spawn(bin_false)
 
+        assert process instanceof os.process
         assert process.pid > 1
 
         const ret = process.wait()
