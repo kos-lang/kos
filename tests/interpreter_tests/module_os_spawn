@@ -30,7 +30,7 @@ run()
 
 run_shell()
 {
-    run 'import os; os.spawn({program: "/bin/sh", args: ["-c", "'"$*"'"]})'
+    run 'import os; os.spawn("/bin/sh", ["-c", "'"$*"'"])'
 }
 
 # TODO On Windows we could use cmd.exe, but os.spawn() does not support PATH lookups yet

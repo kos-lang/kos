@@ -18,7 +18,7 @@ fun have_program(pathname)
     }
 
     try {
-        os.spawn({program: pathname, args: ["0"]})
+        os.spawn(pathname, ["0"])
         return true
     }
     catch const e {
@@ -37,7 +37,7 @@ fun sleep(time_s)
     var pid = -1
 
     if bin_sleep {
-        var process = os.spawn({program: bin_sleep, args: ["\(time_s)"]})
+        var process = os.spawn(bin_sleep, ["\(time_s)"])
         pid = process.pid
         process = void
     }

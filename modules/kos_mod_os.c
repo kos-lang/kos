@@ -32,6 +32,8 @@
 #endif
 
 KOS_DECLARE_STATIC_CONST_STRING(str_args,               "args");
+KOS_DECLARE_STATIC_CONST_STRING(str_capture_stderr,     "capture_stderr");
+KOS_DECLARE_STATIC_CONST_STRING(str_capture_stdout,     "capture_stdout");
 KOS_DECLARE_STATIC_CONST_STRING(str_cwd,                "cwd");
 KOS_DECLARE_STATIC_CONST_STRING(str_env,                "env");
 KOS_DECLARE_STATIC_CONST_STRING(str_eq,                 "=");
@@ -41,6 +43,9 @@ KOS_DECLARE_STATIC_CONST_STRING(str_inherit_env,        "inherit_env");
 KOS_DECLARE_STATIC_CONST_STRING(str_program,            "program");
 KOS_DECLARE_STATIC_CONST_STRING(str_signal,             "signal");
 KOS_DECLARE_STATIC_CONST_STRING(str_status,             "status");
+KOS_DECLARE_STATIC_CONST_STRING(str_stderr,             "stderr");
+KOS_DECLARE_STATIC_CONST_STRING(str_stdin,              "stdin");
+KOS_DECLARE_STATIC_CONST_STRING(str_stdout,             "stdout");
 KOS_DECLARE_STATIC_CONST_STRING(str_stopped,            "stopped");
 
 struct KOS_WAIT_S {
@@ -73,69 +78,23 @@ static const char *get_type_name(KOS_TYPE type)
     return type_names[(int)type >> 1];
 }
 
-static KOS_OBJ_ID get_opt_property(KOS_CONTEXT      ctx,
-                                   KOS_OBJ_ID       obj_id,
-                                   KOS_OBJ_ID       prop_id,
-                                   enum KOS_DEPTH_E shallow,
-                                   KOS_TYPE         expect,
-                                   KOS_OBJ_ID       default_id,
-                                   const char      *where)
+static int check_arg_type(KOS_CONTEXT ctx,
+                          KOS_OBJ_ID  obj_id,
+                          const char *name,
+                          KOS_TYPE    expected_type)
 {
-    KOS_OBJ_ID value_id = KOS_get_property_with_depth(ctx, obj_id, prop_id, shallow);
+    const KOS_TYPE actual_type = GET_OBJ_TYPE(obj_id);
 
-    assert(expect <= OBJ_LAST_TYPE);
-    assert(expect > OBJ_SMALL_INTEGER);
+    if (actual_type != expected_type) {
+        const char *const actual_str   = get_type_name(actual_type);
+        const char *const expected_str = get_type_name(expected_type);
 
-    if (IS_BAD_PTR(value_id)) {
-        KOS_clear_exception(ctx);
-
-        if ( ! IS_BAD_PTR(default_id))
-            value_id = default_id;
-        else {
-
-            KOS_VECTOR prop_cstr;
-
-            KOS_vector_init(&prop_cstr);
-
-            if (KOS_string_to_cstr_vec(ctx, prop_id, &prop_cstr) == KOS_SUCCESS)
-                KOS_raise_printf(ctx, "missing '%s' property in %s", prop_cstr.buffer, where);
-
-            KOS_vector_destroy(&prop_cstr);
-        }
-    }
-    else {
-        const KOS_TYPE actual_type = GET_OBJ_TYPE(value_id);
-
-        if (actual_type != expect) {
-
-            const char *type_name = KOS_NULL;
-
-            if (expect == OBJ_FLOAT) {
-                if (actual_type > expect)
-                    type_name = "number";
-            }
-            else
-                type_name = get_type_name(expect);
-
-            if (type_name) {
-
-                KOS_VECTOR prop_cstr;
-
-                KOS_vector_init(&prop_cstr);
-
-                if (KOS_string_to_cstr_vec(ctx, prop_id, &prop_cstr) == KOS_SUCCESS)
-                    KOS_raise_printf(ctx, "'%s' property in %s is a %s, but expected %s",
-                                     prop_cstr.buffer, where, get_type_name(actual_type),
-                                     type_name);
-
-                KOS_vector_destroy(&prop_cstr);
-
-                value_id = KOS_BADPTR;
-            }
-        }
+        KOS_raise_printf(ctx, "argument '%s' is %s, but expected %s\n",
+                         name, actual_str, expected_str);
+        return KOS_ERROR_EXCEPTION;
     }
 
-    return value_id;
+    return KOS_SUCCESS;
 }
 
 static int get_string(KOS_CONTEXT           ctx,
@@ -698,11 +657,13 @@ cleanup:
 
 /* @item os spawn()
  *
- *     spawn(spawn_desc)
+ *     spawn(program, args = [], env = {}, cwd = "", inherit_env = true,
+ *           capture_stdout = false, capture_stderr = false,
+ *           stdin = void, stdout = void, stderr = void)
  *
- * Spawns a new process described by `spawn_desc`.
+ * Spawns a new process.
  *
- * `spawn_desc` is an object containing the following properties:
+ * The arguments describe how the process will be spawned:
  *  * program        - Path to the program to start, or name of the program on PATH.
  *  * args           - (Optional) Array of arguments for the program.  If not specified,
  *                     an empty list of arguments is passed to the spawned program.
@@ -728,12 +689,18 @@ cleanup:
  *  * [pid](#processpid)     The pid of the spawned child process.
  *  * [wait()](#processwait) The wait function, which can be used to wait for the process to finish.
  */
-/* TODO change to individual args instead of an object */
-KOS_DECLARE_STATIC_CONST_STRING(str_spawn_desc, "spawn_desc");
-
-static const KOS_ARG_DESC spawn_args[2] = {
-    { KOS_CONST_ID(str_spawn_desc), KOS_BADPTR },
-    { KOS_BADPTR,                   KOS_BADPTR }
+static const KOS_ARG_DESC spawn_args[11] = {
+    { KOS_CONST_ID(str_program),        KOS_BADPTR      },
+    { KOS_CONST_ID(str_args),           KOS_EMPTY_ARRAY },
+    { KOS_CONST_ID(str_env),            KOS_VOID        },
+    { KOS_CONST_ID(str_cwd),            KOS_STR_EMPTY   },
+    { KOS_CONST_ID(str_inherit_env),    KOS_TRUE        },
+    { KOS_CONST_ID(str_capture_stdout), KOS_FALSE       },
+    { KOS_CONST_ID(str_capture_stderr), KOS_FALSE       },
+    { KOS_CONST_ID(str_stdin),          KOS_VOID        },
+    { KOS_CONST_ID(str_stdout),         KOS_VOID        },
+    { KOS_CONST_ID(str_stderr),         KOS_VOID        },
+    { KOS_BADPTR,                       KOS_BADPTR      }
 };
 
 static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
@@ -742,6 +709,7 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
 {
     int                  error = KOS_SUCCESS;
     KOS_LOCAL            process;
+    KOS_LOCAL            args;
     KOS_LOCAL            desc;
     struct KOS_MEMPOOL_S alloc;
     KOS_OBJ_ID           value_obj;
@@ -752,12 +720,11 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
     char               **args_array   = KOS_NULL;
     char               **env_array    = KOS_NULL;
 
-    static const char arg_desc[] = "object passed to os.spawn()";
-
-    assert(KOS_get_array_size(args_obj) > 0);
+    assert(KOS_get_array_size(args_obj) >= 10);
 
     KOS_mempool_init(&alloc);
-    KOS_init_local(ctx, &process);
+    KOS_init_local(     ctx, &process);
+    KOS_init_local_with(ctx, &args, args_obj);
     KOS_init_local_with(ctx, &desc, KOS_array_read(ctx, args_obj, 0));
 
     /* Create return object which can be used to manage the child process */
@@ -767,37 +734,37 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
     wait_info = (struct KOS_WAIT_S *)KOS_object_get_private_ptr(process.o);
 
     /* Get 'program' */
-    value_obj = get_opt_property(ctx, desc.o, KOS_CONST_ID(str_program), KOS_DEEP, OBJ_STRING,
-                                 KOS_BADPTR, arg_desc);
+    value_obj = KOS_array_read(ctx, args.o, 0);
     TRY_OBJID(value_obj);
+    TRY(check_arg_type(ctx, value_obj, "program", OBJ_STRING));
 
     TRY(get_string(ctx, value_obj, &alloc, &program_cstr));
 
     /* Get 'cwd' */
-    value_obj = get_opt_property(ctx, desc.o, KOS_CONST_ID(str_cwd), KOS_DEEP, OBJ_STRING,
-                                 KOS_STR_EMPTY, arg_desc);
+    value_obj = KOS_array_read(ctx, args.o, 3);
     TRY_OBJID(value_obj);
+    TRY(check_arg_type(ctx, value_obj, "cwd", OBJ_STRING));
 
     TRY(get_string(ctx, value_obj, &alloc, &cwd));
 
     /* Get 'args' */
-    value_obj = get_opt_property(ctx, desc.o, KOS_CONST_ID(str_args), KOS_DEEP, OBJ_ARRAY,
-                                 KOS_EMPTY_ARRAY, arg_desc);
+    value_obj = KOS_array_read(ctx, args.o, 1);
     TRY_OBJID(value_obj);
+    TRY(check_arg_type(ctx, value_obj, "args", OBJ_ARRAY));
 
     TRY(get_args_array(ctx, value_obj, &alloc, &args_array));
     args_array[0] = program_cstr;
 
     /* Get 'inherit_env' */
-    inherit_env = get_opt_property(ctx, desc.o, KOS_CONST_ID(str_inherit_env), KOS_DEEP, OBJ_BOOLEAN,
-                                   KOS_TRUE, arg_desc);
+    inherit_env = KOS_array_read(ctx, args.o, 4);
     TRY_OBJID(inherit_env);
-    assert((inherit_env == KOS_TRUE) || (inherit_env == KOS_FALSE));
+    TRY(check_arg_type(ctx, inherit_env, "inherit_env", OBJ_BOOLEAN));
 
     /* Get 'env' */
-    value_obj = get_opt_property(ctx, desc.o, KOS_CONST_ID(str_env), KOS_DEEP, OBJ_OBJECT,
-                                 KOS_VOID, arg_desc);
+    value_obj = KOS_array_read(ctx, args.o, 2);
     TRY_OBJID(value_obj);
+    if (value_obj != KOS_VOID)
+        TRY(check_arg_type(ctx, value_obj, "env", OBJ_OBJECT));
 
     TRY(get_env_array(ctx, value_obj, KOS_get_bool(inherit_env), &alloc, &env_array));
 
