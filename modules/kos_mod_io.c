@@ -158,7 +158,7 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
 
 #ifndef _WIN32
     if (file)
-        fcntl(fileno(file), F_SETFD, FD_CLOEXEC);
+        (void)fcntl(fileno(file), F_SETFD, FD_CLOEXEC);
 #endif
 
     if ( ! file)

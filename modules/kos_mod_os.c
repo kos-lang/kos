@@ -786,8 +786,8 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
 
-        fcntl(exec_status_fd[1], F_SETFD, FD_CLOEXEC);
-        fcntl(exec_status_fd[0], F_SETFD, FD_CLOEXEC);
+        (void)fcntl(exec_status_fd[1], F_SETFD, FD_CLOEXEC);
+        (void)fcntl(exec_status_fd[0], F_SETFD, FD_CLOEXEC);
 
         child_pid = fork();
 

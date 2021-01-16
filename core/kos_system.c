@@ -98,7 +98,7 @@ int kos_unix_open(const char *filename, int flags)
                    open(filename, flags | KOS_O_CLOEXEC);
 
     if (fd != -1)
-        fcntl(fd, F_SETFD, FD_CLOEXEC);
+        (void)fcntl(fd, F_SETFD, FD_CLOEXEC);
 
     return fd;
 }
@@ -134,7 +134,7 @@ int kos_load_file(const char  *filename,
         RAISE_ERROR(KOS_ERROR_ERRNO);
 
 #ifndef _WIN32
-    fcntl(fileno(file), F_SETFD, FD_CLOEXEC);
+    (void)fcntl(fileno(file), F_SETFD, FD_CLOEXEC);
 #endif
 
     if (0 != fseek(file, 0, SEEK_END) || kos_seq_fail())
