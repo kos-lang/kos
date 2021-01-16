@@ -4,7 +4,7 @@
 
 #include "../inc/kos_entity.h"
 #include "../inc/kos_array.h"
-#include "../inc/kos_const_strings.h"
+#include "../inc/kos_constants.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_memory.h"
 #include "../inc/kos_module.h"

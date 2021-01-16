@@ -4,7 +4,7 @@
 
 #include "kos_threads_internal.h"
 #include "../inc/kos_array.h"
-#include "../inc/kos_const_strings.h"
+#include "../inc/kos_constants.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_instance.h"
 #include "../inc/kos_malloc.h"

@@ -5,7 +5,7 @@
 #include "../inc/kos_instance.h"
 #include "../inc/kos_array.h"
 #include "../inc/kos_atomic.h"
-#include "../inc/kos_const_strings.h"
+#include "../inc/kos_constants.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_malloc.h"
 #include "../inc/kos_memory.h"
