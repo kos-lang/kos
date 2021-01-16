@@ -967,7 +967,7 @@ KOS_INIT_MODULE(os)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     KOS_LOCAL wait_proto;
     KOS_LOCAL wait_func;
 
-    static const KOS_ARG_DESC spawn_args[11] = {
+    const KOS_ARG_DESC spawn_args[11] = {
         { KOS_CONST_ID(str_program),        KOS_BADPTR      },
         { KOS_CONST_ID(str_args),           KOS_EMPTY_ARRAY },
         { KOS_CONST_ID(str_env),            KOS_VOID        },

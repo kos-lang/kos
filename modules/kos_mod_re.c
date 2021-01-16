@@ -1936,7 +1936,7 @@ KOS_INIT_MODULE(re)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     KOS_LOCAL module;
     KOS_LOCAL proto;
 
-    static const KOS_ARG_DESC find_args[4] = {
+    const KOS_ARG_DESC find_args[4] = {
         { KOS_CONST_ID(str_string), KOS_BADPTR      },
         { KOS_CONST_ID(str_begin),  TO_SMALL_INT(0) },
         { KOS_CONST_ID(str_end),    KOS_VOID        },
