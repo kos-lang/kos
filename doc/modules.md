@@ -3862,11 +3862,13 @@ This function will return in three following situations:
 spawn()
 -------
 
-    spawn(spawn_desc)
+    spawn(program, args = [], env = {}, cwd = "", inherit_env = true,
+          capture_stdout = false, capture_stderr = false,
+          stdin = void, stdout = void, stderr = void)
 
-Spawns a new process described by `spawn_desc`.
+Spawns a new process.
 
-`spawn_desc` is an object containing the following properties:
+The arguments describe how the process will be spawned:
  * program        - Path to the program to start, or name of the program on PATH.
  * args           - (Optional) Array of arguments for the program.  If not specified,
                     an empty list of arguments is passed to the spawned program.
