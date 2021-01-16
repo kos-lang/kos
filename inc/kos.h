@@ -7,6 +7,7 @@
 
 #include "kos_array.h"
 #include "kos_buffer.h"
+#include "kos_constants.h"
 #include "kos_entity.h"
 #include "kos_error.h"
 #include "kos_instance.h"

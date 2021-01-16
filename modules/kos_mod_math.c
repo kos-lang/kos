@@ -3,9 +3,10 @@
  */
 
 #include "../inc/kos_array.h"
-#include "../inc/kos_instance.h"
+#include "../inc/kos_constants.h"
 #include "../inc/kos_entity.h"
 #include "../inc/kos_error.h"
+#include "../inc/kos_instance.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_string.h"
 #include "../inc/kos_utils.h"

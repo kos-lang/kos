@@ -3,14 +3,15 @@
  */
 
 #include "../inc/kos_buffer.h"
-#include "../inc/kos_instance.h"
+#include "../inc/kos_constants.h"
 #include "../inc/kos_error.h"
+#include "../inc/kos_instance.h"
 #include "../inc/kos_memory.h"
 #include "../inc/kos_string.h"
 #include "../inc/kos_threads.h"
-#include "../core/kos_system.h"
 #include "../core/kos_misc.h"
 #include "../core/kos_object_internal.h"
+#include "../core/kos_system.h"
 #include "kos_test_tools.h"
 #include <memory.h>
 

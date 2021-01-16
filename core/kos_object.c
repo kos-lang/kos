@@ -4,6 +4,7 @@
 
 #include "../inc/kos_object.h"
 #include "../inc/kos_atomic.h"
+#include "../inc/kos_constants.h"
 #include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_memory.h"

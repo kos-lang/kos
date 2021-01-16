@@ -2,8 +2,9 @@
  * Copyright (c) 2014-2021 Chris Dragan
  */
 
-#include "../inc/kos_instance.h"
+#include "../inc/kos_constants.h"
 #include "../inc/kos_error.h"
+#include "../inc/kos_instance.h"
 #include "../inc/kos_threads.h"
 #include "kos_test_tools.h"
 

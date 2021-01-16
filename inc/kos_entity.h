@@ -169,7 +169,7 @@ typedef struct KOS_FLOAT_S {
 
 typedef struct KOS_VOID_S {
     KOS_OBJ_HEADER header;
-} KOS_VOID;
+} KOS_VOID_TYPE;
 
 typedef struct KOS_BOOLEAN_S {
     KOS_OBJ_HEADER header;
@@ -315,25 +315,6 @@ struct KOS_CONST_ARRAY_S {
     KOS_DECLARE_STATIC_CONST_STRING_WITH_LENGTH(name,                     \
             (uint16_t)sizeof(KOS_CONCAT_NAME(str_##name, __LINE__)) - 1U, \
             KOS_CONCAT_NAME(str_##name, __LINE__))
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-KOS_API extern const struct KOS_CONST_OBJECT_S KOS_void;
-KOS_API extern const struct KOS_CONST_OBJECT_S KOS_false;
-KOS_API extern const struct KOS_CONST_OBJECT_S KOS_true;
-KOS_API extern const struct KOS_CONST_ARRAY_S  KOS_empty_array;
-
-#ifdef __cplusplus
-}
-#endif
-
-#define KOS_VOID        KOS_CONST_ID(KOS_void)
-#define KOS_FALSE       KOS_CONST_ID(KOS_false)
-#define KOS_TRUE        KOS_CONST_ID(KOS_true)
-#define KOS_BOOL(v)     ( (v) ? KOS_TRUE : KOS_FALSE )
-#define KOS_EMPTY_ARRAY KOS_CONST_ID(KOS_empty_array)
 
 typedef void (*KOS_FINALIZE)(KOS_CONTEXT ctx,
                              void       *priv);
@@ -554,12 +535,6 @@ KOS_OBJ_ID KOS_get_named_arg(KOS_CONTEXT ctx,
 
 #ifdef __cplusplus
 
-static inline bool KOS_get_bool(KOS_OBJ_ID obj_id)
-{
-    assert(obj_id == KOS_TRUE || obj_id == KOS_FALSE);
-    return obj_id == KOS_TRUE;
-}
-
 static inline KOS_OBJ_ID KOS_atomic_read_relaxed_obj(KOS_ATOMIC(KOS_OBJ_ID)& src)
 {
     return (KOS_OBJ_ID)KOS_atomic_read_relaxed_ptr(src);
@@ -571,8 +546,6 @@ static inline KOS_OBJ_ID KOS_atomic_read_acquire_obj(KOS_ATOMIC(KOS_OBJ_ID)& src
 }
 
 #else
-
-#define KOS_get_bool(obj_id) ((obj_id) == KOS_TRUE)
 
 #define KOS_atomic_read_relaxed_obj(src) ((KOS_OBJ_ID)KOS_atomic_read_relaxed_ptr(src))
 
