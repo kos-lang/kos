@@ -1882,13 +1882,6 @@ cleanup:
  *
  *     > re(r"down.*(rabbit)").find("tumbling down the rabbit hole")
  */
-static const KOS_ARG_DESC find_args[4] = {
-    { KOS_CONST_ID(str_string), KOS_BADPTR      },
-    { KOS_CONST_ID(str_begin),  TO_SMALL_INT(0) },
-    { KOS_CONST_ID(str_end),    KOS_VOID        },
-    { KOS_BADPTR,               KOS_BADPTR      }
-};
-
 static KOS_OBJ_ID re_find(KOS_CONTEXT ctx,
                           KOS_OBJ_ID  this_obj,
                           KOS_OBJ_ID  args_obj)
@@ -1942,6 +1935,13 @@ KOS_INIT_MODULE(re)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     int       error = KOS_SUCCESS;
     KOS_LOCAL module;
     KOS_LOCAL proto;
+
+    static const KOS_ARG_DESC find_args[4] = {
+        { KOS_CONST_ID(str_string), KOS_BADPTR      },
+        { KOS_CONST_ID(str_begin),  TO_SMALL_INT(0) },
+        { KOS_CONST_ID(str_end),    KOS_VOID        },
+        { KOS_BADPTR,               KOS_BADPTR      }
+    };
 
     KOS_init_local_with(ctx, &module, module_obj);
     KOS_init_local(     ctx, &proto);

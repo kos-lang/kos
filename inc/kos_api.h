@@ -32,10 +32,4 @@
 #   define KOS_API KOS_EXPORT_SYMBOL
 #endif
 
-#if !defined(_MSC_VER) || !defined(KOS_PUBLIC_API)
-#   define KOS_API_VAR_DEF
-#else
-#   define KOS_API_VAR_DEF KOS_API
-#endif
-
 #endif

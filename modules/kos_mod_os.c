@@ -689,20 +689,6 @@ cleanup:
  *  * [pid](#processpid)     The pid of the spawned child process.
  *  * [wait()](#processwait) The wait function, which can be used to wait for the process to finish.
  */
-static const KOS_ARG_DESC spawn_args[11] = {
-    { KOS_CONST_ID(str_program),        KOS_BADPTR      },
-    { KOS_CONST_ID(str_args),           KOS_EMPTY_ARRAY },
-    { KOS_CONST_ID(str_env),            KOS_VOID        },
-    { KOS_CONST_ID(str_cwd),            KOS_STR_EMPTY   },
-    { KOS_CONST_ID(str_inherit_env),    KOS_TRUE        },
-    { KOS_CONST_ID(str_capture_stdout), KOS_FALSE       },
-    { KOS_CONST_ID(str_capture_stderr), KOS_FALSE       },
-    { KOS_CONST_ID(str_stdin),          KOS_VOID        },
-    { KOS_CONST_ID(str_stdout),         KOS_VOID        },
-    { KOS_CONST_ID(str_stderr),         KOS_VOID        },
-    { KOS_BADPTR,                       KOS_BADPTR      }
-};
-
 static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
                         KOS_OBJ_ID  this_obj,
                         KOS_OBJ_ID  args_obj)
@@ -980,6 +966,20 @@ KOS_INIT_MODULE(os)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     KOS_LOCAL priv;
     KOS_LOCAL wait_proto;
     KOS_LOCAL wait_func;
+
+    static const KOS_ARG_DESC spawn_args[11] = {
+        { KOS_CONST_ID(str_program),        KOS_BADPTR      },
+        { KOS_CONST_ID(str_args),           KOS_EMPTY_ARRAY },
+        { KOS_CONST_ID(str_env),            KOS_VOID        },
+        { KOS_CONST_ID(str_cwd),            KOS_STR_EMPTY   },
+        { KOS_CONST_ID(str_inherit_env),    KOS_TRUE        },
+        { KOS_CONST_ID(str_capture_stdout), KOS_FALSE       },
+        { KOS_CONST_ID(str_capture_stderr), KOS_FALSE       },
+        { KOS_CONST_ID(str_stdin),          KOS_VOID        },
+        { KOS_CONST_ID(str_stdout),         KOS_VOID        },
+        { KOS_CONST_ID(str_stderr),         KOS_VOID        },
+        { KOS_BADPTR,                       KOS_BADPTR      }
+    };
 
     KOS_init_local_with(ctx, &module, module_obj);
     KOS_init_locals(ctx, 3, &wait_func, &priv, &wait_proto);
