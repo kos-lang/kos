@@ -222,11 +222,16 @@ int main(int argc, char *argv[])
 
         /* Load script from command line */
         if (is_script) {
-            error = KOS_load_module_from_memory(ctx,
-                                                str_cmdline,
-                                                sizeof(str_cmdline) - 1,
-                                                str_import_base,
-                                                sizeof(str_import_base) - 1);
+            const KOS_OBJ_ID module_obj = KOS_load_module_from_memory(ctx,
+                                                                      str_cmdline,
+                                                                      sizeof(str_cmdline) - 1,
+                                                                      str_import_base,
+                                                                      sizeof(str_import_base) - 1);
+
+            if (IS_BAD_PTR(module_obj))
+                error = KOS_ERROR_EXCEPTION;
+            else
+                error = IS_BAD_PTR(KOS_run_module(ctx, module_obj)) ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
 
             if ( ! error) {
                 KOS_OBJ_ID ret = KOS_repl(ctx, str_cmdline, argv[i_module], mod_name_len);
@@ -236,17 +241,26 @@ int main(int argc, char *argv[])
         }
         /* Load script from a file */
         else {
-            if (IS_BAD_PTR(KOS_load_module(ctx, argv[i_module], mod_name_len)))
+            const KOS_OBJ_ID module_obj = KOS_load_module(ctx, argv[i_module], mod_name_len);
+
+            if (IS_BAD_PTR(module_obj))
                 error = KOS_ERROR_EXCEPTION;
+            else
+                error = IS_BAD_PTR(KOS_run_module(ctx, module_obj)) ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
         }
     }
     else {
 
-        error = KOS_load_module_from_memory(ctx,
-                                            str_stdin,
-                                            sizeof(str_stdin) - 1,
-                                            str_import_base,
-                                            sizeof(str_import_base) - 1);
+        const KOS_OBJ_ID module_obj = KOS_load_module_from_memory(ctx,
+                                                                  str_stdin,
+                                                                  sizeof(str_stdin) - 1,
+                                                                  str_import_base,
+                                                                  sizeof(str_import_base) - 1);
+
+        if (IS_BAD_PTR(module_obj))
+            error = KOS_ERROR_EXCEPTION;
+        else
+            error = IS_BAD_PTR(KOS_run_module(ctx, module_obj)) ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
 
         if ( ! error) {
 

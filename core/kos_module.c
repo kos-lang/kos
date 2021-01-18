@@ -23,7 +23,6 @@
 #include "kos_system.h"
 #include "kos_try.h"
 #include "kos_utf8_internal.h"
-#include "kos_vm.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -1485,13 +1484,13 @@ static void handle_interpreter_error(KOS_CONTEXT ctx, int error)
     }
 }
 
-static KOS_OBJ_ID import_and_run(KOS_CONTEXT ctx,
-                                 const char *module_name, /* Module name or path, ASCII or UTF-8    */
-                                 unsigned    name_size,   /* Length of module name or path in bytes */
-                                 int         is_path,     /* Module name can be a path              */
-                                 const char *data,        /* Module data or 0 if load from file     */
-                                 unsigned    data_size,   /* Data length if data is not 0           */
-                                 int        *out_module_idx)
+static KOS_OBJ_ID import_module(KOS_CONTEXT ctx,
+                                const char *module_name, /* Module name or path, ASCII or UTF-8    */
+                                unsigned    name_size,   /* Length of module name or path in bytes */
+                                int         is_path,     /* Module name can be a path              */
+                                const char *data,        /* Module data or 0 if load from file     */
+                                unsigned    data_size,   /* Data length if data is not 0           */
+                                int        *out_module_idx)
 {
     PROF_ZONE(MODULE)
 
@@ -1507,7 +1506,6 @@ static KOS_OBJ_ID import_and_run(KOS_CONTEXT ctx,
     KOS_LOCAL             dir;
     KOS_LOCAL             mod_init;
     KOS_LOCAL             module;
-    KOS_OBJ_ID            ret;
     KOS_INSTANCE   *const inst               = ctx->inst;
     KOS_MODULE_LOAD_CHAIN loading            = { KOS_NULL, KOS_NULL, 0 };
     KOS_FILEBUF           file_buf;
@@ -1570,9 +1568,15 @@ static KOS_OBJ_ID import_and_run(KOS_CONTEXT ctx,
         if (inst->flags & KOS_INST_VERBOSE)
             print_search_paths(ctx, inst->modules.search_paths);
 
-        base_obj = import_and_run(ctx, base, sizeof(base)-1, 0, KOS_NULL, 0, &base_idx);
+        base_obj = import_module(ctx, base, sizeof(base)-1, 0, KOS_NULL, 0, &base_idx);
         TRY_OBJID(base_obj);
+
         assert(base_idx == 0);
+
+        if (IS_BAD_PTR(KOS_run_module(ctx, base_obj))) {
+            assert(KOS_is_exception_pending(ctx));
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
     }
 
     /* Add module to the load chain to prevent and detect circular dependencies */
@@ -1677,14 +1681,6 @@ static KOS_OBJ_ID import_and_run(KOS_CONTEXT ctx,
     TRY(KOS_array_write(ctx, inst->modules.modules, (uint16_t)module_idx, module.o));
     TRY(KOS_set_property(ctx, inst->modules.module_names, actual_module_name.o, TO_SMALL_INT(module_idx)));
 
-    /* Run module */
-    ret = kos_vm_run_module(ctx, module.o);
-
-    if (IS_BAD_PTR(ret)) {
-        assert(KOS_is_exception_pending(ctx));
-        error = KOS_ERROR_EXCEPTION;
-    }
-
 cleanup:
     if (chain_init)
         inst->modules.load_chain = loading.next;
@@ -1692,8 +1688,6 @@ cleanup:
     module.o = KOS_destroy_top_locals(ctx, &actual_module_name, &module);
 
     kos_unload_file(&file_buf);
-
-    /* TODO remove module from array if it failed to load? */
 
     if (error) {
         handle_interpreter_error(ctx, error);
@@ -1711,25 +1705,24 @@ KOS_OBJ_ID KOS_load_module(KOS_CONTEXT ctx, const char *path, unsigned path_len)
 {
     int idx;
 
-    return import_and_run(ctx, path, path_len, 1, KOS_NULL, 0, &idx);
+    return import_module(ctx, path, path_len, 1, KOS_NULL, 0, &idx);
 }
 
-int KOS_load_module_from_memory(KOS_CONTEXT ctx,
-                                const char *module_name,
-                                unsigned    module_name_len,
-                                const char *buf,
-                                unsigned    buf_size)
+KOS_OBJ_ID KOS_load_module_from_memory(KOS_CONTEXT ctx,
+                                       const char *module_name,
+                                       unsigned    module_name_len,
+                                       const char *buf,
+                                       unsigned    buf_size)
 {
-    int        idx;
-    KOS_OBJ_ID module = import_and_run(ctx,
-                                       module_name,
-                                       module_name_len,
-                                       0,
-                                       buf,
-                                       buf_size,
-                                       &idx);
+    int idx;
 
-    return IS_BAD_PTR(module) ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
+    return import_module(ctx,
+                         module_name,
+                         module_name_len,
+                         0,
+                         buf,
+                         buf_size,
+                         &idx);
 }
 
 int kos_comp_import_module(void       *vframe,
@@ -1739,12 +1732,25 @@ int kos_comp_import_module(void       *vframe,
 {
     KOS_CONTEXT ctx = (KOS_CONTEXT)vframe;
     KOS_OBJ_ID  module_obj;
+    KOS_OBJ_ID  ret;
 
     assert(module_idx);
 
-    module_obj = import_and_run(ctx, name, length, 0, KOS_NULL, 0, module_idx);
+    module_obj = import_module(ctx, name, length, 0, KOS_NULL, 0, module_idx);
 
-    return IS_BAD_PTR(module_obj) ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
+    if (IS_BAD_PTR(module_obj)) {
+        assert(KOS_is_exception_pending(ctx));
+        return KOS_ERROR_EXCEPTION;
+    }
+
+    ret = KOS_run_module(ctx, module_obj);
+
+    if (IS_BAD_PTR(ret)) {
+        assert(KOS_is_exception_pending(ctx));
+        return KOS_ERROR_EXCEPTION;
+    }
+
+    return KOS_SUCCESS;
 }
 
 KOS_OBJ_ID KOS_repl(KOS_CONTEXT ctx,
@@ -1784,7 +1790,7 @@ KOS_OBJ_ID KOS_repl(KOS_CONTEXT ctx,
     TRY(compile_module(ctx, module.o, (uint16_t)module_idx, buf, buf_size, 1));
 
     /* Run module */
-    ret = kos_vm_run_module(ctx, module.o);
+    ret = KOS_run_module(ctx, module.o);
 
     if (IS_BAD_PTR(ret)) {
         assert(KOS_is_exception_pending(ctx));
@@ -1879,7 +1885,7 @@ KOS_OBJ_ID KOS_repl_stdin(KOS_CONTEXT ctx,
     KOS_vector_destroy(&buf);
 
     /* Run module */
-    ret = kos_vm_run_module(ctx, module.o);
+    ret = KOS_run_module(ctx, module.o);
 
     if (IS_BAD_PTR(ret)) {
         assert(KOS_is_exception_pending(ctx));

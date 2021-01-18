@@ -14,19 +14,22 @@ int main(void)
 {
     KOS_INSTANCE inst;
     KOS_CONTEXT  ctx;
+    KOS_OBJ_ID   mod_obj;
 
     static const char base[] = "base.kos";
 
     TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
 
     /************************************************************************/
-    TEST(KOS_load_module_from_memory(ctx, base, sizeof(base) - 1, 0, 0) != KOS_SUCCESS);
+    mod_obj = KOS_load_module_from_memory(ctx, base, sizeof(base) - 1, 0, 0);
+    TEST(IS_BAD_PTR(mod_obj));
     TEST_EXCEPTION();
 
     /************************************************************************/
     {
-        KOS_OBJ_ID mod_obj = inst.modules.init_module;
-        unsigned   idx     = ~0U;
+        unsigned idx = ~0U;
+
+        mod_obj = inst.modules.init_module;
 
         TEST( ! IS_BAD_PTR(mod_obj));
         TEST(GET_OBJ_TYPE(mod_obj) == OBJ_MODULE);

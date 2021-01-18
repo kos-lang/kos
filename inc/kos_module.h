@@ -18,11 +18,14 @@ KOS_OBJ_ID KOS_load_module(KOS_CONTEXT ctx,
                            unsigned    path_len);
 
 KOS_API
-int KOS_load_module_from_memory(KOS_CONTEXT ctx,
-                                const char *module_name,
-                                unsigned    module_name_len,
-                                const char *buf,
-                                unsigned    buf_size);
+KOS_OBJ_ID KOS_load_module_from_memory(KOS_CONTEXT ctx,
+                                       const char *module_name,
+                                       unsigned    module_name_len,
+                                       const char *buf,
+                                       unsigned    buf_size);
+
+KOS_API
+KOS_OBJ_ID KOS_run_module(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj);
 
 KOS_API
 KOS_OBJ_ID KOS_repl(KOS_CONTEXT ctx,

@@ -19,7 +19,6 @@
 #include "kos_object_internal.h"
 #include "kos_perf.h"
 #include "kos_try.h"
-#include "kos_vm.h"
 #include <assert.h>
 #include <limits.h>
 #include <math.h>
@@ -1457,7 +1456,7 @@ extern KOS_ATOMIC(uint32_t) kos_fuzz_instructions;
 #   define PROF_ZONE_NAME_FUN(func_obj_expr)
 #endif
 
-static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
+static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
 {
     PROF_ZONE(VM)
 
@@ -1468,7 +1467,7 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
     KOS_OBJ_ID         stack    = ctx->stack;
     KOS_STACK_FRAME   *stack_frame;
     int                error    = KOS_SUCCESS;
-    int                depth    = 0; /* Number of calls inside exec_function() without affecting native stack */
+    int                depth    = 0; /* Number of calls inside execute() without affecting native stack */
     unsigned           rdest;
 #ifndef NDEBUG
     uint32_t           regs_idx = ctx->regs_idx;
@@ -3442,7 +3441,7 @@ static KOS_OBJ_ID exec_function(KOS_CONTEXT ctx)
                 else {
                     if ( ! OBJPTR(FUNCTION, func.o)->handler)  {
 #ifdef CONFIG_DEEP_STACK
-                        ret.o = exec_function(ctx);
+                        ret.o = execute(ctx);
 
                         assert(IS_BAD_PTR(ret.o) || GET_OBJ_TYPE(ret.o) <= OBJ_LAST_TYPE);
 
@@ -3888,7 +3887,7 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
             }
         }
         else {
-            ret.o = exec_function(ctx);
+            ret.o = execute(ctx);
             assert( ! IS_BAD_PTR(ret.o) || KOS_is_exception_pending(ctx));
             assert(ctx->local_list == &func);
 
@@ -3916,7 +3915,7 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
     return error ? KOS_BADPTR : ret.o;
 }
 
-KOS_OBJ_ID kos_vm_run_module(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
+KOS_OBJ_ID KOS_run_module(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 {
     int        error;
     KOS_OBJ_ID func_obj;
@@ -3947,7 +3946,7 @@ KOS_OBJ_ID kos_vm_run_module(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 
         kos_validate_context(ctx);
 
-        ret_obj = exec_function(ctx);
+        ret_obj = execute(ctx);
 
         if (IS_BAD_PTR(ret_obj)) {
             error = KOS_ERROR_EXCEPTION;

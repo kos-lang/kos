@@ -9,10 +9,10 @@
 #include "../inc/kos_entity.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_object.h"
+#include "../inc/kos_module.h"
 #include "../inc/kos_string.h"
 #include "../core/kos_config.h"
 #include "../core/kos_object_internal.h"
-#include "../core/kos_vm.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -162,7 +162,7 @@ static KOS_OBJ_ID run_code(KOS_INSTANCE  *inst,
     }
 
     if ( ! error) {
-        ret = kos_vm_run_module(ctx, OBJID(MODULE, module));
+        ret = KOS_run_module(ctx, OBJID(MODULE, module));
 
         if (IS_BAD_PTR(ret)) {
             assert(KOS_is_exception_pending(ctx));
