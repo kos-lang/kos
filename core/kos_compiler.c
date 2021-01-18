@@ -5010,7 +5010,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
 
     /* Check if instruction choice was correct */
     assert(constant->num_binds || ! frame->num_binds);
-    assert((fun_node->type == NT_CONSTRUCTOR_LITERAL) || ! constant->num_binds || frame->num_binds);
+    assert((fun_node->type == NT_CONSTRUCTOR_LITERAL) || ! constant->num_binds || frame->num_binds || frame->num_def_used);
     assert(scope->num_args - constant->min_args == frame->num_def_used);
 
     /* Move the function code to final code_buf */
