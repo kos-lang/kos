@@ -13,9 +13,9 @@ extern "C" {
 #endif
 
 KOS_API
-int KOS_load_module(KOS_CONTEXT ctx,
-                    const char *path,
-                    unsigned    path_len);
+KOS_OBJ_ID KOS_load_module(KOS_CONTEXT ctx,
+                           const char *path,
+                           unsigned    path_len);
 
 KOS_API
 int KOS_load_module_from_memory(KOS_CONTEXT ctx,

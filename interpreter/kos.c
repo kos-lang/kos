@@ -235,8 +235,10 @@ int main(int argc, char *argv[])
             }
         }
         /* Load script from a file */
-        else
-            error = KOS_load_module(ctx, argv[i_module], mod_name_len);
+        else {
+            if (IS_BAD_PTR(KOS_load_module(ctx, argv[i_module], mod_name_len)))
+                error = KOS_ERROR_EXCEPTION;
+        }
     }
     else {
 

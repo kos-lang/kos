@@ -2,6 +2,7 @@
  * Copyright (c) 2014-2021 Chris Dragan
  */
 
+#include "kos_mod_io.h"
 #include "../inc/kos_array.h"
 #include "../inc/kos_buffer.h"
 #include "../inc/kos_constants.h"
@@ -12,6 +13,7 @@
 #include "../inc/kos_module.h"
 #include "../inc/kos_string.h"
 #include "../inc/kos_utils.h"
+#include "../core/kos_debug.h"
 #include "../core/kos_object_internal.h"
 #include "../core/kos_system.h"
 #include "../core/kos_try.h"
@@ -43,7 +45,8 @@ static const char str_err_not_buffer[]          = "argument to file.read_some is
 static const char str_err_not_buffer_or_str[]   = "argument to file.write is neither a buffer nor a string";
 static const char str_err_too_many_to_read[]    = "requested read size exceeds buffer size limit";
 
-KOS_DECLARE_STATIC_CONST_STRING(str_position, "position");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_io_module_priv_data_failed, "failed to get private data from module io");
+KOS_DECLARE_STATIC_CONST_STRING(str_position,                       "position");
 
 static KOS_OBJ_ID get_file_pos(KOS_CONTEXT ctx,
                                KOS_OBJ_ID  this_obj,
@@ -1049,9 +1052,31 @@ cleanup:
     return error ? KOS_BADPTR : this_obj;
 }
 
+KOS_OBJ_ID KOS_os_make_file_object(KOS_CONTEXT ctx,
+                                   KOS_OBJ_ID  io_module_obj,
+                                   FILE       *file)
+{
+    KOS_OBJ_ID obj_id;
+    int        error = KOS_SUCCESS;
+
+    obj_id = KOS_atomic_read_relaxed_obj(OBJPTR(MODULE, io_module_obj)->priv);
+    if (IS_BAD_PTR(obj_id) || kos_seq_fail())
+        RAISE_EXCEPTION_STR(str_err_io_module_priv_data_failed);
+
+    obj_id = KOS_array_read(ctx, obj_id, 0);
+    TRY_OBJID(obj_id);
+
+    obj_id = KOS_new_object_with_prototype(ctx, obj_id);
+    TRY_OBJID(obj_id);
+
+    KOS_object_set_private_ptr(obj_id, file);
+
+cleanup:
+    return error ? KOS_BADPTR : obj_id;
+}
+
 static int add_std_file(KOS_CONTEXT ctx,
                         KOS_OBJ_ID  module_obj,
-                        KOS_OBJ_ID  proto_obj,
                         KOS_OBJ_ID  name_obj,
                         FILE       *file)
 {
@@ -1063,7 +1088,7 @@ static int add_std_file(KOS_CONTEXT ctx,
     KOS_init_local_with(ctx, &module, module_obj);
     KOS_init_local_with(ctx, &name,   name_obj);
 
-    obj = KOS_new_object_with_prototype(ctx, proto_obj);
+    obj = KOS_os_make_file_object(ctx, module.o, file);
     TRY_OBJID(obj);
 
     KOS_object_set_private_ptr(obj, file);
@@ -1076,10 +1101,10 @@ cleanup:
     return error;
 }
 
-#define TRY_ADD_STD_FILE(ctx, module, proto, name, file)                         \
-do {                                                                             \
-    KOS_DECLARE_STATIC_CONST_STRING(str_name, name);                             \
-    TRY(add_std_file((ctx), (module), (proto), KOS_CONST_ID(str_name), (file))); \
+#define TRY_ADD_STD_FILE(ctx, module, name, file)                       \
+do {                                                                    \
+    KOS_DECLARE_STATIC_CONST_STRING(str_name, name);                    \
+    TRY(add_std_file((ctx), (module), KOS_CONST_ID(str_name), (file))); \
 } while (0)
 
 int kos_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
@@ -1087,9 +1112,11 @@ int kos_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     int       error = KOS_SUCCESS;
     KOS_LOCAL module;
     KOS_LOCAL proto;
+    KOS_LOCAL priv;
 
     KOS_init_local_with(ctx, &module, module_obj);
     KOS_init_local(     ctx, &proto);
+    KOS_init_local(     ctx, &priv);
 
     TRY_ADD_CONSTRUCTOR(    ctx, module.o,          "file",      kos_open,       open_args, &proto.o);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "close",     kos_close,      KOS_NULL);
@@ -1106,13 +1133,12 @@ int kos_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "position",  get_file_pos,   KOS_NULL);
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "size",      get_file_size,  KOS_NULL);
 
-    /* @item io stderr
-     *
-     *     stderr
-     *
-     * Write-only file object corresponding to standard error.
-     */
-    TRY_ADD_STD_FILE(       ctx, module.o, proto.o, "stderr",    stderr);
+    priv.o = KOS_new_array(ctx, 1);
+    TRY_OBJID(priv.o);
+
+    KOS_atomic_write_relaxed_ptr(OBJPTR(MODULE, module.o)->priv, priv.o);
+
+    TRY(KOS_array_write(ctx, priv.o, 0, proto.o));
 
     /* @item io stdin
      *
@@ -1120,7 +1146,7 @@ int kos_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
      *
      * Read-only file object corresponding to standard input.
      */
-    TRY_ADD_STD_FILE(       ctx, module.o, proto.o, "stdin",     stdin);
+    TRY_ADD_STD_FILE(ctx, module.o, "stdin", stdin);
 
     /* @item io stdout
      *
@@ -1130,10 +1156,18 @@ int kos_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
      *
      * Calling `file.stdout.print()` is equivalent to `base.print()`.
      */
-    TRY_ADD_STD_FILE(       ctx, module.o, proto.o, "stdout",    stdout);
+    TRY_ADD_STD_FILE(ctx, module.o, "stdout", stdout);
+
+    /* @item io stderr
+     *
+     *     stderr
+     *
+     * Write-only file object corresponding to standard error.
+     */
+    TRY_ADD_STD_FILE(ctx, module.o, "stderr", stderr);
 
 cleanup:
-    KOS_destroy_top_locals(ctx, &proto, &module);
+    KOS_destroy_top_locals(ctx, &priv, &module);
 
     return error;
 }

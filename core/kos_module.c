@@ -1662,7 +1662,7 @@ static KOS_OBJ_ID import_and_run(KOS_CONTEXT ctx,
         kos_stack_pop(ctx);
 
         if (error) {
-            assert( ! IS_BAD_PTR(ctx->exception));
+            assert(KOS_is_exception_pending(ctx));
             goto cleanup;
         }
     }
@@ -1707,12 +1707,11 @@ cleanup:
     return module.o;
 }
 
-int KOS_load_module(KOS_CONTEXT ctx, const char *path, unsigned path_len)
+KOS_OBJ_ID KOS_load_module(KOS_CONTEXT ctx, const char *path, unsigned path_len)
 {
-    int        idx;
-    KOS_OBJ_ID module = import_and_run(ctx, path, path_len, 1, KOS_NULL, 0, &idx);
+    int idx;
 
-    return IS_BAD_PTR(module) ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
+    return import_and_run(ctx, path, path_len, 1, KOS_NULL, 0, &idx);
 }
 
 int KOS_load_module_from_memory(KOS_CONTEXT ctx,

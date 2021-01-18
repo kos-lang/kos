@@ -5,34 +5,28 @@ import base
 import test_tools.expect_fail
 import fs
 import os
+import io
 
 ##############################################################################
 # os.spawn
 
-fun have_program(pathname)
+fun find_program(name)
 {
-    if ! fs.is_file(pathname) {
-        return false
+    for const prefix in ["/bin", "/usr/bin"] {
+        const path = prefix + "/" + name
+        if fs.is_file(path) {
+            return path
+        }
     }
 
-    try {
-        os.spawn(pathname)
-        return true
-    }
-    catch const e {
-        base.print(pathname, "failed:", e.value)
-    }
-
-    return false
+    return void
 }
 
-const bin_true = have_program("/usr/bin/true") ? "/usr/bin/true" :
-                 have_program("/bin/true")     ? "/bin/true"     :
-                 void
+const bin_true = find_program("true")
 
-const bin_false = have_program("/usr/bin/false") ? "/usr/bin/false" :
-                  have_program("/bin/false")     ? "/bin/false"     :
-                  void
+const bin_false = find_program("false")
+
+const bin_cat = find_program("cat")
 
 do {
     expect_fail(() => os.spawn())
@@ -114,4 +108,33 @@ if bin_true {
 
         expect_fail(() => wait.apply(void, []))
     }
+}
+
+if bin_cat {
+    const name = "__spawn_test_file"
+    fs.remove(name)
+    with const f = io.create(name) {
+        f.print("hello")
+        f.print("world")
+    }
+
+    const proc = os.spawn(program = bin_cat, args = [name], capture_output = true)
+    assert proc.pid > 0
+
+    assert "stdout" propertyof proc     # stdout was requested via capture_output
+    assert ! ("stderr" propertyof proc) # Separate stderr was not requested
+
+    const output = proc.stdout
+
+    assert (typeof output.read_lines) == "function"
+
+    const it = output.read_lines()
+    assert it() == "hello"
+    assert it() == "world"
+    expect_fail(it)
+
+    const ret = proc.wait()
+    assert ret.status == 0
+
+    fs.remove(name)
 }

@@ -11,26 +11,19 @@ import os
 ##############################################################################
 # os.spawn
 
-fun have_program(pathname)
+fun find_program(name)
 {
-    if ! fs.is_file(pathname) {
-        return false
+    for const prefix in ["/bin", "/usr/bin"] {
+        const path = prefix + "/" + name
+        if fs.is_file(path) {
+            return path
+        }
     }
 
-    try {
-        os.spawn(pathname, ["0"])
-        return true
-    }
-    catch const e {
-        base.print(pathname, "failed:", e.value)
-    }
-
-    return false
+    return void
 }
 
-const bin_sleep = have_program("/usr/bin/sleep") ? "/usr/bin/sleep" :
-                  have_program("/bin/sleep")     ? "/bin/sleep"     :
-                  void
+const bin_sleep = find_program("sleep")
 
 fun sleep(time_s)
 {

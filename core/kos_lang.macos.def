@@ -57,6 +57,7 @@ _KOS_iterator_next
 _KOS_load_module
 _KOS_load_module_from_memory
 _KOS_lock_object
+_KOS_os_make_file_object
 _KOS_malloc
 _KOS_malloc_aligned
 _KOS_mempool_alloc

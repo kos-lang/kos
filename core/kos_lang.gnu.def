@@ -58,6 +58,7 @@
     KOS_load_module;
     KOS_load_module_from_memory;
     KOS_lock_object;
+    KOS_os_make_file_object;
     KOS_malloc;
     KOS_malloc_aligned;
     KOS_mempool_alloc;

@@ -14,6 +14,7 @@
 #include "../inc/kos_utils.h"
 #include "../core/kos_debug.h"
 #include "../core/kos_try.h"
+#include "kos_mod_io.h"
 #include <string.h>
 
 #ifdef _WIN32
@@ -32,11 +33,12 @@
 #endif
 
 KOS_DECLARE_STATIC_CONST_STRING(str_args,               "args");
+KOS_DECLARE_STATIC_CONST_STRING(str_capture_output,     "capture_output");
 KOS_DECLARE_STATIC_CONST_STRING(str_capture_stderr,     "capture_stderr");
-KOS_DECLARE_STATIC_CONST_STRING(str_capture_stdout,     "capture_stdout");
 KOS_DECLARE_STATIC_CONST_STRING(str_cwd,                "cwd");
 KOS_DECLARE_STATIC_CONST_STRING(str_env,                "env");
 KOS_DECLARE_STATIC_CONST_STRING(str_eq,                 "=");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_capture_stderr, "`capture_stderr` is enabled but `capture_output` is disabled");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_string, "invalid string");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_spawned,    "object is not a spawned process");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_use_spawn,      "use os.spawn() to launch processes");
@@ -587,12 +589,12 @@ static KOS_OBJ_ID get_wait_proto(KOS_CONTEXT ctx)
     assert(GET_OBJ_TYPE(obj_id) == OBJ_MODULE);
 
     obj_id = KOS_atomic_read_relaxed_obj(OBJPTR(MODULE, obj_id)->priv);
-    if (obj_id != KOS_BADPTR) {
+    if (IS_BAD_PTR(obj_id))
+        obj_id = KOS_VOID;
+    else {
         obj_id = KOS_array_read(ctx, obj_id, 0);
         TRY_OBJID(obj_id);
     }
-    else
-        obj_id = KOS_VOID;
 
 cleanup:
     return error ? KOS_BADPTR : obj_id;
@@ -656,6 +658,16 @@ cleanup:
     return error;
 }
 
+#ifndef _WIN32
+static void send_errno_and_exit(int fd)
+{
+    const int     err_value = errno;
+    const ssize_t num_writ  = write(fd, &err_value, sizeof(err_value));
+
+    exit((num_writ == sizeof(err_value)) ? 1 : 2);
+}
+#endif
+
 /* @item os spawn()
  *
  *     spawn(program, args = [], env = {}, cwd = "", inherit_env = true,
@@ -677,40 +689,50 @@ cleanup:
  *                     the spawned program together with environment variables from `env`.
  *                     Otherwise only environment variables from `env` are passed (if any).
  *                     Defaults to `true`.
- *  * capture_stdout - (Optional) If `true`, stdout is captured into a string.
- *  * capture_stderr - (Optional) If `true`, stderr is captured into a string.
+ *  * capture_output - (Optional) If `true`, stdout and stderr are captured into a pipe object which
+ *                     behaves like a `io.file` object.
+ *  * capture_stderr - (Optional) If `true`, stderr is captured into a pipe object separately from
+ *                     stdout.  Setting this flag to `true` requires that `capture_output` is also
+ *                     set to `true`.
  *  * stdin          - (Optional) File object open for reading or a string or buffer
  *                     which is fed into the spawned program on stdin.
  *  * stdout         - (Optional) File object open for writing.
  *  * stderr         - (Optional) File object open for writing.
  *
  * Returns a `process` object which can be used to obtain information about the spawned child process.
- * The process object contains the following fields:
- *
- *  * [pid](#processpid)     The pid of the spawned child process.
- *  * [wait()](#processwait) The wait function, which can be used to wait for the process to finish.
  */
 static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
                         KOS_OBJ_ID  this_obj,
                         KOS_OBJ_ID  args_obj)
 {
-    int                  error = KOS_SUCCESS;
     KOS_LOCAL            process;
+    KOS_LOCAL            io_module;
     KOS_LOCAL            args;
     KOS_LOCAL            desc;
     struct KOS_MEMPOOL_S alloc;
     KOS_OBJ_ID           value_obj;
     KOS_OBJ_ID           inherit_env;
+    KOS_OBJ_ID           capture_output;
+    KOS_OBJ_ID           capture_stderr;
     struct KOS_WAIT_S   *wait_info;
-    char                *program_cstr = KOS_NULL;
-    char                *cwd          = KOS_NULL;
-    char               **args_array   = KOS_NULL;
-    char               **env_array    = KOS_NULL;
+    char                *program_cstr      = KOS_NULL;
+    char                *cwd               = KOS_NULL;
+    char               **args_array        = KOS_NULL;
+    char               **env_array         = KOS_NULL;
+#ifndef _WIN32
+    FILE                *output_file       = KOS_NULL;
+    FILE                *stderr_file       = KOS_NULL;
+    int                  exec_status_fd[2] = { -1, -1 };
+    int                  output_fd[2]      = { -1, -1 };
+    int                  stderr_fd[2]      = { -1, -1 };
+#endif
+    int                  error             = KOS_SUCCESS;
 
     assert(KOS_get_array_size(args_obj) >= 10);
 
     KOS_mempool_init(&alloc);
     KOS_init_local(     ctx, &process);
+    KOS_init_local(     ctx, &io_module);
     KOS_init_local_with(ctx, &args, args_obj);
     KOS_init_local_with(ctx, &desc, KOS_array_read(ctx, args_obj, 0));
 
@@ -747,6 +769,18 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
     TRY_OBJID(inherit_env);
     TRY(check_arg_type(ctx, inherit_env, "inherit_env", OBJ_BOOLEAN));
 
+    /* Get 'capture_output' */
+    capture_output = KOS_array_read(ctx, args.o, 5);
+    TRY_OBJID(capture_output);
+    TRY(check_arg_type(ctx, capture_output, "capture_output", OBJ_BOOLEAN));
+
+    /* Get 'capture_stderr' */
+    capture_stderr = KOS_array_read(ctx, args.o, 6);
+    TRY_OBJID(capture_stderr);
+    TRY(check_arg_type(ctx, capture_stderr, "capture_stderr", OBJ_BOOLEAN));
+    if (KOS_get_bool(capture_stderr) && ! KOS_get_bool(capture_output))
+        RAISE_EXCEPTION_STR(str_err_capture_stderr);
+
     /* Get 'env' */
     value_obj = KOS_array_read(ctx, args.o, 2);
     TRY_OBJID(value_obj);
@@ -755,17 +789,23 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
 
     TRY(get_env_array(ctx, value_obj, KOS_get_bool(inherit_env), &alloc, &env_array));
 
+    /* Load io module for file object */
+    if (KOS_get_bool(capture_output)) {
+        io_module.o = KOS_load_module(ctx, "io", 2);
+        TRY_OBJID(io_module.o);
+    }
+
 #ifdef _WIN32
     KOS_raise_printf(ctx, "spawn not supported on Windows yet");
     RAISE_ERROR(KOS_ERROR_EXCEPTION);
 #else
     {
         pid_t child_pid;
-        int   exec_status_fd[2];
         int   err_value = 0;
 
         KOS_suspend_context(ctx);
 
+        /* Create pipe for sending failure status of the child process */
         if ((pipe(exec_status_fd) != 0) || kos_seq_fail()) {
             err_value = errno;
             KOS_resume_context(ctx);
@@ -776,8 +816,29 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
         (void)fcntl(exec_status_fd[1], F_SETFD, FD_CLOEXEC);
         (void)fcntl(exec_status_fd[0], F_SETFD, FD_CLOEXEC);
 
+        /* Create pipes for redirecting output from the child process */
+        if (KOS_get_bool(capture_output)) {
+            if ((pipe(output_fd) != 0) || kos_seq_fail()) {
+                err_value = errno;
+                KOS_resume_context(ctx);
+                KOS_raise_errno_value(ctx, "pipe creation failed", err_value);
+                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+            }
+
+            if (KOS_get_bool(capture_stderr)) {
+                if ((pipe(stderr_fd) != 0) || kos_seq_fail()) {
+                    err_value = errno;
+                    KOS_resume_context(ctx);
+                    KOS_raise_errno_value(ctx, "pipe creation failed", err_value);
+                    RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                }
+            }
+        }
+
+        /* Now create the child process */
         child_pid = fork();
 
+        /* Handle failure of child process creation */
         if (child_pid == -1) {
             err_value = errno;
             KOS_resume_context(ctx);
@@ -785,27 +846,101 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
 
+        /* Inside child process, execute the program requested */
         if (child_pid == 0) {
-            int exit_code;
+            /* If we are here, it means the fork() has succeeded and we are in the child
+             * process.  All fds should have been closed, except for those which did not have
+             * the FD_CLOEXEC flag set.  Only this (current) thread has survived the fork()
+             * and although all memory was copied, we cannot reliably resume the interpreter
+             * or invoke any of its functions. */
 
+            /* Explicitly close the read end of the status pipe */
             close(exec_status_fd[0]);
 
+            /* Use redirected pipes as stdout and stderr in the child process */
+            if (KOS_get_bool(capture_output)) {
+                close(output_fd[0]);
+
+                if (dup2(output_fd[1], STDOUT_FILENO) == -1)
+                    send_errno_and_exit(exec_status_fd[1]);
+
+                if (KOS_get_bool(capture_stderr)) {
+                    close(stderr_fd[0]);
+
+                    if (dup2(stderr_fd[1], STDERR_FILENO) == -1)
+                        send_errno_and_exit(exec_status_fd[1]);
+
+                    close(stderr_fd[1]);
+                }
+                else {
+                    if (dup2(output_fd[1], STDERR_FILENO) == -1)
+                        send_errno_and_exit(exec_status_fd[1]);
+                }
+
+                close(output_fd[1]);
+            }
+
+            /* Execute the program in the child process */
             execve(program_cstr, args_array, env_array);
 
-            err_value = errno;
-            exit_code = (write(exec_status_fd[1], &err_value, sizeof(err_value)) == sizeof(err_value)) ? 1 : 2;
-            exit(exit_code);
+            /* If execve failed, send the error back to the Kos process */
+            send_errno_and_exit(exec_status_fd[1]);
         }
 
+        /* Close the write end of all pipes */
         close(exec_status_fd[1]);
+        exec_status_fd[1] = -1;
 
+        if (KOS_get_bool(capture_output)) {
+            close(output_fd[1]);
+            output_fd[1] = -1;
+
+            if (KOS_get_bool(capture_stderr)) {
+                close(stderr_fd[1]);
+                stderr_fd[1] = -1;
+            }
+        }
+
+        /* Check if there was any error in the child process */
+        /* If the pipe read fails, it means that execve() was successful */
         if ((size_t)read(exec_status_fd[0], &err_value, sizeof(err_value)) != sizeof(err_value))
             err_value = 0;
 
         close(exec_status_fd[0]);
+        exec_status_fd[0] = -1;
 
-        if ( ! err_value)
+        if ( ! err_value) {
             wait_info->pid = child_pid;
+
+            /* Open FILE objects for the redirected pipes */
+            if (KOS_get_bool(capture_output)) {
+                assert(output_fd[0] != -1);
+                output_file = fdopen(output_fd[0], "rb");
+
+                if ( ! output_file || kos_seq_fail()) {
+                    err_value = errno;
+                    KOS_resume_context(ctx);
+                    KOS_raise_errno_value(ctx, "fdopen failed", err_value);
+                    RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                }
+
+                output_fd[0] = -1;
+
+                if (KOS_get_bool(capture_stderr)) {
+                    assert(stderr_fd[0] != -1);
+                    stderr_file = fdopen(stderr_fd[0], "rb");
+
+                    if ( ! stderr_file || kos_seq_fail()) {
+                        err_value = errno;
+                        KOS_resume_context(ctx);
+                        KOS_raise_errno_value(ctx, "fdopen failed", err_value);
+                        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                    }
+
+                    stderr_fd[0] = -1;
+                }
+            }
+        }
 
         KOS_resume_context(ctx);
 
@@ -813,12 +948,45 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
             KOS_raise_errno_value(ctx, "exec failed", err_value);
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
+
+        if (output_file) {
+            const KOS_OBJ_ID file_obj_id = KOS_os_make_file_object(ctx, io_module.o, output_file);
+            TRY_OBJID(file_obj_id);
+
+            output_file = KOS_NULL;
+
+            TRY(KOS_set_property(ctx, process.o, KOS_CONST_ID(str_stdout), file_obj_id));
+        }
+
+        if (stderr_file) {
+            const KOS_OBJ_ID file_obj_id = KOS_os_make_file_object(ctx, io_module.o, stderr_file);
+            TRY_OBJID(file_obj_id);
+
+            stderr_file = KOS_NULL;
+
+            TRY(KOS_set_property(ctx, process.o, KOS_CONST_ID(str_stderr), file_obj_id));
+        }
     }
 #endif
 
 cleanup:
     process.o = KOS_destroy_top_locals(ctx, &desc, &process);
     KOS_mempool_destroy(&alloc);
+
+#ifndef _WIN32
+    if (output_fd[0] != -1)
+        close(output_fd[0]);
+    if (output_fd[1] != -1)
+        close(output_fd[1]);
+    if (stderr_fd[0] != -1)
+        close(stderr_fd[0]);
+    if (stderr_fd[1] != -1)
+        close(stderr_fd[1]);
+    if (output_file)
+        fclose(output_file);
+    if (stderr_file)
+        fclose(stderr_file);
+#endif
 
     return error ? KOS_BADPTR : process.o;
 }
@@ -993,7 +1161,7 @@ KOS_INIT_MODULE(os)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
         { KOS_CONST_ID(str_env),            KOS_VOID        },
         { KOS_CONST_ID(str_cwd),            KOS_STR_EMPTY   },
         { KOS_CONST_ID(str_inherit_env),    KOS_TRUE        },
-        { KOS_CONST_ID(str_capture_stdout), KOS_FALSE       },
+        { KOS_CONST_ID(str_capture_output), KOS_FALSE       },
         { KOS_CONST_ID(str_capture_stderr), KOS_FALSE       },
         { KOS_CONST_ID(str_stdin),          KOS_VOID        },
         { KOS_CONST_ID(str_stdout),         KOS_VOID        },
