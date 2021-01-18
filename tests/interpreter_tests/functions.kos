@@ -2135,6 +2135,21 @@ do {
     assert add_with_def(first = 9000, fourth = 200) == 9211
 }
 
+# Recursion
+do {
+    const max_level = 5
+
+    fun spawn(level = 0)
+    {
+        if (level < max_level) {
+            return spawn(level + 1)
+        }
+        return level
+    }
+
+    assert spawn(0) == 5
+}
+
 ##############################################################################
 # Iterate over functions
 do {
