@@ -8,8 +8,16 @@
 #include "../inc/kos_entity.h"
 #include <stdio.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 KOS_API KOS_OBJ_ID KOS_os_make_file_object(KOS_CONTEXT ctx,
                                            KOS_OBJ_ID  io_module_obj,
                                            FILE       *file);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
