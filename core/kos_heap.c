@@ -1374,6 +1374,8 @@ static uint32_t set_mark_state(KOS_OBJ_ID            obj_id,
     return marked;
 }
 
+
+
 static void push_scheduled(KOS_MARK_CONTEXT *mark_ctx)
 {
     KOS_HEAP       *const heap    = mark_ctx->heap;
@@ -1384,6 +1386,8 @@ static void push_scheduled(KOS_MARK_CONTEXT *mark_ctx)
         KOS_MARK_GROUP *next;
 
         mark_ctx->current = KOS_NULL;
+
+        KOS_PERF_CNT(mark_groups_sched);
 
         do {
             next = KOS_atomic_read_relaxed_ptr(heap->objects_to_mark);
@@ -1419,6 +1423,8 @@ static int schedule_for_marking(KOS_MARK_CONTEXT *mark_ctx,
             current = (KOS_MARK_GROUP *)KOS_malloc(sizeof(KOS_MARK_GROUP));
             if ( ! current)
                 return KOS_ERROR_OUT_OF_MEMORY;
+
+            KOS_PERF_CNT(mark_groups_alloc);
         }
 
         current->num_objs = 0;

@@ -50,7 +50,7 @@ struct KOS_LIB_LIST_S {
 struct KOS_PERF_S kos_perf = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, { 0, 0, 0, 0 },
     0, 0,
-    0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0,
     { 0, 0, 0, 0 },
     { 0, 0, 0, 0 },
     0
@@ -545,6 +545,8 @@ void KOS_instance_destroy(KOS_INSTANCE *inst)
     PERF_VALUE(alloc_new_page);
     PERF_VALUE(alloc_free_page);
     PERF_VALUE(gc_cycles);
+    PERF_VALUE(mark_groups_alloc);
+    PERF_VALUE(mark_groups_sched);
     PERF_VALUE_NAME(evac_object_32,         evac_object_size[0]);
     PERF_VALUE_NAME(evac_object_64_128,     evac_object_size[1]);
     PERF_VALUE_NAME(evac_object_160_256,    evac_object_size[2]);

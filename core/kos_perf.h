@@ -69,6 +69,8 @@ struct KOS_PERF_S {
     KOS_ATOMIC(uint64_t) alloc_new_page;
     KOS_ATOMIC(uint64_t) alloc_free_page;
     KOS_ATOMIC(uint64_t) gc_cycles;
+    KOS_ATOMIC(uint64_t) mark_groups_alloc;
+    KOS_ATOMIC(uint64_t) mark_groups_sched;
 
     KOS_ATOMIC(uint64_t) alloc_object_size[4];
     KOS_ATOMIC(uint64_t) evac_object_size[4];
