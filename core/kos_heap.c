@@ -2891,7 +2891,7 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
     stop_the_world(ctx->inst); /* Remaining threads enter help_gc() */
 
     time_1             = kos_get_time_us();
-    stats.time_stop_us = time_1 - time_0;
+    stats.time_stop_us = (unsigned)(time_1 - time_0);
     time_0             = time_1;
 
     stats.initial_used_heap_size = heap->used_heap_size;
@@ -2916,7 +2916,7 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
     /* Phase 3: Evacuate and reclaim free pages */
 
     time_1             = kos_get_time_us();
-    stats.time_mark_us = time_1 - time_0;
+    stats.time_mark_us = (unsigned)(time_1 - time_0);
     time_0             = time_1;
 
     if ( ! error) {
@@ -2934,7 +2934,7 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
             kos_lock_mutex(&heap->mutex);
 
             time_1              = kos_get_time_us();
-            stats.time_evac_us += time_1 - time_0;
+            stats.time_evac_us += (unsigned)(time_1 - time_0);
             time_0              = time_1;
 
             heap->gc_state = GC_UPDATE;
@@ -2950,7 +2950,7 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
             reclaim_free_pages(heap, &free_pages, &stats);
 
             time_1                = kos_get_time_us();
-            stats.time_update_us += time_1 - time_0;
+            stats.time_update_us += (unsigned)(time_1 - time_0);
             time_0                = time_1;
 
             /* If there was an error during evacuation and we cannot
@@ -3002,7 +3002,7 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
 
     time_1 = kos_get_time_us();
 
-    stats.time_finish_us = time_1 - time_0;
+    stats.time_finish_us = (unsigned)(time_1 - time_0);
     stats.time_total_us = (unsigned)(stats.time_stop_us +
                                      stats.time_mark_us +
                                      stats.time_evac_us +
