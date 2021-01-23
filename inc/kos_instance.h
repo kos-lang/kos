@@ -27,30 +27,46 @@ typedef struct KOS_PAGE_LIST_S {
     KOS_PAGE *tail;
 } KOS_PAGE_LIST;
 
+/* Unordered stack structure.  AIAO - Any-In, Any-Out ;-)
+ *
+ * A normal stack (or uni-directional list) is difficult to implement in a lock-free
+ * and wait-free manner.  However, since we don't need the items to be ordered,
+ * we are doing a best effort item management.  A certain number of items can be stored
+ * quickly without having to grab a mutex.  Once the list is full, more items can be
+ * stored on the stack.
+ */
+typedef struct KOS_MARK_GROUP_STACK_S {
+    KOS_ATOMIC(uint32_t)         slot_idx;        /* Index to next slot to write                */
+    KOS_ATOMIC(uint32_t)         num_groups;      /* Total number of mark groups in the stack   */
+    KOS_MUTEX                    mutex;           /* Mutex for the stack variable               */
+    KOS_ATOMIC(KOS_MARK_GROUP *) slots[16];       /* Quick-access lock-free & wait-free slots   */
+    KOS_MARK_GROUP              *stack;           /* Slow-access stack when we run out of slots */
+} KOS_MARK_GROUP_STACK;
+
 typedef struct KOS_HEAP_S {
-    KOS_MUTEX                    mutex;
-    uint32_t                     gc_state;        /* Says what the GC is doing                      */
-    uint32_t                     heap_size;       /* Total num bytes allocated for the heap         */
-    uint32_t                     used_heap_size;  /* Num bytes allocated for objects on heap        */
-    uint32_t                     malloc_size;     /* Num bytes allocated for objs with malloc       */
-    uint32_t                     max_heap_size;   /* Maximum allowed heap size                      */
-    uint32_t                     max_malloc_size; /* Maximum allowed bytes allocated with malloc    */
-    uint32_t                     gc_threshold;    /* Next value of used_heap_size which triggers GC */
-    KOS_PAGE                    *free_pages;      /* Pages which are currently unused               */
-    KOS_PAGE_LIST                used_pages;      /* Pages which contain objects                    */
-    KOS_POOL                    *pools;           /* Allocated memory for heap, in page pools       */
+    KOS_MUTEX              mutex;
+    uint32_t               gc_state;        /* Says what the GC is doing                      */
+    uint32_t               heap_size;       /* Total num bytes allocated for the heap         */
+    uint32_t               used_heap_size;  /* Num bytes allocated for objects on heap        */
+    uint32_t               malloc_size;     /* Num bytes allocated for objs with malloc       */
+    uint32_t               max_heap_size;   /* Maximum allowed heap size                      */
+    uint32_t               max_malloc_size; /* Maximum allowed bytes allocated with malloc    */
+    uint32_t               gc_threshold;    /* Next value of used_heap_size which triggers GC */
+    KOS_PAGE              *free_pages;      /* Pages which are currently unused               */
+    KOS_PAGE_LIST          used_pages;      /* Pages which contain objects                    */
+    KOS_POOL              *pools;           /* Allocated memory for heap, in page pools       */
 
-    KOS_ATOMIC(KOS_PAGE *)       walk_pages;      /* Multi-threaded page updating                   */
-    KOS_ATOMIC(KOS_MARK_GROUP *) objects_to_mark; /* Objects being marked during GC                 */
-    KOS_ATOMIC(KOS_MARK_GROUP *) free_mark_groups;/* Unused mark group containers                   */
-    uint32_t                     walk_threads;    /* Number of threads helping with page walking    */
-    uint32_t                     threads_to_stop; /* Number of threads on which GC is waiting       */
-    uint32_t                     gc_cycles;       /* Number of GC cycles started                    */
-    int                          mark_error;      /* Error occurred on helper thread during marking */
+    KOS_ATOMIC(KOS_PAGE *) walk_pages;      /* Multi-threaded page updating                   */
+    KOS_MARK_GROUP_STACK   objects_to_mark; /* Objects being marked during GC                 */
+    KOS_MARK_GROUP_STACK   free_mark_groups;/* Unused mark group containers                   */
+    uint32_t               walk_threads;    /* Number of threads helping with page walking    */
+    uint32_t               threads_to_stop; /* Number of threads on which GC is waiting       */
+    uint32_t               gc_cycles;       /* Number of GC cycles started                    */
+    int                    mark_error;      /* Error occurred on helper thread during marking */
 
-    KOS_COND_VAR                 engagement_cond;
-    KOS_COND_VAR                 walk_cond;
-    KOS_COND_VAR                 helper_cond;
+    KOS_COND_VAR           engagement_cond;
+    KOS_COND_VAR           walk_cond;
+    KOS_COND_VAR           helper_cond;
 
 #ifdef CONFIG_MAD_GC
     struct KOS_LOCKED_PAGES_S *locked_pages_first;
@@ -78,12 +94,55 @@ enum KOS_STACK_FLAGS_E {
  *   or closure stack object or a local stack frame.
  *
  * Local stack frame:
- * +0 function object id
- * +1 catch_offs / catch reg
- * +2 instr_offs
- * +3 registers
- *    ...
- * +N number of registers (small int)
+ *   +0 function object id
+ *   +1 catch_offs / catch reg
+ *   +2 instr_offs
+ *   +3 registers
+ *      ...
+ *   +N number of registers (small int)
+ *
+ * Typical layout of the stack:
+ *
+ * +----------------+
+ * | next_stack_obj |   obj id of the next stack object, or badptr if there is no previous stack
+ * +----------------+
+ * | func_obj       |   local stack frame
+ * | catch_offs/reg |
+ * | instr_offs     |
+ * | r0             |
+ * | r1             |
+ * | num_regs (2)   |
+ * +----------------+
+ * | stack_obj      |   obj id of a reentrant stack frame
+ * +----------------+
+ * | stack_obj      |   obj id of another reentrant stack frame
+ * +----------------+
+ * :                :
+ * :                :
+ * +----------------+
+ * | func_obj       |   local stack frame
+ * | catch_offs/reg |
+ * | instr_offs     |
+ * | r0             |
+ * | r1             |
+ * | r2             |
+ * | r3             |
+ * | num_regs (4)   |
+ * +----------------+
+ *
+ * Layout of a re-entrant stack object/frame:
+ *
+ * +----------------+
+ * | next_stack_obj |   obj id of the main stack object
+ * +----------------+
+ * | func_obj       |
+ * | catch_offs/reg |
+ * | instr_offs     |
+ * | r0             |
+ * | r1             |
+ * | r2             |
+ * | num_regs (3)   |
+ * +----------------+
  */
 
 typedef struct KOS_STACK_S {
@@ -326,12 +385,17 @@ typedef struct KOS_GC_STATS_S {
     unsigned heap_size;
     unsigned used_heap_size;
     unsigned malloc_size;
-    unsigned time_us;
+    unsigned time_stop_us;
+    unsigned time_mark_us;
+    unsigned time_evac_us;
+    unsigned time_update_us;
+    unsigned time_finish_us;
+    unsigned time_total_us;
 } KOS_GC_STATS;
 
 #define KOS_GC_STATS_INIT(val) \
     { (val), (val), (val), (val), (val), (val), (val), (val), (val), (val), \
-      (val), (val), (val), (val), (val) }
+      (val), (val), (val), (val), (val), (val), (val), (val), (val), (val) }
 
 KOS_API
 int KOS_collect_garbage(KOS_CONTEXT   ctx,

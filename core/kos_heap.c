@@ -37,6 +37,9 @@
 #define gc_trace(x) do {} while (0)
 #endif
 
+#define MARK_GROUP_BITS 4
+#define MARK_GROUP_MASK ((1U << MARK_GROUP_BITS) - 1U)
+
 enum WALK_THREAD_TYPE_E {
     WALK_MAIN_THREAD,
     WALK_HELPER_THREAD
@@ -67,9 +70,9 @@ struct KOS_LOCKED_PAGES_S {
 #endif
 
 struct KOS_MARK_GROUP_S {
-    uint32_t                     num_objs;
-    KOS_ATOMIC(KOS_MARK_GROUP *) next;
-    KOS_OBJ_ID                   objs[62];
+    uint32_t        num_objs;
+    KOS_MARK_GROUP *next;
+    KOS_OBJ_ID      objs[62];
 };
 
 struct KOS_MARK_CONTEXT_S {
@@ -148,6 +151,75 @@ static inline KOS_HEAP *get_heap(KOS_CONTEXT ctx)
 #define get_heap(ctx) (&(ctx)->inst->heap)
 #endif
 
+static int init_mark_group_stack(KOS_MARK_GROUP_STACK *stack)
+{
+    size_t i;
+
+    KOS_atomic_write_relaxed_u32(stack->slot_idx, 0U);
+    KOS_atomic_write_relaxed_u32(stack->num_groups, 0U);
+
+    assert(sizeof(stack->slots) / sizeof(stack->slots[0]) == (MARK_GROUP_MASK + 1U));
+
+    for (i = 0; i < sizeof(stack->slots) / sizeof(stack->slots[0]); i++)
+        KOS_atomic_write_relaxed_ptr(stack->slots[i], (KOS_MARK_GROUP *)KOS_NULL);
+
+    stack->stack = KOS_NULL;
+
+    return kos_create_mutex(&stack->mutex);
+}
+
+static void push_mark_group(KOS_MARK_GROUP_STACK *stack,
+                            KOS_MARK_GROUP       *group)
+{
+    uint32_t       idx = KOS_atomic_read_relaxed_u32(stack->slot_idx);
+    const uint32_t end = idx;
+
+    do {
+        if (KOS_atomic_cas_weak_ptr(stack->slots[idx], (KOS_MARK_GROUP *)KOS_NULL, group)) {
+            (void)KOS_atomic_cas_weak_u32(stack->slot_idx, end, (idx + 1U) & MARK_GROUP_MASK);
+            return;
+        }
+
+        idx = (idx + 1U) & MARK_GROUP_MASK;
+    } while (idx != end);
+
+    kos_lock_mutex(&stack->mutex);
+
+    group->next  = stack->stack;
+    stack->stack = group;
+
+    kos_unlock_mutex(&stack->mutex);
+}
+
+static KOS_MARK_GROUP *pop_mark_group(KOS_MARK_GROUP_STACK *stack)
+{
+    KOS_MARK_GROUP *group;
+    uint32_t        idx = (KOS_atomic_read_relaxed_u32(stack->slot_idx) - 1U) & MARK_GROUP_MASK;
+    const uint32_t  end = idx;
+
+    do {
+        group = (KOS_MARK_GROUP *)KOS_atomic_read_relaxed_ptr(stack->slots[idx]);
+
+        if (group && KOS_atomic_cas_weak_ptr(stack->slots[idx], group, (KOS_MARK_GROUP *)KOS_NULL)) {
+            (void)KOS_atomic_cas_weak_u32(stack->slot_idx, (end + 1U) & MARK_GROUP_MASK, idx);
+            return group;
+        }
+
+        idx = (idx - 1U) & MARK_GROUP_MASK;
+    } while (idx != end);
+
+    kos_lock_mutex(&stack->mutex);
+
+    group = stack->stack;
+
+    if (group)
+        stack->stack = group->next;
+
+    kos_unlock_mutex(&stack->mutex);
+
+    return group;
+}
+
 int kos_heap_init(KOS_INSTANCE *inst)
 {
     PROF_PLOT_INIT("heap",     Memory)
@@ -171,9 +243,7 @@ int kos_heap_init(KOS_INSTANCE *inst)
     heap->threads_to_stop = 0U;
     heap->gc_cycles       = 0U;
 
-    KOS_atomic_write_relaxed_ptr(heap->walk_pages,       (KOS_PAGE *)KOS_NULL);
-    KOS_atomic_write_relaxed_ptr(heap->objects_to_mark,  (KOS_MARK_GROUP *)KOS_NULL);
-    KOS_atomic_write_relaxed_ptr(heap->free_mark_groups, (KOS_MARK_GROUP *)KOS_NULL);
+    KOS_atomic_write_relaxed_ptr(heap->walk_pages, (KOS_PAGE *)KOS_NULL);
 
 #ifdef CONFIG_MAD_GC
     heap->locked_pages_first = KOS_NULL;
@@ -184,13 +254,28 @@ int kos_heap_init(KOS_INSTANCE *inst)
     assert( ! (KOS_SLOTS_OFFS & 7U));
     assert(KOS_SLOTS_OFFS + (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS) == KOS_PAGE_SIZE);
 
-    error = kos_create_mutex(&heap->mutex);
+    error = init_mark_group_stack(&heap->objects_to_mark);
     if (error)
         return error;
+
+    error = init_mark_group_stack(&heap->free_mark_groups);
+    if (error) {
+        kos_destroy_mutex(&heap->objects_to_mark.mutex);
+        return error;
+    }
+
+    error = kos_create_mutex(&heap->mutex);
+    if (error) {
+        kos_destroy_mutex(&heap->free_mark_groups.mutex);
+        kos_destroy_mutex(&heap->objects_to_mark.mutex);
+        return error;
+    }
 
     error = kos_create_cond_var(&heap->engagement_cond);
     if (error) {
         kos_destroy_mutex(&heap->mutex);
+        kos_destroy_mutex(&heap->free_mark_groups.mutex);
+        kos_destroy_mutex(&heap->objects_to_mark.mutex);
         return error;
     }
 
@@ -198,6 +283,8 @@ int kos_heap_init(KOS_INSTANCE *inst)
     if (error) {
         kos_destroy_cond_var(&heap->engagement_cond);
         kos_destroy_mutex(&heap->mutex);
+        kos_destroy_mutex(&heap->free_mark_groups.mutex);
+        kos_destroy_mutex(&heap->objects_to_mark.mutex);
         return error;
     }
 
@@ -206,6 +293,8 @@ int kos_heap_init(KOS_INSTANCE *inst)
         kos_destroy_cond_var(&heap->walk_cond);
         kos_destroy_cond_var(&heap->engagement_cond);
         kos_destroy_mutex(&heap->mutex);
+        kos_destroy_mutex(&heap->free_mark_groups.mutex);
+        kos_destroy_mutex(&heap->objects_to_mark.mutex);
         return error;
     }
 
@@ -355,15 +444,28 @@ void kos_heap_destroy(KOS_INSTANCE *inst)
 
     finalize_objects(&inst->threads.main_thread, &inst->heap);
 
-    assert( ! KOS_atomic_read_relaxed_ptr(inst->heap.objects_to_mark));
-    while (KOS_atomic_read_relaxed_ptr(inst->heap.free_mark_groups)) {
+    assert( ! inst->heap.objects_to_mark.stack);
+    while (inst->heap.free_mark_groups.stack) {
 
-        KOS_MARK_GROUP *const to_delete = KOS_atomic_read_relaxed_ptr(inst->heap.free_mark_groups);
-        KOS_MARK_GROUP *const next      = KOS_atomic_read_relaxed_ptr(to_delete->next);
+        KOS_MARK_GROUP *const group = inst->heap.free_mark_groups.stack;
 
-        KOS_atomic_write_relaxed_ptr(inst->heap.free_mark_groups, next);
+        inst->heap.free_mark_groups.stack = group->next;
 
-        KOS_free(to_delete);
+        KOS_free(group);
+    }
+    {
+        KOS_MARK_GROUP_STACK *const stack = &inst->heap.free_mark_groups;
+        size_t                      i;
+
+        for (i = 0; i < sizeof(stack->slots) / sizeof(stack->slots[0]); i++) {
+
+            KOS_MARK_GROUP *const group = KOS_atomic_read_relaxed_ptr(stack->slots[i]);
+
+            assert( ! KOS_atomic_read_relaxed_ptr(inst->heap.objects_to_mark.slots[i]));
+
+            if (group)
+                KOS_free(group);
+        }
     }
 
     for (;;) {
@@ -385,6 +487,8 @@ void kos_heap_destroy(KOS_INSTANCE *inst)
     kos_destroy_cond_var(&inst->heap.walk_cond);
     kos_destroy_cond_var(&inst->heap.engagement_cond);
     kos_destroy_mutex(&inst->heap.mutex);
+    kos_destroy_mutex(&inst->heap.free_mark_groups.mutex);
+    kos_destroy_mutex(&inst->heap.objects_to_mark.mutex);
 }
 
 #ifdef CONFIG_MAD_GC
@@ -1374,28 +1478,12 @@ static uint32_t set_mark_state(KOS_OBJ_ID            obj_id,
     return marked;
 }
 
-
-
-static void push_scheduled(KOS_MARK_CONTEXT *mark_ctx)
+static void push_scheduled(KOS_HEAP       *heap,
+                           KOS_MARK_GROUP *group)
 {
-    KOS_HEAP       *const heap    = mark_ctx->heap;
-    KOS_MARK_GROUP *const current = mark_ctx->current;
+    KOS_PERF_CNT(mark_groups_sched);
 
-    if (current) {
-
-        KOS_MARK_GROUP *next;
-
-        mark_ctx->current = KOS_NULL;
-
-        KOS_PERF_CNT(mark_groups_sched);
-
-        do {
-            next = KOS_atomic_read_relaxed_ptr(heap->objects_to_mark);
-
-            KOS_atomic_write_relaxed_ptr(current->next, next);
-
-        } while ( ! KOS_atomic_cas_weak_ptr(heap->objects_to_mark, next, current));
-    }
+    push_mark_group(&heap->objects_to_mark, group);
 }
 
 static int schedule_for_marking(KOS_MARK_CONTEXT *mark_ctx,
@@ -1407,17 +1495,7 @@ static int schedule_for_marking(KOS_MARK_CONTEXT *mark_ctx,
 
     if ( ! current) {
 
-        KOS_MARK_GROUP *next;
-
-        do {
-            current = KOS_atomic_read_relaxed_ptr(heap->free_mark_groups);
-
-            if ( ! current)
-                break;
-
-            next = KOS_atomic_read_relaxed_ptr(current->next);
-
-        } while ( ! KOS_atomic_cas_weak_ptr(heap->free_mark_groups, current, next));
+        current = pop_mark_group(&heap->free_mark_groups);
 
         if ( ! current) {
             current = (KOS_MARK_GROUP *)KOS_malloc(sizeof(KOS_MARK_GROUP));
@@ -1437,30 +1515,23 @@ static int schedule_for_marking(KOS_MARK_CONTEXT *mark_ctx,
 
     current->objs[idx] = obj_id;
 
-    if (idx == (sizeof(current->objs) / sizeof(current->objs[0])) - 1)
-        push_scheduled(mark_ctx);
+    if (idx == (sizeof(current->objs) / sizeof(current->objs[0])) - 1) {
+        mark_ctx->current = KOS_NULL;
+        push_scheduled(mark_ctx->heap, current);
+    }
 
     return KOS_SUCCESS;
 }
 
 static KOS_MARK_GROUP *get_next_scheduled_mark_group(KOS_MARK_CONTEXT *mark_ctx)
 {
-    KOS_HEAP *const heap = mark_ctx->heap;
-    KOS_MARK_GROUP *group;
-    KOS_MARK_GROUP *next;
+    KOS_HEAP *const heap  = mark_ctx->heap;
+    KOS_MARK_GROUP *group = pop_mark_group(&heap->objects_to_mark);
 
-    do {
-        group = KOS_atomic_read_relaxed_ptr(heap->objects_to_mark);
-
-        if ( ! group) {
-            group = mark_ctx->current;
-            mark_ctx->current = KOS_NULL;
-            break;
-        }
-
-        next = KOS_atomic_read_relaxed_ptr(group->next);
-
-    } while ( ! KOS_atomic_cas_weak_ptr(heap->objects_to_mark, group, next));
+    if ( ! group) {
+        group = mark_ctx->current;
+        mark_ctx->current = KOS_NULL;
+    }
 
     return group;
 }
@@ -1468,14 +1539,8 @@ static KOS_MARK_GROUP *get_next_scheduled_mark_group(KOS_MARK_CONTEXT *mark_ctx)
 static void free_mark_group(KOS_MARK_CONTEXT *mark_ctx, KOS_MARK_GROUP *group)
 {
     KOS_HEAP *const heap = mark_ctx->heap;
-    KOS_MARK_GROUP *next;
 
-    do {
-        next = KOS_atomic_read_relaxed_ptr(heap->free_mark_groups);
-
-        KOS_atomic_write_relaxed_ptr(group->next, next);
-
-    } while ( ! KOS_atomic_cas_weak_ptr(heap->free_mark_groups, next, group));
+    push_mark_group(&heap->free_mark_groups, group);
 }
 
 static void free_all_mark_groups(KOS_MARK_CONTEXT *mark_ctx)
@@ -1508,48 +1573,44 @@ static void init_mark_context(KOS_MARK_CONTEXT *mark_ctx, KOS_HEAP *heap)
 static int perform_gray_to_black_marking(KOS_MARK_CONTEXT       *mark_ctx,
                                          enum WALK_THREAD_TYPE_E helper)
 {
-    if (KOS_atomic_read_relaxed_ptr(mark_ctx->heap->objects_to_mark) || mark_ctx->current) {
+    KOS_MARK_GROUP *group;
+    int             error = KOS_SUCCESS;
 
-        KOS_MARK_GROUP *group;
+    PROF_ZONE(GC)
 
-        begin_walk(mark_ctx->heap, helper);
+    begin_walk(mark_ctx->heap, helper);
 
-        group = get_next_scheduled_mark_group(mark_ctx);
+    group = get_next_scheduled_mark_group(mark_ctx);
 
-        for ( ; group; group = get_next_scheduled_mark_group(mark_ctx)) {
+    while (group && ! error) {
 
-            KOS_OBJ_ID       *ptr = &group->objs[0];
-            KOS_OBJ_ID *const end = ptr + group->num_objs;
+        KOS_OBJ_ID       *ptr = &group->objs[0];
+        KOS_OBJ_ID *const end = ptr + group->num_objs;
 
-            while (ptr != end) {
+        while ((ptr != end) && ! error) {
 
-                const KOS_OBJ_ID obj_id = *(ptr++);
+            const KOS_OBJ_ID obj_id = *(ptr++);
 
-                const int error = mark_object_black(mark_ctx, obj_id);
-
-                if (error) {
-                    free_mark_group(mark_ctx, group);
-
-                    group = mark_ctx->current;
-
-                    if (group) {
-                        mark_ctx->current = KOS_NULL;
-                        free_mark_group(mark_ctx, group);
-                    }
-
-                    end_walk(mark_ctx->heap, helper);
-
-                    return error;
-                }
-            }
-
-            free_mark_group(mark_ctx, group);
+            error = mark_object_black(mark_ctx, obj_id);
         }
 
-        end_walk(mark_ctx->heap, helper);
+        free_mark_group(mark_ctx, group);
+
+        group = get_next_scheduled_mark_group(mark_ctx);
     }
 
-    return KOS_SUCCESS;
+    if (error) {
+        group = mark_ctx->current;
+
+        if (group) {
+            mark_ctx->current = KOS_NULL;
+            free_mark_group(mark_ctx, group);
+        }
+    }
+
+    end_walk(mark_ctx->heap, helper);
+
+    return error;
 }
 
 static int mark_children_gray(KOS_MARK_CONTEXT *mark_ctx,
@@ -1696,8 +1757,6 @@ static int mark_object_black(KOS_MARK_CONTEXT *mark_ctx,
 
 static int gray_to_black(KOS_MARK_CONTEXT *mark_ctx, KOS_HEAP *heap)
 {
-    PROF_ZONE(GC)
-
     int error;
 
     assert(heap->walk_threads == 0);
@@ -2296,6 +2355,8 @@ static int save_incomplete_page(KOS_OBJ_HEADER          *hdr,
 static void update_pages_after_evacuation(KOS_HEAP               *heap,
                                           enum WALK_THREAD_TYPE_E helper)
 {
+    PROF_ZONE(GC)
+
     if (KOS_atomic_read_relaxed_ptr(heap->walk_pages)) {
 
         KOS_PAGE *page;
@@ -2829,6 +2890,10 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
 
     stop_the_world(ctx->inst); /* Remaining threads enter help_gc() */
 
+    time_1             = kos_get_time_us();
+    stats.time_stop_us = time_1 - time_0;
+    time_0             = time_1;
+
     stats.initial_used_heap_size = heap->used_heap_size;
 
     clear_marking(heap);
@@ -2850,6 +2915,10 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
     /***********************************************************************/
     /* Phase 3: Evacuate and reclaim free pages */
 
+    time_1             = kos_get_time_us();
+    stats.time_mark_us = time_1 - time_0;
+    time_0             = time_1;
+
     if ( ! error) {
         do {
             uint32_t                prev_num_freed;
@@ -2864,6 +2933,10 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
 
             kos_lock_mutex(&heap->mutex);
 
+            time_1              = kos_get_time_us();
+            stats.time_evac_us += time_1 - time_0;
+            time_0              = time_1;
+
             heap->gc_state = GC_UPDATE;
 
             assert( ! incomplete.page || error);
@@ -2875,6 +2948,10 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
             prev_num_freed = stats.num_pages_freed;
 
             reclaim_free_pages(heap, &free_pages, &stats);
+
+            time_1                = kos_get_time_us();
+            stats.time_update_us += time_1 - time_0;
+            time_0                = time_1;
 
             /* If there was an error during evacuation and we cannot
              * reclaim any freed pages, throw OOM exception. */
@@ -2925,14 +3002,19 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
 
     time_1 = kos_get_time_us();
 
-    stats.time_us = (unsigned)(time_1 - time_0);
+    stats.time_finish_us = time_1 - time_0;
+    stats.time_total_us = (unsigned)(stats.time_stop_us +
+                                     stats.time_mark_us +
+                                     stats.time_evac_us +
+                                     stats.time_update_us +
+                                     stats.time_finish_us);
 
     if (ctx->inst->flags & KOS_INST_DEBUG) {
         printf("GC used/total [B] %x/%x -> %x/%x | malloc [B] %x -> %x : retained %u : time %u us\n",
                stats.initial_used_heap_size, stats.initial_heap_size,
                stats.used_heap_size, stats.heap_size,
                stats.initial_malloc_size, stats.malloc_size,
-               stats.num_pages_kept, stats.time_us);
+               stats.num_pages_kept, stats.time_total_us);
     }
 
     if (out_stats)

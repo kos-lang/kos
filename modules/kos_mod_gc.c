@@ -70,7 +70,12 @@ static KOS_OBJ_ID collect_garbage(KOS_CONTEXT ctx,
     SET_VALUE(heap_size);
     SET_VALUE(used_heap_size);
     SET_VALUE(malloc_size);
-    SET_VALUE(time_us);
+    SET_VALUE(time_stop_us);
+    SET_VALUE(time_mark_us);
+    SET_VALUE(time_evac_us);
+    SET_VALUE(time_update_us);
+    SET_VALUE(time_finish_us);
+    SET_VALUE(time_total_us);
 #undef SET_VALUE
 
 cleanup:
