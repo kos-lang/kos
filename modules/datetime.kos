@@ -1,2 +1,214 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2014-2021 Chris Dragan
+
+import base.integer
+import math.floor
+
+fun first_day_from_year(year)
+{
+    return 365 * (year - 1970) +
+           ((year - 1969) >> 2) -
+           ((year - 1901) / 100) +
+           ((year - 1601) / 400)
+}
+
+fun is_leap_year(year)
+{
+    return ! (year % 4) && ( !! (year % 100) || ! (year % 400))
+}
+
+const first_day      = [ 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365 ]
+const first_day_leap = [ 0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366 ]
+
+fun get_month(day_in_year, leap)
+{
+    const first_days = leap ? first_day_leap : first_day
+
+    var begin = 0
+    var end   = 12
+
+    while begin + 1 < end {
+        const mid = (begin + end) / 2
+
+        const day = first_days[mid]
+
+        if day_in_year == day {
+            return [mid, day]
+        }
+
+        if day_in_year < day {
+            end = mid
+        }
+        else {
+            begin = mid
+        }
+    }
+
+    return [begin, first_days[begin]]
+}
+
+fun ts_check(name, value)
+{
+    if value != void {
+        throw "\(name) and timestamp cannot be specified at the same time"
+    }
+}
+
+fun date_check(name, value, min, max)
+{
+    if typeof value == "float" {
+        value = integer(floor(value))
+    }
+
+    if value == void || value < min || value > max {
+        throw "invalid \(name): \(value) - expected number from \(min) to \(max)"
+    }
+
+    return value
+}
+
+/* @item datetime datetime()
+ *
+ *     datetime(year, month, day, hour, minute, second = 0, us = void)
+ *     datetime(timestamp)
+ *
+ * Date/time class.
+ *
+ * The first variant creates a datetime object from date and time.
+ *
+ * The second variant creates a datetime object from a `timestamp`.
+ *
+ * The created object has the following properties:
+ *
+ *  * `us` - microsecond, 0..999,999
+ *  * `second` - 0..59
+ *  * `minute` - 0..59
+ *  * `hour` - 0..23
+ *  * `day` - 1..31
+ *  * `month` - 1..12
+ *  * `year` - e.g. 1970
+ *  * `leap` - indicates whether it is a leap year (`false` or `true`)
+ *  * `timestamp` - in microseconds
+ *
+ * Examples:
+ *
+ *     > datetime(now())
+ *     {"us": 740673, "second": 10, "hour": 14, "month": 1, "day": 24, "year": 2021, "timestamp": 1611499810740673, "minute": 50, "leap": false}
+ *
+ *     > datetime(1_000_000_000_000_000)
+ *     {"us": 0, "second": 40, "hour": 1, "month": 9, "day": 9, "year": 2001, "timestamp": 1000000000000000, "minute": 46, "leap": false}
+ *
+ *     > datetime(2000, 2, 29, 13, 0)
+ *     {"us": void, "month": 2, "hour": 13, "second": 0, "day": 29, "year": 2000, "minute": 0, "timestamp": 951829200000000, "leap": true}
+ */
+public class datetime
+{
+    constructor(year = void, month = void, day = void,
+                hour = void, minute = void, second = void, us = void,
+                timestamp = void) {
+
+        if timestamp == void && month == void && day == void &&
+           hour == void && minute == void && second == void && us == void {
+
+            timestamp = year
+            year      = void
+        }
+
+        if timestamp != void {
+            ts_check("year",   year)
+            ts_check("month",  month)
+            ts_check("day",    day)
+            ts_check("hour",   hour)
+            ts_check("minute", minute)
+            ts_check("second", second)
+            ts_check("us",     us)
+
+            this.timestamp = timestamp
+            this.us        = timestamp % 1_000_000
+            timestamp     /= 1_000_000
+            this.second    = timestamp % 60
+            timestamp     /= 60
+            this.minute    = timestamp % 60
+            timestamp     /= 60
+            this.hour      = timestamp % 24
+            timestamp     /= 24
+
+            const year0  = integer(floor(timestamp / 365.2425)) + 1970
+            var   day_ts = first_day_from_year(year0)
+
+            var year = year0
+            var leap = void
+            if (day_ts > timestamp) {
+                year   -= 1
+                leap    = is_leap_year(year)
+                day_ts -= leap ? 366 : 365
+            }
+            else {
+                leap = is_leap_year(year)
+
+                const days_in_year = leap ? 366 : 365
+                if (day_ts + days_in_year <= timestamp) {
+                    year   += 1
+                    day_ts += days_in_year
+
+                    if leap || (year & 3) {
+                        leap = false
+                    }
+                    else {
+                        leap = is_leap_year(year)
+                    }
+                }
+            }
+
+            this.year  = year
+            this.leap  = leap
+            timestamp -= day_ts
+
+            const month_idx, first_day = get_month(timestamp, leap)
+            this.month = month_idx + 1
+            this.day   = timestamp - first_day + 1
+        }
+        else {
+            year   = date_check("year",   year,   1970, 290_307)
+            month  = date_check("month",  month,  1, 12)
+            day    = date_check("day",    day,    1, 31)
+            hour   = date_check("hour",   hour,   0, 23)
+            minute = date_check("minute", minute, 0, 59)
+            second = second == void ? 0 : second
+            second = date_check("second", second, 0, 59)
+            if us != void {
+                us = date_check("us", us,     0, 999_999)
+            }
+
+            this.year   = year
+            this.month  = month
+            this.day    = day
+            this.hour   = hour
+            this.minute = minute
+            this.second = second
+            this.us     = us
+
+            const leap  = is_leap_year(year)
+            this.leap   = leap
+
+            var timestamp = first_day_from_year(year)
+            const first_days = (leap ? first_day_leap : first_day)
+            timestamp += first_days[month - 1]
+
+            date_check("day", day, 1, first_days[month] - first_days[month - 1] + 1)
+
+            timestamp += day - 1
+
+            timestamp = (timestamp * 24) + hour
+            timestamp = (timestamp * 60) + minute
+            timestamp = (timestamp * 60) + second
+
+            timestamp *= 1_000_000
+            if us {
+                timestamp += us
+            }
+
+            this.timestamp = timestamp
+        }
+    }
+}

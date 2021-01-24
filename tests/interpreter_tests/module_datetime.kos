@@ -1,0 +1,112 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2014-2021 Chris Dragan
+
+import datetime
+import base.range
+
+fun check_value(actual, expected, name)
+{
+    if actual[name] != expected[name] {
+        throw "\(name) is \(actual[name]) but expected \(expected[name])"
+    }
+}
+
+fun test_timestamp(timestamp, expected)
+{
+    const d1 = datetime.datetime(timestamp)
+
+    check_value(d1, expected, "year")
+    check_value(d1, expected, "month")
+    check_value(d1, expected, "day")
+    check_value(d1, expected, "hour")
+    check_value(d1, expected, "minute")
+    check_value(d1, expected, "second")
+    check_value(d1, { us: 0 }, "us")
+    check_value(d1, expected, "leap")
+
+    const d2 = datetime.datetime(d1.year,
+                                 d1.month,
+                                 d1.day,
+                                 d1.hour,
+                                 d1.minute,
+                                 d1.second,
+                                 d1.us)
+
+    check_value(d2, { timestamp: timestamp }, "timestamp")
+}
+
+fun is_leap_year(year)
+{
+    return ! (year % 4) && ( !! (year % 100) || ! (year % 400))
+}
+
+const days_in_month      = [ 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 ]
+const days_in_month_leap = [ 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 ]
+
+const day_ts_delta       = 24 * 60 * 60 * 1_000_000
+const year_ts_delta      = 365 * day_ts_delta
+
+fun calc_timestamp(date)
+{
+    const year = date.year
+
+    const leap = is_leap_year(year)
+    date.leap  = leap
+
+    var day_base = 0
+    const days_table = leap ? days_in_month_leap : days_in_month
+    for const im in range(date.month - 1) {
+        day_base += days_table[im]
+    }
+
+    var timestamp = day_base + date.day - 1
+    timestamp    *= 24
+    timestamp    += date.hour
+    timestamp    *= 60
+    timestamp    += date.minute
+    timestamp    *= 60
+    timestamp    += date.second
+
+    date.timestamp = timestamp * 1_000_000
+}
+
+do {
+    const dates = [ ]
+
+    for const month in range(1, 13) {
+        dates.push({ day: 1,                        month: month, year: 1970, hour:  0, minute:  0, second:  0 })
+        dates.push({ day: days_in_month[month - 1], month: month, year: 1970, hour: 23, minute: 59, second: 59 })
+        calc_timestamp(dates[-2])
+        calc_timestamp(dates[-1])
+    }
+
+    var prev_leap = false
+    for const year in range(1970, 2002) {
+        const leap = is_leap_year(year)
+
+        for const date in dates {
+            date.leap = leap
+            assert date.year == year
+
+            if date.month > 2 && leap {
+                date.timestamp += day_ts_delta
+            }
+
+            try {
+                test_timestamp(date.timestamp, date)
+            }
+            catch const e {
+                e.value += " at year:\(year) leap:\(date.leap) month:\(date.month) day:\(date.day) hour:\(date.hour) minute:\(date.minute)"
+                throw e
+            }
+
+            date.year      += 1
+            date.timestamp += year_ts_delta
+            if date.month <= 2 && leap {
+                date.timestamp += day_ts_delta
+            }
+        }
+
+        prev_leap = leap
+    }
+}

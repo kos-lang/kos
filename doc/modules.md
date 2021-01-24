@@ -117,6 +117,7 @@ Table of Contents
     * [whitespace](#whitespace)
     * [zip()](#zip)
   * [datetime](#datetime)
+    * [datetime()](#datetime)
     * [now()](#now)
   * [debug](#debug)
     * [backtrace()](#backtrace)
@@ -2880,6 +2881,41 @@ Example:
 
 datetime
 ========
+
+datetime()
+----------
+
+    datetime(year, month, day, hour, minute, second = 0, us = void)
+    datetime(timestamp)
+
+Date/time class.
+
+The first variant creates a datetime object from date and time.
+
+The second variant creates a datetime object from a `timestamp`.
+
+The created object has the following properties:
+
+ * `us` - microsecond, 0..999,999
+ * `second` - 0..59
+ * `minute` - 0..59
+ * `hour` - 0..23
+ * `day` - 1..31
+ * `month` - 1..12
+ * `year` - e.g. 1970
+ * `leap` - indicates whether it is a leap year (`false` or `true`)
+ * `timestamp` - in microseconds
+
+Examples:
+
+    > datetime(now())
+    {"us": 740673, "second": 10, "hour": 14, "month": 1, "day": 24, "year": 2021, "timestamp": 1611499810740673, "minute": 50, "leap": false}
+
+    > datetime(1_000_000_000_000_000)
+    {"us": 0, "second": 40, "hour": 1, "month": 9, "day": 9, "year": 2001, "timestamp": 1000000000000000, "minute": 46, "leap": false}
+
+    > datetime(2000, 2, 29, 13, 0)
+    {"us": void, "month": 2, "hour": 13, "second": 0, "day": 29, "year": 2000, "minute": 0, "timestamp": 951829200000000, "leap": true}
 
 now()
 -----
