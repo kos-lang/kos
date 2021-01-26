@@ -23,6 +23,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifndef _WIN32
+#   include <signal.h>
+#endif
 
 #define TO_STR_INTERNAL(x) #x
 #define TO_STR(x) TO_STR_INTERNAL(x)
@@ -55,6 +58,11 @@ int main(int argc, char *argv[])
     KOS_INSTANCE inst;
     KOS_CONTEXT  ctx;
     KOS_VECTOR   buf;
+
+#ifndef _WIN32
+    /* Disable SIGPIPE */
+    signal(SIGPIPE, SIG_IGN);
+#endif
 
     KOS_vector_init(&buf);
 

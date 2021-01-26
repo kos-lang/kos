@@ -136,10 +136,12 @@ Table of Contents
       * [file.prototype.eof](#fileprototypeeof)
       * [file.prototype.error](#fileprototypeerror)
       * [file.prototype.fd](#fileprototypefd)
+      * [file.prototype.flush()](#fileprototypeflush)
       * [file.prototype.info](#fileprototypeinfo)
       * [file.prototype.position](#fileprototypeposition)
       * [file.prototype.print()](#fileprototypeprint)
       * [file.prototype.print\_lines()](#fileprototypeprint_lines)
+      * [file.prototype.purge()](#fileprototypepurge)
       * [file.prototype.read()](#fileprototyperead)
       * [file.prototype.read\_line()](#fileprototyperead_line)
       * [file.prototype.read\_lines()](#fileprototyperead_lines)
@@ -148,6 +150,7 @@ Table of Contents
       * [file.prototype.size](#fileprototypesize)
       * [file.prototype.write()](#fileprototypewrite)
     * [open()](#open)
+    * [pipe()](#pipe)
     * [read\_lines()](#read_lines)
     * [ro](#ro)
     * [rw](#rw)
@@ -3088,6 +3091,19 @@ file.prototype.fd
 
 An integer number representing the underlying file descriptor number.
 
+file.prototype.flush()
+----------------------
+
+    file.prototype.flush()
+
+Flushes the file buffer.
+
+All the outstanding written bytes in the underlying buffer are written
+to the file.  For files being read, the seek pointer is moved to the
+end of the file.
+
+Returns the file object itself.
+
 file.prototype.info
 -------------------
 
@@ -3162,6 +3178,20 @@ Elements are extracted from `iterable` object through its `iterator()`
 function, then printed using `file.prototype.print()` function.
 
 If there are no elements, nothing is printed.
+
+file.prototype.purge()
+----------------------
+
+    file.prototype.purge()
+
+Purges the file buffer.
+
+Any outstanding written bytes are discarded and not written into the file.
+
+This discards any bytes written, but not flushed, or any bytes read from
+the file but not returned via `read()` yet.
+
+Returns the file object itself.
 
 file.prototype.read()
 ---------------------
@@ -3298,6 +3328,20 @@ the `with` statement.
 Example:
 
     > with const f = file.open("my.txt", file.create_flag) { f.print("hello") }
+
+pipe()
+------
+
+    pipe()
+
+Pipe class.
+
+Returns a pipe object, which contains two properties:
+
+ * `read` - file object which is the read end of the pipe.
+ * `write` - file object which is the write end of the pipe.
+
+`pipe` objects are most useful with `os.spawn()`.
 
 read_lines()
 ------------

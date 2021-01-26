@@ -33,6 +33,7 @@
 #   include <fcntl.h>
 #   include <sys/stat.h>
 #   include <sys/types.h>
+#   include <unistd.h>
 #endif
 #ifdef __linux__
 #   include <sys/sysmacros.h>
@@ -47,6 +48,8 @@ static const char str_err_too_many_to_read[]    = "requested read size exceeds b
 
 KOS_DECLARE_STATIC_CONST_STRING(str_err_io_module_priv_data_failed, "failed to get private data from module io");
 KOS_DECLARE_STATIC_CONST_STRING(str_position,                       "position");
+KOS_DECLARE_STATIC_CONST_STRING(str_read,                           "read");
+KOS_DECLARE_STATIC_CONST_STRING(str_write,                          "write");
 
 static KOS_OBJ_ID get_file_pos(KOS_CONTEXT ctx,
                                KOS_OBJ_ID  this_obj,
@@ -73,6 +76,45 @@ static void finalize(KOS_CONTEXT ctx,
 {
     if (priv)
         fclose((FILE *)priv);
+}
+
+enum CLOSE_FLAG {
+    NO_CLOSE,
+    AUTO_CLOSE
+};
+
+static KOS_OBJ_ID make_file_object(KOS_CONTEXT     ctx,
+                                   KOS_OBJ_ID      io_module_obj,
+                                   FILE           *file,
+                                   enum CLOSE_FLAG auto_close)
+{
+    KOS_OBJ_ID obj_id;
+    int        error = KOS_SUCCESS;
+
+    obj_id = KOS_atomic_read_relaxed_obj(OBJPTR(MODULE, io_module_obj)->priv);
+    if (IS_BAD_PTR(obj_id) || kos_seq_fail())
+        RAISE_EXCEPTION_STR(str_err_io_module_priv_data_failed);
+
+    obj_id = KOS_array_read(ctx, obj_id, 0);
+    TRY_OBJID(obj_id);
+
+    obj_id = KOS_new_object_with_prototype(ctx, obj_id);
+    TRY_OBJID(obj_id);
+
+    if (auto_close)
+        OBJPTR(OBJECT, obj_id)->finalize = finalize;
+
+    KOS_object_set_private_ptr(obj_id, file);
+
+cleanup:
+    return error ? KOS_BADPTR : obj_id;
+}
+
+KOS_OBJ_ID KOS_os_make_file_object(KOS_CONTEXT ctx,
+                                   KOS_OBJ_ID  io_module_obj,
+                                   FILE       *file)
+{
+    return make_file_object(ctx, io_module_obj, file, AUTO_CLOSE);
 }
 
 /* @item io file()
@@ -159,18 +201,18 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
 
     file = fopen(filename_cstr.buffer, flags_cstr.buffer);
 
+    if ( ! file)
+        stored_errno = errno;
+
 #ifndef _WIN32
     if (file)
         (void)fcntl(fileno(file), F_SETFD, FD_CLOEXEC);
 #endif
 
-    if ( ! file)
-        stored_errno = errno;
-
     KOS_resume_context(ctx);
 
     if ( ! file) {
-        KOS_raise_errno_value(ctx, KOS_NULL, stored_errno);
+        KOS_raise_errno_value(ctx, "fopen", stored_errno);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
@@ -194,6 +236,174 @@ cleanup:
     KOS_vector_destroy(&filename_cstr);
     if (file)
         fclose(file);
+
+    ret.o = KOS_destroy_top_locals(ctx, &this_, &ret);
+
+    return error ? KOS_BADPTR : ret.o;
+}
+
+#ifdef _WIN32
+static FILE *to_file(KOS_CONTEXT ctx, HANDLE *handle, const char *mode)
+{
+    FILE *file         = KOS_NULL;
+    int   fd           = -1;
+    int   stored_errno = 0;
+
+    KOS_suspend_context(ctx);
+
+    fd = _open_osfhandle((intptr_t)*handle, strcmp(mode, "rb") ? 0 : _O_RDONLY);
+
+    if (fd == -1)
+        /* This is not correct, but unlikely to happen */
+        stored_errno = EPIPE;
+    else {
+        *handle = INVALID_HANDLE_VALUE;
+
+        file = _fdopen(fd, mode);
+
+        if ( ! file) {
+            stored_errno = errno;
+
+            _close(fd);
+        }
+    }
+
+    KOS_resume_context(ctx);
+
+    if ( ! file)
+        KOS_raise_errno_value(ctx, "_fdopen", stored_errno);
+
+    return file;
+}
+#else
+static FILE *to_file(KOS_CONTEXT ctx, int *fd, const char *mode)
+{
+    FILE *file;
+    int   stored_errno = 0;
+
+    KOS_suspend_context(ctx);
+
+    file = fdopen(*fd, mode);
+
+    if ( ! file || kos_seq_fail())
+        stored_errno = errno;
+
+    KOS_resume_context(ctx);
+
+    if ( ! file)
+        KOS_raise_errno_value(ctx, "fdopen", stored_errno);
+    else
+        *fd = -1;
+
+    return file;
+}
+#endif
+
+/* @item io pipe()
+ *
+ *     pipe()
+ *
+ * Pipe class.
+ *
+ * Returns a pipe object, which contains two properties:
+ *
+ *  * `read` - file object which is the read end of the pipe.
+ *  * `write` - file object which is the write end of the pipe.
+ *
+ * `pipe` objects are most useful with `os.spawn()`.
+ */
+static KOS_OBJ_ID kos_pipe(KOS_CONTEXT ctx,
+                           KOS_OBJ_ID  this_obj,
+                           KOS_OBJ_ID  args_obj)
+{
+    KOS_LOCAL ret;
+    KOS_LOCAL file_obj;
+    KOS_LOCAL io_module;
+    KOS_LOCAL this_;
+    FILE     *file         = KOS_NULL;
+#ifdef _WIN32
+    HANDLE    read_pipe    = INVALID_HANDLE_VALUE;
+    HANDLE    write_pipe   = INVALID_HANDLE_VALUE;
+#else
+    int       read_pipe    = -1;
+    int       write_pipe   = -1;
+#endif
+    int       stored_errno = 0;
+    int       error        = KOS_SUCCESS;
+
+    KOS_init_local(     ctx, &ret);
+    KOS_init_local(     ctx, &file_obj);
+    KOS_init_local(     ctx, &io_module);
+    KOS_init_local_with(ctx, &this_, this_obj);
+
+    io_module.o = KOS_get_module(ctx);
+    TRY_OBJID(io_module.o);
+
+    ret.o = KOS_new_object_with_prototype(ctx, this_.o);
+    TRY_OBJID(ret.o);
+
+    KOS_suspend_context(ctx);
+
+#ifdef _WIN32
+    if ( ! CreatePipe(&read_pipe, &write_pipe, KOS_NULL, 0x10000))
+        /* This is not correct, but unlikely to happen */
+        stored_errno = EPIPE;
+#else
+    {
+        int pipe_fd[2];
+
+        if ((pipe(pipe_fd) == 0) || kos_seq_fail()) {
+            read_pipe  = pipe_fd[0];
+            write_pipe = pipe_fd[1];
+            (void)fcntl(read_pipe, F_SETFD, FD_CLOEXEC);
+            (void)fcntl(write_pipe, F_SETFD, FD_CLOEXEC);
+        }
+        else
+            stored_errno = errno;
+    }
+#endif
+
+    KOS_resume_context(ctx);
+
+    if (stored_errno) {
+        KOS_raise_errno_value(ctx, "pipe", stored_errno);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+
+    file = to_file(ctx, &read_pipe, "rb");
+    if ( ! file)
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+
+    file_obj.o = make_file_object(ctx, io_module.o, file, AUTO_CLOSE);
+    TRY_OBJID(file_obj.o);
+    file = KOS_NULL;
+
+    TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_read), file_obj.o));
+
+    file = to_file(ctx, &write_pipe, "wb");
+    if ( ! file)
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+
+    file_obj.o = make_file_object(ctx, io_module.o, file, AUTO_CLOSE);
+    TRY_OBJID(file_obj.o);
+    file = KOS_NULL;
+
+    TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_write), file_obj.o));
+
+cleanup:
+    if (file)
+        fclose(file);
+#ifdef _WIN32
+    if (read_pipe)
+        CloseHandle(read_pipe);
+    if (write_pipe)
+        CloseHandle(write_pipe);
+#else
+    if (read_pipe != -1)
+        close(read_pipe);
+    if (write_pipe != -1)
+        close(write_pipe);
+#endif
 
     ret.o = KOS_destroy_top_locals(ctx, &this_, &ret);
 
@@ -295,6 +505,79 @@ cleanup:
     return error ? KOS_BADPTR : this_obj;
 }
 
+/* @item io file.prototype.flush()
+ *
+ *     file.prototype.flush()
+ *
+ * Flushes the file buffer.
+ *
+ * All the outstanding written bytes in the underlying buffer are written
+ * to the file.  For files being read, the seek pointer is moved to the
+ * end of the file.
+ *
+ * Returns the file object itself.
+ */
+static KOS_OBJ_ID flush(KOS_CONTEXT ctx,
+                        KOS_OBJ_ID  this_obj,
+                        KOS_OBJ_ID  args_obj)
+{
+    FILE *file  = KOS_NULL;
+    int   error = get_file_object(ctx, this_obj, &file, 0);
+
+    if ( ! error && file) {
+        int stored_errno = 0;
+
+        KOS_suspend_context(ctx);
+
+        if (fflush(file))
+            stored_errno = errno;
+
+        KOS_resume_context(ctx);
+
+        if (stored_errno)
+            KOS_raise_errno_value(ctx, "fflush", stored_errno);
+    }
+
+    return error ? KOS_BADPTR : this_obj;
+}
+
+/* @item io file.prototype.purge()
+ *
+ *     file.prototype.purge()
+ *
+ * Purges the file buffer.
+ *
+ * Any outstanding written bytes are discarded and not written into the file.
+ *
+ * This discards any bytes written, but not flushed, or any bytes read from
+ * the file but not returned via `read()` yet.
+ *
+ * Returns the file object itself.
+ */
+static KOS_OBJ_ID purge(KOS_CONTEXT ctx,
+                        KOS_OBJ_ID  this_obj,
+                        KOS_OBJ_ID  args_obj)
+{
+    FILE *file  = KOS_NULL;
+    int   error = get_file_object(ctx, this_obj, &file, 0);
+
+    if ( ! error && file) {
+        int stored_errno = 0;
+
+        KOS_suspend_context(ctx);
+
+        if (fpurge(file))
+            stored_errno = errno;
+
+        KOS_resume_context(ctx);
+
+        if (stored_errno)
+            KOS_raise_errno_value(ctx, "fpurge", stored_errno);
+    }
+
+    return error ? KOS_BADPTR : this_obj;
+}
+
 static int is_eol(char c)
 {
     return c == '\n' || c == '\r';
@@ -370,7 +653,7 @@ static KOS_OBJ_ID read_line(KOS_CONTEXT ctx,
             if (ferror(file)) {
                 const int stored_errno = errno;
                 KOS_resume_context(ctx);
-                KOS_raise_errno_value(ctx, KOS_NULL, stored_errno);
+                KOS_raise_errno_value(ctx, "fgets", stored_errno);
                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
             }
             else
@@ -485,7 +768,7 @@ static KOS_OBJ_ID read_some(KOS_CONTEXT ctx,
     TRY(KOS_buffer_resize(ctx, buf.o, (unsigned)(offset + num_read)));
 
     if (stored_errno) {
-        KOS_raise_errno_value(ctx, KOS_NULL, stored_errno);
+        KOS_raise_errno_value(ctx, "fread", stored_errno);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
@@ -576,7 +859,7 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
             }
 
             if (stored_errno) {
-                KOS_raise_errno_value(ctx, KOS_NULL, stored_errno);
+                KOS_raise_errno_value(ctx, "fwrite", stored_errno);
                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
             }
         }
@@ -603,7 +886,7 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
             }
 
             if (stored_errno) {
-                KOS_raise_errno_value(ctx, KOS_NULL, stored_errno);
+                KOS_raise_errno_value(ctx, "fwrite", stored_errno);
                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
             }
 
@@ -845,7 +1128,7 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
         KOS_resume_context(ctx);
 
         if (error) {
-            KOS_raise_errno_value(ctx, KOS_NULL, stored_errno);
+            KOS_raise_errno_value(ctx, "fstat", stored_errno);
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
 
@@ -977,7 +1260,7 @@ static KOS_OBJ_ID get_file_pos(KOS_CONTEXT ctx,
     KOS_resume_context(ctx);
 
     if (stored_errno) {
-        KOS_raise_errno_value(ctx, KOS_NULL, stored_errno);
+        KOS_raise_errno_value(ctx, "ftell", stored_errno);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
@@ -1040,7 +1323,7 @@ static KOS_OBJ_ID set_file_pos(KOS_CONTEXT ctx,
     if (fseek(file, (long)pos, whence)) {
         const int stored_errno = errno;
         KOS_resume_context(ctx);
-        KOS_raise_errno_value(ctx, KOS_NULL, stored_errno);
+        KOS_raise_errno_value(ctx, "fseek", stored_errno);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
@@ -1050,29 +1333,6 @@ static KOS_OBJ_ID set_file_pos(KOS_CONTEXT ctx,
 
 cleanup:
     return error ? KOS_BADPTR : this_obj;
-}
-
-KOS_OBJ_ID KOS_os_make_file_object(KOS_CONTEXT ctx,
-                                   KOS_OBJ_ID  io_module_obj,
-                                   FILE       *file)
-{
-    KOS_OBJ_ID obj_id;
-    int        error = KOS_SUCCESS;
-
-    obj_id = KOS_atomic_read_relaxed_obj(OBJPTR(MODULE, io_module_obj)->priv);
-    if (IS_BAD_PTR(obj_id) || kos_seq_fail())
-        RAISE_EXCEPTION_STR(str_err_io_module_priv_data_failed);
-
-    obj_id = KOS_array_read(ctx, obj_id, 0);
-    TRY_OBJID(obj_id);
-
-    obj_id = KOS_new_object_with_prototype(ctx, obj_id);
-    TRY_OBJID(obj_id);
-
-    KOS_object_set_private_ptr(obj_id, file);
-
-cleanup:
-    return error ? KOS_BADPTR : obj_id;
 }
 
 static int add_std_file(KOS_CONTEXT ctx,
@@ -1088,10 +1348,8 @@ static int add_std_file(KOS_CONTEXT ctx,
     KOS_init_local_with(ctx, &module, module_obj);
     KOS_init_local_with(ctx, &name,   name_obj);
 
-    obj = KOS_os_make_file_object(ctx, module.o, file);
+    obj = make_file_object(ctx, module.o, file, NO_CLOSE);
     TRY_OBJID(obj);
-
-    KOS_object_set_private_ptr(obj, file);
 
     error = KOS_module_add_global(ctx, module.o, name.o, obj, KOS_NULL);
 
@@ -1109,36 +1367,41 @@ do {                                                                    \
 
 int kos_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 {
-    int       error = KOS_SUCCESS;
-    KOS_LOCAL module;
-    KOS_LOCAL proto;
-    KOS_LOCAL priv;
+    int        error = KOS_SUCCESS;
+    KOS_LOCAL  module;
+    KOS_LOCAL  file_proto;
+    KOS_LOCAL  priv;
+    KOS_OBJ_ID pipe_proto;
 
     KOS_init_local_with(ctx, &module, module_obj);
-    KOS_init_local(     ctx, &proto);
+    KOS_init_local(     ctx, &file_proto);
     KOS_init_local(     ctx, &priv);
 
-    TRY_ADD_CONSTRUCTOR(    ctx, module.o,          "file",      kos_open,       open_args, &proto.o);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "close",     kos_close,      KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "print",     print,          KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "read_line", read_line,      read_line_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "read_some", read_some,      read_some_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "release",   kos_close,      KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "seek",      set_file_pos,   set_file_pos_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "write",     kos_write,      KOS_NULL);
-    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "eof",       get_file_eof,   KOS_NULL);
-    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "error",     get_file_error, KOS_NULL);
-    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "fd",        get_file_fd,    KOS_NULL);
-    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "info",      get_file_info,  KOS_NULL);
-    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "position",  get_file_pos,   KOS_NULL);
-    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, proto.o, "size",      get_file_size,  KOS_NULL);
+    TRY_ADD_CONSTRUCTOR(    ctx, module.o,               "file",      kos_open,       open_args, &file_proto.o);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "close",     kos_close,      KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "flush",     flush,          KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "print",     print,          KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "purge",     purge,          KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "read_line", read_line,      read_line_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "read_some", read_some,      read_some_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "release",   kos_close,      KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "seek",      set_file_pos,   set_file_pos_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "write",     kos_write,      KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "eof",       get_file_eof,   KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "error",     get_file_error, KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "fd",        get_file_fd,    KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "info",      get_file_info,  KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "position",  get_file_pos,   KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "size",      get_file_size,  KOS_NULL);
+
+    TRY_ADD_CONSTRUCTOR(    ctx, module.o,               "pipe",      kos_pipe,       KOS_NULL, &pipe_proto);
 
     priv.o = KOS_new_array(ctx, 1);
     TRY_OBJID(priv.o);
 
     KOS_atomic_write_relaxed_ptr(OBJPTR(MODULE, module.o)->priv, priv.o);
 
-    TRY(KOS_array_write(ctx, priv.o, 0, proto.o));
+    TRY(KOS_array_write(ctx, priv.o, 0, file_proto.o));
 
     /* @item io stdin
      *

@@ -511,3 +511,47 @@ do {
     test_file("/dev", "directory")
     test_file("/dev/null", "char")
 }
+
+##############################################################################
+# io.pipe
+
+do {
+    const p = io.pipe()
+
+    p.write.write(base.buffer().pack("u4", 0x12345678))
+    p.write.flush()
+
+    var data = p.read.read(4)
+    assert typeof data == "buffer"
+    assert data.size == 4
+    assert data.unpack("u4")[0] == 0x12345678
+
+    p.write.write("test")
+    p.write.close()
+
+    data = p.read.read()
+    assert typeof data == "buffer"
+    assert data.size == 4
+    assert data.unpack("s")[0] == "test"
+    p.read.close()
+}
+
+##############################################################################
+# io.file.purge, io.file.flush
+
+do {
+    const p = io.pipe()
+
+    p.write.write("abc")
+    p.write.purge()
+    p.write.write("def")
+    p.write.flush()
+    p.write.write("ghi")
+
+    const data = p.read.read(3)
+    assert typeof data == "buffer"
+    assert data.size == 3
+    assert data.unpack("s")[0] == "def"
+    p.read.close()
+    p.write.close()
+}
