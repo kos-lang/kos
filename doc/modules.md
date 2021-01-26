@@ -141,7 +141,6 @@ Table of Contents
       * [file.prototype.position](#fileprototypeposition)
       * [file.prototype.print()](#fileprototypeprint)
       * [file.prototype.print\_lines()](#fileprototypeprint_lines)
-      * [file.prototype.purge()](#fileprototypepurge)
       * [file.prototype.read()](#fileprototyperead)
       * [file.prototype.read\_line()](#fileprototyperead_line)
       * [file.prototype.read\_lines()](#fileprototyperead_lines)
@@ -3178,20 +3177,6 @@ Elements are extracted from `iterable` object through its `iterator()`
 function, then printed using `file.prototype.print()` function.
 
 If there are no elements, nothing is printed.
-
-file.prototype.purge()
-----------------------
-
-    file.prototype.purge()
-
-Purges the file buffer.
-
-Any outstanding written bytes are discarded and not written into the file.
-
-This discards any bytes written, but not flushed, or any bytes read from
-the file but not returned via `read()` yet.
-
-Returns the file object itself.
 
 file.prototype.read()
 ---------------------

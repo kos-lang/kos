@@ -541,43 +541,6 @@ static KOS_OBJ_ID flush(KOS_CONTEXT ctx,
     return error ? KOS_BADPTR : this_obj;
 }
 
-/* @item io file.prototype.purge()
- *
- *     file.prototype.purge()
- *
- * Purges the file buffer.
- *
- * Any outstanding written bytes are discarded and not written into the file.
- *
- * This discards any bytes written, but not flushed, or any bytes read from
- * the file but not returned via `read()` yet.
- *
- * Returns the file object itself.
- */
-static KOS_OBJ_ID purge(KOS_CONTEXT ctx,
-                        KOS_OBJ_ID  this_obj,
-                        KOS_OBJ_ID  args_obj)
-{
-    FILE *file  = KOS_NULL;
-    int   error = get_file_object(ctx, this_obj, &file, 0);
-
-    if ( ! error && file) {
-        int stored_errno = 0;
-
-        KOS_suspend_context(ctx);
-
-        if (fpurge(file))
-            stored_errno = errno;
-
-        KOS_resume_context(ctx);
-
-        if (stored_errno)
-            KOS_raise_errno_value(ctx, "fpurge", stored_errno);
-    }
-
-    return error ? KOS_BADPTR : this_obj;
-}
-
 static int is_eol(char c)
 {
     return c == '\n' || c == '\r';
@@ -1381,7 +1344,6 @@ int kos_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "close",     kos_close,      KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "flush",     flush,          KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "print",     print,          KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "purge",     purge,          KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "read_line", read_line,      read_line_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "read_some", read_some,      read_some_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "release",   kos_close,      KOS_NULL);

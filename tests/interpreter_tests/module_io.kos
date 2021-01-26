@@ -535,23 +535,3 @@ do {
     assert data.unpack("s")[0] == "test"
     p.read.close()
 }
-
-##############################################################################
-# io.file.purge, io.file.flush
-
-do {
-    const p = io.pipe()
-
-    p.write.write("abc")
-    p.write.purge()
-    p.write.write("def")
-    p.write.flush()
-    p.write.write("ghi")
-
-    const data = p.read.read(3)
-    assert typeof data == "buffer"
-    assert data.size == 3
-    assert data.unpack("s")[0] == "def"
-    p.read.close()
-    p.write.close()
-}
