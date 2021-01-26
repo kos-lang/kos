@@ -18,6 +18,7 @@
 #include "../core/kos_system.h"
 #include "../core/kos_try.h"
 #include <errno.h>
+#include <fcntl.h>
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
@@ -30,7 +31,6 @@
 #   pragma warning( pop )
 #   pragma warning( disable : 4996 ) /* 'fopen/getenv': This function may be unsafe */
 #else
-#   include <fcntl.h>
 #   include <sys/stat.h>
 #   include <sys/types.h>
 #   include <unistd.h>
