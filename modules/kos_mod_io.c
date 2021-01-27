@@ -521,8 +521,13 @@ static KOS_OBJ_ID flush(KOS_CONTEXT ctx,
                         KOS_OBJ_ID  this_obj,
                         KOS_OBJ_ID  args_obj)
 {
-    FILE *file  = KOS_NULL;
-    int   error = get_file_object(ctx, this_obj, &file, 0);
+    KOS_LOCAL this_;
+    FILE     *file  = KOS_NULL;
+    int       error;
+
+    KOS_init_local_with(ctx, &this_, this_obj);
+
+    error = get_file_object(ctx, this_.o, &file, 0);
 
     if ( ! error && file) {
         int stored_errno = 0;
@@ -538,7 +543,9 @@ static KOS_OBJ_ID flush(KOS_CONTEXT ctx,
             KOS_raise_errno_value(ctx, "fflush", stored_errno);
     }
 
-    return error ? KOS_BADPTR : this_obj;
+    this_.o = KOS_destroy_top_local(ctx, &this_);
+
+    return error ? KOS_BADPTR : this_.o;
 }
 
 static int is_eol(char c)
