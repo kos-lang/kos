@@ -118,23 +118,55 @@ if bin_cat {
         f.print("world")
     }
 
-    const proc = os.spawn(program = bin_cat, args = [name], capture_output = true)
+    const p = io.pipe();
+    defer { p.read.close() }
+
+    var proc = void
+    with p.write {
+        proc = os.spawn(program = bin_cat, args = [name], stdout = p.write)
+    }
     assert proc.pid > 0
 
-    assert "stdout" propertyof proc     # stdout was requested via capture_output
-    assert ! ("stderr" propertyof proc) # Separate stderr was not requested
-
-    const output = proc.stdout
-
-    assert (typeof output.read_lines) == "function"
-
-    const it = output.read_lines()
+    const it = p.read.read_lines()
     assert it() == "hello"
     assert it() == "world"
     expect_fail(it)
 
     const ret = proc.wait()
     assert ret.status == 0
+
+    fs.remove(name)
+}
+
+if bin_cat {
+    const name = "__spawn_test_file2"
+    fs.remove(name)
+
+    const p = io.pipe();
+    defer { p.write.close() }
+
+    var proc = void
+    with const f = io.create(name) {
+        defer { p.read.close() }
+
+        proc = os.spawn(program = bin_cat, stdin = p.read, stdout = f, stderr = f)
+    }
+    assert proc.pid > 0
+
+    p.write.print("hello")
+    p.write.print("world")
+    p.write.flush()
+    p.write.close()
+
+    const ret = proc.wait()
+    assert ret.status == 0
+
+    with const f = io.open(name, io.ro) {
+        const it = f.read_lines()
+        assert it() == "hello"
+        assert it() == "world"
+        expect_fail(it)
+    }
 
     fs.remove(name)
 }

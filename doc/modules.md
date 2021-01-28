@@ -3941,7 +3941,6 @@ spawn()
 -------
 
     spawn(program, args = [], env = {}, cwd = "", inherit_env = true,
-          capture_stdout = false, capture_stderr = false,
           stdin = void, stdout = void, stderr = void)
 
 Spawns a new process.
@@ -3959,15 +3958,10 @@ The arguments describe how the process will be spawned:
                     the spawned program together with environment variables from `env`.
                     Otherwise only environment variables from `env` are passed (if any).
                     Defaults to `true`.
- * capture_output - (Optional) If `true`, stdout and stderr are captured into a pipe object which
-                    behaves like a `io.file` object.
- * capture_stderr - (Optional) If `true`, stderr is captured into a pipe object separately from
-                    stdout.  Setting this flag to `true` requires that `capture_output` is also
-                    set to `true`.
- * stdin          - (Optional) File object open for reading or a string or buffer
+ * stdin          - (Optional) File object or pipe open for reading or a string or buffer
                     which is fed into the spawned program on stdin.
- * stdout         - (Optional) File object open for writing.
- * stderr         - (Optional) File object open for writing.
+ * stdout         - (Optional) File object or pipe open for writing.
+ * stderr         - (Optional) File object or pipe open for writing.
 
 Returns a `process` object which can be used to obtain information about the spawned child process.
 
