@@ -2,7 +2,7 @@
 # Copyright (c) 2014-2021 Chris Dragan
 
 import base.*
-import gc
+import kos
 
 const num_threads     = args.size > 1 ? integer(args[1]) : 2 # 16
 const num_iters       = args.size > 2 ? integer(args[2]) : 1 # 10
@@ -15,7 +15,7 @@ fun spawn
 fun go_deeper
 {
     try {
-        gc.collect_garbage()
+        kos.collect_garbage()
         const thread = async spawn()
         thread.wait()
     }

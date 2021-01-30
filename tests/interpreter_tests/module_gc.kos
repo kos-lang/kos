@@ -3,7 +3,7 @@
 
 import base
 import test_tools.expect_fail
-import gc
+import kos
 import io
 import fs
 import os
@@ -42,7 +42,7 @@ for const i in base.range(20) {
     sleep(0.1 + i * 0.1)
 }
 
-gc.collect_garbage()
+kos.collect_garbage()
 
 ##############################################################################
 # async
@@ -51,7 +51,7 @@ do {
     var thread = async sleep(1)
     thread = void
 
-    gc.collect_garbage()
+    kos.collect_garbage()
 }
 
 ##############################################################################
@@ -69,7 +69,7 @@ do {
         f = void
     }
 
-    gc.collect_garbage()
+    kos.collect_garbage()
 
     assert fs.is_file(name)
     fs.remove(name)

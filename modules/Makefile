@@ -5,7 +5,6 @@ depth = modules
 
 c_files  = kos_mod_base.c
 c_files += kos_mod_datetime.c
-c_files += kos_mod_gc.c
 c_files += kos_mod_fs.c
 c_files += kos_mod_io.c
 c_files += kos_mod_kos.c
