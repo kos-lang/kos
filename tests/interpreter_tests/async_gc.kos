@@ -1,0 +1,40 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2014-2021 Chris Dragan
+
+import base.*
+import gc
+
+const num_threads     = args.size > 1 ? integer(args[1]) : 2 # 16
+const num_iters       = args.size > 2 ? integer(args[2]) : 1 # 10
+const max_spawn_level = 0
+
+fun spawn
+{
+}
+
+fun go_deeper
+{
+    try {
+        gc.collect_garbage()
+        const thread = async spawn()
+        thread.wait()
+    }
+    catch const e { }
+
+    try {
+        go_deeper()
+    }
+    catch const e { }
+}
+
+fun thread_func
+{
+    for const iter in range(num_iters) {
+        go_deeper()
+    }
+}
+
+range(num_threads)
+    -> map(() => async thread_func())
+    -> array
+    -> each(thread => thread.wait())
