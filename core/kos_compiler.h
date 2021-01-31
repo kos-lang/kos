@@ -29,7 +29,8 @@ enum KOS_VAR_TYPE_E {
     VAR_ARGUMENT_IN_REG        = 8, /* Argument stored directly in a register */
     VAR_INDEPENDENT_ARG_IN_REG = 12,
     VAR_GLOBAL                 = 16,
-    VAR_MODULE                 = 32
+    VAR_MODULE                 = 32,
+    VAR_IMPORTED               = 64
 };
 
 enum KOS_VAR_ACTIVE_E {
@@ -50,6 +51,7 @@ typedef struct KOS_VAR_S {
     int                 num_assignments;   /* Number of writes to a variable (including closures)   */
     int                 local_reads;       /* Number of local reads from a variable                 */
     int                 local_assignments; /* Number of local writes to a variable                  */
+    int                 module_idx;        /* Index of module when type == VAR_IMPORTED             */
     int                 array_idx;
     unsigned            type         : 7;
     unsigned            is_active    : 3;  /* Becomes active/searchable after the node, which declares it. */
@@ -273,8 +275,7 @@ void kos_compiler_init(KOS_COMP_UNIT *program,
 int kos_compiler_predefine_global(KOS_COMP_UNIT *program,
                                   const char    *name,
                                   uint16_t       name_len,
-                                  int            idx,
-                                  int            is_const);
+                                  int            idx);
 
 int kos_compiler_predefine_module(KOS_COMP_UNIT *program,
                                   const char    *name,

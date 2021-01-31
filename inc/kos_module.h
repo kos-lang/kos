@@ -27,15 +27,20 @@ KOS_OBJ_ID KOS_load_module_from_memory(KOS_CONTEXT ctx,
 KOS_API
 KOS_OBJ_ID KOS_run_module(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj);
 
-KOS_API
-KOS_OBJ_ID KOS_repl(KOS_CONTEXT ctx,
-                    const char *module_name,
-                    const char *buf,
-                    unsigned    buf_size);
+enum KOS_REPL_FLAGS_E {
+    KOS_RUN_ONCE_NO_BASE = 0,
+    KOS_RUN_ONCE         = 1,
+    KOS_INIT_REPL        = 2,
+    KOS_RUN_AGAIN        = 3,
+    KOS_RUN_STDIN        = 4
+};
 
 KOS_API
-KOS_OBJ_ID KOS_repl_stdin(KOS_CONTEXT ctx,
-                          const char *module_name);
+KOS_OBJ_ID KOS_repl(KOS_CONTEXT           ctx,
+                    const char           *module_name,
+                    enum KOS_REPL_FLAGS_E flags,
+                    const char           *buf,
+                    unsigned              buf_size);
 
 KOS_API
 KOS_OBJ_ID KOS_get_module(KOS_CONTEXT ctx);

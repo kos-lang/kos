@@ -108,7 +108,6 @@
     KOS_raise_printf;
     KOS_realloc;
     KOS_repl;
-    KOS_repl_stdin;
     KOS_resume_context;
     KOS_run_module;
     KOS_set_builtin_dynamic_property;

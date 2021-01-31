@@ -3385,6 +3385,42 @@ cleanup:
     return error;
 }
 
+int kos_parser_import_base(KOS_PARSER            *parser,
+                           struct KOS_AST_NODE_S *ast)
+{
+    KOS_AST_NODE *import_node;
+    KOS_AST_NODE *ident_node;
+    KOS_TOKEN     token;
+    int           error = KOS_SUCCESS;
+
+    assert(ast);
+    assert(ast->type == NT_SCOPE);
+    assert( ! ast->next);
+
+    memset(&token, 0, sizeof(token));
+
+    TRY(new_node(parser, &import_node, NT_IMPORT));
+
+    TRY(push_node(parser, import_node, NT_IDENTIFIER, &ident_node));
+    token.begin       = "base";
+    token.length      = 4;
+    token.type        = TT_IDENTIFIER;
+    ident_node->token = token;
+
+    TRY(push_node(parser, import_node, NT_IDENTIFIER, &ident_node));
+    token.begin       = "*";
+    token.length      = 1;
+    token.type        = TT_OPERATOR;
+    token.op          = OT_MUL;
+    ident_node->token = token;
+
+    import_node->next = ast->children;
+    ast->children     = import_node;
+
+cleanup:
+    return error;
+}
+
 void kos_parser_destroy(KOS_PARSER *parser)
 {
     parser->ast_buf = KOS_NULL;

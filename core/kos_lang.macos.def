@@ -107,7 +107,6 @@ _KOS_raise_generator_end
 _KOS_raise_printf
 _KOS_realloc
 _KOS_repl
-_KOS_repl_stdin
 _KOS_resume_context
 _KOS_run_module
 _KOS_set_builtin_dynamic_property

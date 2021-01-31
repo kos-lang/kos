@@ -352,7 +352,7 @@ static int lookup_var(KOS_COMP_UNIT      *program,
         const int  is_local_arg  = node->is_local_var &&
                                    (var->type & (VAR_ARGUMENT | VAR_ARGUMENT_IN_REG));
         KOS_SCOPE *scope         = var->scope;
-        const int  skip_reg      = var->type == VAR_GLOBAL || var->type == VAR_MODULE || node->is_const_fun;
+        const int  skip_reg      = (var->type & (VAR_GLOBAL | VAR_MODULE | VAR_IMPORTED)) || node->is_const_fun;
 
         *out_var = var;
 
@@ -1001,6 +1001,10 @@ static int import_global(const char *global_name,
     var = kos_find_var(info->program->scope_stack->vars, &token);
 
     assert(var);
+
+    if (var->type == VAR_IMPORTED)
+        return KOS_SUCCESS;
+
     assert(var->type == VAR_GLOBAL);
 
     TRY(gen_reg(info->program, &reg));
@@ -4397,6 +4401,10 @@ static int identifier(KOS_COMP_UNIT      *program,
 
             case VAR_GLOBAL:
                 TRY(gen_instr2(program, INSTR_GET_GLOBAL, (*reg)->reg, var->array_idx));
+                break;
+
+            case VAR_IMPORTED:
+                TRY(gen_instr3(program, INSTR_GET_MOD_ELEM, (*reg)->reg, var->module_idx, var->array_idx));
                 break;
 
             case VAR_MODULE:

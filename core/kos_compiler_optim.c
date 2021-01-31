@@ -325,7 +325,7 @@ static int count_and_update_vars(KOS_RED_BLACK_NODE *node,
     }
 
     /* Trigger another optimization pass if variable is not needed */
-    if ((var->num_assignments || var->num_reads_prev != var->num_reads) && ! var->num_reads && var->type != VAR_GLOBAL)
+    if ((var->num_assignments || var->num_reads_prev != var->num_reads) && ! var->num_reads && (var->type != VAR_GLOBAL))
         trigger_opt_pass = 1;
 
     ((UPDATE_VARS *)cookie)->program->num_optimizations += trigger_opt_pass;
@@ -1155,7 +1155,7 @@ static int assignment(KOS_COMP_UNIT *program,
                     var->value = rhs_node;
             }
 
-            if ( ! var->num_reads_prev && var->type != VAR_GLOBAL) {
+            if ( ! var->num_reads_prev && (var->type != VAR_GLOBAL)) {
                 collapse(node, NT_VOID_LITERAL, TT_KEYWORD, KW_VOID, KOS_NULL, 0);
                 ++program->num_optimizations;
             }

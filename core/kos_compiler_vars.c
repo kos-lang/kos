@@ -11,12 +11,13 @@
 #include <string.h>
 #include <stdint.h>
 
-static const char str_err_const_assignment[]       = "const variable is not assignable";
-static const char str_err_module_global_conflict[] = "unable to import module, a global variable with this name already exists";
-static const char str_err_redefined_var[]          = "redefined variable";
-static const char str_err_undefined_var[]          = "undeclared identifier";
-static const char str_err_unexpected_global_this[] = "'this' not allowed in global scope";
-static const char str_err_unexpected_yield[]       = "'yield' not allowed in global scope";
+static const char str_err_const_assignment[]        = "const variable is not assignable";
+static const char str_err_module_global_conflict[]  = "unable to import module, a global variable with this name already exists";
+static const char str_err_no_such_module_variable[] = "no such global in module";
+static const char str_err_redefined_var[]           = "redefined variable";
+static const char str_err_undefined_var[]           = "undeclared identifier";
+static const char str_err_unexpected_global_this[]  = "'this' not allowed in global scope";
+static const char str_err_unexpected_yield[]        = "'yield' not allowed in global scope";
 
 static int visit_node(KOS_COMP_UNIT *program,
                       KOS_AST_NODE  *node);
@@ -325,7 +326,7 @@ static int lookup_and_mark_var(KOS_COMP_UNIT *program,
         }
 
         /* Mark own args, globals and modules as local */
-        if (scope == local_fun_scope || var->type == VAR_GLOBAL || var->type == VAR_MODULE)
+        if (scope == local_fun_scope || (var->type & (VAR_GLOBAL | VAR_MODULE | VAR_IMPORTED)))
             node->is_local_var = 1;
 
         assert(var->scope == scope);
@@ -358,12 +359,12 @@ enum DEFINE_VAR_GLOBAL {
 
 static int define_var(KOS_COMP_UNIT         *program,
                       enum DEFINE_VAR_CONST  is_const,
-                      enum DEFINE_VAR_GLOBAL global,
                       KOS_AST_NODE          *node,
                       KOS_VAR              **out_var)
 {
-    int      error  = KOS_SUCCESS;
-    KOS_VAR *var;
+    KOS_VAR               *var;
+    enum DEFINE_VAR_GLOBAL global = LOCAL;
+    int                    error  = KOS_SUCCESS;
 
     assert(node->type == NT_IDENTIFIER);
     assert(program->scope_stack);
@@ -458,7 +459,13 @@ static int import_global(const char *global_name,
 
         g_node->type = NT_IDENTIFIER;
 
-        error = define_var(info->program, CONSTANT, GLOBAL, g_node, &var);
+        error = define_var(info->program, CONSTANT, g_node, &var);
+
+        if ( ! error && (var->type != VAR_GLOBAL)) {
+            var->type       = VAR_IMPORTED;
+            var->module_idx = module_idx;
+            var->array_idx  = global_idx;
+        }
     }
     else
         error = KOS_ERROR_OUT_OF_MEMORY;
@@ -529,10 +536,28 @@ static int import(KOS_COMP_UNIT *program,
             for ( ; node; node = node->next) {
 
                 KOS_VAR *var;
+                int      global_idx;
 
                 assert(node->token.type == TT_IDENTIFIER || node->token.type == TT_KEYWORD);
 
-                error = define_var(program, CONSTANT, GLOBAL, node, &var);
+                error = kos_comp_get_global_idx(program->ctx,
+                                                module_idx,
+                                                node->token.begin,
+                                                node->token.length,
+                                                &global_idx);
+                if (error) {
+                    program->error_token = &node->token;
+                    program->error_str   = str_err_no_such_module_variable;
+                    RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
+                }
+
+                error = define_var(program, CONSTANT, node, &var);
+
+                if ( ! error && (var->type != VAR_GLOBAL)) {
+                    var->type       = VAR_IMPORTED;
+                    var->array_idx  = global_idx;
+                    var->module_idx = module_idx;
+                }
             }
         }
     }
@@ -587,7 +612,7 @@ static int var_node(KOS_COMP_UNIT *program,
     KOS_VAR                    *var;
 
     for (node = node->children; node; node = node->next) {
-        TRY(define_var(program, is_const, LOCAL, node, &var));
+        TRY(define_var(program, is_const, node, &var));
         var->is_active = VAR_INACTIVE;
     }
 
@@ -749,7 +774,7 @@ static int function_literal(KOS_COMP_UNIT *program,
             assert(arg_node->type == NT_IDENTIFIER);
         }
 
-        TRY(define_var(program, VARIABLE, LOCAL, ident_node, &var));
+        TRY(define_var(program, VARIABLE, ident_node, &var));
         assert( ! ident_node->is_scope);
         assert(ident_node->is_var);
         assert(ident_node->u.var == var);
@@ -1215,10 +1240,9 @@ static int predefine_global(KOS_COMP_UNIT      *program,
 int kos_compiler_predefine_global(KOS_COMP_UNIT *program,
                                   const char    *name,
                                   uint16_t       name_len,
-                                  int            idx,
-                                  int            is_const)
+                                  int            idx)
 {
-    return predefine_global(program, name, name_len, idx, is_const, VAR_GLOBAL);
+    return predefine_global(program, name, name_len, idx, program->is_interactive ? 0 : 1, VAR_GLOBAL);
 }
 
 int kos_compiler_predefine_module(KOS_COMP_UNIT *program,

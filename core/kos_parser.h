@@ -42,6 +42,9 @@ void kos_parser_init(KOS_PARSER           *parser,
 int  kos_parser_parse(KOS_PARSER             *parser,
                       struct KOS_AST_NODE_S **ret);
 
+int  kos_parser_import_base(KOS_PARSER            *parser,
+                            struct KOS_AST_NODE_S *ast);
+
 void kos_parser_destroy(KOS_PARSER *parser);
 
 #endif
