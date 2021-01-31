@@ -1845,7 +1845,7 @@ KOS_OBJ_ID KOS_repl(KOS_CONTEXT           ctx,
     KOS_LOCAL             module_name_str;
     KOS_OBJ_ID            ret        = KOS_BADPTR;
     KOS_INSTANCE         *inst       = ctx->inst;
-    const size_t          name_size  = strlen(module_name);
+    const unsigned        name_size  = (unsigned)strlen(module_name);
     int                   chain_init = 0;
     int                   module_idx = -1;
     int                   error      = KOS_SUCCESS;
@@ -1867,17 +1867,17 @@ KOS_OBJ_ID KOS_repl(KOS_CONTEXT           ctx,
         TRY(append_stdin(ctx, &storage));
 
         buf      = storage.buffer;
-        buf_size = storage.size;
+        buf_size = (unsigned)storage.size;
     }
 
     if (flags != KOS_RUN_AGAIN)
         TRY(insert_first_search_path(ctx, KOS_CONST_ID(str_cur_dir)));
 
-    /* Load base module first, so that it ends up at index 0 */
-    TRY(load_base_module(ctx, module_name, name_size));
-
     module_name_str.o = KOS_new_string(ctx, module_name, name_size);
     TRY_OBJID(module_name_str.o);
+
+    /* Load base module first, so that it ends up at index 0 */
+    TRY(load_base_module(ctx, module_name, name_size));
 
     /* Find module object */
     {
