@@ -159,6 +159,14 @@ do {                                                                   \
                               TO_SMALL_INT((int)(value)), KOS_NULL));  \
 } while (0)
 
+#define TRY_ADD_STRING_CONSTANT(ctx, module, name, value)              \
+do {                                                                   \
+    KOS_DECLARE_STATIC_CONST_STRING(str_name, name);                   \
+    KOS_DECLARE_STATIC_CONST_STRING(str_value, value);                 \
+    TRY(KOS_module_add_global((ctx), (module), KOS_CONST_ID(str_name), \
+                              KOS_CONST_ID(str_value), KOS_NULL));     \
+} while (0)
+
 #ifdef KOS_EXTERNAL_MODULES
 #   define KOS_INIT_MODULE(name) KOS_EXTERN_C KOS_EXPORT_SYMBOL int init_kos_module
 #else

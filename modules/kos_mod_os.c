@@ -32,6 +32,33 @@
 #   include <unistd.h>
 #endif
 
+#if defined(__ANDROID__)
+#   define KOS_SYSNAME "Android"
+#elif defined(__APPLE__)
+#   include <TargetConditionals.h>
+#   if (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE) || (defined(TARGET_OS_SIMULATOR) && TARGET_OS_SIMULATOR)
+#       define KOS_SYSNAME "iOS"
+#   else
+#       define KOS_SYSNAME "macOS"
+#   endif
+#elif defined(__FreeBSD__)
+#   define KOS_SYSNAME "FreeBSD"
+#elif defined(__HAIKU__)
+#   define KOS_SYSNAME "Haiku"
+#elif defined(__linux__)
+#   define KOS_SYSNAME "Linux"
+#elif defined(__NetBSD__)
+#   define KOS_SYSNAME "NetBSD"
+#elif defined(__OpenBSD__)
+#   define KOS_SYSNAME "OpenBSD"
+#elif defined(__QNX__)
+#   define KOS_SYSNAME "QNX"
+#elif defined(_WIN32)
+#   define KOS_SYSNAME "Windows"
+#else
+#   define KOS_SYSNAME "Unknown"
+#endif
+
 KOS_DECLARE_STATIC_CONST_STRING(str_args,               "args");
 KOS_DECLARE_STATIC_CONST_STRING(str_cwd,                "cwd");
 KOS_DECLARE_STATIC_CONST_STRING(str_env,                "env");
@@ -1060,15 +1087,15 @@ KOS_INIT_MODULE(os)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     KOS_LOCAL wait_func;
 
     const KOS_ARG_DESC spawn_args[11] = {
-        { KOS_CONST_ID(str_program),        KOS_BADPTR      },
-        { KOS_CONST_ID(str_args),           KOS_EMPTY_ARRAY },
-        { KOS_CONST_ID(str_env),            KOS_VOID        },
-        { KOS_CONST_ID(str_cwd),            KOS_STR_EMPTY   },
-        { KOS_CONST_ID(str_inherit_env),    KOS_TRUE        },
-        { KOS_CONST_ID(str_stdin),          KOS_VOID        },
-        { KOS_CONST_ID(str_stdout),         KOS_VOID        },
-        { KOS_CONST_ID(str_stderr),         KOS_VOID        },
-        { KOS_BADPTR,                       KOS_BADPTR      }
+        { KOS_CONST_ID(str_program),     KOS_BADPTR      },
+        { KOS_CONST_ID(str_args),        KOS_EMPTY_ARRAY },
+        { KOS_CONST_ID(str_env),         KOS_VOID        },
+        { KOS_CONST_ID(str_cwd),         KOS_STR_EMPTY   },
+        { KOS_CONST_ID(str_inherit_env), KOS_TRUE        },
+        { KOS_CONST_ID(str_stdin),       KOS_VOID        },
+        { KOS_CONST_ID(str_stdout),      KOS_VOID        },
+        { KOS_CONST_ID(str_stderr),      KOS_VOID        },
+        { KOS_BADPTR,                    KOS_BADPTR      }
     };
 
     KOS_init_local_with(ctx, &module, module_obj);
@@ -1088,6 +1115,8 @@ KOS_INIT_MODULE(os)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_CONSTRUCTOR(    ctx, module.o,               "process", process_ctor,   KOS_NULL, &wait_proto.o);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, wait_proto.o, "wait",    wait_for_child, KOS_NULL);
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, wait_proto.o, "pid",     get_pid,        0);
+
+    TRY_ADD_STRING_CONSTANT(ctx, module.o, "sysname", KOS_SYSNAME);
 
     TRY(KOS_array_write(ctx, priv.o, 0, wait_proto.o));
 
