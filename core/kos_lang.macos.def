@@ -96,7 +96,6 @@ _KOS_new_string_from_codes
 _KOS_object_to_string
 _KOS_object_to_string_or_cstr_vec
 _KOS_os_get_file
-_KOS_os_make_file_object
 _KOS_print_exception
 _KOS_print_to_cstr_vec
 _KOS_raise_errno

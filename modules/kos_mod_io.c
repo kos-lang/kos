@@ -110,13 +110,6 @@ cleanup:
     return error ? KOS_BADPTR : obj_id;
 }
 
-KOS_OBJ_ID KOS_os_make_file_object(KOS_CONTEXT ctx,
-                                   KOS_OBJ_ID  io_module_obj,
-                                   FILE       *file)
-{
-    return make_file_object(ctx, io_module_obj, file, AUTO_CLOSE);
-}
-
 /* @item io file()
  *
  *     file(filename, flags = rw)

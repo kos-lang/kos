@@ -13,11 +13,6 @@ extern "C" {
 #endif
 
 KOS_API
-KOS_OBJ_ID KOS_os_make_file_object(KOS_CONTEXT ctx,
-                                   KOS_OBJ_ID  io_module_obj,
-                                   FILE       *file);
-
-KOS_API
 FILE *KOS_os_get_file(KOS_CONTEXT ctx,
                       KOS_OBJ_ID  file_obj);
 
