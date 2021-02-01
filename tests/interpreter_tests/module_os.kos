@@ -177,3 +177,16 @@ if bin_cat {
 assert typeof os.sysname == "string"
 assert os.sysname != "Unknown"
 assert os.sysname.size
+
+##############################################################################
+# os.getenv
+
+do {
+    const path = os.getenv("PATH")
+    assert typeof path == "string"
+    assert path.size
+}
+
+assert os.getenv("non-existent env")      == void
+assert os.getenv("non-existent env", 123) == 123
+assert os.getenv(default_value = 456, key = "non-existent env") == 456

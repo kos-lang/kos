@@ -15,6 +15,7 @@
 #include "../core/kos_debug.h"
 #include "../core/kos_try.h"
 #include "kos_mod_io.h"
+#include <stdlib.h>
 #include <string.h>
 
 #ifdef _WIN32
@@ -23,11 +24,11 @@
 #   pragma warning( disable : 4255 4668 )
 #   include <windows.h>
 #   pragma warning( pop )
+#   pragma warning( disable : 4996 ) /* 'getenv': This function may be unsafe */
 #else
 #   include <errno.h>
 #   include <fcntl.h>
 #   include <signal.h>
-#   include <stdlib.h>
 #   include <sys/wait.h>
 #   include <unistd.h>
 #endif
@@ -61,12 +62,14 @@
 
 KOS_DECLARE_STATIC_CONST_STRING(str_args,               "args");
 KOS_DECLARE_STATIC_CONST_STRING(str_cwd,                "cwd");
+KOS_DECLARE_STATIC_CONST_STRING(str_default_value,      "default_value");
 KOS_DECLARE_STATIC_CONST_STRING(str_env,                "env");
 KOS_DECLARE_STATIC_CONST_STRING(str_eq,                 "=");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_string, "invalid string");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_spawned,    "object is not a spawned process");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_use_spawn,      "use os.spawn() to launch processes");
 KOS_DECLARE_STATIC_CONST_STRING(str_inherit_env,        "inherit_env");
+KOS_DECLARE_STATIC_CONST_STRING(str_key,                "key");
 KOS_DECLARE_STATIC_CONST_STRING(str_program,            "program");
 KOS_DECLARE_STATIC_CONST_STRING(str_signal,             "signal");
 KOS_DECLARE_STATIC_CONST_STRING(str_status,             "status");
@@ -1078,6 +1081,62 @@ cleanup:
     return error ? KOS_BADPTR : pid;
 }
 
+/* @item os getenv()
+ *
+ *     getenv(key, default_value = void)
+ *
+ * Returns contents of an environment variable.
+ *
+ * If the environment variable does not exist, returns the `default_value` value.
+ *
+ * Example:
+ *
+ *      > getenv("PATH")
+ *      "/usr/bin:/bin:/usr/sbin:/sbin"
+ */
+const KOS_ARG_DESC getenv_args[3] = {
+    { KOS_CONST_ID(str_key),           KOS_BADPTR },
+    { KOS_CONST_ID(str_default_value), KOS_VOID   },
+    { KOS_BADPTR,                      KOS_BADPTR }
+};
+static KOS_OBJ_ID kos_getenv(KOS_CONTEXT ctx,
+                             KOS_OBJ_ID  this_obj,
+                             KOS_OBJ_ID  args_obj)
+{
+    KOS_VECTOR  cstr;
+    KOS_OBJ_ID  obj = KOS_BADPTR;
+    const char *env_var;
+    int         error;
+
+    assert(KOS_get_array_size(args_obj) >= 2);
+
+    KOS_vector_init(&cstr);
+
+    obj = KOS_array_read(ctx, args_obj, 0);
+    TRY_OBJID(obj);
+
+    TRY(KOS_string_to_cstr_vec(ctx, obj, &cstr));
+
+    env_var = getenv(cstr.buffer);
+
+    if (env_var) {
+
+        const size_t len = strlen(env_var);
+
+        obj = KOS_new_string(ctx, env_var, len);
+        TRY_OBJID(obj);
+    }
+    else {
+        obj = KOS_array_read(ctx, args_obj, 1);
+        TRY_OBJID(obj);
+    }
+
+cleanup:
+    KOS_vector_destroy(&cstr);
+
+    return error ? KOS_BADPTR : obj;
+}
+
 KOS_INIT_MODULE(os)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 {
     int       error = KOS_SUCCESS;
@@ -1111,11 +1170,23 @@ KOS_INIT_MODULE(os)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     KOS_atomic_write_relaxed_ptr(OBJPTR(MODULE, module.o)->priv, priv.o);
 
     TRY_ADD_FUNCTION(       ctx, module.o,               "spawn",   spawn,          spawn_args);
+    TRY_ADD_FUNCTION(       ctx, module.o,               "getenv",  kos_getenv,     getenv_args);
 
     TRY_ADD_CONSTRUCTOR(    ctx, module.o,               "process", process_ctor,   KOS_NULL, &wait_proto.o);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, wait_proto.o, "wait",    wait_for_child, KOS_NULL);
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, wait_proto.o, "pid",     get_pid,        0);
 
+    /* @item os sysname
+     *
+     *     sysname
+     *
+     * Constant string representing Operating System's name where Kos is running.
+     *
+     * Example:
+     *
+     *     > sysname
+     *     "Linux"
+     */
     TRY_ADD_STRING_CONSTANT(ctx, module.o, "sysname", KOS_SYSNAME);
 
     TRY(KOS_array_write(ctx, priv.o, 0, wait_proto.o));

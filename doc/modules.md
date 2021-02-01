@@ -190,10 +190,12 @@ Table of Contents
     * [sqrt()](#sqrt)
     * [tan()](#tan)
   * [os](#os)
+    * [getenv()](#getenv)
     * [process()](#process)
       * [process.prototype.pid](#processprototypepid)
       * [process.prototype.wait()](#processprototypewait)
     * [spawn()](#spawn)
+    * [sysname](#sysname)
   * [random](#random)
     * [rand\_float()](#rand_float)
     * [rand\_integer()](#rand_integer)
@@ -3886,6 +3888,20 @@ Example:
 os
 ==
 
+getenv()
+--------
+
+    getenv(key, default_value = void)
+
+Returns contents of an environment variable.
+
+If the environment variable does not exist, returns the `default_value` value.
+
+Example:
+
+     > getenv("PATH")
+     "/usr/bin:/bin:/usr/sbin:/sbin"
+
 process()
 ---------
 
@@ -3964,6 +3980,18 @@ The arguments describe how the process will be spawned:
  * stderr         - (Optional) File object or pipe open for writing.
 
 Returns a `process` object which can be used to obtain information about the spawned child process.
+
+sysname
+-------
+
+    sysname
+
+Constant string representing Operating System's name where Kos is running.
+
+Example:
+
+    > sysname
+    "Linux"
 
 random
 ======
