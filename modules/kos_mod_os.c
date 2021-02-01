@@ -882,7 +882,7 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
             /* Explicitly close the read end of the status pipe */
             close(exec_status_fd[0]);
 
-            /* Use redirected I/O */
+            /* Use redirected I/O, if provided by caller */
             redirect_io(stdin_file,  STDIN_FILENO,  exec_status_fd[1]);
             redirect_io(stdout_file, STDOUT_FILENO, exec_status_fd[1]);
             redirect_io(stderr_file, STDERR_FILENO, exec_status_fd[1]);
@@ -1123,7 +1123,7 @@ static KOS_OBJ_ID kos_getenv(KOS_CONTEXT ctx,
 
         const size_t len = strlen(env_var);
 
-        obj = KOS_new_string(ctx, env_var, len);
+        obj = KOS_new_string(ctx, env_var, (unsigned)len);
         TRY_OBJID(obj);
     }
     else {
