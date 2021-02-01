@@ -1094,11 +1094,6 @@ cleanup:
  *      > getenv("PATH")
  *      "/usr/bin:/bin:/usr/sbin:/sbin"
  */
-const KOS_ARG_DESC getenv_args[3] = {
-    { KOS_CONST_ID(str_key),           KOS_BADPTR },
-    { KOS_CONST_ID(str_default_value), KOS_VOID   },
-    { KOS_BADPTR,                      KOS_BADPTR }
-};
 static KOS_OBJ_ID kos_getenv(KOS_CONTEXT ctx,
                              KOS_OBJ_ID  this_obj,
                              KOS_OBJ_ID  args_obj)
@@ -1155,6 +1150,12 @@ KOS_INIT_MODULE(os)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
         { KOS_CONST_ID(str_stdout),      KOS_VOID        },
         { KOS_CONST_ID(str_stderr),      KOS_VOID        },
         { KOS_BADPTR,                    KOS_BADPTR      }
+    };
+
+    const KOS_ARG_DESC getenv_args[3] = {
+        { KOS_CONST_ID(str_key),           KOS_BADPTR },
+        { KOS_CONST_ID(str_default_value), KOS_VOID   },
+        { KOS_BADPTR,                      KOS_BADPTR }
     };
 
     KOS_init_local_with(ctx, &module, module_obj);
