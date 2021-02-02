@@ -345,14 +345,14 @@ static KOS_OBJ_ID kos_pipe(KOS_CONTEXT ctx,
     {
         int pipe_fd[2];
 
-        if ((pipe(pipe_fd) == 0) || kos_seq_fail()) {
+        if ( ! kos_seq_fail() && (pipe(pipe_fd) == 0)) {
             read_pipe  = pipe_fd[0];
             write_pipe = pipe_fd[1];
             (void)fcntl(read_pipe, F_SETFD, FD_CLOEXEC);
             (void)fcntl(write_pipe, F_SETFD, FD_CLOEXEC);
         }
         else
-            stored_errno = errno;
+            stored_errno = errno ? errno : EPIPE;
     }
 #endif
 
