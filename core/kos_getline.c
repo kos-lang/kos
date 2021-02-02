@@ -231,7 +231,7 @@ static int receive_cursor_pos(unsigned *pos)
     do {
         c = console_read();
 
-        if (c == EOF)
+        if ((c < 0) || (c > 255))
             return check_error(stdin);
 
         buf[i++] = (char)c;
