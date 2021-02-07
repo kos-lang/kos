@@ -1245,7 +1245,7 @@ some functions.
 exception()
 -----------
 
-    exception([value])
+    exception(value = void)
 
 Exception object class.
 
@@ -1819,17 +1819,32 @@ object()
 --------
 
     object()
+    object(iterable)
+    object(keys, values)
 
 Object type class.
 
-Returns a new empty object.  Equivalent to empty object literal `{}`.
+If no arguments are provided, returns a new empty object.  Equivalent to empty object literal `{}`.
+
+If one argument is provided - `iterable`, it is iterated over and elements extracted from
+it must be key-value pairs.  The new object is then filled with these keys and values.
+For example, `iterable` can be an array of 2-element arrays, another object or a generator
+which yields key-balue pairs.
+
+If two arguments are provided, subsequent values extracted from `keys` and `values` are used
+to create properties of the new object.  Both `key` and `values` can be generators.  The values
+extracted from `keys` must be strings.
 
 `object.prototype` is directly or indirectly the prototype for all object types.
 
-Example:
+Examples:
 
     > object()
     {}
+    > object([["a", 1], ["b", 2], ["c", 3]])
+    {"a": 1, "b": 2, "c": 3}
+    > object(["a", "b", "c"], [1, 2, 3])
+    {"a": 1, "b": 2, "c": 3}
 
 object.prototype.all()
 ----------------------

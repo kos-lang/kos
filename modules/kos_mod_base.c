@@ -16,6 +16,8 @@
 #include "../core/kos_misc.h"
 #include "../core/kos_try.h"
 #include <assert.h>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 #include <limits.h>
 #include <memory.h>
 #include <stdio.h>
@@ -60,6 +62,7 @@ KOS_DECLARE_STATIC_CONST_STRING(str_gen_ready,                    "ready");
 KOS_DECLARE_STATIC_CONST_STRING(str_gen_running,                  "running");
 KOS_DECLARE_STATIC_CONST_STRING(str_inclusive,                    "inclusive");
 KOS_DECLARE_STATIC_CONST_STRING(str_key,                          "key");
+KOS_DECLARE_STATIC_CONST_STRING(str_keys,                         "keys");
 KOS_DECLARE_STATIC_CONST_STRING(str_new_value,                    "new_value");
 KOS_DECLARE_STATIC_CONST_STRING(str_obj,                          "obj");
 KOS_DECLARE_STATIC_CONST_STRING(str_old_value,                    "old_value");
@@ -70,14 +73,16 @@ KOS_DECLARE_STATIC_CONST_STRING(str_source,                       "source");
 KOS_DECLARE_STATIC_CONST_STRING(str_str,                          "str");
 KOS_DECLARE_STATIC_CONST_STRING(str_substr,                       "substr");
 KOS_DECLARE_STATIC_CONST_STRING(str_value,                        "value");
+KOS_DECLARE_STATIC_CONST_STRING(str_values,                       "values");
 
-#define TRY_CREATE_CONSTRUCTOR(name, module)               \
+#define TRY_CREATE_CONSTRUCTOR(name, module, args)         \
 do {                                                       \
     KOS_DECLARE_STATIC_CONST_STRING(str_name, #name);      \
     TRY(create_class(ctx,                                  \
                      module,                               \
                      KOS_CONST_ID(str_name),               \
                      name##_constructor,                   \
+                     (args),                               \
                      ctx->inst->prototypes.name##_proto)); \
 } while (0)
 
@@ -251,20 +256,22 @@ static int create_class(KOS_CONTEXT          ctx,
                         KOS_OBJ_ID           module_obj,
                         KOS_OBJ_ID           str_name,
                         KOS_FUNCTION_HANDLER constructor,
+                        const KOS_ARG_DESC  *args,
                         KOS_OBJ_ID           prototype)
 {
     int        error    = KOS_SUCCESS;
     KOS_OBJ_ID func_obj = KOS_BADPTR;
     KOS_LOCAL  module;
+    KOS_LOCAL  proto;
 
     KOS_init_local_with(ctx, &module, module_obj);
+    KOS_init_local_with(ctx, &proto,  prototype);
 
-    func_obj = KOS_new_class(ctx, prototype);
+    func_obj = KOS_new_builtin_class(ctx, str_name, constructor, args);
     TRY_OBJID(func_obj);
 
-    OBJPTR(CLASS, func_obj)->handler = constructor;
-    OBJPTR(CLASS, func_obj)->module  = module.o;
-    OBJPTR(CLASS, func_obj)->name    = str_name;
+    OBJPTR(CLASS, func_obj)->prototype = proto.o;
+    OBJPTR(CLASS, func_obj)->module    = module.o;
 
     TRY(KOS_module_add_global(ctx,
                               module.o,
@@ -273,7 +280,7 @@ static int create_class(KOS_CONTEXT          ctx,
                               KOS_NULL));
 
 cleanup:
-    KOS_destroy_top_local(ctx, &module);
+    KOS_destroy_top_locals(ctx, &proto, &module);
     return error;
 }
 
@@ -864,23 +871,163 @@ cleanup:
 /* @item base object()
  *
  *     object()
+ *     object(iterable)
+ *     object(keys, values)
  *
  * Object type class.
  *
- * Returns a new empty object.  Equivalent to empty object literal `{}`.
+ * If no arguments are provided, returns a new empty object.  Equivalent to empty object literal `{}`.
+ *
+ * If one argument is provided - `iterable`, it is iterated over and elements extracted from
+ * it must be key-value pairs.  The new object is then filled with these keys and values.
+ * For example, `iterable` can be an array of 2-element arrays, another object or a generator
+ * which yields key-balue pairs.
+ *
+ * If two arguments are provided, subsequent values extracted from `keys` and `values` are used
+ * to create properties of the new object.  Both `key` and `values` can be generators.  The values
+ * extracted from `keys` must be strings.
  *
  * `object.prototype` is directly or indirectly the prototype for all object types.
  *
- * Example:
+ * Examples:
  *
  *     > object()
  *     {}
+ *     > object([["a", 1], ["b", 2], ["c", 3]])
+ *     {"a": 1, "b": 2, "c": 3}
+ *     > object(["a", "b", "c"], [1, 2, 3])
+ *     {"a": 1, "b": 2, "c": 3}
  */
+static const KOS_ARG_DESC object_args[3] = {
+    { KOS_CONST_ID(str_keys),   KOS_VOID   },
+    { KOS_CONST_ID(str_values), KOS_VOID   },
+    { KOS_BADPTR,               KOS_BADPTR }
+};
+
 static KOS_OBJ_ID object_constructor(KOS_CONTEXT ctx,
                                      KOS_OBJ_ID  this_obj,
                                      KOS_OBJ_ID  args_obj)
 {
-    return KOS_new_object(ctx);
+    KOS_LOCAL keys;
+    KOS_LOCAL values;
+    KOS_LOCAL key;
+    KOS_LOCAL elem;
+    KOS_LOCAL obj;
+    int       error = KOS_SUCCESS;
+
+    assert(KOS_get_array_size(args_obj) >= 2);
+
+    KOS_init_locals(ctx, 5, &keys, &values, &key, &elem, &obj);
+
+    values.o = args_obj;
+
+    keys.o = KOS_array_read(ctx, args_obj, 0);
+    TRY_OBJID(keys.o);
+
+    values.o = KOS_array_read(ctx, values.o, 1);
+    TRY_OBJID(values.o);
+
+    obj.o = KOS_new_object(ctx);
+    TRY_OBJID(obj.o);
+
+    if (values.o == KOS_VOID) {
+        keys.o = KOS_new_iterator(ctx, keys.o, KOS_CONTENTS);
+        TRY_OBJID(keys.o);
+
+        while ( ! KOS_iterator_next(ctx, keys.o)) {
+
+            assert( ! IS_BAD_PTR(KOS_get_walk_key(keys.o)));
+            assert( ! IS_BAD_PTR(KOS_get_walk_value(keys.o)));
+
+            elem.o = KOS_get_walk_key(keys.o);
+
+            if (GET_OBJ_TYPE(elem.o) == OBJ_STRING)
+                TRY(KOS_set_property(ctx, obj.o, elem.o, KOS_get_walk_value(keys.o)));
+            else {
+                int64_t idx;
+
+                assert(GET_OBJ_TYPE(elem.o) <= OBJ_INTEGER);
+
+                TRY(KOS_get_integer(ctx, elem.o, &idx));
+
+                elem.o = KOS_get_walk_value(keys.o);
+
+                if (GET_OBJ_TYPE(elem.o) != OBJ_ARRAY) {
+                    KOS_raise_printf(ctx,
+                                     "element %" PRId64 " passed to object class is %s, but expected array",
+                                     idx,
+                                     KOS_get_type_name(GET_OBJ_TYPE(elem.o)));
+                    RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                }
+
+                if (KOS_get_array_size(elem.o) < 2) {
+                    KOS_raise_printf(ctx,
+                                     "element %" PRId64 " is an array with %u element%s, but expected 2 elements",
+                                     idx,
+                                     KOS_get_array_size(elem.o),
+                                     KOS_get_array_size(elem.o) == 0 ? "s" : "");
+                    RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                }
+
+                key.o = KOS_array_read(ctx, elem.o, 0);
+                TRY_OBJID(key.o);
+
+                elem.o = KOS_array_read(ctx, elem.o, 1);
+                TRY_OBJID(elem.o);
+
+                if (GET_OBJ_TYPE(key.o) != OBJ_STRING) {
+                    KOS_raise_printf(ctx,
+                                     "element %" PRId64 " has key which is %s, but expected string",
+                                     idx,
+                                     KOS_get_type_name(GET_OBJ_TYPE(key.o)));
+                    RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                }
+
+                TRY(KOS_set_property(ctx, obj.o, key.o, elem.o));
+            }
+        }
+    }
+    else {
+
+        const KOS_TYPE type = GET_OBJ_TYPE(keys.o);
+
+        if ((type != OBJ_ARRAY) && (type != OBJ_STRING) && (type != OBJ_FUNCTION)) {
+            KOS_raise_printf(ctx,
+                             "'keys' argument is %s, unable to extract object keys",
+                             KOS_get_type_name(type));
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+
+        keys.o = KOS_new_iterator(ctx, keys.o, KOS_CONTENTS);
+        TRY_OBJID(keys.o);
+
+        values.o = KOS_new_iterator(ctx, values.o, KOS_CONTENTS);
+        TRY_OBJID(values.o);
+
+        while ( ! KOS_iterator_next(ctx, keys.o) && ! KOS_iterator_next(ctx, values.o)) {
+
+            key.o = KOS_get_walk_value(keys.o);
+
+            elem.o = KOS_get_walk_key(values.o);
+
+            if (GET_OBJ_TYPE(elem.o) == OBJ_STRING) {
+                elem.o = KOS_new_array(ctx, 2);
+                TRY_OBJID(elem.o);
+
+                TRY(KOS_array_write(ctx, elem.o, 0, KOS_get_walk_key(values.o)));
+                TRY(KOS_array_write(ctx, elem.o, 1, KOS_get_walk_value(values.o)));
+            }
+            else
+                elem.o = KOS_get_walk_value(values.o);
+
+            TRY(KOS_set_property(ctx, obj.o, key.o, elem.o));
+        }
+    }
+
+cleanup:
+    obj.o = KOS_destroy_top_locals(ctx, &keys, &obj);
+
+    return error ? KOS_BADPTR : obj.o;
 }
 
 static int make_room_in_array(KOS_CONTEXT ctx,
@@ -1581,7 +1728,7 @@ static KOS_OBJ_ID generator_constructor(KOS_CONTEXT ctx,
 
 /* @item base exception()
  *
- *     exception([value])
+ *     exception(value = void)
  *
  * Exception object class.
  *
@@ -4795,20 +4942,20 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 
     TRY_ADD_GLOBAL(   ctx, module.o, "args",      ctx->inst->args);
 
-    TRY_CREATE_CONSTRUCTOR(array,         module.o);
-    TRY_CREATE_CONSTRUCTOR(boolean,       module.o);
-    TRY_CREATE_CONSTRUCTOR(buffer,        module.o);
-    TRY_CREATE_CONSTRUCTOR(class,         module.o);
-    TRY_CREATE_CONSTRUCTOR(exception,     module.o);
-    TRY_CREATE_CONSTRUCTOR(float,         module.o);
-    TRY_CREATE_CONSTRUCTOR(function,      module.o);
-    TRY_CREATE_CONSTRUCTOR(generator,     module.o);
-    TRY_CREATE_CONSTRUCTOR(generator_end, module.o);
-    TRY_CREATE_CONSTRUCTOR(integer,       module.o);
-    TRY_CREATE_CONSTRUCTOR(number,        module.o);
-    TRY_CREATE_CONSTRUCTOR(object,        module.o);
-    TRY_CREATE_CONSTRUCTOR(string,        module.o);
-    TRY_CREATE_CONSTRUCTOR(thread,        module.o);
+    TRY_CREATE_CONSTRUCTOR(array,         module.o, KOS_NULL);
+    TRY_CREATE_CONSTRUCTOR(boolean,       module.o, KOS_NULL);
+    TRY_CREATE_CONSTRUCTOR(buffer,        module.o, KOS_NULL);
+    TRY_CREATE_CONSTRUCTOR(class,         module.o, KOS_NULL);
+    TRY_CREATE_CONSTRUCTOR(exception,     module.o, KOS_NULL);
+    TRY_CREATE_CONSTRUCTOR(float,         module.o, KOS_NULL);
+    TRY_CREATE_CONSTRUCTOR(function,      module.o, KOS_NULL);
+    TRY_CREATE_CONSTRUCTOR(generator,     module.o, KOS_NULL);
+    TRY_CREATE_CONSTRUCTOR(generator_end, module.o, KOS_NULL);
+    TRY_CREATE_CONSTRUCTOR(integer,       module.o, KOS_NULL);
+    TRY_CREATE_CONSTRUCTOR(number,        module.o, KOS_NULL);
+    TRY_CREATE_CONSTRUCTOR(object,        module.o, object_args);
+    TRY_CREATE_CONSTRUCTOR(string,        module.o, KOS_NULL);
+    TRY_CREATE_CONSTRUCTOR(thread,        module.o, KOS_NULL);
 
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(array),     "cas",          array_cas,         array_cas_args);
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(array),     "insert_array", insert_array,      insert_array_args);

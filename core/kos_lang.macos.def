@@ -38,6 +38,7 @@ _KOS_get_named_arg
 _KOS_get_numeric_arg
 _KOS_get_property_with_depth
 _KOS_get_prototype
+_KOS_get_type_name
 _KOS_has_prototype
 _KOS_help_gc
 _KOS_init_local_with

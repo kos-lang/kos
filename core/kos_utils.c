@@ -81,6 +81,27 @@ static const int8_t extra_len_map[256] = {
 
 static const char hex_digits[] = "0123456789abcdef";
 
+const char *KOS_get_type_name(KOS_TYPE type)
+{
+    static const char *const type_names[] = {
+        "integer",
+        "integer",
+        "float",
+        "void",
+        "boolean",
+        "string",
+        "object",
+        "array",
+        "buffer",
+        "function",
+        "class"
+    };
+
+    assert(type <= OBJ_LAST_TYPE);
+
+    return type_names[(int)type >> 1];
+}
+
 int KOS_get_numeric_arg(KOS_CONTEXT  ctx,
                         KOS_OBJ_ID   args_obj,
                         int          idx,

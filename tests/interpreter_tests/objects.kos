@@ -1198,6 +1198,93 @@ do {
 }
 
 do {
+    expect_fail(() => base.object([void]))
+    expect_fail(() => base.object([{}]))
+    expect_fail(() => base.object([""]))
+    expect_fail(() => base.object([[]]))
+    expect_fail(() => base.object([[""]]))
+    expect_fail(() => base.object([[0,""]]))
+
+    expect_fail(() => base.object(fun { yield void   }()))
+    expect_fail(() => base.object(fun { yield {}     }()))
+    expect_fail(() => base.object(fun { yield ""     }()))
+    expect_fail(() => base.object(fun { yield []     }()))
+    expect_fail(() => base.object(fun { yield [""]   }()))
+    expect_fail(() => base.object(fun { yield [0,""] }()))
+
+    expect_fail(() => base.object({}, []))
+    expect_fail(() => base.object(true, []))
+}
+
+do {
+    const o = base.object({ a: 1, b: 2, c: 3 })
+
+    var cnt = 0
+    for const k, v in o {
+        cnt += 1
+    }
+    assert cnt == 3
+
+    assert "a" in o
+    assert "b" in o
+    assert "c" in o
+    assert o.a == 1
+    assert o.b == 2
+    assert o.c == 3
+}
+
+do {
+    const o = base.object([ ["x", 10, 200], ["y", 20], ["z", 30] ])
+
+    var cnt = 0
+    for const k, v in o {
+        cnt += 1
+    }
+    assert cnt == 3
+
+    assert "x" in o
+    assert "y" in o
+    assert "z" in o
+    assert o.x == 10
+    assert o.y == 20
+    assert o.z == 30
+}
+
+do {
+    const o = base.object(["aaa", "bbb", "ccc", "ddd"], [-1, -2, -3])
+
+    var cnt = 0
+    for const k, v in o {
+        cnt += 1
+    }
+    assert cnt == 3
+
+    assert "aaa" in o
+    assert "bbb" in o
+    assert "ccc" in o
+    assert o.aaa == -1
+    assert o.bbb == -2
+    assert o.ccc == -3
+}
+
+do {
+    const o = base.object("abcdef", [-11, -12, -13])
+
+    var cnt = 0
+    for const k, v in o {
+        cnt += 1
+    }
+    assert cnt == 3
+
+    assert "a" in o
+    assert "b" in o
+    assert "c" in o
+    assert o.a == -11
+    assert o.b == -12
+    assert o.c == -13
+}
+
+do {
     class constr {
         constructor {
             this.c = 2

@@ -45,6 +45,9 @@ extern "C" {
 #endif
 
 KOS_API
+const char *KOS_get_type_name(KOS_TYPE type);
+
+KOS_API
 int KOS_get_numeric_arg(KOS_CONTEXT  ctx,
                         KOS_OBJ_ID   args_obj,
                         int          idx,

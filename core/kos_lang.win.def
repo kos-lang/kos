@@ -39,6 +39,7 @@ EXPORTS
     KOS_get_numeric_arg
     KOS_get_property_with_depth
     KOS_get_prototype
+    KOS_get_type_name
     KOS_has_prototype
     KOS_help_gc
     KOS_init_local_with

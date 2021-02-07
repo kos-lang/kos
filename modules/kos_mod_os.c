@@ -87,27 +87,6 @@ struct KOS_WAIT_S {
 #endif
 };
 
-static const char *get_type_name(KOS_TYPE type)
-{
-    static const char *const type_names[] = {
-        "integer",
-        "integer",
-        "float",
-        "void",
-        "boolean",
-        "string",
-        "object",
-        "array",
-        "buffer",
-        "function",
-        "class"
-    };
-
-    assert(type <= OBJ_LAST_TYPE);
-
-    return type_names[(int)type >> 1];
-}
-
 static int check_arg_type(KOS_CONTEXT ctx,
                           KOS_OBJ_ID  obj_id,
                           const char *name,
@@ -116,10 +95,10 @@ static int check_arg_type(KOS_CONTEXT ctx,
     const KOS_TYPE actual_type = GET_OBJ_TYPE(obj_id);
 
     if (actual_type != expected_type) {
-        const char *const actual_str   = get_type_name(actual_type);
-        const char *const expected_str = get_type_name(expected_type);
+        const char *const actual_str   = KOS_get_type_name(actual_type);
+        const char *const expected_str = KOS_get_type_name(expected_type);
 
-        KOS_raise_printf(ctx, "argument '%s' is %s, but expected %s\n",
+        KOS_raise_printf(ctx, "argument '%s' is %s, but expected %s",
                          name, actual_str, expected_str);
         return KOS_ERROR_EXCEPTION;
     }
@@ -193,7 +172,7 @@ static int get_args_array(KOS_CONTEXT           ctx,
         if (type != OBJ_STRING) {
             KOS_raise_printf(ctx,
                              "element %u in 'args' array passed to os.spawn() is %s, but expected string",
-                             i, get_type_name(type));
+                             i, KOS_get_type_name(type));
             return KOS_ERROR_EXCEPTION;
         }
 
@@ -296,7 +275,7 @@ static int get_env_array(KOS_CONTEXT           ctx,
                                      "invalid type of environment variable '%s' passed to os.spawn(),"
                                      " it is %s, but expected string",
                                      buf,
-                                     get_type_name(type));
+                                     KOS_get_type_name(type));
                     error = KOS_ERROR_EXCEPTION;
                 }
                 goto cleanup;
@@ -362,7 +341,7 @@ static int get_env_array(KOS_CONTEXT           ctx,
                                  "invalid type of environment variable '%s' passed to os.spawn(),"
                                  " it is %s, but expected string",
                                  buf,
-                                 get_type_name(val_type));
+                                 KOS_get_type_name(val_type));
                 error = KOS_ERROR_EXCEPTION;
             }
             goto cleanup;
