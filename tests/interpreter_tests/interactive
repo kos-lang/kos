@@ -405,7 +405,7 @@ if [ $COUNT -ne 1 ]; then
     exit 1
 fi
 
-find_in_output "^Kos [0-9]\."
+find_in_output "^Kos [0-9]\+\."
 
 ##############################################################################
 # CR and TAB

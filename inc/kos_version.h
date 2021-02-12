@@ -5,7 +5,12 @@
 #ifndef KOS_VERSION_H_INCLUDED
 #define KOS_VERSION_H_INCLUDED
 
-#define KOS_VERSION_MAJOR 0
-#define KOS_VERSION_MINOR 1
+#ifndef KOS_VERSION_MAJOR
+#   define KOS_VERSION_MAJOR 0
+#endif
+
+#ifndef KOS_VERSION_MINOR
+#   define KOS_VERSION_MINOR 1
+#endif
 
 #endif

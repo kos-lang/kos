@@ -1,0 +1,20 @@
+name: Package
+
+on:
+  create
+
+jobs:
+  package:
+    strategy:
+      matrix:
+        os:
+          - macos-latest
+
+    runs-on: ${{ matrix.os }}
+
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Package
+        run: interpreter/create_package.sh "$GITHUB_REF"
