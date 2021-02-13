@@ -5,18 +5,21 @@ Name "Kos programming language ${VERSION}"
 OutFile "Kos-${VERSION}.exe"
 Unicode True
 
-InstallDir "${LOCALAPPDATA}\Kos"
+InstallDir "${PROGRAMFILES}\Kos"
 InstallDirRegKey HKCU "Software\Kos" ""
 RequestExecutionLevel user
 
 !define MUI_ABORTWARNING
 
+!insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_COMPONENTS
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
+!insertmacro MUI_PAGE_FINISH
   
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
+!insertmacro MUI_UNPAGE_FINISH
 
 !insertmacro MUI_LANGUAGE "English"
 
@@ -27,12 +30,12 @@ Section "InstallSection" SecInstall
 
     ; Install executable
     SetOutPath "${INSTDIR}"
-    File "package\kos.exe"
+    File "kos.exe"
 
     ; Install modules
     CreateDirectory "${INSTDIR}\modules"
     SetOutPath "${INSTDIR}\modules"
-    File "package\modules\*.*"
+    File "modules\*.*"
 
     ; Save installation path
     WriteRegStr HKCU "Software\Kos" "" ${INSTDIR}
