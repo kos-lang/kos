@@ -40,6 +40,7 @@ if [ -z "$JOBS" ]; then
         Windows) JOBS="$NUMBER_OF_PROCESSORS" ;;
     esac
 fi
+echo "Using $JOBS jobs"
 
 # Check if we're in the right directory
 if ! test -d interpreter; then
@@ -76,7 +77,7 @@ create_pkg_dir()
 
 if [ "$UNAME" = "Darwin" ]; then
     create_pkg_dir
-    productbuild --root "$PKGDIR" /usr/local --product interpreter/Kos.plist "$BUILDDIR"/"$PKGNAME.pkg"
+    productbuild --root "$PKGDIR" /usr/local --product interpreter/macos/kos.plist "$BUILDDIR"/"$PKGNAME.pkg"
     cd "$BUILDDIR"
     shasum -a 256 "$PKGNAME.pkg" | tee "$PKGNAME.pkg.sha"
 elif [ "$UNAME" = "Linux" ]; then
