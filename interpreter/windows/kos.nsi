@@ -29,6 +29,7 @@ RequestExecutionLevel user
 Section "InstallSection" SecInstall
 
     ; Install executable
+    CreateDirectory "$INSTDIR"
     SetOutPath "$INSTDIR"
     File "kos.exe"
 
