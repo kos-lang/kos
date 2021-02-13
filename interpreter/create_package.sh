@@ -58,20 +58,25 @@ create_pkg_dir()
 
     make -j "$JOBS" test builtin_modules=0 strict=1 version_major="$VERSION_MAJOR" version_minor="$VERSION_MINOR"
 
-    local CP
-    CP=ln
-    [ "$UNAME" = "Windows" ] && CP=cp
-
-    mkdir -p "$PKGDIR"/bin
-    mkdir -p "$PKGDIR"/share/kos/modules
-    "$CP" "$BUILDDIR"/interpreter/kos "$PKGDIR"/bin/
-    "$CP" "$BUILDDIR"/share/kos/modules/* "$PKGDIR"/share/kos/modules/
+    local KOS
+    if [ "$UNAME" = "Windows" ]; then
+        KOS="$PKGDIR/kos.exe"
+        mkdir -p "$PKGDIR"/modules
+        cp "$BUILDDIR"/interpreter/kos.exe "$PKGDIR"/
+        cp "$BUILDDIR"/interpreter/modules/* "$PKGDIR"/modules/
+    else
+        KOS="$PKGDIR/bin/kos"
+        mkdir -p "$PKGDIR"/bin
+        mkdir -p "$PKGDIR"/share/kos/modules
+        ln "$BUILDDIR"/interpreter/kos "$PKGDIR"/bin/
+        ln "$BUILDDIR"/share/kos/modules/* "$PKGDIR"/share/kos/modules/
+    fi
 
     # Test the package
     unset KOSPATH
     cd Out
-    ../"$PKGDIR"/bin/kos --version
-    ../"$PKGDIR"/bin/kos -c "import os; import re; import math; print(os.sysname)"
+    ../"$KOS" --version
+    ../"$KOS" -c "import os; import re; import math; print(os.sysname)"
     cd ..
 }
 
@@ -110,6 +115,18 @@ elif [ "$UNAME" = "Linux" ]; then
 
     cd "$BUILDDIR"
     shasum -a 256 "$PKGNAME.deb" | tee "$PKGNAME.deb.sha"
+elif [ "$UNAME" = "Windows" ]; then
+    create_pkg_dir
+
+    sed "/^\!define VERSION/s/\".*\"/\"$VERSION\"/" < interpreter/windows/kos.nsi > "$PKGDIR"/kos.nsi
+
+    cd "$BUILDDIR"
+    ls 'C:/'
+    ls 'C:/Program Files (x86)'
+    ls 'C:/Program Files (x86)/NSIS'
+    'C:/Program Files (x86)/NSIS/makensis.exe' 'package\kos.nsi'
+
+    shasum "Kos-${VERSION}.exe" "Kos-${VERSION}.exe.sha"
 else
     echo "Unsupported OS '$UNAME'" >&2
     exit 1
