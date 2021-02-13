@@ -121,10 +121,9 @@ elif [ "$UNAME" = "Windows" ]; then
     sed "/^\!define VERSION/s/\".*\"/\"$VERSION\"/" < interpreter/windows/kos.nsi > "$PKGDIR"/kos.nsi
 
     cd "$BUILDDIR"
-    ls -lR package
     'C:/Program Files (x86)/NSIS/makensis.exe' 'package\kos.nsi'
-    ls -lR
 
+    mv package/Kos-*.exe .
     shasum "Kos-${VERSION}.exe" "Kos-${VERSION}.exe.sha"
 else
     echo "Unsupported OS '$UNAME'" >&2

@@ -5,7 +5,7 @@ Name "Kos programming language ${VERSION}"
 OutFile "Kos-${VERSION}.exe"
 Unicode True
 
-InstallDir "${PROGRAMFILES}\Kos"
+InstallDir "$PROGRAMFILES\Kos"
 InstallDirRegKey HKCU "Software\Kos" ""
 RequestExecutionLevel user
 
@@ -29,26 +29,26 @@ RequestExecutionLevel user
 Section "InstallSection" SecInstall
 
     ; Install executable
-    SetOutPath "${INSTDIR}"
+    SetOutPath "$INSTDIR"
     File "kos.exe"
 
     ; Install modules
-    CreateDirectory "${INSTDIR}\modules"
-    SetOutPath "${INSTDIR}\modules"
+    CreateDirectory "$INSTDIR\modules"
+    SetOutPath "$INSTDIR\modules"
     File "modules\*.*"
 
     ; Save installation path
-    WriteRegStr HKCU "Software\Kos" "" ${INSTDIR}
+    WriteRegStr HKCU "Software\Kos" "" $INSTDIR
 
     ; Install extension association
     WriteRegStr HKCR "${Ext}" "" "${ExtDesc}"
     WriteRegStr HKCR "${ExtDesc}" "" "${ExtDesc}"
     WriteRegStr HKCR "${ExtDesc}\shell" "" "open"
-    ;WriteRegStr HKCR "${ExtDesc}\DefaultIcon" "" "${INSTDIR}\Kos.exe,0"
-    WriteRegStr HKCR "${ExtDesc}\shell\open\command" "" '"${INSTDIR}\Kos.exe" "%1"'
+    ;WriteRegStr HKCR "${ExtDesc}\DefaultIcon" "" "$INSTDIR\kos.exe,0"
+    WriteRegStr HKCR "${ExtDesc}\shell\open\command" "" '"$INSTDIR\kos.exe" "%1"'
 
     ; Write uninstaller
-    WriteUninstaller "${INSTDIR}\Uninstall.exe"
+    WriteUninstaller "$INSTDIR\Uninstall.exe"
 SectionEnd
 
 LangString DESC_SecInstall ${LANG_ENGLISH} "Install section."
@@ -64,7 +64,7 @@ Section "Uninstall"
     DeleteRegKey HKCR "${ExtDesc}"
 
     ; Remove installed files
-    RMDir /r "${INSTDIR}"
+    RMDir /r "$INSTDIR"
 
     ; Remove Kos's own registry key
     DeleteRegKey /ifempty HKCU "Software\Kos"
