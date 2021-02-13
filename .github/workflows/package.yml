@@ -13,7 +13,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
 
-    timeout-minutes: 5
+    timeout-minutes: 3
 
     steps:
       - uses: actions/checkout@v2
@@ -47,5 +47,5 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: installer
+          name: package
           path: Out/release/Kos-*.*
