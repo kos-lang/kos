@@ -123,8 +123,8 @@ elif [ "$UNAME" = "Windows" ]; then
     cd "$BUILDDIR"
     'C:/Program Files (x86)/NSIS/makensis.exe' 'package\kos.nsi'
 
-    mv package/Kos-*.exe .
-    shasum "Kos-${VERSION}.exe" "Kos-${VERSION}.exe.sha"
+    mv "package/Kos-${VERSION}.exe" .
+    shasum -a 256 "Kos-${VERSION}.exe" | tee "Kos-${VERSION}.exe.sha"
 else
     echo "Unsupported OS '$UNAME'" >&2
     exit 1
