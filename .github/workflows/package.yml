@@ -23,7 +23,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: package
-          path: Out/release/package/kos-*.*
+          path: Out/release/kos-*.*
 
   windows:
     runs-on: windows-latest
@@ -48,4 +48,4 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: installer
-          path: Out/release/package/Kos-*.*
+          path: Out/release/Kos-*.*
