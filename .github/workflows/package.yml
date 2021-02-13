@@ -4,7 +4,7 @@ on:
   create
 
 jobs:
-  package:
+  default:
     strategy:
       matrix:
         os:
@@ -19,3 +19,23 @@ jobs:
       - uses: actions/checkout@v2
       - name: Package
         run: interpreter/create_package.sh "$GITHUB_REF"
+
+  windows:
+    runs-on: windows-latest
+
+    timeout-minutes: 10
+
+    steps:
+      - uses: msys2/setup-msys2@v2
+        with:
+          path-type: inherit
+          install: diffutils
+      - uses: actions/checkout@v2
+      - name: Remove link.exe from MSYS2
+        shell: msys2 {0}
+        run: rm -f /bin/link.exe
+      - name: Package
+        shell: cmd
+        run: |
+          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x86
+          msys2 -c "interpreter/create_package.sh $GITHUB_REF"
