@@ -1,0 +1,10 @@
+Package: kos
+Version: 0.1
+Section: interpreters
+Priority: optional
+Architecture: all
+Essential: no
+Installed-Size: 0
+Maintainer: Chris Dragan
+Homepage: https://github.com/kos-lang/kos
+Description: Kos programming language

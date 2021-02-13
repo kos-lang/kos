@@ -70,7 +70,7 @@ create_pkg_dir()
     unset KOSPATH
     cd Out
     ../"$PKGDIR"/bin/kos --version
-    ../"$PKGDIR"/bin/kos -c "import os; import re; import math;"
+    ../"$PKGDIR"/bin/kos -c "import os; import re; import math; print(os.sysname)"
     cd ..
 }
 
@@ -79,6 +79,36 @@ if [ "$UNAME" = "Darwin" ]; then
     productbuild --root "$PKGDIR" /usr/local --product interpreter/Kos.plist "$BUILDDIR"/"$PKGNAME.pkg"
     cd "$BUILDDIR"
     shasum -a 256 "$PKGNAME.pkg" | tee "$PKGNAME.pkg.sha"
+elif [ "$UNAME" = "Linux" ]; then
+    create_pkg_dir
+
+    mkdir "$PKGDIR"/usr
+    mv "$PKGDIR"/bin "$PKGDIR"/share "$PKGDIR"/usr/
+
+    PKGSIZE=$(du -sk "$PKGDIR" | awk '{print $1}')
+
+    ARCH=$(uname -m)
+    case "$ARCH" in
+        x86_64) ARCH=amd64 ;;
+    esac
+
+    mkdir -p "$PKGDIR"/DEBIAN
+
+    cd "$PKGDIR"
+    find usr -type f | xargs md5sum > DEBIAN/md5sums
+    cd - > /dev/null
+
+    CTRLSCRIPT="/^Version:/s/:.*/: $VERSION/"
+    CTRLSCRIPT="$CTRLSCRIPT;/^Installed-Size:/s/:.*/: $PKGSIZE/"
+    CTRLSCRIPT="$CTRLSCRIPT;/^Architecture:/s/:.*/: $ARCH/"
+    echo "Sed '$CTRLSCRIPT'"
+
+    sed "$CTRLSCRIPT" < interpreter/debian/control > "$PKGDIR"/DEBIAN/control
+
+    dpkg -b "$PKGDIR" "$BUILDDIR"/"$PKGNAME.deb"
+
+    cd "$BUILDDIR"
+    shasum -a 256 "$PKGNAME.deb" | tee "$PKGNAME.deb.sha"
 else
     echo "Unsupported OS '$UNAME'" >&2
     exit 1
