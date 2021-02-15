@@ -9,7 +9,7 @@ const a = []
 const str_codes = []
 str_codes.reserve(10)
 
-for var i = 0; i < 100000; i += 1 {
+for const i in range(100000) {
 
     var r = rand_integer(0, 0x7FFF_FFFF_FFFF_FFFF)
 

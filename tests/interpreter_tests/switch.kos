@@ -1,3 +1,5 @@
+import base.range
+
 do {
     fun test(a)
     {
@@ -60,7 +62,7 @@ do {
         return false
     }
 
-    for var i = 0; i < 10; i += 1 {
+    for const i in range(10) {
         assert (i == 5) == test(i)
     }
 }
@@ -114,14 +116,15 @@ do {
 
 do {
     var sum = 0
-    for var i = 1; i < 10; i += 1 {
+    const it = range(10)
+    for const i in it {
         switch i {
             case 2, 4, 5:
                 continue
 
             default: sum = sum * 10 + i
 
-            case 8: i = 10
+            case 8: it()
         }
     }
 
@@ -290,7 +293,17 @@ do {
     {
         const seq = pusher()
 
-        for var i = 0; i < 2; i += 1, seq.push("\(i)") {
+        fun next
+        {
+            var i = 0
+            while i < 2 {
+                yield i
+                i += 1
+                seq.push("\(i)")
+            }
+        }
+
+        for const i in next() {
 
             switch a {
 

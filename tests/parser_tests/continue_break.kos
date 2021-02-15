@@ -9,7 +9,7 @@ while true {
     else   { continue; }
 }
 
-for (;;) {
+for const x in y {
     if c() { break;    }
     else   { continue; }
 }
@@ -35,15 +35,27 @@ for (;;) {
                 (scope 8 12 { (break 8 14 break))
                 (scope 9 12 { (continue 9 14 continue))
     )))
-    (for 12 1 for
-        (empty 12 7 ;)
-        (empty 12 8 paren_close)
-        (scope 12 10 {
+    (for_in 12 1 for
+        (in 12 13 in
+            (const 12 5 const
+                (identifier 12 11 x)
+            )
+            (identifier 12 16 y)
+        )
+        (scope 12 18 {
             (if 13 5 if
-                (invocation 13 9 paren_open (identifier 13 8 c))
-                (scope 13 12 { (break 13 14 break))
-                (scope 14 12 { (continue 14 14 continue))
-    )))
+                (invocation 13 9 paren_open
+                    (identifier 13 8 c)
+                )
+                (scope 13 12 {
+                    (break 13 14 break)
+                )
+                (scope 14 12 {
+                    (continue 14 14 continue)
+                )
+            )
+        )
+    )
 )
 
 @------------------------------------------------------------------------------

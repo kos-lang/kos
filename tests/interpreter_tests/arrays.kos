@@ -2,6 +2,7 @@
 # Copyright (c) 2014-2021 Chris Dragan
 
 import base
+import base.range
 import test_tools.expect_fail
 
 ##############################################################################
@@ -57,7 +58,7 @@ do {
     assert a["size"] == 4
     assert a[0]      == 1
     assert a[-1]     == 4
-    for var i = 0; i < a.size; i += 1 {
+    for const i in range(a.size) {
         assert a[i] == i + 1
     }
 }
@@ -115,7 +116,7 @@ do {
                290, 291, 292, 293, 294, 295, 296, 297, 298, 299 ]
     assert typeof a == "array"
     assert a.size   == 300
-    for var i = 0; i < a.size; i += 1 {
+    for const i in range(a.size) {
         assert a[i] == i
     }
 }
@@ -153,7 +154,7 @@ do {
 
     const f = a[-10:10]
     assert a.size == f.size
-    for var i = 0; i < a.size; i += 1 {
+    for const i in range(a.size) {
         assert a[i] == f[i]
     }
 
@@ -211,16 +212,11 @@ do {
 }
 
 do {
-    fun gen {
-        for var i = 10; i < 15; i += 1 {
-            yield i
-        }
-    }
     var a = [3, 4, 5, 6]
-    a[1:3] = [gen()...]
+    a[1:3] = [range(10, 15)...]
     const expected = [3, 10, 11, 12, 13, 14, 6]
     assert a.size == expected.size
-    for var i = 0; i < a.size; i += 1 {
+    for const i in range(a.size) {
         assert a[i] == expected[i]
     }
 }
@@ -278,7 +274,7 @@ do {
     assert a.size >= 1
 
     var found = false
-    for var i = 0; i < a.size; i += 1 {
+    for const i in range(a.size) {
         const k, v = a[i]
         if k == "abc" {
             found = true
@@ -335,7 +331,7 @@ do {
                 240, 241, 242, 243, 244, 245, 246, 247, 248, 249,
                 250, 251, 252, 253, 254, 255, 256, 257, 258, 259 ]
     assert a.size == 260
-    for var i = 0; i < 260; i += 1 {
+    for const i in range(260) {
         assert a[i] == i
     }
 }
@@ -441,7 +437,7 @@ do {
     const c = a.repeat(1)
     assert a.size == 5
     assert c.size == 5
-    for var i = 0; i < 5; i += 1 {
+    for const i in range(5) {
         assert a[i] == i + 1
         assert c[i] == i + 1
     }
@@ -449,7 +445,7 @@ do {
     const d = a.repeat(3)
     assert a.size == 5
     assert d.size == 15
-    for var i = 0; i < 5; i += 1 {
+    for const i in range(5) {
         assert a[i] == i + 1
         assert d[i] == i + 1
         assert d[i+5] == i + 1
@@ -691,7 +687,7 @@ do {
     const a = base.array(base.range(4))
     assert typeof a == "array"
     assert a.size   == 4
-    for var i = 0; i < 4; i += 1 {
+    for const i in range(4) {
         assert a[i] == i
     }
 }
@@ -701,7 +697,7 @@ do {
     assert typeof a == "array"
     assert a.size   == 3
     const had = { "a": false, "b": false, "c": false }
-    for var i = 0; i < a.size; i += 1 {
+    for const i in range(a.size) {
         const key, value = a[i]
         assert key == "a" || key == "b" || key == "c"
         assert ! had[key]
@@ -777,7 +773,7 @@ do {
     assert typeof b == "array"
     assert b        == a
     assert b.size   == a.size
-    for var i = 0; i < b.size; i += 1 {
+    for const i in range(b.size) {
         assert b[i] == a[i]
     }
     b.push(0)
@@ -803,7 +799,7 @@ do {
 do {
     const buf = base.buffer(10)
     const size = buf.size
-    for var i = 0; i < size; i += 1 {
+    for const i in range(size) {
         buf[i] = i + 20
     }
 
@@ -890,7 +886,7 @@ do {
 do {
     const a = base.array(base.array.prototype)
     var has_size = false
-    for (var i = 0; i < a.size; i += 1) {
+    for (const i in range(a.size)) {
         if a[i][0] == "size" {
             assert ! has_size
             has_size = true
@@ -1037,7 +1033,7 @@ do {
         const size = out.size
         assert out  == test.array
         assert size == test.result.size
-        for var i = 0; i < size; i += 1 {
+        for const i in range(size) {
             assert out[i] == test.result[i]
         }
     }
@@ -1110,7 +1106,7 @@ do {
 
     const buf   = base.buffer(4)
     const size1 = buf.size
-    for var i = 0; i < size1; i += 1 {
+    for const i in range(size1) {
         buf[i] = buf.size - i
     }
 
@@ -1121,7 +1117,7 @@ do {
     assert a[6]   == 1
 
     const size2 = buf.size
-    for var i = 0; i < size2; i += 1 {
+    for const i in range(size2) {
         buf[i] = 10 + i
     }
 
@@ -1188,7 +1184,7 @@ do {
 
     a.fill(42, -3)
 
-    for var i = 0; i < a.size; i += 1 {
+    for const i in range(a.size) {
         if i < 7 {
             assert a[i] == "abc"
         }
@@ -1200,7 +1196,7 @@ do {
     const obj = { x : 1, y : 2 }
     a.fill(obj, 2, 8)
 
-    for var i = 0; i < a.size; i += 1 {
+    for const i in range(a.size) {
         if i < 2 {
             assert a[i] == "abc"
         }

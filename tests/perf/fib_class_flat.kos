@@ -1,6 +1,6 @@
 #!/usr/bin/env kos
 
-import base.print
+import base: print, range
 
 const fib = {
     prev: 1,
@@ -24,7 +24,7 @@ const fib = {
     },
 
     execute: fun(n) {
-        for var i = 0; i < n; i += 1 {
+        for const i in range(n) {
             this.advance()
         }
         const ret = this.get_cur()
@@ -35,7 +35,7 @@ const fib = {
 
 const orig = fib.execute(50)
 
-for var i = 0; i < 10000; i += 1 {
+for const i in range(10000) {
     assert orig == fib.execute(50)
 }
 

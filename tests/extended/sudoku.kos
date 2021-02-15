@@ -138,11 +138,13 @@ fun generate_board()
     const board_stack = []
     var num_back_tracks = 0
 
-    for var irow, idx = [0, 0]; irow < f_size; irow += 1 {
+    var idx  = 0
+    var irow = 0
+    while irow < f_size {
         board_stack.push(clone(board))
         const blk_base = (irow / f_base) * f_base
         var row_ok = true
-        for var icol = 0; icol < f_size; icol += 1, idx += 1 {
+        for const icol in range(f_size) {
             const iblk = blk_base + (icol / f_base)
 
             const has = board.rows[irow] | board.cols[icol] | board.blocks[iblk]
@@ -173,7 +175,10 @@ fun generate_board()
             board.rows[irow] |= v_mask
             board.cols[icol] |= v_mask
             board.blocks[iblk] |= v_mask
+            idx += 1
         }
+
+        irow += 1
     }
 
     dprint("Number of back tracks: \(num_back_tracks)")

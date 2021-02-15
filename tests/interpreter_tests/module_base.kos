@@ -202,7 +202,7 @@ do {
     assert 0x781000000 .hex() == "0x781000000"
     assert 0xfedcba .hex() == "0xfedcba"
     assert 0x9876543210 .hex() == "0x9876543210"
-    for var i = 0; i <= 16; i += 1 {
+    for const i in base.range(16) {
         assert 32 .hex(i) == "0x" + "20".zfill(i)
     }
 
@@ -828,7 +828,7 @@ do {
     var has_indices = false
     var has_apply   = false
 
-    for var i = 0; i < a.size; i += 1 {
+    for const i in base.range(a.size) {
         const elem = a[i]
         assert typeof elem == "array"
         assert elem.size   == 2
@@ -1151,7 +1151,7 @@ do {
     assert base.keys({x: 8, _test_value: 8, y: 8}).count("_test_value") == 1
 
     assert fun {
-        for var i = 0; i < 100; i += 1 {
+        for const i in base.range(100) {
             yield i / 4
         }
     } () . count(11) == 4

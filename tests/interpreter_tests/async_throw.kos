@@ -11,7 +11,8 @@ do {
         }
     }
 
-    for var i = 20; i; i -= 1 {
+    var i = 20
+    while i {
         const t1 = async thrower()
         const t2 = async thrower()
         const t3 = async thrower()
@@ -20,5 +21,6 @@ do {
         t2.wait()
         t3.wait()
         t4.wait()
+        i -= 1
     }
 }

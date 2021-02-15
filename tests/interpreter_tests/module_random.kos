@@ -2,6 +2,7 @@
 # Copyright (c) 2014-2021 Chris Dragan
 
 import random
+import base.range
 
 fun expect_fail(function)
 {
@@ -18,7 +19,7 @@ fun expect_fail(function)
 # random.rand_integer
 do {
     var sum = 0
-    for var i = 0; i < 0x100; i += 1 {
+    for const i in range(0x100) {
         sum += random.rand_integer() >> 13
     }
 
@@ -27,7 +28,7 @@ do {
     assert sum >= -0x10
     assert sum <  0x10
 
-    for var i = 0; i < 10; i += 1 {
+    for const i in range(10) {
         const value = random.rand_integer(-9, 50)
         assert value >= -9
         assert value <= 50
@@ -49,7 +50,7 @@ do {
 
 # random.rand_float
 do {
-    for var i = 0; i < 0x100; i += 1 {
+    for const i in range(0x100) {
         const r = random.rand_float()
         assert r >= 0
         assert r < 1
@@ -76,7 +77,7 @@ do {
 
         a.resize(256)
 
-        for var i = 0; i < 256; i += 1 {
+        for const i in range(256) {
             a[i] = rand.integer()
         }
     }
@@ -84,7 +85,7 @@ do {
     do {
         const rand = random.random(seed)
 
-        for var i = 0; i < 256; i += 1 {
+        for const i in range(256) {
             assert a[i] == rand.integer()
         }
     }

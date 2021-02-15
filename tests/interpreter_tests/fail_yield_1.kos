@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2014-2021 Chris Dragan
 
-for var i = 0; i < 10; i += 1 {
+for const i in range(10) {
     yield i * 2;
 }

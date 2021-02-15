@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2014-2021 Chris Dragan
 
-import base.thread
+import base: thread, range
 
 fun expect_fail(function)
 {
@@ -157,8 +157,7 @@ do {
 do {
     fun thread
     {
-        for var i = 0; i < 100; i += 1 {
-        }
+        for const i in range(100) { }
     }
 
     fun start(f, count)

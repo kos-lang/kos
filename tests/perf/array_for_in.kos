@@ -7,7 +7,7 @@ const size  = 10000
 const a     = [range(size)...]
 var   total = 0
 
-for var l = 0; l < loops; l += 1 {
+for const l in range(loops) {
 
     for const elem in a {
         total += elem

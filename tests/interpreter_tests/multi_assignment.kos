@@ -99,11 +99,13 @@ do {
 
 do {
     var count = 0
-    for var x, y, z = range(3); x < y; x += 1 {
+    var x, y, z = range(3)
+    while x < y {
         assert x == 0
         assert y == 1
         assert z == 2
         count += 1
+        x += 1
     }
     assert count == 1
 }

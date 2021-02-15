@@ -59,13 +59,15 @@ public fun range(start, args...)
     }
 
     if step > 0 {
-        for ; start < stop; start += step {
+        while start < stop {
             yield start
+            start += step
         }
     }
     else if step < 0 {
-        for ; start > stop; start += step {
+        while start > stop {
             yield start
+            start += step
         }
     }
 }
@@ -119,9 +121,7 @@ object.prototype.iterator = fun
 
 fun iterator
 {
-    var   i  = 0
-    const _1 = 1
-    for ; i < this.size; i += _1 {
+    for const i in range(this.size) {
         yield this[i]
     }
 }
@@ -805,12 +805,11 @@ string.prototype.split = fun(sep = void, max_split = -1)
 {
     assert sep != ""
 
-    var splits_left = max_split
-    if splits_left == 0 {
+    if max_split == 0 {
         return
     }
-    if splits_left < 0 {
-        splits_left = 0x10000
+    if max_split < 0 {
+        max_split = 0x10000
     }
 
     if sep == void {
@@ -821,7 +820,7 @@ string.prototype.split = fun(sep = void, max_split = -1)
             return
         }
 
-        for ; splits_left > 1; splits_left -= 1 {
+        for const i in range(max_split - 1) {
             const end = this.scan(chars, pos)
             if end == -1 {
                 yield this[pos:]
@@ -840,7 +839,7 @@ string.prototype.split = fun(sep = void, max_split = -1)
     else {
         var pos = 0
 
-        for ; splits_left > 1; splits_left -= 1 {
+        for const i in range(max_split - 1) {
             const end = this.find(sep, pos)
             if end == -1 {
                 yield this[pos:]
@@ -1615,9 +1614,11 @@ fun reverse
     const obj = typeof this == "buffer" ? buffer() : array()
     obj.resize(dst)
     const _1 = 1
-    for var src = 0; dst; src += _1 {
+    var src = 0
+    while dst {
         dst -= _1
         obj[dst] = this[src]
+        src += _1
     }
     return obj
 }
@@ -1674,7 +1675,7 @@ array.prototype.repeat = fun(num)
         new_array.fill(this[0])
     }
     else {
-        for var i = 0; i < new_size; i += old_size {
+        for const i in range(0, new_size, old_size) {
             new_array.insert_array(i, i + old_size, this)
         }
     }
@@ -1706,7 +1707,7 @@ buffer.prototype.repeat = fun(num)
         new_buf.fill(this[0])
     }
     else {
-        for var i = 0; i < new_size; i += old_size {
+        for const i in range(0, new_size, old_size) {
             new_buf.copy_buffer(i, this)
         }
     }
@@ -1858,7 +1859,7 @@ public fun zip(a, b...)
         const iter = []
         iter.resize(size)
         iter[0] = a.iterator()
-        for var i = 0; i < b_size; i += _1 {
+        for const i in range(b_size) {
             iter[i + _1] = b[i].iterator()
         }
 
@@ -1866,7 +1867,7 @@ public fun zip(a, b...)
             const out = []
             out.resize(size)
 
-            for var i = 0; i < size; i += _1 {
+            for const i in range(size) {
                 out[i] = iter[i]()
             }
 
@@ -2050,8 +2051,9 @@ public fun join(sep, args...)
         const num_pieces = num_in * 2 - 1
         const pieces = array(num_pieces > 0 ? num_pieces : 0, sep)
         var dest_i = 0
-        for var src_i = 0; src_i < num_in; src_i += 1, dest_i += 2 {
+        for const src_i in range(num_in) {
             pieces[dest_i] = to_join[src_i]
+            dest_i += 2
         }
 
         return string.apply(void, pieces)

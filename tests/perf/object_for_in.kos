@@ -1,6 +1,6 @@
 #!/usr/bin/env kos
 
-import base.print
+import base: print, range
 
 const lcg_init = 48611 # init value for LCG RNG
 const lcg_mult = 16807 # multiplier for LCG RNG
@@ -8,7 +8,7 @@ const lcg_mult = 16807 # multiplier for LCG RNG
 var rng = lcg_init
 var obj = { }
 const num_objs = 1000
-for var i = 0; i < num_objs; i += 1 {
+for const i in range(num_objs) {
     rng = (rng * lcg_mult) & 0xFFFF
     obj["\(rng)"] = i
 }
@@ -16,7 +16,7 @@ for var i = 0; i < num_objs; i += 1 {
 const loops = 300
 var   total = 0
 
-for var l = 0; l < loops; l += 1 {
+for const l in range(loops) {
 
     for const kv in obj {
         total += kv[1]

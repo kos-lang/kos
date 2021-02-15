@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2014-2021 Chris Dragan
 
+import base.range
+
 fun expect_fail(function)
 {
     var failed = false
@@ -1068,9 +1070,9 @@ do {
 do {
     var different_values = [ void, false, true, 0, 1, -1, "", "0", [], [0], {}, {"0":0} ]
     const len = different_values.size
-    for var y = 0; y < len; y += 1 {
+    for const y in range(len) {
         const a = different_values[y]
-        for var x = 0; x < len; x += 1 {
+        for const x in range(len) {
             const b   = different_values[x]
             const c   = x == y
             const eq  = a == b
@@ -1190,7 +1192,7 @@ do {
 do {
     var true_values  = [ true, 1, -1, 0x8000000000000000, "", "0", "false", [], [false], {} ]
     const len = true_values.size
-    for var i = 0; i < len; i+= 1 {
+    for const i in range(len) {
         const value = true_values[i]
         assert value
         assert !! value

@@ -1,7 +1,6 @@
 #!/usr/bin/env kos
 
-import base.buffer
-import base.print
+import base: buffer, print, range
 
 # Prime number generator with a fixed-size sieve
 fun primes(max_number)
@@ -14,7 +13,7 @@ fun primes(max_number)
     const len   = max_number >> 1
     const sieve = buffer(len)
 
-    for var value = 3; value < max_number; value += 2 {
+    for const value in range(3, max_number, 2) {
 
         const idx = value >> 1
 
@@ -24,7 +23,7 @@ fun primes(max_number)
             yield value
 
             # Mark all multiplicities of this prime as non-primes
-            for var i = idx + value; i < len; i += value {
+            for const i in range(idx + value, len, value) {
                 sieve[i] = 1 # Mark a non-prime
             }
         }

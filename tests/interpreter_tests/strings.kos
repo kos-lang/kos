@@ -643,7 +643,7 @@ do {
     const size     = s.size
     assert typeof s == "string"
     assert size     == elements.size
-    for var i = 0; i < size; i += 1 {
+    for const i in base.range(size) {
         assert s.code(i) == elements[i]
     }
 }
@@ -654,7 +654,7 @@ do {
     const size     = s.size
     assert typeof s == "string"
     assert size     == elements.size
-    for var i = 0; i < size; i += 1 {
+    for const i in base.range(size) {
         assert s.code(i) == elements[i]
     }
 }

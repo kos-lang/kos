@@ -73,13 +73,13 @@ do {
 
     fun gen
     {
+        var i = 0
         var j = 10
-        for var i = 0; i < 2;
-            i += 1,
-            j += 2 {
-
+        while i < 2 {
             idx = i
             yield i
+            i += 1
+            j += 2
         }
     }
 

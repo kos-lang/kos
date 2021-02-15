@@ -2,6 +2,7 @@
 # Copyright (c) 2014-2021 Chris Dragan
 
 import base.print
+import base.range
 import base.generator_end
 
 do {
@@ -44,32 +45,30 @@ do {
 
 do {
     var c = 0
-    for var i = 0; i < 2; i += 1 {
+    for const i in range(2) {
         c += 1
     }
     assert c == 2
 }
 
 do {
-    var c = 0
-    for const step1 = 2,
-        const step2 = 3,
-        var   c1    = 2,
-        var   c2    = 0;
+    var   c     = 0
+    const step1 = 2
+    const step2 = 3
+    var   c1    = 2
+    var   c2    = 0
             
-        c1 > c2;
-            
-        c += 1 {
-
+    while c1 > c2 {
         c1 += step1
         c2 += step2
+        c  += 1
     }
     assert c == 2
 }
 
 do {
     var i = 0
-    for ; i < 10; { i+=1 }
+    while i < 10 { i+=1 }
     assert i == 10
 }
 
@@ -81,8 +80,9 @@ do {
     }
 
     var x = 1
-    for ; i < 5 ; inc() {
+    while i < 5 {
         x += 2
+        inc()
     }
     assert i == 5
     assert x == 11
@@ -219,7 +219,7 @@ do {
 
 do {
     var sum = 0
-    for var i = 1; i < 100; i += 1 {
+    for const i in range(1, 100) {
         if i == 3 {
             sum += 500 + i
             continue
@@ -241,7 +241,7 @@ do {
     var status = 0
 
     try {
-        for var i=0; i < 1; i += 1 {
+        for const i in range(1) {
             try {
                 continue
             }
@@ -265,7 +265,7 @@ do {
         defer {
             status += 2
         }
-        for var i=0; i < 100; i += 1 {
+        for const i in range(100) {
             try {
                 break
             }
@@ -397,7 +397,8 @@ do {
     fun throw_from_loop(x)
     {
         try {
-            for var i = 0; i < 100; i += 1 {
+            var i = 0
+            while i < 100 {
                 try {
                     if i == 2 {
                         break
@@ -406,6 +407,7 @@ do {
                 catch const e {
                     i = 100
                 }
+                i += 1
             }
             throw 5
         }
@@ -420,9 +422,8 @@ do {
 }
 
 do {
-    var i = 0
     var j = 0
-    for ; i < 100; i += 1 {
+    for const i in range(100) {
         defer {
             j += 1
         }
@@ -447,7 +448,7 @@ do {
         }
         a += "2"
         const letters = ["a", "b", "c"]
-        for var i = 0; i < 100; i += 1 {
+        for const i in range(100) {
             defer {
                 a += "3"
             }
@@ -471,7 +472,7 @@ do {
     {
         try {
             a += "A"
-            for var i = 0; i < 100; i += 1 {
+            for const i in range(100) {
                 defer {
                     a += "B"
                 }
@@ -498,7 +499,7 @@ do {
     var a = ""
 
     try {
-        for var i = 0; i < 100; i += 1 {
+        for const i in range(100) {
             defer {
                 a += "e "
             }
@@ -536,7 +537,18 @@ do {
             assert j == 6
             fail1 = false
         }
-        for i = 0, j = 0; i < 10; i += 1 {
+
+        fun iterate_over_i
+        {
+            i = 0
+            while i < 10 {
+                yield i
+                i += 1
+            }
+        }
+
+        j = 0
+        for const i in iterate_over_i() {
             defer {
                 j += 1
             }
@@ -582,7 +594,15 @@ do {
 do {
     var i = 0
 
-    for i = 0; i < 10; i += 1 {
+    fun next
+    {
+        while i < 10 {
+            yield i
+            i += 1
+        }
+    }
+
+    for const xyz in next() {
         defer {
             continue // Cancel break, override with continue
         }
@@ -595,8 +615,10 @@ do {
 
 do {
     const value = fun {
-        for var i = 0; ; i += 1 {
+        var i = 0
+        while true {
             return i
+            i += 1
         }
     } ()
     assert value == 0
@@ -702,8 +724,9 @@ do {
     fun set_x(value)
     {
         x = value
+        return false
     }
-    for var x = set_x(1) ; false ; {
+    while set_x(1) {
         x = 2
     }
     assert x == 1
@@ -718,13 +741,11 @@ do {
         }
     }
 
-    var total = 0
     for const v in obj {
         assert typeof v == "array"
         assert v[0] == "iterator"
-        #total += v
+        assert typeof v[1] == "function"
     }
-    #assert total == 12
 }
 
 # multiple defers
@@ -733,7 +754,7 @@ do {
     {
         var a = 0
 
-        for var i = 0; i < 10; i += 2 {
+        for const i in range(0, 10, 2) {
             do {
                 defer { a = a * 10 + i + 1 }
                 if i == x {

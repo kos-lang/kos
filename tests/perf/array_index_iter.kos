@@ -7,12 +7,12 @@ const size  = 10000
 const a     = array(size)
 var   total = 0
 
-for var l = 0; l < loops; l += 1 {
-    for var i = 0; i < size; i += 1 {
+for const l in range(loops) {
+    for const i in range(size) {
         a[i] = i
     }
 
-    for var i = 0; i < size; i += 1 {
+    for const i in range(size) {
         total += a[i]
     }
 }

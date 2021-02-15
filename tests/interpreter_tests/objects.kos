@@ -230,7 +230,7 @@ do {
         }
     }
 
-    for var i = 0; i < values.size; i += 1 {
+    for const i in base.range(values.size) {
         assert values[i] == void
     }
 }
@@ -777,7 +777,7 @@ do {
              1, 1, 1000, -1, -2, -3, -4, -5)
     assert typeof o.rest == "array"
     assert o.rest.size == 5
-    for var i = 0; i < 5; i += 1 {
+    for const i in base.range(5) {
         assert o.rest[i] == -1 - i
     }
     assert o.id == 2
@@ -1308,7 +1308,7 @@ do {
         }
     }
 
-    for var i = 0; i < values.size; i += 1 {
+    for const i in base.range(values.size) {
         assert values[i] == void
     }
 

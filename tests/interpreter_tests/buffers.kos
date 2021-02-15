@@ -219,7 +219,7 @@ do {
 do {
     const b = buffer(range(256))
     assert b.size == 256
-    for var i = 0; i < 256; i += 1 {
+    for const i in range(256) {
         assert b[i] == i
     }
 }
@@ -227,7 +227,7 @@ do {
 do {
     const b = buffer(10, 15)
     assert b.size == 10
-    for var i = 0; i < 10; i += 1 {
+    for const i in range(10) {
         assert b[i] == 15
     }
 }
@@ -285,17 +285,17 @@ do {
     const b = buffer(32)
 
     b.fill(1)
-    for var i = 0; i < b.size; i += 1 {
+    for const i in range(b.size) {
         assert b[i] == 1
     }
 
     b.fill(50)
-    for var i = 0; i < b.size; i += 1 {
+    for const i in range(b.size) {
         assert b[i] == 50
     }
 
     b.fill(100, 24)
-    for var i = 0; i < b.size; i += 1 {
+    for const i in range(b.size) {
         if i < 24 {
             assert b[i] == 50
         }
@@ -305,7 +305,7 @@ do {
     }
 
     b.fill(17, 10, 20)
-    for var i = 0; i < b.size; i += 1 {
+    for const i in range(b.size) {
         if i < 10 {
             assert b[i] == 50
         }
@@ -321,7 +321,7 @@ do {
     }
 
     b.fill(255.0, -24, void)
-    for var i = 0; i < b.size; i += 1 {
+    for const i in range(b.size) {
         if i < 8 {
             assert b[i] == 50
         }
@@ -332,12 +332,12 @@ do {
 
     b.resize(4)
     b.fill(5, void, void)
-    for var i = 0; i < b.size; i += 1 {
+    for const i in range(b.size) {
         assert b[i] == 5
     }
 
     b.fill(6, void)
-    for var i = 0; i < b.size; i += 1 {
+    for const i in range(b.size) {
         assert b[i] == 6
     }
 
@@ -364,7 +364,7 @@ do {
     fun check_b1(contents...)
     {
         assert b1.size == contents.size
-        for var i = 0; i < b1.size; i += 1 {
+        for const i in range(b1.size) {
             assert b1[i] == contents[i]
         }
     }
@@ -423,7 +423,7 @@ do {
     b1.copy_buffer(-2, b1, 2)
     check_b1(4, 4, 4, 2, 2, 0, 3, 3, 4, 2)
 
-    for var i = 0; i < b1.size; i += 1 {
+    for const i in range(b1.size) {
         b1[i] = i
     }
     b1.copy_buffer(-6, b1)
@@ -432,13 +432,13 @@ do {
     b1.copy_buffer(0, b1, 5, 10)
     check_b1(1, 2, 3, 4, 5, 1, 2, 3, 4, 5) 
 
-    for var i = 0; i < b2.size; i += 1 {
+    for const i in range(b2.size) {
         assert b2[i] == 2
     }
-    for var i = 0; i < b3.size; i += 1 {
+    for const i in range(b3.size) {
         assert b3[i] == 3
     }
-    for var i = 0; i < b4.size; i += 1 {
+    for const i in range(b4.size) {
         assert b4[i] == 4
     }
 }
@@ -1047,7 +1047,7 @@ do {
 do {
     const b = buffer([1, 2, 3, 4, 5])
     assert b.size == 5
-    for var i = 0; i < 5; i += 1 {
+    for const i in range(5) {
         assert b[i] == i + 1
     }
 
@@ -1056,7 +1056,7 @@ do {
 
     b.resize(5)
     assert b.size == 5
-    for var i = 0; i < 5; i += 1 {
+    for const i in range(5) {
         assert b[i] == 0
     }
 }
@@ -1127,13 +1127,13 @@ do {
 
     const c = a.repeat(1)
     assert c.size == 3
-    for var i = 0; i < 3; i += 1 {
+    for const i in range(3) {
         c[i] == (i + 1) * 10
     }
 
     const d = a.repeat(3)
     assert d.size == 9
-    for var i = 0; i < 3; i += 1 {
+    for const i in range(3) {
         d[i]     == (i + 1) * 10
         d[i + 3] == (i + 1) * 10
         d[i + 6] == (i + 1) * 10

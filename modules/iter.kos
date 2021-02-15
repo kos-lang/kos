@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2014-2021 Chris Dragan
 
-import base: array, print
+import base: array, print, range
 
 /* @item iter generator()
  *
@@ -98,7 +98,7 @@ public fun iproduct(args...)
 
     if dim == 1 {
         const num = args[0]
-        for var i = 0; i < num; i += 1 {
+        for const i in range(num) {
             yield i
         }
         return
@@ -106,7 +106,7 @@ public fun iproduct(args...)
 
     const step = [0].repeat(dim)
 
-    for var i = 0; i < dim; i += 1 {
+    for const i in range(dim) {
         if args[i] <= 0 {
             return
         }
@@ -116,7 +116,7 @@ public fun iproduct(args...)
         // Make a copy to prevent fiddling outside of the function
         yield [step...]
 
-        for var i = 0; i < dim; i += 1 {
+        for const i in range(dim) {
             const next = step[i] + 1
             if next >= args[i] {
                 if i + 1 == dim {
@@ -163,7 +163,7 @@ public fun product(args...)
     }
 
     const generators = []
-    for var i = 0; i < dim; i += 1 {
+    for const i in range(dim) {
         generators.push(generator(args[i]))
     }
 
@@ -252,7 +252,8 @@ public fun reverse(iterable)
     else {
         iterable = [ iterable ... ]
         return fun(iterable_inner) {
-            for var i = iterable_inner.size; i; {
+            var i = iterable_inner.size
+            while i {
                 i -= 1
                 yield iterable_inner[i]
             }
