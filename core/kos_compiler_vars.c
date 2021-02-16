@@ -347,6 +347,26 @@ cleanup:
     return error;
 }
 
+static int find_local_var(KOS_SCOPE       *scope,
+                          const KOS_TOKEN *token)
+{
+    do {
+        if (kos_find_var(scope->vars, token))
+            return 1;
+
+        /* Special case: a scope in a generated try section for a defer statement.
+         * In this case, look up the variable in the parent scope,
+         * because in the source code this is the same scope.
+         */
+        if (scope->scope_node->token.keyword != KW_DEFER)
+            break;
+
+        scope = scope->parent_scope;
+    } while (scope);
+
+    return 0;
+}
+
 enum DEFINE_VAR_CONST {
     VARIABLE,
     CONSTANT
@@ -379,7 +399,7 @@ static int define_var(KOS_COMP_UNIT         *program,
     if (program->is_interactive && ! program->scope_stack->parent_scope)
         global = GLOBAL;
 
-    if (kos_find_var(program->scope_stack->vars, &node->token)) {
+    if (find_local_var(program->scope_stack, &node->token)) {
         program->error_token = &node->token;
         program->error_str   = str_err_redefined_var;
         error                = KOS_ERROR_COMPILE_FAILED;
