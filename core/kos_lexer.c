@@ -270,6 +270,7 @@ static const struct KOS_OP_SPECIFIER_S operator_map[][7] = {
 
 static const char *const keywords[] = {
     KOS_NULL,
+    "_",
     "__line__",
     "assert",
     "async",
@@ -296,6 +297,7 @@ static const char *const keywords[] = {
     "in",
     "instanceof",
     "loop",
+    "match",
     "propertyof",
     "public",
     "repeat",

@@ -70,7 +70,7 @@ while; # Expression expected
 @ 10 4 6
 
 @------------------------------------------------------------------------------
-repeat {} while _ = 1; # Semicolon expected
+repeat {} while x = 1; # Semicolon expected
 
 @ 10 1 19
 

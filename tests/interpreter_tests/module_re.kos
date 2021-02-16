@@ -20,19 +20,19 @@ fun check(result, begin, end)
 
 fun find_all(regex, str)
 {
-    const found = []
+    const items = []
     var pos = 0
     loop {
-        const match = regex.find(str, pos)
-        if ! match {
+        const found = regex.find(str, pos)
+        if ! found {
             break
         }
 
-        found.push(str[match.begin : match.end])
-        pos = match.end
+        items.push(str[found.begin : found.end])
+        pos = found.end
     }
 
-    return found
+    return items
 }
 
 do {

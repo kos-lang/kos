@@ -36,20 +36,19 @@
 @------------------------------------------------------------------------------
 # Valid identifiers
 
-_; a; z; A; Z; b0; B9; _1;
+a; z; A; Z; b0; B9; _1;
 abcdefghijklmnopqrstuvwxyz_ABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789;
 
 @ 0
 
 (scope 1 1
-    (identifier 3 1 _)
-    (identifier 3 4 a)
-    (identifier 3 7 z)
-    (identifier 3 10 A)
-    (identifier 3 13 Z)
-    (identifier 3 16 b0)
-    (identifier 3 20 B9)
-    (identifier 3 24 _1)
+    (identifier 3 1 a)
+    (identifier 3 4 z)
+    (identifier 3 7 A)
+    (identifier 3 10 Z)
+    (identifier 3 13 b0)
+    (identifier 3 17 B9)
+    (identifier 3 21 _1)
     (identifier 4 1 abcdefghijklmnopqrstuvwxyz_ABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789)
 )
 

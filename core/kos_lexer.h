@@ -40,6 +40,7 @@ typedef enum KOS_TOKEN_TYPE_E {
 
 typedef enum KOS_KEYWORD_TYPE_E {
     KW_NONE,
+    KW_UNDERSCORE,
     KW_LINE,
     KW_ASSERT,
     KW_ASYNC,
@@ -66,6 +67,7 @@ typedef enum KOS_KEYWORD_TYPE_E {
     KW_IN,
     KW_INSTANCEOF,
     KW_LOOP,
+    KW_MATCH,
     KW_PROPERTYOF,
     KW_PUBLIC,
     KW_REPEAT,
