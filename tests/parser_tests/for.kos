@@ -70,9 +70,14 @@ for (var a in b;;) {} # Close parenthesis expected
 @------------------------------------------------------------------------------
 for var a = 0; ; a += 1 : # Open curly brace expected
 
-@ 10 1 25
+@ 10 1 14
 
 @------------------------------------------------------------------------------
-for (var a = 0; ; a += 1 : # Close parenthesis expected
+for var a in 1 : # Open curly brace expected
 
-@ 10 1 26
+@ 10 1 16
+
+@------------------------------------------------------------------------------
+for (var a in 1 : # Close parenthesis expected
+
+@ 10 1 17

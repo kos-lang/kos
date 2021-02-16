@@ -16,7 +16,7 @@ typedef enum KOS_NODE_TYPE_U {
     NT_TRY_DEFER,
     NT_SWITCH,
     NT_REPEAT,
-    NT_FOR,
+    NT_WHILE,
     NT_FOR_IN,
     NT_CONTINUE,
     NT_BREAK,

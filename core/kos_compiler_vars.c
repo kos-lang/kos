@@ -1102,7 +1102,7 @@ static int visit_node(KOS_COMP_UNIT *program,
             /* fall through */
         case NT_REPEAT:
             /* fall through */
-        case NT_FOR:
+        case NT_WHILE:
             /* fall through */
         case NT_REFINEMENT:
             /* fall through */

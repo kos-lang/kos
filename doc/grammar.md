@@ -156,6 +156,7 @@ Keywords
 Keywords are identifiers matching one of the reserved keywords.
 The following reserved keywords are defined:
 
+* `_`
 * `__line__`
 * `assert`
 * `async`
@@ -182,6 +183,7 @@ The following reserved keywords are defined:
 * `in`
 * `instanceof`
 * `loop`
+* `match`
 * `propertyof`
 * `public`
 * `repeat`
@@ -831,54 +833,19 @@ of the expression.
 For statement
 -------------
 
-The for statement consists of the loop control definition and a compound
-statement.  The loop control definition determines how the for statement
-loops over the compound statement.
+The for statement consists of a control expression and a compound
+statement.  The loop control expression declares variables and an expression,
+which shall produce a container over which the loop will iterate.
 
     ForStatement ::= "for" ForLoopControl CompoundStatement
 
-There are two variants of the loop control definition.
-
-    ForLoopControl ::= ForCondition
-                     | ForInExpression
-                     | ( "(" ForCondition ")" )
+    ForLoopControl ::= ForInExpression
                      | ( "(" ForInExpression ")" )
 
-The first variant consists of a loop initialization expression list, loop
-condition and a step expression.
+    ForInExpression ::= ( VarList | ConstList ) "in" RHSExpression
 
-    ForCondition          ::= [ ExpressionList ] ";" [ RHSExpression  ] ";" [ ForStepExpressionList ]
-
-    ExpressionList        ::= Expression ( "," Expression )*
-
-    ForStepExpressionList ::= ForStepExpression ( "," ForStepExpression )*
-
-The semicolons in the `for` condition are mandatory.
-
-The initialization expression list is executed once before the loop.
-
-Any variables declared in the loop initialization expression list are visible
-only within the loop control definition and the for compound statement.
-The values of these variables are retained across loops.
-
-The loop condition is evaluated before every loop, including the first loop.
-Consecutive loops are only executed if the loop condition is truthy.  If the
-loop condition is falsy, the loop is interrupted.  If the loop condition is
-empty, the loop executes forever, unless there is a break statement in it.
-
-The step expression list is executed after every loop.  Variable or constant
-definitions are not allowed in the step expression list.
-
-In the variant without parentheses, which are optional, the initialization
-expression cannot begin with an open parenthesis and the step expression cannot
-begin with an object literal, unless the object literal is in parentheses,
-otherwise the loop control definition will be interpreted incorrectly and
-the parser will fail with an error.
-
-The second variant of the for statement declares variables and the expression,
-which shall produce a container over which the loop will iterate.
-
-The declared variables are visible in the compound statement.
+Variables declared in the loop control expression are visible
+only within the compound statement.
 
 Before the first loop commences, the expression is evaluated and
 a generator is extracted from its result.  For example, if the resulting
@@ -889,11 +856,9 @@ If a generator cannot be extracted, an exception is thrown.
 For every loop, a new item from the generator is assigned to the variables.
 
 If there is a single variable, the item is assigned to it.  If there are
-multiple variables, consecutive elements of the item are assigned to them using
-array indexing operator.  If the item does not support extracting elements,
+multiple variables, consecutive elements of the item are assigned to them by
+iterating over the item.  If the item does not support extracting elements,
 an exception is thrown.
-
-    ForInExpression ::= ( VarList | ConstList ) "in" RHSExpression
 
 
 Continue statement
@@ -1020,10 +985,6 @@ Expressions
                                      ArithAssignmentExpression |
                                      VariableDefinitionExpression |
                                      RHSExpression
-
-    ForStepExpression            ::= AssignmentExpression
-                                   | ArithAssignmentExpression
-                                   | RHSExpression
 
     AssignmentExpression         ::= AssignmentTargetList AssignmentOperator RHSExpression
 

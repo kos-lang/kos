@@ -30,6 +30,7 @@ static const char str_err_expected_const_or_expr[]    = "expected 'const' or exp
 static const char str_err_expected_curly_close[]      = "expected '}'";
 static const char str_err_expected_curly_open[]       = "expected '{'";
 static const char str_err_expected_expression[]       = "expected expression";
+static const char str_err_expected_for_in[]           = "expected 'in' expression";
 static const char str_err_expected_ident_or_str[]     = "expected identifier or string literal";
 static const char str_err_expected_identifier[]       = "expected identifier";
 static const char str_err_expected_invocation[]       = "expected invocation";
@@ -2709,9 +2710,7 @@ static int loop_stmt(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
     KOS_AST_NODE *node = KOS_NULL;
 
-    TRY(new_node(parser, ret, NT_FOR));
-
-    TRY(push_node(parser, *ret, NT_EMPTY, KOS_NULL));
+    TRY(new_node(parser, ret, NT_WHILE));
 
     TRY(push_node(parser, *ret, NT_EMPTY, KOS_NULL));
 
@@ -2776,14 +2775,12 @@ static int while_stmt(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
     KOS_AST_NODE *node = KOS_NULL;
 
-    TRY(new_node(parser, ret, NT_FOR));
+    TRY(new_node(parser, ret, NT_WHILE));
 
     TRY(right_hand_side_expr(parser, &node));
 
     ast_push(*ret, node);
     node = KOS_NULL;
-
-    TRY(push_node(parser, *ret, NT_EMPTY, KOS_NULL));
 
     ++parser->state.allow_continue;
     ++parser->state.allow_break;
@@ -2801,7 +2798,6 @@ cleanup:
 }
 
 static int for_expr_list(KOS_PARSER        *parser,
-                         int                allow_in,
                          KOS_SEPARATOR_TYPE end_sep,
                          KOS_AST_NODE     **ret)
 {
@@ -2811,51 +2807,16 @@ static int for_expr_list(KOS_PARSER        *parser,
 
     TRY(new_node(parser, ret, NT_EXPRESSION_LIST));
 
-    TRY(expr(parser, allow_in, allow_in, &node));
+    /* TODO allow variable without var or const */
+    TRY(expr(parser, 1, 1, &node));
 
     if (node->type == NT_IN) {
-
         *ret = node;
         node = KOS_NULL;
     }
     else {
-
-        ast_push(*ret, node);
-        node = KOS_NULL;
-
-        for (;;) {
-
-            TRY(next_token(parser));
-
-            if ((KOS_SEPARATOR_TYPE)parser->token.sep == end_sep) {
-                parser->unget = 1;
-                break;
-            }
-
-            if (parser->token.sep != ST_COMMA)
-                switch (end_sep) {
-                    case ST_SEMICOLON:
-                        parser->error_str = str_err_expected_semicolon;
-                        error = KOS_ERROR_PARSE_FAILED;
-                        goto cleanup;
-                    case ST_CURLY_OPEN:
-                        parser->error_str = str_err_expected_curly_open;
-                        error = KOS_ERROR_PARSE_FAILED;
-                        goto cleanup;
-                    case ST_PAREN_CLOSE:
-                        /* fall through */
-                    default:
-                        assert(end_sep == ST_PAREN_CLOSE);
-                        parser->error_str = str_err_expected_paren_close;
-                        error = KOS_ERROR_PARSE_FAILED;
-                        goto cleanup;
-                }
-
-            TRY(expr(parser, 0, allow_in, &node));
-
-            ast_push(*ret, node);
-            node = KOS_NULL;
-        }
+        parser->error_str = str_err_expected_for_in;
+        error = KOS_ERROR_PARSE_FAILED;
     }
 
 cleanup:
@@ -2864,100 +2825,27 @@ cleanup:
 
 static int for_stmt(KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
-    int error  = KOS_SUCCESS;
-    int for_in = 0;
+    int error = KOS_SUCCESS;
     int has_paren;
 
     KOS_AST_NODE *node       = KOS_NULL;
     KOS_AST_NODE *scope_node = KOS_NULL;
     KOS_AST_NODE *for_node   = KOS_NULL;
 
-    TRY(new_node(parser, &for_node, NT_FOR));
+    TRY(new_node(parser, &for_node, NT_FOR_IN));
+    *ret = for_node;
 
     TRY(new_node(parser, &scope_node, NT_SCOPE));
 
     TRY(fetch_optional_paren(parser, &has_paren));
 
-    TRY(next_token(parser));
+    TRY(for_expr_list(parser, ST_SEMICOLON, &node));
 
-    if (parser->token.sep == ST_SEMICOLON) {
+    assert(node->type == NT_IN);
 
-        *ret = for_node;
+    ast_push(for_node, node);
 
-        parser->unget = 1;
-    }
-    else {
-
-        parser->unget = 1;
-
-        TRY(for_expr_list(parser, 1, ST_SEMICOLON, &node));
-
-        if (node->type == NT_IN) {
-            for_in         = 1;
-            for_node->type = NT_FOR_IN;
-            *ret           = for_node;
-
-            ast_push(for_node, node);
-        }
-        else {
-            *ret = scope_node;
-
-            ast_push(scope_node, node);
-            ast_push(scope_node, for_node);
-        }
-
-        node = KOS_NULL;
-    }
-
-    if (!for_in) {
-
-        TRY(assume_separator(parser, ST_SEMICOLON));
-
-        TRY(next_token(parser));
-
-        if (parser->token.sep == ST_SEMICOLON)
-
-            TRY(push_node(parser, for_node, NT_EMPTY, KOS_NULL));
-
-        else {
-
-            parser->unget = 1;
-
-            TRY(right_hand_side_expr(parser, &node));
-
-            ast_push(for_node, node);
-            node = KOS_NULL;
-
-            TRY(next_token(parser));
-
-            if (parser->token.sep != ST_SEMICOLON) {
-                parser->error_str = str_err_expected_semicolon;
-                error = KOS_ERROR_PARSE_FAILED;
-                goto cleanup;
-            }
-        }
-
-        TRY(next_token(parser));
-
-        if ((has_paren  && parser->token.sep == ST_PAREN_CLOSE) ||
-            (!has_paren && parser->token.sep == ST_CURLY_OPEN)) {
-
-            TRY(push_node(parser, for_node, NT_EMPTY, KOS_NULL));
-
-            parser->unget = 1;
-        }
-        else {
-
-            parser->unget = 1;
-
-            TRY(for_expr_list(parser, 0,
-                              has_paren ? ST_PAREN_CLOSE : ST_CURLY_OPEN,
-                              &node));
-
-            ast_push(for_node, node);
-            node = KOS_NULL;
-        }
-    }
+    node = KOS_NULL;
 
     if (has_paren)
         TRY(assume_separator(parser, ST_PAREN_CLOSE));

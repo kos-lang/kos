@@ -540,9 +540,9 @@ cleanup:
     return error;
 }
 
-static int for_stmt(KOS_COMP_UNIT *program,
-                    KOS_AST_NODE  *node,
-                    int           *is_terminal)
+static int while_stmt(KOS_COMP_UNIT *program,
+                      KOS_AST_NODE  *node,
+                      int           *is_terminal)
 {
     int error     = KOS_SUCCESS;
     int is_truthy = 0;
@@ -558,16 +558,6 @@ static int for_stmt(KOS_COMP_UNIT *program,
         is_truthy = node->type == NT_EMPTY || kos_node_is_truthy(program, node);
         is_falsy  = is_truthy ? 0 : kos_node_is_falsy(program, node);
     }
-
-    node = node->next;
-    assert(node);
-    if (is_falsy && node->type != NT_EMPTY) {
-        collapse(node, NT_EMPTY, TT_IDENTIFIER, KW_NONE, KOS_NULL, 0);
-        ++program->num_optimizations;
-    }
-
-    TRY(visit_node(program, node, &t));
-    assert(t == TERM_NONE);
 
     assert(node->next);
     assert( ! node->next->next);
@@ -2015,8 +2005,8 @@ static int visit_node(KOS_COMP_UNIT *program,
         case NT_REPEAT:
             error = repeat_stmt(program, node, is_terminal);
             break;
-        case NT_FOR:
-            error = for_stmt(program, node, is_terminal);
+        case NT_WHILE:
+            error = while_stmt(program, node, is_terminal);
             break;
         case NT_FOR_IN:
             error = for_in_stmt(program, node);

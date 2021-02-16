@@ -5,13 +5,9 @@
 
 * Hook Ctrl-C in interpreter to interrupt all threads
 
-* Object ctor: accept some form of input args, e.g. pairs of [key, value]
-
 * Add warnings about variable shadowing
 
 * ? Callstack from shallow is missing built-in function
-
-* if, switch variable declarations
 
 * Use _ as operator for empty extraction instead of void, like in Python
 
@@ -35,6 +31,8 @@
 
 * Comparison operators for arrays and objects
 
+* ? Add match expression
+
 * ? Add delete global in REPL (only), set BADPTR on global, functions using globals should then fail
 
 * Expand object in-place, e.g. { a: 1, b..., c: 2 }
@@ -50,8 +48,6 @@
 * ? Add buffer strings b"" or buffer literals <01 fa>
 
 * ? Empty array, buffer, string, object (shallow) are all falsy
-
-* remove C-style for loop
 
 * ? set/get:
 

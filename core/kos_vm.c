@@ -880,7 +880,7 @@ static KOS_OBJ_ID get_named_args(KOS_CONTEXT ctx,
         idx       = (uint32_t)GET_SMALL_INT(idx_id);
         end_found = KOS_max(end_found, idx + 1U);
 
-        TRY(KOS_array_write(ctx, args.o, (int64_t)idx, KOS_get_walk_value(input.o)));
+        TRY(KOS_array_write(ctx, args.o, (int)idx, KOS_get_walk_value(input.o)));
     }
 
     for (i = 0; i < min_args; i++) {

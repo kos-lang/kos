@@ -1752,8 +1752,8 @@ cleanup:
     return error;
 }
 
-static int for_stmt(KOS_COMP_UNIT      *program,
-                    const KOS_AST_NODE *node)
+static int while_stmt(KOS_COMP_UNIT      *program,
+                      const KOS_AST_NODE *node)
 {
     int                 error          = KOS_SUCCESS;
     const KOS_AST_NODE *cond_node      = node->children;
@@ -1770,7 +1770,6 @@ static int for_stmt(KOS_COMP_UNIT      *program,
         int                 continue_tgt_offs;
         int                 is_truthy;
         unsigned            negated              = 0;
-        const KOS_AST_NODE *step_node;
         KOS_REG            *reg                  = KOS_NULL;
 
         program->cur_frame->break_offs = KOS_NULL;
@@ -1798,24 +1797,16 @@ static int for_stmt(KOS_COMP_UNIT      *program,
 
         loop_start_offs = program->cur_offs;
 
-        step_node = cond_node->next;
-        assert(step_node);
-
-        node = step_node->next;
+        node = cond_node->next;
         assert(node);
         assert( ! node->next);
 
         TRY(visit_node(program, node, &reg));
         assert( ! reg);
 
-        TRY(add_addr2line(program, &step_node->token, KOS_FALSE_VALUE));
-
         continue_tgt_offs = program->cur_offs;
 
-        TRY(visit_node(program, step_node, &reg));
-        assert( ! reg);
-
-        if (program->cur_offs == continue_tgt_offs && is_truthy)
+        if (is_truthy)
             continue_tgt_offs = loop_start_offs;
 
         if (is_truthy)
@@ -5512,8 +5503,8 @@ static int visit_node(KOS_COMP_UNIT      *program,
         case NT_REPEAT:
             error = repeat(program, node);
             break;
-        case NT_FOR:
-            error = for_stmt(program, node);
+        case NT_WHILE:
+            error = while_stmt(program, node);
             break;
         case NT_FOR_IN:
             error = for_in(program, node);

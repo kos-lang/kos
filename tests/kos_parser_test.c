@@ -27,7 +27,7 @@ static const char *const node_types[] = {
     "try-defer",
     "switch",
     "repeat",
-    "for",
+    "while",
     "for_in",
     "continue",
     "break",
