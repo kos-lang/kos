@@ -1054,28 +1054,21 @@ static int import(KOS_COMP_UNIT      *program,
 
             for ( ; node; node = node->next) {
 
-                int global_idx;
-
                 assert(node->token.type == TT_IDENTIFIER || node->token.type == TT_KEYWORD);
 
-                error = kos_comp_get_global_idx(program->ctx,
+                info.pos = get_token_pos(&node->token);
+
+                error = kos_comp_resolve_global(program->ctx,
                                                 module_idx,
                                                 node->token.begin,
                                                 node->token.length,
-                                                &global_idx);
-                if (error) {
+                                                import_global,
+                                                &info);
+                if (error && (error != KOS_ERROR_OUT_OF_MEMORY)) {
                     program->error_token = &node->token;
                     program->error_str   = str_err_no_such_module_variable;
                     RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
                 }
-
-                info.pos = get_token_pos(&node->token);
-
-                TRY(import_global(node->token.begin,
-                                  node->token.length,
-                                  module_idx,
-                                  global_idx,
-                                  &info));
             }
         }
     }
@@ -2576,6 +2569,16 @@ static KOS_REG *super_prototype(KOS_COMP_UNIT      *program,
     return program->cur_frame->base_proto_reg;
 }
 
+static int get_global_idx(const char *global_name,
+                          uint16_t    global_length,
+                          int         module_idx,
+                          int         global_idx,
+                          void       *cookie)
+{
+    *(int *)cookie = global_idx;
+    return KOS_SUCCESS;
+}
+
 static int refinement_module(KOS_COMP_UNIT      *program,
                              KOS_VAR            *module_var,
                              const KOS_AST_NODE *node, /* the second child of the refinement node */
@@ -2593,11 +2596,16 @@ static int refinement_module(KOS_COMP_UNIT      *program,
         uint16_t        length;
         KOS_UTF8_ESCAPE escape;
 
-        /* TODO this does not work for escaped strings, kos_comp_get_global_idx assumes NO_ESCAPE */
+        /* TODO this does not work for escaped strings, kos_comp_resolve_global assumes NO_ESCAPE */
         get_token_str(&node->token, &begin, &length, &escape);
 
-        error = kos_comp_get_global_idx(program->ctx, module_var->array_idx, begin, length, &global_idx);
-        if (error) {
+        error = kos_comp_resolve_global(program->ctx,
+                                        module_var->array_idx,
+                                        begin,
+                                        length,
+                                        get_global_idx,
+                                        &global_idx);
+        if (error && (error != KOS_ERROR_OUT_OF_MEMORY)) {
             program->error_token = &node->token;
             program->error_str   = str_err_no_such_module_variable;
             RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
@@ -3081,9 +3089,13 @@ static int invocation(KOS_COMP_UNIT      *program,
         static const char str_string[] = "stringify";
         int               string_idx   = 0;
 
-        error = kos_comp_get_global_idx(program->ctx, 0, str_string, sizeof(str_string)-1,
+        error = kos_comp_resolve_global(program->ctx,
+                                        0,
+                                        str_string,
+                                        sizeof(str_string)-1,
+                                        get_global_idx,
                                         &string_idx);
-        if (error) {
+        if (error && (error != KOS_ERROR_OUT_OF_MEMORY)) {
             program->error_token = &node->token;
             program->error_str   = str_err_no_such_module_variable;
             RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);

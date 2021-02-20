@@ -841,43 +841,51 @@ cleanup:
     return ret;
 }
 
-int kos_comp_get_global_idx(void       *vframe,
-                            int         module_idx,
-                            const char *name,
-                            uint16_t    length,
-                            int        *global_idx)
+int kos_comp_resolve_global(void                          *vframe,
+                            int                            module_idx,
+                            const char                    *name,
+                            uint16_t                       length,
+                            KOS_COMP_WALK_GLOBALS_CALLBACK callback,
+                            void                          *cookie)
 {
     int           error = KOS_SUCCESS;
-    KOS_OBJ_ID    str;
     KOS_CONTEXT   ctx   = (KOS_CONTEXT)vframe;
     KOS_INSTANCE *inst  = ctx->inst;
     KOS_OBJ_ID    module_obj;
     KOS_OBJ_ID    glob_idx_obj;
 
+    KOS_DECLARE_CONST_STRING_WITH_LENGTH(str, 0, KOS_NULL);
+
     assert(module_idx >= 0);
 
     TRY(kos_seq_fail());
 
-    str = KOS_new_string(ctx, name, length);
-    TRY_OBJID(str);
+    assert(!kos_is_heap_object(KOS_CONST_ID(str)));
+    str.object.data_ptr = name;
+    str.object.length   = length;
 
     module_obj = KOS_array_read(ctx, inst->modules.modules, module_idx);
     TRY_OBJID(module_obj);
 
     assert(GET_OBJ_TYPE(module_obj) == OBJ_MODULE);
 
-    glob_idx_obj = KOS_get_property_shallow(ctx, OBJPTR(MODULE, module_obj)->global_names, str);
+    glob_idx_obj = KOS_get_property_shallow(ctx, OBJPTR(MODULE, module_obj)->global_names, KOS_CONST_ID(str));
     TRY_OBJID(glob_idx_obj);
 
     assert(IS_SMALL_INT(glob_idx_obj));
 
-    *global_idx = (int)GET_SMALL_INT(glob_idx_obj);
+    TRY(callback(name,
+                 length,
+                 module_idx,
+                 (int)GET_SMALL_INT(glob_idx_obj),
+                 cookie));
 
 cleanup:
-    if (error) {
+    if (error == KOS_ERROR_EXCEPTION) {
+        error = (KOS_get_exception(ctx) == KOS_STR_OUT_OF_MEMORY) ? KOS_ERROR_OUT_OF_MEMORY : KOS_ERROR_NOT_FOUND;
         KOS_clear_exception(ctx);
-        error = KOS_ERROR_NOT_FOUND;
     }
+
     return error;
 }
 
@@ -921,6 +929,11 @@ int kos_comp_walk_globals(void                          *vframe,
 cleanup:
     KOS_destroy_top_local(ctx, &walk);
     KOS_vector_destroy(&name);
+
+    if (error == KOS_ERROR_EXCEPTION) {
+        error = (KOS_get_exception(ctx) == KOS_STR_OUT_OF_MEMORY) ? KOS_ERROR_OUT_OF_MEMORY : KOS_ERROR_NOT_FOUND;
+        KOS_clear_exception(ctx);
+    }
 
     return error;
 }
@@ -1210,7 +1223,7 @@ static int compile_module(KOS_CONTEXT           ctx,
     time_1 = kos_get_time_us();
 
     /* Save base module index */
-    if (module_idx == 0)
+    if (module_idx == KOS_BASE_MODULE_IDX)
         TRY(KOS_array_write(ctx, inst->modules.modules, module_idx, module.o));
 
     /* Prepare compiler */
@@ -1507,10 +1520,10 @@ static int load_base_module(KOS_CONTEXT ctx,
     if (inst->flags & KOS_INST_VERBOSE)
         print_search_paths(ctx, inst->modules.search_paths);
 
-    base_obj = import_module(ctx, base, sizeof(base)-1, 0, KOS_NULL, 0, &base_idx);
+    base_obj = import_module(ctx, base, sizeof(base) - 1, 0, KOS_NULL, 0, &base_idx);
     TRY_OBJID(base_obj);
 
-    assert(base_idx == 0);
+    assert(base_idx == KOS_BASE_MODULE_IDX);
 
     if (IS_BAD_PTR(KOS_run_module(ctx, base_obj))) {
         assert(KOS_is_exception_pending(ctx));

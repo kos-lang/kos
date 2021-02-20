@@ -74,7 +74,19 @@ static int scope_ref_compare_node(KOS_RED_BLACK_NODE *a,
     return (int)((intptr_t)ref_a->closure - (intptr_t)ref_b->closure);
 }
 
+enum KOS_VAR_SPECIAL_E kos_get_special(int         module_idx,
+                                       const char *name,
+                                       unsigned    length)
+{
+    if ((module_idx == KOS_BASE_MODULE_IDX) &&
+        (strncmp(name, "range", length) == 0))
+        return SPECIAL_RANGE;
+
+    return SPECIAL_NONE;
+}
+
 static KOS_VAR *alloc_var(KOS_COMP_UNIT      *program,
+                          unsigned            type,
                           unsigned            is_const,
                           const KOS_AST_NODE *node)
 {
@@ -84,12 +96,15 @@ static KOS_VAR *alloc_var(KOS_COMP_UNIT      *program,
     if (var) {
         memset(var, 0, sizeof(*var));
 
-        var->scope        = program->scope_stack;
-        var->token        = &node->token;
-        var->type         = VAR_LOCAL;
-        var->is_const     = is_const;
-        var->is_active    = VAR_ALWAYS_ACTIVE;
-        var->num_reads    = -1;
+        var->scope     = program->scope_stack;
+        var->token     = &node->token;
+        var->type      = type;
+        var->is_const  = is_const;
+        var->is_active = VAR_ALWAYS_ACTIVE;
+        var->num_reads = -1;
+
+        if (var->type == VAR_GLOBAL)
+            var->special = kos_get_special((int)program->file_id, node->token.begin, node->token.length);
 
         kos_red_black_insert(&program->scope_stack->vars,
                              (KOS_RED_BLACK_NODE *)var,
@@ -108,10 +123,9 @@ static int init_global_scope(KOS_COMP_UNIT *program)
 
     for ( ; global; global = global->next) {
 
-        KOS_VAR *var = alloc_var(program, global->is_const, &global->node);
+        KOS_VAR *var = alloc_var(program, global->type, global->is_const, &global->node);
 
         if (var) {
-            var->type        = global->type;
             var->array_idx   = global->idx;
             var->next        = program->globals;
             program->globals = var;
@@ -405,7 +419,7 @@ static int define_var(KOS_COMP_UNIT         *program,
         error                = KOS_ERROR_COMPILE_FAILED;
     }
 
-    var = alloc_var(program, is_const, node);
+    var = alloc_var(program, global ? VAR_GLOBAL : VAR_LOCAL, is_const, node);
     if (!var)
         RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
 
@@ -418,7 +432,6 @@ static int define_var(KOS_COMP_UNIT         *program,
     *out_var           = var;
 
     if (global) {
-        var->type        = VAR_GLOBAL;
         var->array_idx   = program->num_globals++;
         var->next        = program->globals;
         program->globals = var;
@@ -486,6 +499,8 @@ static int import_global(const char *global_name,
             var->module_idx = module_idx;
             var->array_idx  = global_idx;
         }
+
+        var->special = kos_get_special(module_idx, global_name, global_length);
     }
     else
         error = KOS_ERROR_OUT_OF_MEMORY;
@@ -523,11 +538,10 @@ static int import(KOS_COMP_UNIT *program,
             }
         }
         else {
-            var = alloc_var(program, 1, node);
+            var = alloc_var(program, VAR_MODULE, 1, node);
             if (!var)
                 RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
 
-            var->type        = VAR_MODULE;
             var->array_idx   = module_idx;
             var->next        = program->modules;
             program->modules = var;
@@ -541,11 +555,12 @@ static int import(KOS_COMP_UNIT *program,
     node = node->next;
 
     if (node) {
-        if (node->token.op == OT_MUL) {
-            KOS_IMPORT_INFO_V info;
+        KOS_IMPORT_INFO_V info;
 
-            info.program = program;
-            info.node    = node;
+        info.program = program;
+
+        if (node->token.op == OT_MUL) {
+            info.node = node;
 
             error = kos_comp_walk_globals(program->ctx,
                                           module_idx,
@@ -555,28 +570,20 @@ static int import(KOS_COMP_UNIT *program,
         else {
             for ( ; node; node = node->next) {
 
-                KOS_VAR *var;
-                int      global_idx;
-
                 assert(node->token.type == TT_IDENTIFIER || node->token.type == TT_KEYWORD);
 
-                error = kos_comp_get_global_idx(program->ctx,
+                info.node = node;
+
+                error = kos_comp_resolve_global(program->ctx,
                                                 module_idx,
                                                 node->token.begin,
                                                 node->token.length,
-                                                &global_idx);
-                if (error) {
+                                                import_global,
+                                                &info);
+                if (error && (error != KOS_ERROR_OUT_OF_MEMORY)) {
                     program->error_token = &node->token;
                     program->error_str   = str_err_no_such_module_variable;
                     RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
-                }
-
-                error = define_var(program, CONSTANT, node, &var);
-
-                if ( ! error && (var->type != VAR_GLOBAL)) {
-                    var->type       = VAR_IMPORTED;
-                    var->array_idx  = global_idx;
-                    var->module_idx = module_idx;
                 }
             }
         }

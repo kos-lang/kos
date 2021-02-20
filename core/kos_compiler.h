@@ -12,6 +12,9 @@
 #include "kos_red_black.h"
 #include <stdint.h>
 
+/* base module is always at index 0 */
+#define KOS_BASE_MODULE_IDX 0
+
 typedef struct KOS_REG_S {
     struct KOS_REG_S *next;
     struct KOS_REG_S *prev;
@@ -39,6 +42,11 @@ enum KOS_VAR_ACTIVE_E {
     VAR_ALWAYS_ACTIVE
 };
 
+enum KOS_VAR_SPECIAL_E {
+    SPECIAL_NONE,
+    SPECIAL_RANGE
+};
+
 typedef struct KOS_VAR_S {
     KOS_RED_BLACK_NODE  rb_tree_node;      /* Node for red-black tree holding variables in parent scope        */
     struct KOS_VAR_S   *next;              /* Pointer to next variable on the list of variables in frame scope */
@@ -57,6 +65,7 @@ typedef struct KOS_VAR_S {
     unsigned            is_active    : 3;  /* Becomes active/searchable after the node, which declares it. */
     unsigned            is_const     : 1;
     unsigned            has_defaults : 1;
+    unsigned            special      : 1;  /* enum KOS_VAR_SPECIAL_E: special variable, used by optimizer */
 } KOS_VAR;
 
 typedef struct KOS_BREAK_OFFS_S {
@@ -306,6 +315,10 @@ int kos_optimize(KOS_COMP_UNIT *program,
 int kos_allocate_args(KOS_COMP_UNIT *program,
                       KOS_AST_NODE  *ast);
 
+enum KOS_VAR_SPECIAL_E kos_get_special(int         module_idx,
+                                       const char *name,
+                                       unsigned    length);
+
 KOS_VAR *kos_find_var(KOS_RED_BLACK_NODE *rb_root,
                       const KOS_TOKEN    *token);
 
@@ -335,17 +348,18 @@ int kos_comp_import_module(void       *ctx,
                            uint16_t    length,
                            int        *module_idx);
 
-int kos_comp_get_global_idx(void       *ctx,
-                            int         module_idx,
-                            const char *name,
-                            uint16_t    length,
-                            int        *global_idx);
-
 typedef int (*KOS_COMP_WALK_GLOBALS_CALLBACK)(const char *global_name,
                                               uint16_t    global_length,
                                               int         module_idx,
                                               int         global_idx,
                                               void       *cookie);
+
+int kos_comp_resolve_global(void                          *vframe,
+                            int                            module_idx,
+                            const char                    *name,
+                            uint16_t                       length,
+                            KOS_COMP_WALK_GLOBALS_CALLBACK callback,
+                            void                          *cookie);
 
 int kos_comp_walk_globals(void                          *ctx,
                           int                            module_idx,

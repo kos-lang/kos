@@ -2,6 +2,8 @@
 # Copyright (c) 2014-2021 Chris Dragan
 
 import base.print
+import base.range
+import base
 
 fun check(function, expected)
 {
@@ -806,4 +808,43 @@ do {
 
     check(uses_super,   { registers: 2, instructions: 2, size: 6 })
     check(unused_super, { registers: 2, instructions: 2, size: 6 })
+}
+
+#============================================================================#
+
+do {
+    fun range_num(n)
+    {
+        var sum = 0
+        for const i in range(n) {
+            sum += i
+        }
+        return sum
+    }
+
+    fun range_begin_end(begin, end)
+    {
+        var sum = 0
+        for const i in range(begin, end) {
+            sum += i
+        }
+        return sum
+    }
+
+    fun range_dec(begin, end)
+    {
+        var sum = 0
+        for const i in base.range(begin, end, -2) {
+            sum += i
+        }
+        return sum
+    }
+
+    assert range_num(4) == 6
+    assert range_begin_end(5, 7) == 11
+    assert range_dec(8, 3) == 18
+
+    check(range_num,       { registers: 4, instructions:  8, size: 39 })
+    check(range_begin_end, { registers: 6, instructions: 10, size: 45 })
+    check(range_dec,       { registers: 7, instructions: 11, size: 48 })
 }
