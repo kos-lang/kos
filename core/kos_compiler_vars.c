@@ -477,7 +477,7 @@ static int import_global(const char *global_name,
     if (g_node) {
 
         KOS_TOKEN *token = &g_node->token;
-        KOS_VAR   *var;
+        KOS_VAR   *var   = KOS_NULL;
 
         memset(g_node, 0, sizeof(*g_node));
 
