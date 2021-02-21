@@ -34,6 +34,7 @@ static const char str_err_operand_not_string[]        = "operand is not a string
 static const char str_err_return_in_generator[]       = "complex return statement in a generator function, return value always ignored";
 static const char str_err_too_many_args[]             = "too many arguments passed to a function";
 static const char str_err_too_many_registers[]        = "register capacity exceeded, try to refactor the program";
+static const char str_err_too_many_vars_for_range[]   = "too many variables specified for a range, only one variable is supported";
 static const char str_err_unexpected_super[]          = "'super' cannot be used in this context";
 
 enum KOS_BOOL_E {
@@ -395,23 +396,6 @@ static int lookup_var(KOS_COMP_UNIT      *program,
         program->error_token = &node->token;
 
     return var ? KOS_SUCCESS : KOS_ERROR_INTERNAL;
-}
-
-static void lookup_module_var(KOS_COMP_UNIT      *program,
-                              const KOS_AST_NODE *node,
-                              KOS_VAR           **out_var)
-{
-    KOS_REG *reg        = KOS_NULL;
-    KOS_VAR *module_var = KOS_NULL;
-
-    (void)lookup_local_var(program, node, &reg);
-
-    if (reg)
-        free_reg(program, reg);
-    else if ( ! lookup_var(program, node, &module_var, KOS_NULL)) {
-        if (module_var->type == VAR_MODULE)
-            *out_var = module_var;
-    }
 }
 
 static int compare_strings(const char *a, unsigned len_a, KOS_UTF8_ESCAPE escape_a,
@@ -1892,6 +1876,107 @@ cleanup:
     return error;
 }
 
+static int is_for_range(KOS_COMP_UNIT      *program,
+                        const KOS_AST_NODE *node)
+{
+    assert(node->type == NT_FOR_IN);
+
+    node = node->children;
+    assert(node);
+    assert(node->type == NT_IN);
+
+    node = node->children;
+    assert(node);
+    assert(node->next);
+
+    node = node->next;
+    assert(node);
+    if (node->type != NT_INVOCATION)
+        return 0;
+
+    node = node->children;
+    assert(node);
+
+    if ((node->type == NT_IDENTIFIER) && node->is_var) {
+
+        const KOS_VAR *const var = node->u.var;
+
+        assert( ! node->is_scope);
+        assert(var);
+
+        switch (var->type) {
+
+            /* Detect range imported via import.range etc. */
+            case VAR_IMPORTED:
+                if (var->module_idx != KOS_BASE_MODULE_IDX)
+                    return 0;
+                break;
+
+            /* Detect global range function inside base module */
+            case VAR_GLOBAL:
+                if (program->file_id != KOS_BASE_MODULE_IDX)
+                    return 0;
+                break;
+
+            default:
+                return 0;
+        }
+
+        if (strncmp(var->token->begin, "range", var->token->length) != 0)
+            return 0;
+    }
+    /* Detect reference via base.range() */
+    else if (node->type == NT_REFINEMENT) {
+
+        const KOS_AST_NODE *ref_node = node->children;
+        const KOS_VAR      *var;
+
+        assert(ref_node);
+
+        if ((ref_node->type != NT_IDENTIFIER) || ! ref_node->is_var)
+            return 0;
+
+        var = ref_node->u.var;
+        assert(var);
+
+        if ((var->type != VAR_MODULE) || (var->array_idx != KOS_BASE_MODULE_IDX))
+            return 0;
+
+        ref_node = ref_node->next;
+        assert(ref_node);
+
+        if ((ref_node->type != NT_IDENTIFIER) && (ref_node->type != NT_STRING_LITERAL))
+            return 0;
+
+        if (strncmp(ref_node->token.begin, "range", ref_node->token.length) != 0)
+            return 0;
+    }
+    else
+        return 0;
+
+    /* First argument (mandatory) */
+    node = node->next;
+    if (node) {
+
+        /* Second argument (optional) */
+        node = node->next;
+        if ( ! node)
+            return 1;
+
+        /* Third argument (optional) */
+        node = node->next;
+        if ( ! node)
+            return 1;
+
+        /* The third argument must be a numeric constant in order to be optimized */
+        node = kos_get_const(program, node);
+        if (node && (node->type == NT_NUMERIC_LITERAL))
+            return 1;
+    }
+
+    return 0;
+}
+
 static int for_in(KOS_COMP_UNIT      *program,
                   const KOS_AST_NODE *node)
 {
@@ -1996,6 +2081,176 @@ static int for_in(KOS_COMP_UNIT      *program,
     item_reg = KOS_NULL;
     free_reg(program, iter_reg);
     iter_reg = KOS_NULL;
+
+    pop_scope(program);
+
+    program->cur_frame->last_try_scope = prev_try_scope;
+
+cleanup:
+    return error;
+}
+
+static int for_range(KOS_COMP_UNIT      *program,
+                     const KOS_AST_NODE *node)
+{
+    int                 error;
+    int                 initial_jump_offs;
+    int                 loop_start_offs;
+    int                 next_jump_offs;
+    int                 loop_jump_offs;
+    int                 decrement      = 0;
+    const KOS_AST_NODE *var_node;
+    const KOS_AST_NODE *assg_node;
+    KOS_REG            *reg            = KOS_NULL;
+    KOS_REG            *item_reg       = KOS_NULL;
+    KOS_REG            *iter_reg       = KOS_NULL;
+    KOS_REG            *end_reg        = KOS_NULL;
+    KOS_REG            *step_reg       = KOS_NULL;
+    KOS_BREAK_OFFS     *old_break_offs = program->cur_frame->break_offs;
+    KOS_SCOPE          *prev_try_scope = push_try_scope(program);
+
+    program->cur_frame->break_offs = KOS_NULL;
+
+    push_scope(program, node);
+
+    assg_node = node->children;
+    assert(assg_node);
+    assert(assg_node->type == NT_IN);
+
+    var_node = assg_node->children;
+    assert(var_node);
+    assert(var_node->type == NT_VAR || var_node->type == NT_CONST);
+
+    node = var_node->next;
+    assert(node);
+    assert(!node->next);
+    assert(node->type == NT_INVOCATION);
+    node = node->children;
+    /* First child is range function, skip it */
+    assert(node);
+    node = node->next;
+    assert(node);
+
+    kos_activate_new_vars(program, var_node);
+
+    var_node = var_node->children;
+    assert(var_node);
+    if (var_node->next) {
+        program->error_token = &var_node->next->token;
+        program->error_str   = str_err_too_many_vars_for_range;
+        RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
+    }
+    assert(var_node->type == NT_IDENTIFIER);
+    assert(var_node->is_var);
+    assert(var_node->u.var);
+
+    TRY(lookup_local_var(program, var_node, &item_reg));
+    assert(item_reg);
+
+    if (var_node->u.var->is_const)
+        iter_reg = item_reg;
+    else
+        TRY(gen_reg(program, &iter_reg));
+
+    /* range(end) */
+    if ( ! node->next) {
+        TRY(visit_node(program, node, &end_reg));
+
+        TRY(gen_reg(program, &iter_reg));
+        TRY(gen_instr2(program, INSTR_LOAD_INT8, iter_reg->reg, 0));
+
+        TRY(gen_reg(program, &step_reg));
+        TRY(gen_instr2(program, INSTR_LOAD_INT8, step_reg->reg, 1));
+    }
+    /* range(begin, end, ...) */
+    else {
+        reg = iter_reg;
+
+        TRY(visit_node(program, node, &reg));
+
+        if (reg != iter_reg) {
+            TRY(gen_instr2(program, INSTR_MOVE, iter_reg->reg, reg->reg));
+            free_reg(program, reg);
+        }
+        reg = KOS_NULL;
+
+        node = node->next;
+        TRY(visit_node(program, node, &end_reg));
+
+        node = node->next;
+        if (node) {
+            TRY(visit_node(program, node, &step_reg));
+
+            node = kos_get_const(program, node);
+            assert(node);
+            assert(node->type == NT_NUMERIC_LITERAL);
+
+            if (node->token.type == TT_NUMERIC_BINARY) {
+
+                const KOS_NUMERIC *numeric = (const KOS_NUMERIC *)node->token.begin;
+
+                if (numeric->type == KOS_INTEGER_VALUE) {
+                    if (numeric->u.i < 0)
+                        decrement = 1;
+                }
+                else {
+                    assert(numeric->type == KOS_FLOAT_VALUE);
+                    if (numeric->u.d < 0)
+                        decrement = 1;
+                }
+            }
+            else {
+                assert(node->token.type == TT_NUMERIC);
+
+                if (*node->token.begin == '-')
+                    decrement = 1;
+            }
+        }
+        else {
+            TRY(gen_reg(program, &step_reg));
+            TRY(gen_instr2(program, INSTR_LOAD_INT8, step_reg->reg, 1));
+        }
+    }
+
+    initial_jump_offs = program->cur_offs;
+    TRY(gen_instr1(program, INSTR_JUMP, 0));
+
+    loop_start_offs = program->cur_offs;
+
+    node = assg_node->next;
+    assert(node);
+    assert(!node->next);
+
+    TRY(visit_node(program, node, &reg));
+    assert(!reg);
+
+    TRY(add_addr2line(program, &assg_node->token, KOS_FALSE_VALUE));
+
+    next_jump_offs = program->cur_offs;
+    TRY(gen_instr3(program, INSTR_ADD, iter_reg->reg, iter_reg->reg, step_reg->reg));
+
+    update_jump_offs(program, initial_jump_offs, program->cur_offs);
+
+    if (iter_reg != item_reg)
+        TRY(gen_instr2(program, INSTR_MOVE, item_reg->reg, iter_reg->reg));
+
+    TRY(gen_reg(program, &reg));
+    TRY(gen_instr3(program, INSTR_CMP_LT, reg->reg,
+                   decrement ? end_reg->reg : iter_reg->reg,
+                   decrement ? iter_reg->reg : end_reg->reg));
+
+    loop_jump_offs = program->cur_offs;
+    TRY(gen_instr2(program, INSTR_JUMP_COND, 0, reg->reg));
+
+    update_jump_offs(program, loop_jump_offs, loop_start_offs);
+    finish_break_continue(program, next_jump_offs, old_break_offs);
+
+    free_reg(program, reg);
+    free_reg(program, item_reg);
+    if (iter_reg != item_reg)
+        free_reg(program, iter_reg);
+    free_reg(program, end_reg);
+    free_reg(program, step_reg);
 
     pop_scope(program);
 
@@ -2743,11 +2998,13 @@ static int refinement(KOS_COMP_UNIT      *program,
     node = node->children;
     assert(node);
 
-    if (node->type == NT_IDENTIFIER)
-        lookup_module_var(program, node, &module_var);
+    if ((node->type == NT_IDENTIFIER) && node->is_var) {
+        module_var = node->u.var;
+        if (module_var->type != VAR_MODULE)
+            module_var = KOS_NULL;
+    }
 
     if (module_var) {
-
         node = node->next;
         assert(node);
         assert(!node->next);
@@ -5519,7 +5776,10 @@ static int visit_node(KOS_COMP_UNIT      *program,
             error = while_stmt(program, node);
             break;
         case NT_FOR_IN:
-            error = for_in(program, node);
+            if (is_for_range(program, node))
+                error = for_range(program, node);
+            else
+                error = for_in(program, node);
             break;
         case NT_CONTINUE:
             /* fall through */

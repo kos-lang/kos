@@ -42,11 +42,6 @@ enum KOS_VAR_ACTIVE_E {
     VAR_ALWAYS_ACTIVE
 };
 
-enum KOS_VAR_SPECIAL_E {
-    SPECIAL_NONE,
-    SPECIAL_RANGE
-};
-
 typedef struct KOS_VAR_S {
     KOS_RED_BLACK_NODE  rb_tree_node;      /* Node for red-black tree holding variables in parent scope        */
     struct KOS_VAR_S   *next;              /* Pointer to next variable on the list of variables in frame scope */
@@ -65,7 +60,6 @@ typedef struct KOS_VAR_S {
     unsigned            is_active    : 3;  /* Becomes active/searchable after the node, which declares it. */
     unsigned            is_const     : 1;
     unsigned            has_defaults : 1;
-    unsigned            special      : 1;  /* enum KOS_VAR_SPECIAL_E: special variable, used by optimizer */
 } KOS_VAR;
 
 typedef struct KOS_BREAK_OFFS_S {
@@ -314,10 +308,6 @@ int kos_optimize(KOS_COMP_UNIT *program,
 
 int kos_allocate_args(KOS_COMP_UNIT *program,
                       KOS_AST_NODE  *ast);
-
-enum KOS_VAR_SPECIAL_E kos_get_special(int         module_idx,
-                                       const char *name,
-                                       unsigned    length);
 
 KOS_VAR *kos_find_var(KOS_RED_BLACK_NODE *rb_root,
                       const KOS_TOKEN    *token);

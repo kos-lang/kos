@@ -73,12 +73,10 @@ do {
 
     fun gen
     {
-        var i = 0
         var j = 10
-        while i < 2 {
+        for const i in range(2) {
             idx = i
             yield i
-            i += 1
             j += 2
         }
     }

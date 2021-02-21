@@ -74,17 +74,6 @@ static int scope_ref_compare_node(KOS_RED_BLACK_NODE *a,
     return (int)((intptr_t)ref_a->closure - (intptr_t)ref_b->closure);
 }
 
-enum KOS_VAR_SPECIAL_E kos_get_special(int         module_idx,
-                                       const char *name,
-                                       unsigned    length)
-{
-    if ((module_idx == KOS_BASE_MODULE_IDX) &&
-        (strncmp(name, "range", length) == 0))
-        return SPECIAL_RANGE;
-
-    return SPECIAL_NONE;
-}
-
 static KOS_VAR *alloc_var(KOS_COMP_UNIT      *program,
                           unsigned            type,
                           unsigned            is_const,
@@ -102,9 +91,6 @@ static KOS_VAR *alloc_var(KOS_COMP_UNIT      *program,
         var->is_const  = is_const;
         var->is_active = VAR_ALWAYS_ACTIVE;
         var->num_reads = -1;
-
-        if (var->type == VAR_GLOBAL)
-            var->special = kos_get_special((int)program->file_id, node->token.begin, node->token.length);
 
         kos_red_black_insert(&program->scope_stack->vars,
                              (KOS_RED_BLACK_NODE *)var,
@@ -499,8 +485,6 @@ static int import_global(const char *global_name,
             var->module_idx = module_idx;
             var->array_idx  = global_idx;
         }
-
-        var->special = kos_get_special(module_idx, global_name, global_length);
     }
     else
         error = KOS_ERROR_OUT_OF_MEMORY;

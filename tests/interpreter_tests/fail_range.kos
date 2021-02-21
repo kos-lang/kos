@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2014-2021 Chris Dragan
+
+import base: print, range
+
+for const x, y in range(2) {
+    print(x)
+}
