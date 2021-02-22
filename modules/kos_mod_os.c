@@ -759,7 +759,7 @@ static int find_program(KOS_CONTEXT           ctx,
         while (*path_env) {
 
             const char  *colon        = strchr(path_env, ':');
-            const size_t path_len     = colon ? (colon - path_env) : strlen(path_env);
+            const size_t path_len     = colon ? (size_t)(colon - path_env) : strlen(path_env);
 
             if (concat_path(&buf_mgr, path_env, path_len)) {
                 KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
