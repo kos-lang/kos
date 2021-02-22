@@ -861,6 +861,10 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
             /* Explicitly close the read end of the status pipe */
             close(exec_status_fd[0]);
 
+            /* Set cwd */
+            if (cwd && cwd[0] && (chdir(cwd) != 0))
+                send_errno_and_exit(exec_status_fd[1]);
+
             /* Use redirected I/O, if provided by caller */
             redirect_io(stdin_file,  STDIN_FILENO,  exec_status_fd[1]);
             redirect_io(stdout_file, STDOUT_FILENO, exec_status_fd[1]);

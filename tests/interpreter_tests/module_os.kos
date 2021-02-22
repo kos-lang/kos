@@ -68,6 +68,12 @@ if bin_true {
     os.spawn(program=bin_true, inherit_env=false)
     os.spawn(program=bin_true, inherit_env=false, env={STH: "OK2"})
 
+    # cwd works for spawning processes
+    if ! fs.is_file("./true") {
+        const last_slash = bin_true.rscan("/")
+        os.spawn(program="./true", cwd=bin_true[0:last_slash], inherit_env=false)
+    }
+
     # os.spawn() returns a wait object
     do {
         const process = os.spawn(bin_true)
