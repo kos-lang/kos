@@ -74,6 +74,9 @@ if bin_true {
         os.spawn(program="./true", cwd=bin_true[0:last_slash], inherit_env=false)
     }
 
+    # On most systems, true is on PATH
+    os.spawn("true")
+
     # os.spawn() returns a wait object
     do {
         const process = os.spawn(bin_true)

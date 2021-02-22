@@ -13,6 +13,7 @@
 #include "../inc/kos_string.h"
 #include "../inc/kos_utils.h"
 #include "../core/kos_debug.h"
+#include "../core/kos_math.h"
 #include "../core/kos_try.h"
 #include "kos_mod_io.h"
 #include <stdlib.h>
@@ -29,6 +30,7 @@
 #   include <errno.h>
 #   include <fcntl.h>
 #   include <signal.h>
+#   include <sys/stat.h>
 #   include <sys/wait.h>
 #   include <unistd.h>
 #endif
@@ -664,7 +666,122 @@ cleanup:
     return error;
 }
 
+#ifdef _WIN32
+static int find_program(KOS_CONTEXT           ctx,
+                        struct KOS_MEMPOOL_S *alloc,
+                        const char           *cwd,
+                        char                **program_cstr)
+{
+    /* On Windows, CreateProcess() already looks for the program using various techniques, including PATH */
+    return KOS_SUCCESS;
+}
+#else
+static int does_file_exist(const char *path)
+{
+    struct stat statbuf;
+
+    if (stat(path, &statbuf) != 0)
+        return 0;
+
+    return (S_ISREG(statbuf.st_mode) || S_ISLNK(statbuf.st_mode)) ? 1 : 0;
+}
+
+struct CONCAT_BUF_MGR
+{
+    struct KOS_MEMPOOL_S *alloc;
+    char                 *buf;
+    size_t                buf_size;
+    const char           *orig_prog_name;
+    size_t                orig_prog_name_len;
+};
+
+static int concat_path(struct CONCAT_BUF_MGR *buf_mgr,
+                       const char            *dir_path,
+                       size_t                 dir_path_len)
+{
+#ifdef NDEBUG
+    const size_t buf_align    = 1024;
+#else
+    const size_t buf_align    = 1;
+#endif
+    const size_t reqd_storage = KOS_align_up(dir_path_len + buf_mgr->orig_prog_name_len + 2, buf_align);
+
+    if (reqd_storage > buf_mgr->buf_size) {
+        buf_mgr->buf      = (char *)KOS_mempool_alloc(buf_mgr->alloc, reqd_storage);
+        buf_mgr->buf_size = reqd_storage;
+
+        if ( ! buf_mgr->buf)
+            return KOS_ERROR_OUT_OF_MEMORY;
+    }
+
+    memcpy(buf_mgr->buf, dir_path, dir_path_len);
+
+    buf_mgr->buf[dir_path_len] = '/';
+
+    memcpy(buf_mgr->buf + dir_path_len + 1, buf_mgr->orig_prog_name, buf_mgr->orig_prog_name_len + 1);
+
+    return KOS_SUCCESS;
+}
+
+static int find_program(KOS_CONTEXT           ctx,
+                        struct KOS_MEMPOOL_S *alloc,
+                        const char           *cwd,
+                        char                **program_cstr)
+{
+    struct CONCAT_BUF_MGR buf_mgr;
+
+    if (does_file_exist(*program_cstr))
+        return KOS_SUCCESS;
+
+    buf_mgr.alloc              = alloc;
+    buf_mgr.buf                = KOS_NULL;
+    buf_mgr.buf_size           = 0;
+    buf_mgr.orig_prog_name     = *program_cstr;
+    buf_mgr.orig_prog_name_len = strlen(buf_mgr.orig_prog_name);
+
+    if (*cwd) {
+        if (concat_path(&buf_mgr, cwd, strlen(cwd))) {
+            KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+            return KOS_ERROR_EXCEPTION;
+        }
+
+        if (does_file_exist(buf_mgr.buf)) {
+            *program_cstr = buf_mgr.buf;
+            return KOS_SUCCESS;
+        }
+    }
+
+    /* Search PATH unless Absolute path was given */
+    if (**program_cstr != '/') {
+
+        const char *path_env = getenv("PATH");
+
+        while (*path_env) {
+
+            const char  *colon        = strchr(path_env, ':');
+            const size_t path_len     = colon ? (colon - path_env) : strlen(path_env);
+
+            if (concat_path(&buf_mgr, path_env, path_len)) {
+                KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+                return KOS_ERROR_EXCEPTION;
+            }
+
+            if (does_file_exist(buf_mgr.buf)) {
+                *program_cstr = buf_mgr.buf;
+                return KOS_SUCCESS;
+            }
+
+            path_env += path_len + 1;
+        }
+    }
+
+    KOS_raise_printf(ctx, "program \"%s\" not found", buf_mgr.orig_prog_name);
+    return KOS_ERROR_EXCEPTION;
+}
+#endif
+
 #ifndef _WIN32
+/* Sends errno to parent process, if the child cannot run execve() */
 static void send_errno_and_exit(int fd)
 {
     const int     err_value = errno;
@@ -756,6 +873,13 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
 
     wait_info = (struct KOS_WAIT_S *)KOS_object_get_private_ptr(process.o);
 
+    /* Get 'cwd' */
+    value_obj = KOS_array_read(ctx, args.o, 3);
+    TRY_OBJID(value_obj);
+    TRY(check_arg_type(ctx, value_obj, "cwd", OBJ_STRING));
+
+    TRY(get_string(ctx, value_obj, &alloc, &cwd));
+
     /* Get 'program' */
     value_obj = KOS_array_read(ctx, args.o, 0);
     TRY_OBJID(value_obj);
@@ -763,12 +887,7 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
 
     TRY(get_string(ctx, value_obj, &alloc, &program_cstr));
 
-    /* Get 'cwd' */
-    value_obj = KOS_array_read(ctx, args.o, 3);
-    TRY_OBJID(value_obj);
-    TRY(check_arg_type(ctx, value_obj, "cwd", OBJ_STRING));
-
-    TRY(get_string(ctx, value_obj, &alloc, &cwd));
+    TRY(find_program(ctx, &alloc, cwd, &program_cstr));
 
     /* Get 'args' */
     value_obj = KOS_array_read(ctx, args.o, 1);
