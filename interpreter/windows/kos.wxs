@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="windows-1252"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <Product Name="Kos 0.1" Manufacturer="Chris Dragan"
+             Id="EC8C2E85-969D-4969-BA29-C2C0EE79078F"
+             UpgradeCode="F3927E6D-0EEB-47C0-A927-A72EEAEE1147"
+             Language="1033" Codepage="1252" Version="0.1">
+
+        <!-- Package description -->
+        <Package Id="*" Keywords="Installer" Description="Kos 0.1 Installer"
+                 Comments="Kos Programming Language Interpreter" Manufacturer="Chris Dragan"
+                 InstallerVersion="100" Languages="1033" Compressed="yes" SummaryCodepage="1252" />
+
+        <!-- Media to install from (boilerplate) -->
+        <Media Id="1" Cabinet="Sample.cab" EmbedCab="yes" DiskPrompt="CD-ROM #1" />
+        <Property Id="DiskPrompt" Value="Kos 0.1 Installation [1]" />
+
+        <!-- Directory structure -->
+        <Directory Id="TARGETDIR" Name="SourceDir">
+            <Directory Id="ProgramFilesFolder" Name="PFiles">
+                <Directory Id="INSTALLDIR" Name="Kos">
+                    <Component Id="KosComponent" Guid="4D7E5057-3949-44ED-A51A-395C1D70C9CA">
+                        <File Id="KosExe" Name="kos.exe" DiskId="1" Source="kos.exe" KeyPath="yes" />
+                        <File Id="KosIcon" Name="kos.ico" DiskId="1" Source="kos.ico" KeyPath="yes" />
+                        <ProgId Id="KosScript" Description="Kos script" Icon="KosIcon">
+                            <Extension Id="kos" ContentType="application/kos">
+                                <Verb Id="open" Command="Open" TargetFile="KosExe" Argument=""%1"" />
+                            </Extension>
+                        </ProgId>
+                        <Environment Id="UpdatePath" Name="PATH" Action="set" Permanent="no" System="yes" Part="last" Value="[INSTALLDIR]" />
+                    </Component>
+                    <Directory Id="ModulesDir" Name="modules">
+                        <Component Id="ModulesComponent" Guid="252EDB8C-9415-4C90-B179-DD439819E3BA">
+                            <File Id="base.kos" Name="base.kos" DiskId="1" Source="modules\base.kos" KeyPath="yes" />
+                        </Component>
+                    </Directory>
+                </Directory>
+            </Directory>
+        </Directory>
+
+        <!-- Features to install -->
+        <Feature Id="Complete" Title="Kos 0.1" Description="Kos Interpreter" Level="1">
+            <ComponentRef Id="KosComponent" />
+            <ComponentRef Id="ModulesComponent" />
+        </Feature>
+
+        <!-- Installer UI -->
+        <Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR" />
+        <UIRef Id="WixUI_Mondo" />
+        <!-- TODO Try to remove WixUI_ErrorProgressText -->
+        <UIRef Id="WixUI_ErrorProgressText" />
+        <Icon Id="KosIcon.ico" SourceFile="kos.ico" />
+    </Product>
+</Wix>
+
+<!-- vim:ft=xml
+-->

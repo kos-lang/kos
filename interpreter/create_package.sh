@@ -118,13 +118,23 @@ elif [ "$UNAME" = "Linux" ]; then
 elif [ "$UNAME" = "Windows" ]; then
     create_pkg_dir
 
-    sed "/^\!define VERSION/s/\".*\"/\"$VERSION\"/" < interpreter/windows/kos.nsi > "$PKGDIR"/kos.nsi
+    sed "s/0\.1/$VERSION/" < interpreter/windows/kos.wxs > "$PKGDIR"/"Kos-$VERSION.wxs"
+    cp interpreter/windows/kos.ico "$PKGDIR"/
 
-    cd "$BUILDDIR"
-    'C:/Program Files (x86)/NSIS/makensis.exe' 'package\kos.nsi'
+    cd "$PKDIR"
+    MODLINE=""
+    for MOD in modules/*; do
+        MOD="$(echo "$MOD" | sed "s/modules\///")"
+        MODLINE="$MODLINE<File Id='$MOD' Name='$MOD' DiskId='1' Source='modules\\\\$MOD' KeyPath='yes' \\/>"
+    done
+    sed -i "/File Id.*base.kos/s/<.*>/$MODLINE/" "Kos-$VERSION.wxs"
 
-    mv "package/Kos-${VERSION}.exe" .
-    shasum -a 256 "Kos-${VERSION}.exe" | tee "Kos-${VERSION}.exe.sha"
+    candle.exe "Kos-$VERSION.wxs"
+    light.exe -ext WixUIExtension "Kos-$VERSION.wixobj"
+
+    mv "Kos-$VERSION.msi" ..
+    cd ..
+    shasum -a 256 "Kos-$VERSION.msi" | tee "Kos-$VERSION.msi.sha"
 else
     echo "Unsupported OS '$UNAME'" >&2
     exit 1
