@@ -121,13 +121,17 @@ elif [ "$UNAME" = "Windows" ]; then
     sed "s/0\.1/$VERSION/" < interpreter/windows/kos.wxs > "$PKGDIR"/"Kos-$VERSION.wxs"
     cp interpreter/windows/kos.ico "$PKGDIR"/
 
-    cd "$PKDIR"
-    MODLINE=""
+    cd "$PKGDIR"
+    MODDEFS=""
+    MODREFS=""
     for MOD in modules/*; do
         MOD="$(echo "$MOD" | sed "s/modules\///")"
-        MODLINE="$MODLINE<File Id='$MOD' Name='$MOD' DiskId='1' Source='modules\\\\$MOD' KeyPath='yes' \\/>"
+        MODDEFS="$MODDEFS<Component Id='${MOD}.Component' Guid='$(uuidgen)'>"
+        MODDEFS="$MODDEFS<File Id='$MOD' Name='$MOD' DiskId='1' Source='modules\\\\$MOD' KeyPath='yes' \\/>"
+        MODDEFS="$MODDEFS<\\/Component>"
+        MODREFS="$MODREFS<ComponentRef Id='${MOD}.Component' \\/>"
     done
-    sed -i "/File Id.*base.kos/s/<.*>/$MODLINE/" "Kos-$VERSION.wxs"
+    sed -i "s/^.*MODULE_COMPONENT_DEFS.*$/$MODDEFS/ ; s/^.*MODULE_COMPONENT_REFS.*$/$MODREFS/" "Kos-$VERSION.wxs"
 
     candle.exe "Kos-$VERSION.wxs"
     light.exe -ext WixUIExtension "Kos-$VERSION.wixobj"
