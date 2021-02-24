@@ -3,6 +3,7 @@
 import random.rand_integer
 import base.print
 import base.string
+import base.range
 
 const a = []
 
