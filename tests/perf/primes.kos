@@ -23,8 +23,10 @@ fun primes(max_number)
             yield value
 
             # Mark all multiplicities of this prime as non-primes
-            for const i in range(idx + value, len, value) {
+            var i = idx + value
+            while i < len {
                 sieve[i] = 1 # Mark a non-prime
+                i += value
             }
         }
     }
