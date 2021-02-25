@@ -346,7 +346,7 @@ static int main_inner(kos::context ctx)
 #ifdef KOS_CPP11
         kos::function add = ctx.NEW_FUNCTION(&add_func);
 #else
-        kos::function add = ctx.new_function<int64_t (*)(bool, int, int64_t), add_func>("add_func");
+        kos::function add = ctx.new_function98<int64_t (*)(bool, int, int64_t), add_func>("add_func");
 #endif
         /* Test basic, full invocation */
         {
@@ -479,7 +479,7 @@ static int main_inner(kos::context ctx)
 #ifdef KOS_CPP11
         kos::function set = ctx.NEW_FUNCTION(&set_global);
 #else
-        kos::function set = ctx.new_function<void (*)(const std::string&), set_global>("set_global");
+        kos::function set = ctx.new_function98<void (*)(const std::string&), set_global>("set_global");
 #endif
         set("some string");
         TEST(global_str == "some string");
@@ -493,9 +493,9 @@ static int main_inner(kos::context ctx)
         kos::function fb = ctx.NEW_FUNCTION(&test_class::get_b);
         kos::function fx = ctx.NEW_FUNCTION(&test_class::add_a);
 #else
-        kos::function fa = ctx.new_function<int                (test_class::*)() const,    &test_class::get_a>("get_a");
-        kos::function fb = ctx.new_function<const std::string& (test_class::*)() const,    &test_class::get_b>("get_b");
-        kos::function fx = ctx.new_function<int64_t            (test_class::*)(bool, int), &test_class::add_a>("add_a");
+        kos::function fa = ctx.new_function98<int                (test_class::*)() const,    &test_class::get_a>("get_a");
+        kos::function fb = ctx.new_function98<const std::string& (test_class::*)() const,    &test_class::get_b>("get_b");
+        kos::function fx = ctx.new_function98<int64_t            (test_class::*)(bool, int), &test_class::add_a>("add_a");
 #endif
         kos::function fy = from_object_ptr(ctx, fx);
 
@@ -604,7 +604,11 @@ static int main_inner(kos::context ctx)
     }
 
     {
-        kos::function f = ctx.new_function<void (*)(const std::string&), throw_string>("throw_string");
+#if __cplusplus >= 201703L
+        kos::function f = ctx.new_function<throw_string>("throw_string");
+#else
+        kos::function f = ctx.new_function98<void (*)(const std::string&), throw_string>("throw_string");
+#endif
 
         kos::void_type v = f("");
         TEST(v.type() == OBJ_VOID);

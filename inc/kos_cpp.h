@@ -144,9 +144,13 @@ class context {
 
         function new_function(const char* name, KOS_FUNCTION_HANDLER handler, int min_args);
 
-        // Something like N3601 (automatic template arg deduction) would simplify this interface
-        template<typename T, T fun>
+#if __cplusplus >= 201703L
+        template<auto fun>
         function new_function(const char* name);
+#endif
+
+        template<typename T, T fun>
+        function new_function98(const char* name);
 
 #ifdef KOS_CPP11
         template<typename Ret, typename... Args>
@@ -1773,8 +1777,16 @@ KOS_OBJ_ID wrapper(KOS_CONTEXT frame_ptr, KOS_OBJ_ID this_obj, KOS_OBJ_ID args_o
     return KOS_BADPTR;
 }
 
-template<typename T, T fun>
+#if __cplusplus >= 201703L
+template<auto fun>
 function context::new_function(const char* name)
+{
+    return new_function(name, wrapper<decltype(fun), fun>, num_args(fun));
+}
+#endif
+
+template<typename T, T fun>
+function context::new_function98(const char* name)
 {
     return new_function(name, wrapper<T, fun>, num_args(fun));
 }
@@ -2065,7 +2077,11 @@ inline bool value_from_object_ptr<bool>(context ctx, KOS_OBJ_ID obj_id)
 } // namespace kos
 
 #ifdef KOS_CPP11
-#define NEW_FUNCTION(fun) new_function<decltype(fun), (fun)>(#fun)
+#   if __cplusplus >= 201703L
+#       define NEW_FUNCTION(fun) new_function<(fun)>(#fun)
+#   else
+#       define NEW_FUNCTION(fun) new_function98<decltype(fun), (fun)>(#fun)
+#   endif
 #endif
 
 #endif
