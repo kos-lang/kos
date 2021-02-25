@@ -63,14 +63,13 @@ do {
     fs.remove(name)
     assert ! fs.is_file(name)
 
-    do {
-        var f = io.create(name)
-        f.write("x")
-        f = void
-    }
+    fun {
+        io.create(name).write("x")
+    }()
 
     kos.collect_garbage()
 
     assert fs.is_file(name)
     fs.remove(name)
+    assert ! fs.is_file(name)
 }
