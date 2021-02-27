@@ -751,7 +751,7 @@ static int find_program(KOS_CONTEXT           ctx,
         }
     }
 
-    /* Search PATH unless Absolute path was given */
+    /* Search PATH unless absolute path was given */
     if (**program_cstr != '/') {
 
         const char *path_env = getenv("PATH");
@@ -914,7 +914,7 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
     file_obj = KOS_array_read(ctx, args.o, 5);
     TRY_OBJID(file_obj);
     if (file_obj != KOS_VOID) {
-        stdin_file = KOS_os_get_file(ctx, file_obj);
+        stdin_file = KOS_io_get_file(ctx, file_obj);
         if ( ! stdin_file)
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
@@ -923,7 +923,7 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
     file_obj = KOS_array_read(ctx, args.o, 6);
     TRY_OBJID(file_obj);
     if (file_obj != KOS_VOID) {
-        stdout_file = KOS_os_get_file(ctx, file_obj);
+        stdout_file = KOS_io_get_file(ctx, file_obj);
         if ( ! stdout_file)
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
@@ -932,7 +932,7 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
     file_obj = KOS_array_read(ctx, args.o, 7);
     TRY_OBJID(file_obj);
     if (file_obj != KOS_VOID) {
-        stderr_file = KOS_os_get_file(ctx, file_obj);
+        stderr_file = KOS_io_get_file(ctx, file_obj);
         if ( ! stderr_file)
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }

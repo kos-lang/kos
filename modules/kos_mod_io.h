@@ -13,7 +13,7 @@ extern "C" {
 #endif
 
 KOS_API
-FILE *KOS_os_get_file(KOS_CONTEXT ctx,
+FILE *KOS_io_get_file(KOS_CONTEXT ctx,
                       KOS_OBJ_ID  file_obj);
 
 #ifdef __cplusplus

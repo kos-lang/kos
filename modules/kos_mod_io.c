@@ -467,7 +467,7 @@ cleanup:
     return error;
 }
 
-FILE *KOS_os_get_file(KOS_CONTEXT ctx,
+FILE *KOS_io_get_file(KOS_CONTEXT ctx,
                       KOS_OBJ_ID  file_obj)
 {
     KOS_LOCAL  file_;
