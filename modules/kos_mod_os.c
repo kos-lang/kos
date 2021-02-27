@@ -1133,8 +1133,18 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
 #ifdef _WIN32
     {
         PROCESS_INFORMATION proc_info;
+        STARTUPINFO         startup_info;
 
         KOS_suspend_context(ctx);
+
+        memset(&startup_info, 0, sizeof(startup_info));
+        startup_info.cb         = (DWORD)sizeof(startup_info);
+        startup_info.dwFlags    = STARTF_USESTDHANDLES;
+        startup_info.hStdInput  = GetStdHandle(STD_INPUT_HANDLE);
+        startup_info.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+        startup_info.hStdError  = GetStdHandle(STD_ERROR_HANDLE);
+
+        /* TODO override I/O handles */
 
         if (!CreateProcess(KOS_NULL,
                            args_array,
@@ -1144,10 +1154,10 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
                            0,
                            env_array,
                            cwd,
-                           KOS_NULL, /* TODO redirect I/O via startup info */
+                           &startup_info,
                            &proc_info)) {
 
-            /* TODO GetLastError */
+            /* TODO GetLastError + FormatMessage */
             KOS_raise_printf(ctx, "CreateProcess failed");
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
