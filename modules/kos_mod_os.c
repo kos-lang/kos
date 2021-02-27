@@ -144,23 +144,188 @@ static int get_string(KOS_CONTEXT           ctx,
     return KOS_SUCCESS;
 }
 
+#ifdef _WIN32
+
+typedef char *PROCESS_ARRAY;
+
+struct CONSTRUCT_ARRAY
+{
+    PROCESS_ARRAY array;
+    size_t        size;
+    size_t        capacity;
+};
+
+static int append_arg(KOS_CONTEXT             ctx,
+                      struct KOS_MEMPOOL_S   *alloc,
+                      char                   *elem_cstr,
+                      struct CONSTRUCT_ARRAY *args)
+{
+    const size_t elem_size = strlen(elem_cstr);
+    const size_t new_size  = args->size + elem_size + 3 + (args->size ? 1 : 0);
+
+    if (new_size > args->capacity) {
+        const size_t  new_capacity = KOS_align_up(new_size, (size_t)1024U);
+        PROCESS_ARRAY new_array    = (PROCESS_ARRAY)KOS_mempool_alloc(alloc, new_capacity);
+
+        if ( ! new_array) {
+            KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+            return KOS_ERROR_EXCEPTION;
+        }
+
+        if (args->size)
+            memcpy(new_array, args->array, args->size);
+
+        args->array    = new_array;
+        args->capacity = new_capacity;
+    }
+
+    if (args->size) {
+        args->array[args->size] = ' ';
+        ++args->size;
+    }
+
+    args->array[args->size] = '"';
+    ++args->size;
+
+    memcpy(&args->array[args->size], elem_cstr, elem_size);
+    args->size += elem_size;
+
+    args->array[args->size] = '"';
+    ++args->size;
+
+    assert(args->size < args->capacity);
+    args->array[args->size] = 0;
+
+    return KOS_SUCCESS;
+}
+
+static int append_env_var(KOS_CONTEXT             ctx,
+                          struct KOS_MEMPOOL_S   *alloc,
+                          struct CONSTRUCT_ARRAY *env,
+                          KOS_OBJ_ID              iter,
+                          unsigned                key_len,
+                          unsigned                val_len)
+{
+    const size_t new_size = env->size + key_len + val_len + 3;
+
+    if (new_size > env->capacity) {
+        const size_t  new_capacity = KOS_align_up(new_size, (size_t)1024U);
+        PROCESS_ARRAY new_env      = (PROCESS_ARRAY)KOS_mempool_alloc(alloc, new_capacity);
+
+        if ( ! new_env) {
+            KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+            return KOS_ERROR_EXCEPTION;
+        }
+
+        if (env->size)
+            memcpy(new_env, env->array, env->size);
+
+        env->array    = new_env;
+        env->capacity = new_capacity;
+    }
+
+    KOS_string_to_utf8(KOS_get_walk_key(iter), &env->array[env->size], key_len);
+    env->size += key_len;
+
+    env->array[env->size] = '=';
+    ++env->size;
+
+    KOS_string_to_utf8(KOS_get_walk_value(iter), &env->array[env->size], val_len);
+    env->size += val_len;
+
+    env->array[env->size] = 0;
+    ++env->size;
+
+    assert(env->size < env->capacity);
+    env->array[env->size] = 0;
+
+    return KOS_SUCCESS;
+}
+
 static int get_args_array(KOS_CONTEXT           ctx,
                           KOS_OBJ_ID            obj_id,
                           struct KOS_MEMPOOL_S *alloc,
-                          char               ***out_array)
+                          char                 *program_cstr,
+                          PROCESS_ARRAY        *out_array)
+{
+    struct CONSTRUCT_ARRAY args      = { KOS_NULL, 0U, 0U };
+    const uint32_t         num_elems = KOS_get_array_size(obj_id);
+    int                    error     = KOS_SUCCESS;
+    uint32_t               i;
+
+    TRY(append_arg(ctx, alloc, program_cstr, &args));
+
+    for (i = 0; i < num_elems; i++) {
+        char      *elem_cstr;
+        KOS_OBJ_ID str_id;
+        KOS_TYPE   type;
+
+        str_id = KOS_array_read(ctx, obj_id, i);
+        TRY_OBJID(str_id);
+
+        type = GET_OBJ_TYPE(str_id);
+        if (type != OBJ_STRING) {
+            KOS_raise_printf(ctx,
+                             "element %u in 'args' array passed to os.spawn() is %s, but expected string",
+                             i, KOS_get_type_name(type));
+            return KOS_ERROR_EXCEPTION;
+        }
+
+        TRY(get_string(ctx, str_id, alloc, &elem_cstr));
+
+        TRY(append_arg(ctx, alloc, elem_cstr, &args));
+    }
+
+    *out_array = args.array;
+
+cleanup:
+    return error;
+}
+
+typedef const char *ENV_PTR;
+
+static ENV_PTR get_cur_env(void)
+{
+    return GetEnvironmentStrings();
+}
+
+static int have_more_env_data(ENV_PTR env)
+{
+    return *env;
+}
+
+static const char *get_cur_env_var(ENV_PTR env)
+{
+    return env;
+}
+
+static void advance_env_ptr(ENV_PTR *env)
+{
+    *env += strlen(*env) + 1;
+}
+
+#else
+
+typedef char **PROCESS_ARRAY;
+
+static int get_args_array(KOS_CONTEXT           ctx,
+                          KOS_OBJ_ID            obj_id,
+                          struct KOS_MEMPOOL_S *alloc,
+                          char                 *program_cstr,
+                          PROCESS_ARRAY        *out_array)
 {
     int            error     = KOS_SUCCESS;
     const uint32_t num_elems = KOS_get_array_size(obj_id);
     uint32_t       i;
-    char         **array;
+    PROCESS_ARRAY  array;
 
-    array = (char **)KOS_mempool_alloc(alloc, (num_elems + 2) * sizeof(void *));
+    array = (PROCESS_ARRAY)KOS_mempool_alloc(alloc, (num_elems + 2) * sizeof(void *));
     if ( ! array) {
         KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
         return KOS_ERROR_EXCEPTION;
     }
 
-    array[0] = KOS_NULL;
+    array[0] = program_cstr;
 
     for (i = 0; i < num_elems; i++) {
         char      *elem_cstr;
@@ -191,21 +356,28 @@ cleanup:
     return error;
 }
 
-#ifdef _WIN32
-static char **get_cur_env(void)
-{
-    static char *fake_env = KOS_NULL;
-
-    return &fake_env;
-}
-
-#else
-
 extern char **environ;
 
-static char **get_cur_env(void)
+typedef char **ENV_PTR;
+
+static ENV_PTR get_cur_env(void)
 {
     return environ;
+}
+
+static int have_more_env_data(ENV_PTR env)
+{
+    return *env ? 1 : 0;
+}
+
+static const char *get_cur_env_var(ENV_PTR env)
+{
+    return *env;
+}
+
+static void advance_env_ptr(ENV_PTR *env)
+{
+    ++*env;
 }
 #endif
 
@@ -213,32 +385,36 @@ static int get_env_array(KOS_CONTEXT           ctx,
                          KOS_OBJ_ID            obj_id,
                          int                   inherit_env,
                          struct KOS_MEMPOOL_S *alloc,
-                         char               ***out_array)
+                         PROCESS_ARRAY        *out_array)
 {
     KOS_LOCAL obj;
     KOS_LOCAL in_obj;
     KOS_LOCAL name;
     int       error       = KOS_SUCCESS;
     unsigned  est_num_env = 0;
-    char    **array;
-    char    **out_ptr;
+#ifdef _WIN32
+    struct CONSTRUCT_ARRAY env_buf = { KOS_NULL, 0U, 0U };
+#else
+    PROCESS_ARRAY array;
+    PROCESS_ARRAY out_ptr;
+#endif
 
     KOS_init_locals(ctx, 3, &obj, &in_obj, &name);
 
     /* If inheriting environment, join vars from environment with overrides from the call */
     if (inherit_env) {
 
-        char **env = get_cur_env();
+        ENV_PTR env = get_cur_env();
 
         in_obj.o = obj_id;
 
         obj.o = KOS_new_object(ctx);
         TRY_OBJID(obj.o);
 
-        for ( ; *env; ++env) {
+        while (have_more_env_data(env)) {
             KOS_OBJ_ID     value;
-            char          *name_str = *env;
-            char          *val_str  = strchr(name_str, '=');
+            const char    *name_str = get_cur_env_var(env);
+            const char    *val_str  = strchr(name_str, '=');
             const unsigned name_len = val_str ? (unsigned)(val_str - name_str) : 0U;
             const unsigned val_len  = val_str ? (unsigned)strlen(val_str + 1) : 0U;
 
@@ -255,6 +431,8 @@ static int get_env_array(KOS_CONTEXT           ctx,
 
                 ++est_num_env;
             }
+
+            advance_env_ptr(&env);
         }
 
         in_obj.o = KOS_new_iterator(ctx, in_obj.o, KOS_SHALLOW);
@@ -301,16 +479,18 @@ static int get_env_array(KOS_CONTEXT           ctx,
     }
 
     /* Now convert the joined values to an array of strings */
-    array = (char **)KOS_mempool_alloc(alloc, (est_num_env + 1) * sizeof(void *));
+#ifndef _WIN32
+    array = (PROCESS_ARRAY)KOS_mempool_alloc(alloc, (est_num_env + 1) * sizeof(void *));
     if ( ! array) {
         KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
         return KOS_ERROR_EXCEPTION;
     }
 
+    out_ptr = array;
+#endif
+
     in_obj.o = KOS_new_iterator(ctx, obj.o, KOS_SHALLOW);
     TRY_OBJID(in_obj.o);
-
-    out_ptr = array;
 
     while ( ! KOS_iterator_next(ctx, in_obj.o) && (est_num_env > 0)) {
 
@@ -353,6 +533,9 @@ static int get_env_array(KOS_CONTEXT           ctx,
         val_len  = KOS_string_to_utf8(KOS_get_walk_value(in_obj.o), KOS_NULL, 0);
         buf_size = key_len + val_len + 2;
 
+#ifdef _WIN32
+        TRY(append_env_var(ctx, alloc, &env_buf, in_obj.o, key_len, val_len));
+#else
         buf = (char *)KOS_mempool_alloc(alloc, buf_size);
         if ( ! buf) {
             KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
@@ -365,12 +548,17 @@ static int get_env_array(KOS_CONTEXT           ctx,
         buf[buf_size - 1] = 0;
 
         *(out_ptr++) = buf;
+#endif
 
         --est_num_env;
     }
 
+#ifdef _WIN32
+    *out_array = env_buf.array;
+#else
     *out_ptr   = KOS_NULL;
     *out_array = array;
+#endif
 
 cleanup:
     KOS_destroy_top_locals(ctx, &obj, &name);
@@ -381,6 +569,8 @@ cleanup:
 
 static void release_pid(struct KOS_WAIT_S *wait_info)
 {
+    if (wait_info->h_process != INVALID_HANDLE_VALUE)
+        CloseHandle(wait_info->h_process);
 }
 
 #else
@@ -628,6 +818,10 @@ static KOS_OBJ_ID create_wait_object(KOS_CONTEXT ctx)
 
     memset(wait_info, 0, sizeof(*wait_info));
 
+#ifdef _WIN32
+    wait_info->h_process = INVALID_HANDLE_VALUE;
+#endif
+
     KOS_object_set_private_ptr(obj_id, wait_info);
 
     OBJPTR(OBJECT, obj_id)->finalize = wait_finalize;
@@ -850,8 +1044,8 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
     struct KOS_WAIT_S   *wait_info;
     char                *program_cstr      = KOS_NULL;
     char                *cwd               = KOS_NULL;
-    char               **args_array        = KOS_NULL;
-    char               **env_array         = KOS_NULL;
+    PROCESS_ARRAY        args_array        = KOS_NULL;
+    PROCESS_ARRAY        env_array         = KOS_NULL;
     FILE                *stdin_file        = KOS_NULL;
     FILE                *stdout_file       = KOS_NULL;
     FILE                *stderr_file       = KOS_NULL;
@@ -894,8 +1088,7 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
     TRY_OBJID(value_obj);
     TRY(check_arg_type(ctx, value_obj, "args", OBJ_ARRAY));
 
-    TRY(get_args_array(ctx, value_obj, &alloc, &args_array));
-    args_array[0] = program_cstr;
+    TRY(get_args_array(ctx, value_obj, &alloc, program_cstr, &args_array));
 
     /* Get 'inherit_env' */
     inherit_env = KOS_array_read(ctx, args.o, 4);
@@ -938,8 +1131,34 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
     }
 
 #ifdef _WIN32
-    KOS_raise_printf(ctx, "spawn not supported on Windows yet");
-    RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    {
+        PROCESS_INFORMATION proc_info;
+
+        KOS_suspend_context(ctx);
+
+        if (!CreateProcess(KOS_NULL,
+                           args_array,
+                           KOS_NULL,
+                           KOS_NULL,
+                           TRUE,
+                           0,
+                           env_array,
+                           cwd,
+                           KOS_NULL, /* TODO redirect I/O via startup info */
+                           &proc_info)) {
+
+            /* TODO GetLastError */
+            KOS_raise_printf(ctx, "CreateProcess failed");
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+
+        wait_info->h_process = proc_info.hProcess;
+        wait_info->pid       = proc_info.dwProcessId;
+
+        CloseHandle(proc_info.hThread);
+
+        KOS_resume_context(ctx);
+    }
 #else
     {
         pid_t child_pid;
