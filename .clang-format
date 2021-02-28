@@ -1,11 +1,16 @@
 BasedOnStyle: LLVM
+AccessModifierOffset: -4
 AlignConsecutiveAssignments: true
 AlignConsecutiveDeclarations: true
-AllowShortFunctionsOnASingleLine: None
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Inline
 BinPackArguments: false
 BinPackParameters: false
 ColumnLimit: 100
 IndentWidth: 4
+IndentPPDirectives: AfterHash
 BreakBeforeBraces: Custom
 BraceWrapping:
     AfterClass: false
@@ -22,4 +27,6 @@ BraceWrapping:
     SplitEmptyFunction: true
     SplitEmptyRecord: true
     SplitEmptyNamespace: true
-PointerAlignment: Right
+PenaltyReturnTypeOnItsOwnLine: 300
+PointerAlignment: Left
+SpaceAfterTemplateKeyword: false
