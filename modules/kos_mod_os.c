@@ -1137,6 +1137,8 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
 
         KOS_suspend_context(ctx);
 
+        memset(&proc_info, 0, sizeof(proc_info));
+
         memset(&startup_info, 0, sizeof(startup_info));
         startup_info.cb         = (DWORD)sizeof(startup_info);
         startup_info.dwFlags    = STARTF_USESTDHANDLES;
@@ -1153,13 +1155,37 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
                            TRUE,
                            0,
                            env_array,
-                           cwd,
+                           cwd[0] ? cwd : KOS_NULL,
                            &startup_info,
                            &proc_info)) {
 
-            /* TODO GetLastError + FormatMessage */
-            KOS_raise_printf(ctx, "CreateProcess failed");
-            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+            const DWORD err = GetLastError();
+            char       *msg = KOS_NULL;
+
+            DWORD msg_size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+                                           KOS_NULL,
+                                           err,
+                                           LANG_USER_DEFAULT,
+                                           (LPTSTR)&msg,
+                                           1024,
+                                           KOS_NULL);
+
+            KOS_resume_context(ctx);
+
+            while (msg_size && (msg[msg_size - 1] == '\r' || msg[msg_size - 1] == '\n'))
+                --msg_size;
+
+            if (msg_size) {
+                const KOS_OBJ_ID msg_str = KOS_new_string(ctx, msg, msg_size);
+                LocalFree(msg);
+
+                KOS_raise_exception(ctx, msg_str);
+                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+            }
+            else {
+                KOS_DECLARE_STATIC_CONST_STRING(str_err_create_process, "CreateProcess failed");
+                RAISE_EXCEPTION_STR(str_err_create_process);
+            }
         }
 
         wait_info->h_process = proc_info.hProcess;
