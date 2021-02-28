@@ -24,6 +24,7 @@
 #   pragma warning( push )
 #   pragma warning( disable : 4255 4668 )
 #   include <windows.h>
+#   include <io.h>
 #   pragma warning( pop )
 #   pragma warning( disable : 4996 ) /* 'getenv': This function may be unsafe */
 #else
@@ -155,16 +156,13 @@ struct CONSTRUCT_ARRAY
     size_t        capacity;
 };
 
-static int append_arg(KOS_CONTEXT             ctx,
-                      struct KOS_MEMPOOL_S   *alloc,
-                      char                   *elem_cstr,
-                      struct CONSTRUCT_ARRAY *args)
+static int make_room(KOS_CONTEXT             ctx,
+                     struct KOS_MEMPOOL_S   *alloc,
+                     struct CONSTRUCT_ARRAY *array,
+                     size_t                  size)
 {
-    const size_t elem_size = strlen(elem_cstr);
-    const size_t new_size  = args->size + elem_size + 3 + (args->size ? 1 : 0);
-
-    if (new_size > args->capacity) {
-        const size_t  new_capacity = KOS_align_up(new_size, (size_t)1024U);
+    if (size + 1 > array->capacity) {
+        const size_t  new_capacity = KOS_align_up(size + 1, (size_t)1024U);
         PROCESS_ARRAY new_array    = (PROCESS_ARRAY)KOS_mempool_alloc(alloc, new_capacity);
 
         if ( ! new_array) {
@@ -172,29 +170,51 @@ static int append_arg(KOS_CONTEXT             ctx,
             return KOS_ERROR_EXCEPTION;
         }
 
-        if (args->size)
-            memcpy(new_array, args->array, args->size);
+        if (array->size)
+            memcpy(new_array, array->array, array->size);
 
-        args->array    = new_array;
-        args->capacity = new_capacity;
+        array->array    = new_array;
+        array->capacity = new_capacity;
     }
 
-    if (args->size) {
-        args->array[args->size] = ' ';
-        ++args->size;
-    }
+    return KOS_SUCCESS;
+}
 
-    args->array[args->size] = '"';
-    ++args->size;
+static void append_str(struct CONSTRUCT_ARRAY *array,
+                       const char             *cstr,
+                       size_t                  size)
+{
+    assert(array->size + size + 1 <= array->capacity);
 
-    memcpy(&args->array[args->size], elem_cstr, elem_size);
-    args->size += elem_size;
+    memcpy(&array->array[array->size], cstr, size);
+    array->size += size;
+    array->array[array->size] = 0;
+}
 
-    args->array[args->size] = '"';
-    ++args->size;
+static int append_arg(KOS_CONTEXT             ctx,
+                      struct KOS_MEMPOOL_S   *alloc,
+                      const char             *elem_cstr,
+                      struct CONSTRUCT_ARRAY *args)
+{
+    const size_t elem_size = strlen(elem_cstr);
+    const int    spaces    = (memchr(elem_cstr, ' ', elem_size) != KOS_NULL) ? 1 : 0;
+    const size_t new_size  = args->size + elem_size + (spaces ? 2 : 0) + (args->size ? 1 : 0);
 
-    assert(args->size < args->capacity);
-    args->array[args->size] = 0;
+    /* TODO escape doublequotes */
+
+    if (make_room(ctx, alloc, args, new_size))
+        return KOS_ERROR_EXCEPTION;
+
+    if (args->size)
+        append_str(args, " ", 1);
+
+    if (spaces)
+        append_str(args, "\"", 1);
+
+    append_str(args, elem_cstr, elem_size);
+
+    if (spaces)
+        append_str(args, "\"", 1);
 
     return KOS_SUCCESS;
 }
@@ -206,38 +226,20 @@ static int append_env_var(KOS_CONTEXT             ctx,
                           unsigned                key_len,
                           unsigned                val_len)
 {
-    const size_t new_size = env->size + key_len + val_len + 3;
+    const size_t new_size = env->size + key_len + val_len + 2;
 
-    if (new_size > env->capacity) {
-        const size_t  new_capacity = KOS_align_up(new_size, (size_t)1024U);
-        PROCESS_ARRAY new_env      = (PROCESS_ARRAY)KOS_mempool_alloc(alloc, new_capacity);
-
-        if ( ! new_env) {
-            KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
-            return KOS_ERROR_EXCEPTION;
-        }
-
-        if (env->size)
-            memcpy(new_env, env->array, env->size);
-
-        env->array    = new_env;
-        env->capacity = new_capacity;
-    }
+    if (make_room(ctx, alloc, env, new_size))
+        return KOS_ERROR_EXCEPTION;
 
     KOS_string_to_utf8(KOS_get_walk_key(iter), &env->array[env->size], key_len);
     env->size += key_len;
 
-    env->array[env->size] = '=';
-    ++env->size;
+    append_str(env, "=", 1);
 
     KOS_string_to_utf8(KOS_get_walk_value(iter), &env->array[env->size], val_len);
     env->size += val_len;
 
-    env->array[env->size] = 0;
-    ++env->size;
-
-    assert(env->size < env->capacity);
-    env->array[env->size] = 0;
+    append_str(env, "", 1);
 
     return KOS_SUCCESS;
 }
@@ -554,6 +556,10 @@ static int get_env_array(KOS_CONTEXT           ctx,
     }
 
 #ifdef _WIN32
+    if ( ! env_buf.size) {
+        TRY(make_room(ctx, alloc, &env_buf, 1));
+        append_str(&env_buf, "", 1);
+    }
     *out_array = env_buf.array;
 #else
     *out_ptr   = KOS_NULL;
@@ -566,6 +572,34 @@ cleanup:
 }
 
 #ifdef _WIN32
+
+static void raise_last_error(KOS_CONTEXT ctx, DWORD err)
+{
+    char *msg = KOS_NULL;
+    DWORD msg_size;
+
+    msg_size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+                             KOS_NULL,
+                             err,
+                             LANG_USER_DEFAULT,
+                             (LPTSTR)&msg,
+                             1024,
+                             KOS_NULL);
+
+    while (msg_size && (msg[msg_size - 1] == '\r' || msg[msg_size - 1] == '\n'))
+        --msg_size;
+
+    if (msg_size) {
+        const KOS_OBJ_ID msg_str = KOS_new_string(ctx, msg, msg_size);
+        LocalFree(msg);
+
+        KOS_raise_exception(ctx, msg_str);
+    }
+    else {
+        KOS_DECLARE_STATIC_CONST_STRING(str_err_create_process, "CreateProcess failed");
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_create_process));
+    }
+}
 
 static void release_pid(struct KOS_WAIT_S *wait_info)
 {
@@ -869,7 +903,23 @@ static int find_program(KOS_CONTEXT           ctx,
     /* On Windows, CreateProcess() already looks for the program using various techniques, including PATH */
     return KOS_SUCCESS;
 }
+
+static HANDLE redirect_io(FILE *file, DWORD std_handle)
+{
+    if (file) {
+        const HANDLE handle = (HANDLE)_get_osfhandle(_fileno(file));
+
+        if (handle != INVALID_HANDLE_VALUE) {
+            SetHandleInformation(handle, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
+            return handle;
+        }
+    }
+
+    return GetStdHandle(std_handle);
+}
+
 #else
+
 static int does_file_exist(const char *path)
 {
     struct stat statbuf;
@@ -972,9 +1022,7 @@ static int find_program(KOS_CONTEXT           ctx,
     KOS_raise_printf(ctx, "program \"%s\" not found", buf_mgr.orig_prog_name);
     return KOS_ERROR_EXCEPTION;
 }
-#endif
 
-#ifndef _WIN32
 /* Sends errno to parent process, if the child cannot run execve() */
 static void send_errno_and_exit(int fd)
 {
@@ -1142,50 +1190,27 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
         memset(&startup_info, 0, sizeof(startup_info));
         startup_info.cb         = (DWORD)sizeof(startup_info);
         startup_info.dwFlags    = STARTF_USESTDHANDLES;
-        startup_info.hStdInput  = GetStdHandle(STD_INPUT_HANDLE);
-        startup_info.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-        startup_info.hStdError  = GetStdHandle(STD_ERROR_HANDLE);
+        startup_info.hStdInput  = redirect_io(stdin_file,  STD_INPUT_HANDLE);
+        startup_info.hStdOutput = redirect_io(stdout_file, STD_OUTPUT_HANDLE);
+        startup_info.hStdError  = redirect_io(stderr_file, STD_ERROR_HANDLE);
 
-        /* TODO override I/O handles */
+        if ( ! CreateProcess(KOS_NULL,
+                             args_array,
+                             KOS_NULL,
+                             KOS_NULL,
+                             TRUE,
+                             0,
+                             env_array,
+                             cwd[0] ? cwd : KOS_NULL,
+                             &startup_info,
+                             &proc_info)) {
 
-        if (!CreateProcess(KOS_NULL,
-                           args_array,
-                           KOS_NULL,
-                           KOS_NULL,
-                           TRUE,
-                           0,
-                           env_array,
-                           cwd[0] ? cwd : KOS_NULL,
-                           &startup_info,
-                           &proc_info)) {
-
-            const DWORD err = GetLastError();
-            char       *msg = KOS_NULL;
-
-            DWORD msg_size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
-                                           KOS_NULL,
-                                           err,
-                                           LANG_USER_DEFAULT,
-                                           (LPTSTR)&msg,
-                                           1024,
-                                           KOS_NULL);
+            const DWORD last_err = GetLastError();
 
             KOS_resume_context(ctx);
 
-            while (msg_size && (msg[msg_size - 1] == '\r' || msg[msg_size - 1] == '\n'))
-                --msg_size;
-
-            if (msg_size) {
-                const KOS_OBJ_ID msg_str = KOS_new_string(ctx, msg, msg_size);
-                LocalFree(msg);
-
-                KOS_raise_exception(ctx, msg_str);
-                RAISE_ERROR(KOS_ERROR_EXCEPTION);
-            }
-            else {
-                KOS_DECLARE_STATIC_CONST_STRING(str_err_create_process, "CreateProcess failed");
-                RAISE_EXCEPTION_STR(str_err_create_process);
-            }
+            raise_last_error(ctx, last_err);
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
 
         wait_info->h_process = proc_info.hProcess;
@@ -1345,7 +1370,54 @@ static KOS_OBJ_ID wait_for_child(KOS_CONTEXT ctx,
     ret.o = KOS_new_object(ctx);
     TRY_OBJID(ret.o);
 
-#ifndef _WIN32
+#ifdef _WIN32
+    {
+        KOS_DECLARE_STATIC_CONST_STRING(str_err_wait, "wait failed");
+
+        const HANDLE h_process = wait_info->h_process;
+        DWORD        exit_code = 0;
+
+        wait_info->h_process = INVALID_HANDLE_VALUE;
+
+        if (h_process != INVALID_HANDLE_VALUE) {
+            DWORD result;
+            DWORD last_err = 0;
+
+            KOS_suspend_context(ctx);
+
+            result = WaitForSingleObject(h_process, INFINITE);
+
+            if (result == WAIT_FAILED)
+                last_err = GetLastError();
+
+            KOS_resume_context(ctx);
+
+            if (result != WAIT_OBJECT_0) {
+
+                if (result == WAIT_FAILED) {
+                    raise_last_error(ctx, last_err);
+                    RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                }
+                else
+                    RAISE_EXCEPTION_STR(str_err_wait);
+            }
+        }
+        else
+            RAISE_EXCEPTION_STR(str_err_wait);
+
+        if ( ! GetExitCodeProcess(h_process, &exit_code)) {
+            raise_last_error(ctx, GetLastError());
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+
+        TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_status),
+                             KOS_new_int(ctx, (int64_t)exit_code)));
+
+        TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_signal), KOS_VOID));
+
+        TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_stopped), KOS_FALSE));
+    }
+#else
     {
         pid_t ret_pid;
         int   status;
