@@ -34,11 +34,10 @@ run_shell()
         local ARGS
         ARGS=""
         while [ $# -gt 0 ]; do
-            [ "$ARGS" = "" ] || ARGS="$ARGS "
             ARGS="$ARGS, \"$1\""
             shift
         done
-        run 'import os; os.spawn(program="cmd", args=["/c", '"$ARGS"'], inherit_env=false)'
+        run 'import os; os.spawn(program="cmd", args=["/c"'"$ARGS"'], inherit_env=false)'
     else
         run 'import os; os.spawn("/bin/sh", ["-c", "'"$*"'"])'
     fi
