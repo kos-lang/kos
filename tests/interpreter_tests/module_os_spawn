@@ -35,10 +35,10 @@ run_shell()
         ARGS=""
         while [ $# -gt 0 ]; do
             [ "$ARGS" = "" ] || ARGS="$ARGS "
-            ARGS="$ARGS \"$1\""
+            ARGS="$ARGS, \"$1\""
             shift
         done
-        run 'import os; os.spawn("cmd", ["/c", '"$ARGS"'], inherit_env=false)'
+        run 'import os; os.spawn(program="cmd", args=["/c", '"$ARGS"'], inherit_env=false)'
     else
         run 'import os; os.spawn("/bin/sh", ["-c", "'"$*"'"])'
     fi
@@ -47,7 +47,7 @@ run_shell()
 ##############################################################################
 # Run simple shell script via /bin/sh
 
-run_shell "echo Hello_Kos" > "$OUTPUT"
+run_shell "echo" "Hello_Kos" > "$OUTPUT"
 
 CONTENTS=`cat "$OUTPUT"`
 
