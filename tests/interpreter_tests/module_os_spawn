@@ -30,23 +30,31 @@ run()
 
 run_shell()
 {
-    run 'import os; os.spawn("/bin/sh", ["-c", "'"$*"'"])'
+    if [ "$UNAME" = "Windows" ]; then
+        local ARGS
+        ARGS=""
+        while [ $# -gt 0 ]; do
+            [ "$ARGS" = "" ] || ARGS="$ARGS "
+            ARGS="$ARGS \"$1\""
+            shift
+        done
+        run 'import os; os.spawn("cmd", ["/c", '"$ARGS"'], inherit_env=false)'
+    else
+        run 'import os; os.spawn("/bin/sh", ["-c", "'"$*"'"])'
+    fi
 }
-
-# TODO On Windows we could use cmd.exe, but os.spawn() does not support PATH lookups yet
-if [ "$UNAME" = "Windows" ]; then
-    exit 0
-fi
 
 ##############################################################################
 # Run simple shell script via /bin/sh
 
-run_shell "echo 'Hello, Kos!'" > "$OUTPUT"
+run_shell "echo Hello_Kos" > "$OUTPUT"
 
 CONTENTS=`cat "$OUTPUT"`
 
-if [ "$CONTENTS" != "Hello, Kos!" ]; then
-    echo "$LINENO: Error: Expected output to contain: \"Hello, Kos\", but it is different" >&2
+if [ "$CONTENTS" != "Hello_Kos" ]; then
+    echo "$LINENO: Error: Expected output to contain: \"Hello_Kos\", but it is different" >&2
     cat "$OUTPUT"
     exit 1
 fi
+
+rm "$OUTPUT"
