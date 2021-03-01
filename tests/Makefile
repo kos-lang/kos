@@ -174,6 +174,11 @@ pseudotty = $(out_dir)/pseudotty/pseudotty
 $(pseudotty)::
 	@$(MAKE) -C pseudotty
 
+cmdline:
+	@$(MAKE) -C cmdline
+
+interpreter_tests/module_os.kos: cmdline
+
 define PSEUDOTTY_RULE
 pseudotty_$1: $(pseudotty) pseudotty/$1
 	@echo Test pseudotty $1
@@ -275,6 +280,6 @@ endif
 .PHONY: test simple_test gcov fuzz
 .PHONY: $(addprefix gcov., $(gcov_modules))
 .PHONY: $(standalone_tests) $(parser_test_list) $(sequential_test_list) $(interactive_scripts)
-.PHONY: module_paths print_heap_test
+.PHONY: module_paths print_heap_test cmdline
 .PHONY: $(addprefix pseudotty_, $(pseudotty_scripts))
 .PHONY: $(interpreter_test_list) $(interpreter_fail_test_list)

@@ -10,10 +10,24 @@ import io
 ##############################################################################
 # os.spawn
 
+const sep = (os.sysname == "Windows") ? "\\" : "/"
+const ext = (os.sysname == "Windows") ? ".exe" : ""
+
 fun find_program(name)
 {
-    for const prefix in ["/bin", "/usr/bin"] {
-        const path = prefix + "/" + name
+    const test_locations = [ ]
+
+    for const out_dir in [ "Out", "..\(sep)Out" ] {
+        for const cfg in [ "release", "debug" ] {
+            test_locations.push("\(out_dir)\(sep)\(cfg)\(sep)tests\(sep)cmdline\(sep)kos_\(name)\(ext)")
+        }
+    }
+
+
+    test_locations.push("\(sep)bin\(sep)\(name)")
+    test_locations.push("\(sep)usr\(sep)bin\(sep)\(name)")
+
+    for const path in test_locations {
         if fs.is_file(path) {
             return path
         }
@@ -36,7 +50,7 @@ do {
     expect_fail(() => os.spawn(0))
     expect_fail(() => os.spawn([]))
     expect_fail(() => os.spawn([bin_true]))
-    expect_fail(() => os.spawn([bin_true[1:].split("/")...]))
+    expect_fail(() => os.spawn([bin_true[1:].split(sep)...]))
     expect_fail(() => os.spawn("no such program %%%"))
 }
 
@@ -69,9 +83,9 @@ if bin_true {
     os.spawn(program=bin_true, inherit_env=false, env={STH: "OK2"})
 
     # cwd works for spawning processes
-    if ! fs.is_file("./true") {
-        const last_slash = bin_true.rscan("/")
-        os.spawn(program="./true", cwd=bin_true[0:last_slash], inherit_env=false)
+    if ! fs.is_file(".\(sep)true\(ext)") {
+        const last_slash = bin_true.rscan(sep)
+        os.spawn(program=".\(sep)true\(ext)", cwd=bin_true[0:last_slash], inherit_env=false)
     }
 
     # On most systems, true is on PATH
