@@ -6,6 +6,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#ifdef _WIN32
+#   pragma warning( disable : 4996 ) /* 'fopen': This function may be unsafe */
+#endif
+
 static void cat(FILE *file)
 {
     static uint8_t buf[1024 * 1024];

@@ -7,7 +7,7 @@ all_test_programs  = kos_true
 all_test_programs += kos_false
 all_test_programs += kos_cat
 
-c_files = $(addsuffix .cpp, $(all_test_programs))
+c_files = $(addsuffix .c, $(all_test_programs))
 
 include ../../build/rules.mk
 
