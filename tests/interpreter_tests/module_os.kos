@@ -83,13 +83,17 @@ if bin_true {
     os.spawn(program=bin_true, inherit_env=false, env={STH: "OK2"})
 
     # cwd works for spawning processes
-    if ! fs.is_file(".\(sep)true\(ext)") {
-        const last_slash = bin_true.rscan(sep)
-        os.spawn(program=".\(sep)true\(ext)", cwd=bin_true[0:last_slash], inherit_env=false)
-    }
+    #const last_slash = bin_true.rscan(sep)
+    #const local_true = "." + bin_true[last_slash:]
+    #if ! fs.is_file(local_true) {
+    #    base.print(local_true) ; base.print(bin_true[:last_slash])
+    #    os.spawn(program=bin_true, cwd=bin_true[:last_slash], inherit_env=false)
+    #}
 
     # On most systems, true is on PATH
-    os.spawn("true")
+    if os.sysname != "Windows" {
+        os.spawn("true")
+    }
 
     # os.spawn() returns a wait object
     do {
