@@ -36,260 +36,166 @@ fun find_program(name)
     return void
 }
 
-base.print("module_os XXX \(__line__)")
 const bin_true = find_program("true")
 
-base.print("module_os XXX \(__line__)")
 const bin_false = find_program("false")
 
-base.print("module_os XXX \(__line__)")
 const bin_cat = find_program("cat")
 
 do {
-base.print("module_os XXX \(__line__)")
     expect_fail(() => os.spawn())
-base.print("module_os XXX \(__line__)")
     expect_fail(() => os.spawn({}))
-base.print("module_os XXX \(__line__)")
     expect_fail(() => os.spawn(args=[]))
-base.print("module_os XXX \(__line__)")
     expect_fail(() => os.spawn(void))
-base.print("module_os XXX \(__line__)")
     expect_fail(() => os.spawn(0))
-base.print("module_os XXX \(__line__)")
     expect_fail(() => os.spawn([]))
-base.print("module_os XXX \(__line__)")
     expect_fail(() => os.spawn([bin_true]))
-base.print("module_os XXX \(__line__)")
     expect_fail(() => os.spawn([bin_true[1:].split(sep)...]))
-base.print("module_os XXX \(__line__)")
     expect_fail(() => os.spawn("no such program %%%"))
-base.print("module_os XXX \(__line__)")
 }
 
 if bin_true {
 
     # args must be an array of strings
-base.print("module_os XXX \(__line__)")
     expect_fail(() => os.spawn(bin_true, {}))
-base.print("module_os XXX \(__line__)")
     expect_fail(() => os.spawn(bin_true, void))
-base.print("module_os XXX \(__line__)")
     expect_fail(() => os.spawn(bin_true, 1))
-base.print("module_os XXX \(__line__)")
     expect_fail(() => os.spawn(bin_true, [1]))
-base.print("module_os XXX \(__line__)")
     expect_fail(() => os.spawn(bin_true, [true]))
-base.print("module_os XXX \(__line__)")
     os.spawn(bin_true, [])
-base.print("module_os XXX \(__line__)")
 
     # env must be an object containing strings
-base.print("module_os XXX \(__line__)")
     expect_fail(() => os.spawn(program=bin_true, env=[]))
-base.print("module_os XXX \(__line__)")
     expect_fail(() => os.spawn(program=bin_true, env=true))
-base.print("module_os XXX \(__line__)")
     expect_fail(() => os.spawn(program=bin_true, env=1))
-base.print("module_os XXX \(__line__)")
     expect_fail(() => os.spawn(program=bin_true, env={STH: 1}))
-base.print("module_os XXX \(__line__)")
     expect_fail(() => os.spawn(program=bin_true, env={STH: true}))
-base.print("module_os XXX \(__line__)")
     expect_fail(() => os.spawn(program=bin_true, env={"some=": "x"}))
-base.print("module_os XXX \(__line__)")
     os.spawn(program=bin_true, env={})
-base.print("module_os XXX \(__line__)")
     os.spawn(program=bin_true, env={}, args=[])
-base.print("module_os XXX \(__line__)")
     os.spawn(program=bin_true, env={STH: "OK1"}, args=[])
-base.print("module_os XXX \(__line__)")
 
     # os.spawn() returns a wait object
     do {
-base.print("module_os XXX \(__line__)")
         const process = os.spawn(bin_true)
 
-base.print("module_os XXX \(__line__)")
         assert process instanceof os.process
-base.print("module_os XXX \(__line__)")
         assert process.pid > 1
 
-base.print("module_os XXX \(__line__)")
         const ret = process.wait()
-base.print("module_os XXX \(__line__)")
         assert typeof ret == "object"
-base.print("module_os XXX \(__line__)")
         assert ret.status  == 0
-base.print("module_os XXX \(__line__)")
         assert ret.signal  == void
-base.print("module_os XXX \(__line__)")
         assert ret.stopped == false
-base.print("module_os XXX \(__line__)")
 
         expect_fail(() => process.wait())
-base.print("module_os XXX \(__line__)")
     }
 
     # inherit_env must be a boolean
-base.print("module_os XXX \(__line__)")
     expect_fail(() => os.spawn(program=bin_true, inherit_env={}))
-base.print("module_os XXX \(__line__)")
     expect_fail(() => os.spawn(program=bin_true, inherit_env=void))
-base.print("module_os XXX \(__line__)")
     os.spawn(program=bin_true, inherit_env=true)
-base.print("module_os XXX \(__line__)")
     os.spawn(program=bin_true, inherit_env=false)
-base.print("module_os XXX \(__line__)")
     os.spawn(program=bin_true, inherit_env=false, env={STH: "OK2"})
-base.print("module_os XXX \(__line__)")
 
     # cwd works for spawning processes
-base.print("module_os XXX \(__line__)")
     const last_slash = bin_true.rscan(sep)
     const local_true = "." + bin_true[last_slash:]
     if ! fs.is_file(local_true) {
-base.print("module_os XXX \(__line__)")
         os.spawn(program=bin_true,   cwd=bin_true[:last_slash], inherit_env=false).wait()
-base.print("module_os XXX \(__line__)")
-if os.sysname != "Windows" {
-        os.spawn(program=local_true, cwd=bin_true[:last_slash], inherit_env=false).wait()
-}
-base.print("module_os XXX \(__line__)")
+        if os.sysname != "Windows" {
+            os.spawn(program=local_true, cwd=bin_true[:last_slash], inherit_env=false).wait()
+        }
     }
 
     # On most systems, true is on PATH
     if os.sysname != "Windows" {
-base.print("module_os XXX \(__line__)")
         os.spawn("true").wait()
-base.print("module_os XXX \(__line__)")
     }
 
     # Check non-zero status
     if bin_false {
-base.print("module_os XXX \(__line__)")
         const process = os.spawn(bin_false)
 
-base.print("module_os XXX \(__line__)")
         assert process instanceof os.process
-base.print("module_os XXX \(__line__)")
         assert process.pid > 1
-base.print("module_os XXX \(__line__)")
 
-base.print("module_os XXX \(__line__)")
         const ret = process.wait()
-base.print("module_os XXX \(__line__)")
         assert ret.status  != 0
-base.print("module_os XXX \(__line__)")
         assert ret.signal  == void
-base.print("module_os XXX \(__line__)")
         assert ret.stopped == false
-base.print("module_os XXX \(__line__)")
 
         expect_fail(() => process.wait())
-base.print("module_os XXX \(__line__)")
     }
 
     # Call wait() on a non-process object
     do {
-base.print("module_os XXX \(__line__)")
         const process = os.spawn(bin_true)
 
-base.print("module_os XXX \(__line__)")
         const wait = process.wait
-base.print("module_os XXX \(__line__)")
         assert typeof wait == "function"
 
-base.print("module_os XXX \(__line__)")
         expect_fail(() => wait.apply(void, []))
-base.print("module_os XXX \(__line__)")
     }
 }
 
 if bin_cat {
-base.print("module_os XXX \(__line__)")
     const name = "__spawn_test_file"
-base.print("module_os XXX \(__line__)")
     fs.remove(name)
-base.print("module_os XXX \(__line__)")
     with const f = io.create(name) {
         f.print("hello")
         f.print("world")
     }
 
-base.print("module_os XXX \(__line__)")
     const p = io.pipe();
-base.print("module_os XXX \(__line__)")
     defer { p.read.close() }
 
     var proc = void
     with p.write {
-base.print("module_os XXX \(__line__)")
         proc = os.spawn(program = bin_cat, args = [name], stdout = p.write)
-base.print("module_os XXX \(__line__)")
     }
     assert proc.pid > 0
 
-base.print("module_os XXX \(__line__)")
     const it = p.read.read_lines()
-base.print("module_os XXX \(__line__)")
     assert it() == "hello"
-base.print("module_os XXX \(__line__)")
     assert it() == "world"
-base.print("module_os XXX \(__line__)")
     expect_fail(it)
 
-base.print("module_os XXX \(__line__)")
     const ret = proc.wait()
-base.print("module_os XXX \(__line__)")
     assert ret.status == 0
-base.print("module_os XXX \(__line__)")
 
     fs.remove(name)
 }
 
 if bin_cat {
-base.print("module_os XXX \(__line__)")
     const name = "__spawn_test_file2"
     fs.remove(name)
 
-base.print("module_os XXX \(__line__)")
     const p = io.pipe();
-base.print("module_os XXX \(__line__)")
     defer { p.write.close() }
 
     var proc = void
-base.print("module_os XXX \(__line__)")
     with const f = io.create(name) {
         defer { p.read.close() }
 
-base.print("module_os XXX \(__line__)")
         proc = os.spawn(program = bin_cat, stdin = p.read, stdout = f, stderr = f)
-base.print("module_os XXX \(__line__)")
     }
-base.print("module_os XXX \(__line__)")
     assert proc.pid > 0
-base.print("module_os XXX \(__line__)")
 
     p.write.print("hello")
     p.write.print("world")
-base.print("module_os XXX \(__line__)")
     p.write.flush()
-base.print("module_os XXX \(__line__)")
     p.write.close()
-base.print("module_os XXX \(__line__)")
 
     const ret = proc.wait()
     assert ret.status == 0
 
-base.print("module_os XXX \(__line__)")
     with const f = io.open(name, io.ro) {
         const it = f.read_lines()
         assert it() == "hello"
         assert it() == "world"
         expect_fail(it)
     }
-base.print("module_os XXX \(__line__)")
 
     fs.remove(name)
 }
@@ -313,4 +219,3 @@ do {
 assert os.getenv("non-existent env")      == void
 assert os.getenv("non-existent env", 123) == 123
 assert os.getenv(default_value = 456, key = "non-existent env") == 456
-base.print("module_os XXX \(__line__)")

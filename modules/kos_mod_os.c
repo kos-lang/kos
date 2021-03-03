@@ -1222,7 +1222,6 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
         startup_info.hStdOutput = redirect_io(stdout_file, STD_OUTPUT_HANDLE);
         startup_info.hStdError  = redirect_io(stderr_file, STD_ERROR_HANDLE);
 
-printf("CreateProcess >>>%s<<< CWD '%s'\n", args_array, cwd);
         if ( ! CreateProcess(KOS_NULL,
                              args_array,
                              KOS_NULL,
