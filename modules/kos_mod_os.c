@@ -39,7 +39,9 @@
 #if defined(__ANDROID__)
 #   define KOS_SYSNAME "Android"
 #elif defined(__APPLE__)
-#   include <TargetConditionals.h>
+#   if __has_include(<TargetConditionals.h>)
+#       include <TargetConditionals.h>
+#   endif
 #   if (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE) || (defined(TARGET_OS_SIMULATOR) && TARGET_OS_SIMULATOR)
 #       define KOS_SYSNAME "iOS"
 #   else
@@ -974,14 +976,14 @@ static int find_program(KOS_CONTEXT           ctx,
 {
     struct CONCAT_BUF_MGR buf_mgr;
 
-    if (does_file_exist(*program_cstr))
-        return KOS_SUCCESS;
-
     buf_mgr.alloc              = alloc;
-    buf_mgr.buf                = KOS_NULL;
+    buf_mgr.buf                = *program_cstr;
     buf_mgr.buf_size           = 0;
     buf_mgr.orig_prog_name     = *program_cstr;
     buf_mgr.orig_prog_name_len = strlen(buf_mgr.orig_prog_name);
+
+    if (does_file_exist(*program_cstr))
+        goto found_program;
 
     if (*cwd) {
         if (concat_path(&buf_mgr, cwd, strlen(cwd))) {
@@ -989,10 +991,8 @@ static int find_program(KOS_CONTEXT           ctx,
             return KOS_ERROR_EXCEPTION;
         }
 
-        if (does_file_exist(buf_mgr.buf)) {
-            *program_cstr = buf_mgr.buf;
-            return KOS_SUCCESS;
-        }
+        if (does_file_exist(buf_mgr.buf))
+            goto found_program;
     }
 
     /* Search PATH unless absolute path was given */
@@ -1010,10 +1010,8 @@ static int find_program(KOS_CONTEXT           ctx,
                 return KOS_ERROR_EXCEPTION;
             }
 
-            if (does_file_exist(buf_mgr.buf)) {
-                *program_cstr = buf_mgr.buf;
-                return KOS_SUCCESS;
-            }
+            if (does_file_exist(buf_mgr.buf))
+                goto found_program;
 
             path_env += path_len + 1;
         }
@@ -1021,6 +1019,36 @@ static int find_program(KOS_CONTEXT           ctx,
 
     KOS_raise_printf(ctx, "program \"%s\" not found", buf_mgr.orig_prog_name);
     return KOS_ERROR_EXCEPTION;
+
+found_program:
+    if (buf_mgr.buf[0] != '/') {
+        char  *const cur_wd   = getcwd(KOS_NULL, 0);
+        const size_t cwd_len  = cur_wd ? strlen(cur_wd) : 0;
+        const size_t prog_len = strlen(buf_mgr.buf);
+        const size_t reqd_len = cwd_len + prog_len + 2;
+
+        if (reqd_len > buf_mgr.buf_size) {
+            char *const new_buf = (char *)KOS_mempool_alloc(alloc, reqd_len);
+
+            if ( ! new_buf) {
+                free(cur_wd);
+                KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+                return KOS_ERROR_EXCEPTION;
+            }
+
+            memcpy(&new_buf[cwd_len + 1], buf_mgr.buf, prog_len + 1);
+            buf_mgr.buf = new_buf;
+        }
+        else
+            memmove(&buf_mgr.buf[cwd_len + 1], buf_mgr.buf, prog_len + 1);
+
+        memcpy(buf_mgr.buf, cur_wd, cwd_len);
+        buf_mgr.buf[cwd_len] = '/';
+        free(cur_wd);
+    }
+
+    *program_cstr = buf_mgr.buf;
+    return KOS_SUCCESS;
 }
 
 /* Sends errno to parent process, if the child cannot run execve() */
