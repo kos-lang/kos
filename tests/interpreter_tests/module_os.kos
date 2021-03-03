@@ -74,6 +74,7 @@ if bin_true {
     os.spawn(program=bin_true, env={})
     os.spawn(program=bin_true, env={}, args=[])
     os.spawn(program=bin_true, env={STH: "OK1"}, args=[])
+base.print("module_os XXX \(__line__)")
 
     # os.spawn() returns a wait object
     do {
@@ -90,6 +91,7 @@ if bin_true {
 
         expect_fail(() => process.wait())
     }
+base.print("module_os XXX \(__line__)")
 
     # inherit_env must be a boolean
     expect_fail(() => os.spawn(program=bin_true, inherit_env={}))
@@ -107,6 +109,7 @@ if bin_true {
             os.spawn(program=local_true, cwd=bin_true[:last_slash], inherit_env=false).wait()
         }
     }
+base.print("module_os XXX \(__line__)")
 
     # On most systems, true is on PATH
     if os.sysname != "Windows" {
@@ -127,6 +130,7 @@ if bin_true {
 
         expect_fail(() => process.wait())
     }
+base.print("module_os XXX \(__line__)")
 
     # Call wait() on a non-process object
     do {
@@ -138,6 +142,7 @@ if bin_true {
         expect_fail(() => wait.apply(void, []))
     }
 }
+base.print("module_os XXX \(__line__)")
 
 if bin_cat {
     const name = "__spawn_test_file"
@@ -166,6 +171,7 @@ if bin_cat {
 
     fs.remove(name)
 }
+base.print("module_os XXX \(__line__)")
 
 if bin_cat {
     const name = "__spawn_test_file2"
@@ -199,6 +205,7 @@ if bin_cat {
 
     fs.remove(name)
 }
+base.print("module_os XXX \(__line__)")
 
 ##############################################################################
 # os.sysname
