@@ -152,7 +152,9 @@ base.print("module_os XXX \(__line__)")
 base.print("module_os XXX \(__line__)")
         os.spawn(program=bin_true,   cwd=bin_true[:last_slash], inherit_env=false).wait()
 base.print("module_os XXX \(__line__)")
+if os.sysname != "Windows" {
         os.spawn(program=local_true, cwd=bin_true[:last_slash], inherit_env=false).wait()
+}
 base.print("module_os XXX \(__line__)")
     }
 
@@ -311,3 +313,4 @@ do {
 assert os.getenv("non-existent env")      == void
 assert os.getenv("non-existent env", 123) == 123
 assert os.getenv(default_value = 456, key = "non-existent env") == 456
+base.print("module_os XXX \(__line__)")
