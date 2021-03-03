@@ -562,9 +562,9 @@ static int get_env_array(KOS_CONTEXT           ctx,
         TRY(make_room(ctx, alloc, &env_buf, 1));
         append_str(&env_buf, "", 1);
     }
-if (env_buf.size >= env_buf.capacity || env_buf.size == 0) printf("BAD SIZE %u VS CAPACITY %u\n", (unsigned)env_buf.size, (unsigned)env_buf.capacity);
-if (env_buf.array[env_buf.size - 1] != 0) printf("MISSING 0 (A)\n");
-if (env_buf.array[env_buf.size] != 0) printf("MISSING 0 (B)\n");
+if (env_buf.size >= env_buf.capacity || env_buf.size == 0) printf("BAD SIZE %zu VS CAPACITY %zu\n", env_buf.size, env_buf.capacity);
+if (env_buf.array[env_buf.size - 1] != 0) printf("MISSING 0 (A) with size %zu\n", env_buf.size);
+if (env_buf.array[env_buf.size] != 0) printf("MISSING 0 (B) with size %zu\n", env_buf.size);
     *out_array = env_buf.array;
 #else
     *out_ptr   = KOS_NULL;
