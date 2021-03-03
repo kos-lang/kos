@@ -11,6 +11,6 @@ c_files = $(addsuffix .c, $(all_test_programs))
 
 include ../../build/rules.mk
 
-$(foreach test, $(all_test_programs), $(eval $(call LINK_EXE,$(test),$(test).c)))
+$(foreach test, $(all_test_programs), $(eval $(call LINK_EXE,$(test),$(test).c,)))
 
 default: $(addsuffix $(exe_suffix), $(addprefix $(out_dir)/, $(all_test_programs)))
