@@ -562,6 +562,9 @@ static int get_env_array(KOS_CONTEXT           ctx,
         TRY(make_room(ctx, alloc, &env_buf, 1));
         append_str(&env_buf, "", 1);
     }
+if (env_buf.size >= env_buf.capacity || env_buf.size == 0) printf("BAD SIZE %u VS CAPACITY %u\n", (unsigned)env_buf.size, (unsigned)env_buf.capacity);
+if (env_buf.array[env_buf.size - 1] != 0) printf("MISSING 0 (A)\n");
+if (env_buf.array[env_buf.size] != 0) printf("MISSING 0 (B)\n");
     *out_array = env_buf.array;
 #else
     *out_ptr   = KOS_NULL;
@@ -1222,6 +1225,7 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
         startup_info.hStdOutput = redirect_io(stdout_file, STD_OUTPUT_HANDLE);
         startup_info.hStdError  = redirect_io(stderr_file, STD_ERROR_HANDLE);
 
+printf("CreateProcess >>>%s<<< CWD '%s'\n", args_array, cwd);
         if ( ! CreateProcess(KOS_NULL,
                              args_array,
                              KOS_NULL,
