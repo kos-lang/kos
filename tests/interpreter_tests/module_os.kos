@@ -139,7 +139,7 @@ if bin_true {
     }
 }
 
-if bin_cat && false {
+if bin_cat && (os.sysname != "Windows) {
     const name = "__spawn_test_file"
     fs.remove(name)
     with const f = io.create(name) {
@@ -167,7 +167,7 @@ if bin_cat && false {
     fs.remove(name)
 }
 
-if bin_cat {
+if bin_cat && (os.sysname != "Windows) {
     const name = "__spawn_test_file2"
     fs.remove(name)
 
