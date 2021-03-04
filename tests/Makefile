@@ -177,7 +177,7 @@ $(pseudotty)::
 cmdline:
 	@$(MAKE) -C cmdline
 
-interpreter_tests/module_os.kos: cmdline
+interpreter_tests/module_os.kos default: cmdline
 
 define PSEUDOTTY_RULE
 pseudotty_$1: $(pseudotty) pseudotty/$1
