@@ -29,7 +29,6 @@ fun find_program(name)
 
     for const path in test_locations {
         if fs.is_file(path) {
-            base.print("found \(path)")
             return path
         }
     }
@@ -37,15 +36,12 @@ fun find_program(name)
     return void
 }
 
-base.print("module_os XXX \(__line__)")
 const bin_true = find_program("true")
-base.print("module_os XXX \(__line__)")
 
 const bin_false = find_program("false")
 
 const bin_cat = find_program("cat")
 
-base.print("module_os XXX \(__line__)")
 do {
     expect_fail(() => os.spawn())
     expect_fail(() => os.spawn({}))
@@ -58,7 +54,6 @@ do {
     expect_fail(() => os.spawn("no such program %%%"))
 }
 
-base.print("module_os XXX \(__line__)")
 if bin_true {
 
     # args must be an array of strings
@@ -68,19 +63,17 @@ if bin_true {
     expect_fail(() => os.spawn(bin_true, [1]))
     expect_fail(() => os.spawn(bin_true, [true]))
     os.spawn(bin_true, [])
-base.print("module_os XXX \(__line__)")
 
     # env must be an object containing strings
-    expect_fail(() => os.spawn(program=bin_true, env=[]))
-    expect_fail(() => os.spawn(program=bin_true, env=true))
-    expect_fail(() => os.spawn(program=bin_true, env=1))
-    expect_fail(() => os.spawn(program=bin_true, env={STH: 1}))
-    expect_fail(() => os.spawn(program=bin_true, env={STH: true}))
-    expect_fail(() => os.spawn(program=bin_true, env={"some=": "x"}))
-    os.spawn(program=bin_true, env={})
-    os.spawn(program=bin_true, env={}, args=[])
-    os.spawn(program=bin_true, env={STH: "OK1"}, args=[])
-base.print("module_os XXX \(__line__)")
+#    expect_fail(() => os.spawn(program=bin_true, env=[]))
+#    expect_fail(() => os.spawn(program=bin_true, env=true))
+#    expect_fail(() => os.spawn(program=bin_true, env=1))
+#    expect_fail(() => os.spawn(program=bin_true, env={STH: 1}))
+#    expect_fail(() => os.spawn(program=bin_true, env={STH: true}))
+#    expect_fail(() => os.spawn(program=bin_true, env={"some=": "x"}))
+#    os.spawn(program=bin_true, env={})
+#    os.spawn(program=bin_true, env={}, args=[])
+#    os.spawn(program=bin_true, env={STH: "OK1"}, args=[])
 
     # os.spawn() returns a wait object
     do {
@@ -97,25 +90,23 @@ base.print("module_os XXX \(__line__)")
 
         expect_fail(() => process.wait())
     }
-base.print("module_os XXX \(__line__)")
 
     # inherit_env must be a boolean
-    expect_fail(() => os.spawn(program=bin_true, inherit_env={}))
-    expect_fail(() => os.spawn(program=bin_true, inherit_env=void))
-    os.spawn(program=bin_true, inherit_env=true)
-    os.spawn(program=bin_true, inherit_env=false)
-    os.spawn(program=bin_true, inherit_env=false, env={STH: "OK2"})
+#    expect_fail(() => os.spawn(program=bin_true, inherit_env={}))
+#    expect_fail(() => os.spawn(program=bin_true, inherit_env=void))
+#    os.spawn(program=bin_true, inherit_env=true)
+#    os.spawn(program=bin_true, inherit_env=false)
+#    os.spawn(program=bin_true, inherit_env=false, env={STH: "OK2"})
 
     # cwd works for spawning processes
     const last_slash = bin_true.rscan(sep)
     const local_true = "." + bin_true[last_slash:]
     if ! fs.is_file(local_true) {
-        os.spawn(program=bin_true, cwd=bin_true[:last_slash], inherit_env=false).wait()
+#        os.spawn(program=bin_true, cwd=bin_true[:last_slash], inherit_env=false).wait()
         if os.sysname != "Windows" {
             os.spawn(program=local_true[2:], env={PATH:bin_true[:last_slash]}, cwd=bin_true[:last_slash], inherit_env=false).wait()
         }
     }
-base.print("module_os XXX \(__line__)")
 
     # On most systems, true is on PATH
     if os.sysname != "Windows" {
@@ -136,7 +127,6 @@ base.print("module_os XXX \(__line__)")
 
         expect_fail(() => process.wait())
     }
-base.print("module_os XXX \(__line__)")
 
     # Call wait() on a non-process object
     do {
@@ -148,7 +138,6 @@ base.print("module_os XXX \(__line__)")
         expect_fail(() => wait.apply(void, []))
     }
 }
-base.print("module_os XXX \(__line__)")
 
 if bin_cat {
     const name = "__spawn_test_file"
@@ -177,7 +166,6 @@ if bin_cat {
 
     fs.remove(name)
 }
-base.print("module_os XXX \(__line__)")
 
 if bin_cat {
     const name = "__spawn_test_file2"
@@ -211,7 +199,6 @@ if bin_cat {
 
     fs.remove(name)
 }
-base.print("module_os XXX \(__line__)")
 
 ##############################################################################
 # os.sysname
