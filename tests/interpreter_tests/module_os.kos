@@ -65,15 +65,15 @@ if bin_true {
     os.spawn(bin_true, [])
 
     # env must be an object containing strings
-#    expect_fail(() => os.spawn(program=bin_true, env=[]))
-#    expect_fail(() => os.spawn(program=bin_true, env=true))
-#    expect_fail(() => os.spawn(program=bin_true, env=1))
-#    expect_fail(() => os.spawn(program=bin_true, env={STH: 1}))
-#    expect_fail(() => os.spawn(program=bin_true, env={STH: true}))
-#    expect_fail(() => os.spawn(program=bin_true, env={"some=": "x"}))
-#    os.spawn(program=bin_true, env={})
-#    os.spawn(program=bin_true, env={}, args=[])
-#    os.spawn(program=bin_true, env={STH: "OK1"}, args=[])
+    expect_fail(() => os.spawn(program=bin_true, env=[]))
+    expect_fail(() => os.spawn(program=bin_true, env=true))
+    expect_fail(() => os.spawn(program=bin_true, env=1))
+    expect_fail(() => os.spawn(program=bin_true, env={STH: 1}))
+    expect_fail(() => os.spawn(program=bin_true, env={STH: true}))
+    expect_fail(() => os.spawn(program=bin_true, env={"some=": "x"}))
+    os.spawn(program=bin_true, env={})
+    os.spawn(program=bin_true, env={}, args=[])
+    os.spawn(program=bin_true, env={STH: "OK1"}, args=[])
 
     # os.spawn() returns a wait object
     do {
@@ -92,17 +92,17 @@ if bin_true {
     }
 
     # inherit_env must be a boolean
-#    expect_fail(() => os.spawn(program=bin_true, inherit_env={}))
-#    expect_fail(() => os.spawn(program=bin_true, inherit_env=void))
-#    os.spawn(program=bin_true, inherit_env=true)
-#    os.spawn(program=bin_true, inherit_env=false)
-#    os.spawn(program=bin_true, inherit_env=false, env={STH: "OK2"})
+    expect_fail(() => os.spawn(program=bin_true, inherit_env={}))
+    expect_fail(() => os.spawn(program=bin_true, inherit_env=void))
+    os.spawn(program=bin_true, inherit_env=true)
+    os.spawn(program=bin_true, inherit_env=false)
+    os.spawn(program=bin_true, inherit_env=false, env={STH: "OK2"})
 
     # cwd works for spawning processes
     const last_slash = bin_true.rscan(sep)
     const local_true = "." + bin_true[last_slash:]
     if ! fs.is_file(local_true) {
-#        os.spawn(program=bin_true, cwd=bin_true[:last_slash], inherit_env=false).wait()
+        os.spawn(program=bin_true, cwd=bin_true[:last_slash], inherit_env=false).wait()
         if os.sysname != "Windows" {
             os.spawn(program=local_true[2:], env={PATH:bin_true[:last_slash]}, cwd=bin_true[:last_slash], inherit_env=false).wait()
         }
