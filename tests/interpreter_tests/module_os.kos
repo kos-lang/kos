@@ -103,7 +103,7 @@ if bin_true {
     const local_true = "." + bin_true[last_slash:]
     if ! fs.is_file(local_true) {
         os.spawn(program=bin_true, cwd=bin_true[:last_slash], inherit_env=false).wait()
-        if os.sysname != "Windows" {
+        if os.sysname != "Windows" { # TODO
             os.spawn(program=local_true[2:], env={PATH:bin_true[:last_slash]}, cwd=bin_true[:last_slash], inherit_env=false).wait()
         }
     }
@@ -139,7 +139,7 @@ if bin_true {
     }
 }
 
-if bin_cat && (os.sysname != "Windows) {
+if bin_cat && (os.sysname != "Windows") { # TODO
     const name = "__spawn_test_file"
     fs.remove(name)
     with const f = io.create(name) {
@@ -167,7 +167,7 @@ if bin_cat && (os.sysname != "Windows) {
     fs.remove(name)
 }
 
-if bin_cat && (os.sysname != "Windows) {
+if bin_cat && (os.sysname != "Windows") { # TODO
     const name = "__spawn_test_file2"
     fs.remove(name)
 
