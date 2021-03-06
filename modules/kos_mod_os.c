@@ -920,6 +920,8 @@ static HANDLE redirect_io(FILE *file, DWORD std_handle, int *close_handle)
                 return new_handle;
             }
         }
+
+        /* TODO error */
     }
 
     return GetStdHandle(std_handle);
@@ -1137,6 +1139,9 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
 
     assert(KOS_get_array_size(args_obj) >= 8);
 
+#ifdef _WIN32
+printf("*** spawn *** %d\n", __LINE__); fflush(stdout);
+#endif
     KOS_mempool_init(&alloc);
     KOS_init_local(     ctx, &process);
     KOS_init_local_with(ctx, &args, args_obj);
@@ -1169,7 +1174,13 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
     TRY_OBJID(value_obj);
     TRY(check_arg_type(ctx, value_obj, "args", OBJ_ARRAY));
 
+#ifdef _WIN32
+printf("*** spawn *** %d\n", __LINE__); fflush(stdout);
+#endif
     TRY(get_args_array(ctx, value_obj, &alloc, program_cstr, &args_array));
+#ifdef _WIN32
+printf("*** spawn *** %d\n", __LINE__); fflush(stdout);
+#endif
 
     /* Get 'inherit_env' */
     inherit_env = KOS_array_read(ctx, args.o, 4);
@@ -1182,7 +1193,13 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
     if (value_obj != KOS_VOID)
         TRY(check_arg_type(ctx, value_obj, "env", OBJ_OBJECT));
 
+#ifdef _WIN32
+printf("*** spawn *** %d\n", __LINE__); fflush(stdout);
+#endif
     TRY(get_env_array(ctx, value_obj, KOS_get_bool(inherit_env), &alloc, &env_array));
+#ifdef _WIN32
+printf("*** spawn *** %d\n", __LINE__); fflush(stdout);
+#endif
 
     /* Get 'stdin' */
     file_obj = KOS_array_read(ctx, args.o, 5);
@@ -1210,6 +1227,9 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
         if ( ! stderr_file)
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
+#ifdef _WIN32
+printf("*** spawn *** %d\n", __LINE__); fflush(stdout);
+#endif
 
 #ifdef _WIN32
     {
@@ -1227,9 +1247,13 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
         memset(&startup_info, 0, sizeof(startup_info));
         startup_info.cb         = (DWORD)sizeof(startup_info);
         startup_info.dwFlags    = STARTF_USESTDHANDLES;
+printf("*** spawn *** %d\n", __LINE__); fflush(stdout);
         startup_info.hStdInput  = redirect_io(stdin_file,  STD_INPUT_HANDLE,  &close_stdin);
+printf("*** spawn *** %d\n", __LINE__); fflush(stdout);
         startup_info.hStdOutput = redirect_io(stdout_file, STD_OUTPUT_HANDLE, &close_stdout);
+printf("*** spawn *** %d\n", __LINE__); fflush(stdout);
         startup_info.hStdError  = redirect_io(stderr_file, STD_ERROR_HANDLE,  &close_stderr);
+printf("*** spawn *** %d\n", __LINE__); fflush(stdout);
 
         if ( ! CreateProcess(KOS_NULL,
                              args_array,
@@ -1242,6 +1266,7 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
                              &startup_info,
                              &proc_info))
             last_err = GetLastError();
+printf("*** spawn *** %d last error %u\n", __LINE__, (unsigned)last_err); fflush(stdout);
 
         if ( ! last_err) {
             wait_info->h_process = proc_info.hProcess;
@@ -1256,6 +1281,7 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
             CloseHandle(startup_info.hStdOutput);
         if (close_stderr)
             CloseHandle(startup_info.hStdError);
+printf("*** spawn *** %d\n", __LINE__); fflush(stdout);
 
         KOS_resume_context(ctx);
 
