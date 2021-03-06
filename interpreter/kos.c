@@ -58,7 +58,15 @@ int main(int argc, char *argv[])
     KOS_CONTEXT  ctx;
     KOS_VECTOR   buf;
 
-#ifndef _WIN32
+#ifdef _WIN32
+    /* Redirect debugging messages to stderr */
+    _CrtSetReportMode(_CRT_WARN,   _CRTDBG_MODE_FILE);
+    _CrtSetReportMode(_CRT_ERROR,  _CRTDBG_MODE_FILE);
+    _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);
+    _CrtSetReportFile(_CRT_WARN,   _CRTDBG_FILE_STDERR);
+    _CrtSetReportFile(_CRT_ERROR,  _CRTDBG_FILE_STDERR);
+    _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
+#else
     /* Disable SIGPIPE */
     signal(SIGPIPE, SIG_IGN);
 #endif
