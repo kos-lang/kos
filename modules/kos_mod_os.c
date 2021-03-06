@@ -915,12 +915,12 @@ printf("    fd %d\n", fd); fflush(stdout);
 
         if (fd >= 0) {
             const HANDLE handle = (HANDLE)_get_osfhandle(fd);
-printf("    handle 0x%x\n", (unsigned)handle); fflush(stdout);
+printf("    handle %p\n", (void *)handle); fflush(stdout);
 
             if (handle != INVALID_HANDLE_VALUE) {
                 if (DuplicateHandle(GetCurrentProcess(), handle, GetCurrentProcess(), new_handle,
                                     0, TRUE, DUPLICATE_SAME_ACCESS)) {
-printf("    duplicate handle 0x%x\n", (unsigned)*new_handle); fflush(stdout);
+printf("    duplicate handle %p\n", (void *)*new_handle); fflush(stdout);
                 }
                 else {
                     /* TODO error */
@@ -1267,13 +1267,6 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
 
             CloseHandle(proc_info.hThread);
         }
-
-        if (close_stdin)
-            CloseHandle(startup_info.hStdInput);
-        if (close_stdout)
-            CloseHandle(startup_info.hStdOutput);
-        if (close_stderr)
-            CloseHandle(startup_info.hStdError);
 
         KOS_resume_context(ctx);
 
