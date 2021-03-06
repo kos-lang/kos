@@ -906,25 +906,36 @@ static int find_program(KOS_CONTEXT           ctx,
     return KOS_SUCCESS;
 }
 
-static HANDLE redirect_io(FILE *file, DWORD std_handle, int *close_handle)
+static int redirect_io(KOS_CONTEXT ctx, FILE *file, HANDLE *new_handle)
 {
+printf("redirect_io %p\n", file); fflush(stdout);
     if (file) {
-        const HANDLE handle = (HANDLE)_get_osfhandle(_fileno(file));
+        const int fd = _fileno(file);
+printf("    fd %d\n", fd); fflush(stdout);
 
-        if (handle != INVALID_HANDLE_VALUE) {
-            HANDLE new_handle = INVALID_HANDLE_VALUE;
+        if (fd >= 0) {
+            const HANDLE handle = (HANDLE)_get_osfhandle(fd);
+printf("    handle 0x%x\n", (unsigned)handle); fflush(stdout);
 
-            if (DuplicateHandle(GetCurrentProcess(), handle, GetCurrentProcess(), &new_handle,
-                                0, TRUE, DUPLICATE_SAME_ACCESS)) {
-                *close_handle = 1;
-                return new_handle;
+            if (handle != INVALID_HANDLE_VALUE) {
+                if (DuplicateHandle(GetCurrentProcess(), handle, GetCurrentProcess(), new_handle,
+                                    0, TRUE, DUPLICATE_SAME_ACCESS)) {
+printf("    duplicate handle 0x%x\n", (unsigned)*new_handle); fflush(stdout);
+                }
+                else {
+                    /* TODO error */
+                }
+            }
+            else {
+                /* TODO error */
             }
         }
-
-        /* TODO error */
+        else {
+            /* TODO error */
+        }
     }
 
-    return GetStdHandle(std_handle);
+    return KOS_SUCCESS;
 }
 
 #else
@@ -1132,16 +1143,17 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
     FILE                *stdin_file        = KOS_NULL;
     FILE                *stdout_file       = KOS_NULL;
     FILE                *stderr_file       = KOS_NULL;
-#ifndef _WIN32
+#ifdef _WIN32
+    HANDLE               handle_stdin      = INVALID_HANDLE_VALUE;
+    HANDLE               handle_stdout     = INVALID_HANDLE_VALUE;
+    HANDLE               handle_stderr     = INVALID_HANDLE_VALUE;
+#else
     int                  exec_status_fd[2] = { -1, -1 };
 #endif
     int                  error             = KOS_SUCCESS;
 
     assert(KOS_get_array_size(args_obj) >= 8);
 
-#ifdef _WIN32
-printf("*** spawn *** %d\n", __LINE__); fflush(stdout);
-#endif
     KOS_mempool_init(&alloc);
     KOS_init_local(     ctx, &process);
     KOS_init_local_with(ctx, &args, args_obj);
@@ -1174,13 +1186,7 @@ printf("*** spawn *** %d\n", __LINE__); fflush(stdout);
     TRY_OBJID(value_obj);
     TRY(check_arg_type(ctx, value_obj, "args", OBJ_ARRAY));
 
-#ifdef _WIN32
-printf("*** spawn *** %d\n", __LINE__); fflush(stdout);
-#endif
     TRY(get_args_array(ctx, value_obj, &alloc, program_cstr, &args_array));
-#ifdef _WIN32
-printf("*** spawn *** %d\n", __LINE__); fflush(stdout);
-#endif
 
     /* Get 'inherit_env' */
     inherit_env = KOS_array_read(ctx, args.o, 4);
@@ -1193,13 +1199,7 @@ printf("*** spawn *** %d\n", __LINE__); fflush(stdout);
     if (value_obj != KOS_VOID)
         TRY(check_arg_type(ctx, value_obj, "env", OBJ_OBJECT));
 
-#ifdef _WIN32
-printf("*** spawn *** %d\n", __LINE__); fflush(stdout);
-#endif
     TRY(get_env_array(ctx, value_obj, KOS_get_bool(inherit_env), &alloc, &env_array));
-#ifdef _WIN32
-printf("*** spawn *** %d\n", __LINE__); fflush(stdout);
-#endif
 
     /* Get 'stdin' */
     file_obj = KOS_array_read(ctx, args.o, 5);
@@ -1227,18 +1227,16 @@ printf("*** spawn *** %d\n", __LINE__); fflush(stdout);
         if ( ! stderr_file)
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
-#ifdef _WIN32
-printf("*** spawn *** %d\n", __LINE__); fflush(stdout);
-#endif
 
 #ifdef _WIN32
     {
         PROCESS_INFORMATION proc_info;
         STARTUPINFO         startup_info;
         DWORD               last_err     = 0;
-        int                 close_stdin  = 0;
-        int                 close_stdout = 0;
-        int                 close_stderr = 0;
+
+        TRY(redirect_io(ctx, stdin_file,  &handle_stdin));
+        TRY(redirect_io(ctx, stdout_file, &handle_stdout));
+        TRY(redirect_io(ctx, stderr_file, &handle_stderr));
 
         KOS_suspend_context(ctx);
 
@@ -1247,13 +1245,9 @@ printf("*** spawn *** %d\n", __LINE__); fflush(stdout);
         memset(&startup_info, 0, sizeof(startup_info));
         startup_info.cb         = (DWORD)sizeof(startup_info);
         startup_info.dwFlags    = STARTF_USESTDHANDLES;
-printf("*** spawn *** %d\n", __LINE__); fflush(stdout);
-        startup_info.hStdInput  = redirect_io(stdin_file,  STD_INPUT_HANDLE,  &close_stdin);
-printf("*** spawn *** %d\n", __LINE__); fflush(stdout);
-        startup_info.hStdOutput = redirect_io(stdout_file, STD_OUTPUT_HANDLE, &close_stdout);
-printf("*** spawn *** %d\n", __LINE__); fflush(stdout);
-        startup_info.hStdError  = redirect_io(stderr_file, STD_ERROR_HANDLE,  &close_stderr);
-printf("*** spawn *** %d\n", __LINE__); fflush(stdout);
+        startup_info.hStdInput  = (handle_stdin  != INVALID_HANDLE_VALUE) ? handle_stdin  : GetStdHandle(STD_INPUT_HANDLE);
+        startup_info.hStdOutput = (handle_stdout != INVALID_HANDLE_VALUE) ? handle_stdout : GetStdHandle(STD_OUTPUT_HANDLE);
+        startup_info.hStdError  = (handle_stderr != INVALID_HANDLE_VALUE) ? handle_stderr : GetStdHandle(STD_ERROR_HANDLE);
 
         if ( ! CreateProcess(KOS_NULL,
                              args_array,
@@ -1266,7 +1260,6 @@ printf("*** spawn *** %d\n", __LINE__); fflush(stdout);
                              &startup_info,
                              &proc_info))
             last_err = GetLastError();
-printf("*** spawn *** %d last error %u\n", __LINE__, (unsigned)last_err); fflush(stdout);
 
         if ( ! last_err) {
             wait_info->h_process = proc_info.hProcess;
@@ -1281,7 +1274,6 @@ printf("*** spawn *** %d last error %u\n", __LINE__, (unsigned)last_err); fflush
             CloseHandle(startup_info.hStdOutput);
         if (close_stderr)
             CloseHandle(startup_info.hStdError);
-printf("*** spawn *** %d\n", __LINE__); fflush(stdout);
 
         KOS_resume_context(ctx);
 
@@ -1373,6 +1365,15 @@ printf("*** spawn *** %d\n", __LINE__); fflush(stdout);
 cleanup:
     process.o = KOS_destroy_top_locals(ctx, &desc, &process);
     KOS_mempool_destroy(&alloc);
+
+#ifdef _WIN32
+    if (handle_stdin != INVALID_HANDLE_VALUE)
+        CloseHandle(handle_stdin);
+    if (handle_stdout != INVALID_HANDLE_VALUE)
+        CloseHandle(handle_stdout);
+    if (handle_stderr != INVALID_HANDLE_VALUE)
+        CloseHandle(handle_stderr);
+#endif
 
     return error ? KOS_BADPTR : process.o;
 }
