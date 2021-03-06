@@ -906,46 +906,45 @@ static int find_program(KOS_CONTEXT           ctx,
     return KOS_SUCCESS;
 }
 
-static void inv_par_hand(const wchar_t *expression,
-                         const wchar_t *function,
-                         const wchar_t *file,
-                         unsigned       line,
-                         uintptr_t      reserved)
+static void invalid_param_handler(const wchar_t *expression,
+                                  const wchar_t *function,
+                                  const wchar_t *file,
+                                  unsigned       line,
+                                  uintptr_t      reserved)
 {
-    wprintf(L"%s:%d: %s - invalid parameter\n", file, line, function);
-    wprintf(L"Expression: %s\n", expression);
+    wprintf(L"%s:%d: %s - invalid parameter, expression: %s\n", file, line, function, expression);
 }
 
 static int redirect_io(KOS_CONTEXT ctx, FILE *file, HANDLE *new_handle)
 {
-    if (file) {
-        const int fd = _fileno(file);
-printf("redirect %d\n", fd); fflush(stdout);
+    int fd;
 
-        if (fd >= 0) {
-_set_invalid_parameter_handler(inv_par_hand);
-            const HANDLE handle = (HANDLE)_get_osfhandle(fd);
-printf("    handle %p\n", (void *)handle); fflush(stdout);
+    if ( ! file)
+        return KOS_SUCCESS;
 
-            if (handle != INVALID_HANDLE_VALUE) {
-                if (DuplicateHandle(GetCurrentProcess(), handle, GetCurrentProcess(), new_handle,
-                                    0, TRUE, DUPLICATE_SAME_ACCESS)) {
-printf("    duplicate handle %p\n", (void *)*new_handle); fflush(stdout);
-                }
-                else {
-                    /* TODO error */
-                }
-            }
+    fd = _fileno(file);
+
+    if (fd >= 0) {
+        _invalid_parameter_handler old_handler;
+        HANDLE                     handle;
+
+        old_handler = _set_invalid_parameter_handler(invalid_param_handler);
+        handle      = (HANDLE)_get_osfhandle(fd);
+        _set_invalid_parameter_handler(old_handler);
+
+        if (handle != INVALID_HANDLE_VALUE) {
+            if (DuplicateHandle(GetCurrentProcess(), handle, GetCurrentProcess(), new_handle,
+                                0, TRUE, DUPLICATE_SAME_ACCESS))
+                return KOS_SUCCESS;
             else {
-                /* TODO error */
+                raise_last_error(ctx, GetLastError());
+                return KOS_ERROR_EXCEPTION;
             }
-        }
-        else {
-            /* TODO error */
         }
     }
 
-    return KOS_SUCCESS;
+    KOS_raise_errno(ctx, KOS_NULL);
+    return KOS_ERROR_EXCEPTION;
 }
 
 #else
