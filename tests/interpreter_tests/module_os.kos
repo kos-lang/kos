@@ -147,15 +147,12 @@ if bin_cat {
         f.print("world")
     }
 
-fun print(args...) { if os.sysname == "Windows" { base.print.apply(void, args); io.stdout.flush() } }
     const p = io.pipe();
     defer { p.read.close() }
 
     var proc = void
     with p.write {
-print("*** module_os *** \(__line__)")
         proc = os.spawn(program = bin_cat, args = [name], stdout = p.write)
-print("*** module_os *** \(__line__)")
     }
     assert proc.pid > 0
 
