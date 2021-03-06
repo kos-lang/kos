@@ -906,14 +906,24 @@ static int find_program(KOS_CONTEXT           ctx,
     return KOS_SUCCESS;
 }
 
+static void inv_par_hand(const wchar_t *expression,
+                         const wchar_t *function,
+                         const wchar_t *file,
+                         unsigned       line,
+                         uintptr_t      reserved)
+{
+    wprintf(L"%s:%d: %s - invalid parameter\n", file, line, function);
+    wprintf(L"Expression: %s\n", expression);
+}
+
 static int redirect_io(KOS_CONTEXT ctx, FILE *file, HANDLE *new_handle)
 {
-printf("redirect_io %p\n", file); fflush(stdout);
     if (file) {
         const int fd = _fileno(file);
-printf("    fd %d\n", fd); fflush(stdout);
+printf("redirect %d\n", fd); fflush(stdout);
 
         if (fd >= 0) {
+_set_invalid_parameter_handler(inv_par_hand);
             const HANDLE handle = (HANDLE)_get_osfhandle(fd);
 printf("    handle %p\n", (void *)handle); fflush(stdout);
 
