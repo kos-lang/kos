@@ -244,7 +244,7 @@ static FILE *to_file(KOS_CONTEXT ctx, HANDLE *handle, const char *mode)
 
     KOS_suspend_context(ctx);
 
-    fd = _open_osfhandle((intptr_t)*handle, strcmp(mode, "rb") ? _O_WRONLY : _O_RDONLY);
+    fd = _open_osfhandle((intptr_t)*handle, _O_BINARY | (strcmp(mode, "rb") ? _O_WRONLY : _O_RDONLY));
 
     if (fd == -1)
         /* This is not correct, but unlikely to happen */
