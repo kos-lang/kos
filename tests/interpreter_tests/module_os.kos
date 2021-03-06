@@ -139,7 +139,7 @@ if bin_true {
     }
 }
 
-if bin_cat && (os.sysname != "Windows") { # TODO
+if bin_cat {
     const name = "__spawn_test_file"
     fs.remove(name)
     with const f = io.create(name) {
@@ -147,24 +147,36 @@ if bin_cat && (os.sysname != "Windows") { # TODO
         f.print("world")
     }
 
+fun print(args...) { if os.sysname == "Windows" { base.print.apply(void, args); io.stdout.flush() } }
+print("*** module_os *** \(__line__)")
     const p = io.pipe();
+print("*** module_os *** \(__line__)")
     defer { p.read.close() }
 
     var proc = void
+print("*** module_os *** \(__line__)")
     with p.write {
+print("*** module_os *** \(__line__)")
         proc = os.spawn(program = bin_cat, args = [name], stdout = p.write)
+print("*** module_os *** \(__line__)")
     }
+print("*** module_os *** \(__line__)")
     assert proc.pid > 0
 
+print("*** module_os *** \(__line__)")
     const it = p.read.read_lines()
     assert it() == "hello"
     assert it() == "world"
     expect_fail(it)
+print("*** module_os *** \(__line__)")
 
     const ret = proc.wait()
+print("*** module_os *** \(__line__)")
     assert ret.status == 0
+print("*** module_os *** \(__line__)")
 
     fs.remove(name)
+print("*** module_os *** \(__line__)")
 }
 
 if bin_cat && (os.sysname != "Windows") { # TODO
