@@ -245,6 +245,7 @@ static FILE *to_file(KOS_CONTEXT ctx, HANDLE *handle, const char *mode)
     KOS_suspend_context(ctx);
 
     fd = _open_osfhandle((intptr_t)*handle, strcmp(mode, "rb") ? 0 : _O_RDONLY);
+printf("opened handle %d with flags %u mode %s\n", fd, strcmp(mode, "rb") ? 0 : (int)_O_RDONLY, mode);
 
     if (fd == -1)
         /* This is not correct, but unlikely to happen */
