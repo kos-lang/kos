@@ -469,6 +469,25 @@ static void increment_pos(struct TERM_EDIT *edit, struct TERM_POS *pos)
     ++pos->logical;
 }
 
+#ifdef _WIN32
+static int hide_cursor(void)
+{
+    static const char hide_escape[] = "\x1B[?25l";
+
+    return console_write(hide_escape, sizeof(hide_escape) - 1);
+}
+
+static int show_cursor(void)
+{
+    static const char hide_escape[] = "\x1B[?25h";
+
+    return console_write(hide_escape, sizeof(hide_escape) - 1);
+}
+#else
+#define hide_cursor() KOS_SUCCESS
+#define show_cursor() KOS_SUCCESS
+#endif
+
 static int clear_and_redraw(struct TERM_EDIT *edit)
 {
     const char *const begin        = edit->line->buffer + edit->scroll_pos.physical;
@@ -489,6 +508,12 @@ static int clear_and_redraw(struct TERM_EDIT *edit)
     /* Move cursor after terminal resize */
     while (edit->cursor_pos.logical > edit->last_visible_column)
         decrement_pos(edit, &edit->cursor_pos);
+
+    if (edit->interactive) {
+        error = hide_cursor();
+        if (error)
+            return error;
+    }
 
     error = console_write(edit->prompt, edit->prompt_size);
     if (error)
@@ -525,13 +550,23 @@ static int clear_and_redraw(struct TERM_EDIT *edit)
                 return error;
         }
 
-        if (cursor_delta)
-            return move_cursor_left(cursor_delta);
+        if (cursor_delta) {
+            error = move_cursor_left(cursor_delta);
+            if (error)
+                return error;
+        }
 
-        return KOS_SUCCESS;
+        return show_cursor();
     }
 
-    return edit->interactive ? send_escape(0, 'K') : KOS_SUCCESS;
+    if ( ! edit->interactive)
+        return KOS_SUCCESS;
+
+    error = send_escape(0, 'K');
+    if (error)
+        return error;
+
+    return show_cursor();
 }
 
 static int move_cursor_to(struct TERM_EDIT *edit, struct TERM_POS pos)
