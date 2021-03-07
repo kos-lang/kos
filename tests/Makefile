@@ -28,10 +28,15 @@ standalone_tests += kos_utf8_len
 standalone_tests += kos_vm_test
 standalone_tests += kos_vm_unit_test
 
+cmd_line_programs  = kos_true
+cmd_line_programs += kos_false
+cmd_line_programs += kos_cat
+
 all_test_programs  = $(standalone_tests)
 all_test_programs += kos_parser_test
 all_test_programs += kos_print_heap_test
 all_test_programs += kos_module_path_test
+all_test_programs += $(cmd_line_programs)
 
 fuzz_tests  = kos_fuzz_compiler
 fuzz_tests += kos_fuzz_interpreter
@@ -81,7 +86,7 @@ $(out_dir)/kos_vm_unit_test$(o_suffix): CFLAGS += -Wno-missing-field-initializer
 endif
 endif
 
-default: $(addsuffix $(exe_suffix), $(addprefix $(out_dir)/, $(all_test_programs))) cmdline
+default: $(addsuffix $(exe_suffix), $(addprefix $(out_dir)/, $(all_test_programs)))
 
 tool ?=
 
@@ -174,10 +179,7 @@ pseudotty = $(out_dir)/pseudotty/pseudotty
 $(pseudotty)::
 	@$(MAKE) -C pseudotty
 
-cmdline:
-	@$(MAKE) -C cmdline
-
-interpreter_tests/module_os.kos: cmdline
+interpreter_tests/module_os.kos: $(addsuffix $(exe_suffix), $(addprefix $(out_dir)/, $(cmd_line_programs)))
 
 define PSEUDOTTY_RULE
 pseudotty_$1: $(pseudotty) pseudotty/$1
@@ -280,6 +282,6 @@ endif
 .PHONY: test simple_test gcov fuzz
 .PHONY: $(addprefix gcov., $(gcov_modules))
 .PHONY: $(standalone_tests) $(parser_test_list) $(sequential_test_list) $(interactive_scripts)
-.PHONY: module_paths print_heap_test cmdline
+.PHONY: module_paths print_heap_test
 .PHONY: $(addprefix pseudotty_, $(pseudotty_scripts))
 .PHONY: $(interpreter_test_list) $(interpreter_fail_test_list)

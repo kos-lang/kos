@@ -19,10 +19,9 @@ fun find_program(name)
 
     for const out_dir in [ "Out", "..\(sep)Out" ] {
         for const cfg in [ "release", "debug" ] {
-            test_locations.push("\(out_dir)\(sep)\(cfg)\(sep)tests\(sep)cmdline\(sep)kos_\(name)\(ext)")
+            test_locations.push("\(out_dir)\(sep)\(cfg)\(sep)tests\(sep)kos_\(name)\(ext)")
         }
     }
-
 
     test_locations.push("\(sep)bin\(sep)\(name)")
     test_locations.push("\(sep)usr\(sep)bin\(sep)\(name)")
