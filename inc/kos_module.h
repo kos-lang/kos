@@ -7,6 +7,9 @@
 
 #include "kos_api.h"
 #include "kos_entity.h"
+#ifdef _WIN32
+#   include <crtdbg.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -174,14 +177,15 @@ do {                                                                   \
 #endif
 
 #ifdef _WIN32
-#   define KOS_init_debug_output kos_init_debug_output_win
+    /* Redirect debug messages to stderr */
+#   define KOS_init_debug_output() do {                  \
+    _CrtSetReportMode(_CRT_ERROR,  _CRTDBG_MODE_FILE);   \
+    _CrtSetReportFile(_CRT_ERROR,  _CRTDBG_FILE_STDERR); \
+    _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);   \
+    _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR); \
+} while (0)
 #else
 #   define KOS_init_debug_output() ((void)0)
-#endif
-
-#ifdef _WIN32
-KOS_API
-void kos_init_debug_output_win(void);
 #endif
 
 #endif

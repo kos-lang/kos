@@ -158,4 +158,3 @@ EXPORTS
     KOS_vector_resize
     KOS_void DATA
     kos_call_function
-    kos_init_debug_output_win
