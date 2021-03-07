@@ -79,6 +79,7 @@ int main(int argc, char *argv[])
 #ifdef _WIN32
     /* Redirect debugging messages to stderr */
     _CrtSetReportHook(print_debug_report);
+    _CrtSetReportMode(_CRT_ASSERT, 0);
 #else
     /* Disable SIGPIPE */
     signal(SIGPIPE, SIG_IGN);
