@@ -930,7 +930,9 @@ static int redirect_io(KOS_CONTEXT ctx, FILE *file, HANDLE *new_handle)
 
         old_handler = _set_invalid_parameter_handler(invalid_param_handler);
         handle      = (HANDLE)_get_osfhandle(fd);
+        /*
         _set_invalid_parameter_handler(old_handler);
+        */
 
         if (handle != INVALID_HANDLE_VALUE) {
             if (DuplicateHandle(GetCurrentProcess(), handle, GetCurrentProcess(), new_handle,
