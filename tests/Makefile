@@ -81,7 +81,7 @@ $(out_dir)/kos_vm_unit_test$(o_suffix): CFLAGS += -Wno-missing-field-initializer
 endif
 endif
 
-default: $(addsuffix $(exe_suffix), $(addprefix $(out_dir)/, $(all_test_programs)))
+default: $(addsuffix $(exe_suffix), $(addprefix $(out_dir)/, $(all_test_programs))) cmdline
 
 tool ?=
 
@@ -177,7 +177,7 @@ $(pseudotty)::
 cmdline:
 	@$(MAKE) -C cmdline
 
-interpreter_tests/module_os.kos default: cmdline
+interpreter_tests/module_os.kos: cmdline
 
 define PSEUDOTTY_RULE
 pseudotty_$1: $(pseudotty) pseudotty/$1
