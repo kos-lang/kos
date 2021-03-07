@@ -987,16 +987,6 @@ static int find_program(KOS_CONTEXT           ctx,
     if (does_file_exist(*program_cstr))
         goto found_program;
 
-    if (*cwd) {
-        if (concat_path(&buf_mgr, cwd, strlen(cwd))) {
-            KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
-            return KOS_ERROR_EXCEPTION;
-        }
-
-        if (does_file_exist(buf_mgr.buf))
-            goto found_program;
-    }
-
     /* Search PATH unless absolute path was given */
     if (**program_cstr != '/') {
 

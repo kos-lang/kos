@@ -103,9 +103,10 @@ if bin_true {
     const local_true = "." + bin_true[last_slash:]
     if ! fs.is_file(local_true) {
         os.spawn(program=bin_true, cwd=bin_true[:last_slash], inherit_env=false).wait()
-        if os.sysname != "Windows" { # TODO
-            os.spawn(program=local_true[2:], env={PATH:bin_true[:last_slash]}, cwd=bin_true[:last_slash], inherit_env=false).wait()
-        }
+
+        # Cannot find the program in cwd
+        expect_fail(() =>
+            os.spawn(program=local_true, env={PATH:bin_true[:last_slash]}, cwd=bin_true[:last_slash], inherit_env=false))
     }
 
     # On most systems, true is on PATH
