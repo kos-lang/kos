@@ -44,6 +44,22 @@ static void print_usage(void);
 
 static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf);
 
+#ifdef _WIN32
+static int print_debug_report(int report_type, char *message, int *return_value)
+{
+    fprintf(stderr, "%s: %s\n",
+            (report_type == _CRT_WARN)  ? "warning" :
+            (report_type == _CRT_ERROR) ? "error"   :
+                                          "assertion failed",
+            message);
+    fflush(stderr);
+
+    *return_value = 0;
+
+    return TRUE;
+}
+#endif
+
 int main(int argc, char *argv[])
 {
     PROF_ZONE(MODULE)
@@ -62,12 +78,7 @@ int main(int argc, char *argv[])
 
 #ifdef _WIN32
     /* Redirect debugging messages to stderr */
-    _CrtSetReportMode(_CRT_WARN,   _CRTDBG_MODE_FILE);
-    _CrtSetReportMode(_CRT_ERROR,  _CRTDBG_MODE_FILE);
-    _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);
-    _CrtSetReportFile(_CRT_WARN,   _CRTDBG_FILE_STDERR);
-    _CrtSetReportFile(_CRT_ERROR,  _CRTDBG_FILE_STDERR);
-    _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
+    _CrtSetReportHook(print_debug_report);
 #else
     /* Disable SIGPIPE */
     signal(SIGPIPE, SIG_IGN);
