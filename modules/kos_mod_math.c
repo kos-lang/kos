@@ -814,6 +814,8 @@ KOS_INIT_MODULE(math)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     int       error = KOS_SUCCESS;
     KOS_LOCAL module;
 
+    KOS_init_debug_output();
+
     KOS_init_local_with(ctx, &module, module_obj);
 
     /* @item math infinity

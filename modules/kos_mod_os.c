@@ -906,47 +906,20 @@ static int find_program(KOS_CONTEXT           ctx,
     return KOS_SUCCESS;
 }
 
-static void invalid_param_handler(const wchar_t *expression,
-                                  const wchar_t *function,
-                                  const wchar_t *file,
-                                  unsigned       line,
-                                  uintptr_t      reserved)
+static int get_file(KOS_CONTEXT ctx, KOS_OBJ_ID file_obj, HANDLE *new_handle)
 {
-    wprintf(L"%s:%d: %s - invalid parameter, expression: %s\n", file, line, function, expression);
-}
+    if (file_obj != KOS_VOID) {
+        const HANDLE handle = KOS_io_get_file(ctx, file_obj);
 
-static int redirect_io(KOS_CONTEXT ctx, FILE *file, HANDLE *new_handle)
-{
-    int fd;
+        if (handle == INVALID_HANDLE_VALUE)
+            return KOS_ERROR_EXCEPTION;
 
-    if ( ! file)
-        return KOS_SUCCESS;
-
-    fd = _fileno(file);
-
-    if (fd >= 0) {
-        _invalid_parameter_handler old_handler;
-        HANDLE                     handle;
-
-        old_handler = _set_invalid_parameter_handler(invalid_param_handler);
-        handle      = (HANDLE)_get_osfhandle(fd);
-        /*
-        _set_invalid_parameter_handler(old_handler);
-        */
-
-        if (handle != INVALID_HANDLE_VALUE) {
-            if (DuplicateHandle(GetCurrentProcess(), handle, GetCurrentProcess(), new_handle,
-                                0, TRUE, DUPLICATE_SAME_ACCESS))
-                return KOS_SUCCESS;
-            else {
-                raise_last_error(ctx, GetLastError());
-                return KOS_ERROR_EXCEPTION;
-            }
-        }
+        if ( ! DuplicateHandle(GetCurrentProcess(), handle, GetCurrentProcess(), new_handle,
+                               0, TRUE, DUPLICATE_SAME_ACCESS))
+            raise_last_error(ctx, GetLastError());
     }
 
-    KOS_raise_errno(ctx, KOS_NULL);
-    return KOS_ERROR_EXCEPTION;
+    return KOS_SUCCESS;
 }
 
 #else
@@ -1089,6 +1062,19 @@ static void send_errno_and_exit(int fd)
     exit((num_writ == sizeof(err_value)) ? 1 : 2);
 }
 
+static int get_file(KOS_CONTEXT ctx, KOS_OBJ_ID file_obj, FILE **file)
+{
+    if (file_obj != KOS_VOID) {
+
+        *file = KOS_io_get_file(ctx, file_obj);
+
+        if ( ! *file)
+            return KOS_ERROR_EXCEPTION;
+    }
+
+    return KOS_SUCCESS;
+}
+
 static void redirect_io(FILE *src_file,
                         int   target_fd,
                         int   status_fd)
@@ -1151,14 +1137,14 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
     char                *cwd               = KOS_NULL;
     PROCESS_ARRAY        args_array        = KOS_NULL;
     PROCESS_ARRAY        env_array         = KOS_NULL;
+#ifdef _WIN32
+    HANDLE               stdin_file        = INVALID_HANDLE_VALUE;
+    HANDLE               stdout_file       = INVALID_HANDLE_VALUE;
+    HANDLE               stderr_file       = INVALID_HANDLE_VALUE;
+#else
     FILE                *stdin_file        = KOS_NULL;
     FILE                *stdout_file       = KOS_NULL;
     FILE                *stderr_file       = KOS_NULL;
-#ifdef _WIN32
-    HANDLE               handle_stdin      = INVALID_HANDLE_VALUE;
-    HANDLE               handle_stdout     = INVALID_HANDLE_VALUE;
-    HANDLE               handle_stderr     = INVALID_HANDLE_VALUE;
-#else
     int                  exec_status_fd[2] = { -1, -1 };
 #endif
     int                  error             = KOS_SUCCESS;
@@ -1215,39 +1201,26 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
     /* Get 'stdin' */
     file_obj = KOS_array_read(ctx, args.o, 5);
     TRY_OBJID(file_obj);
-    if (file_obj != KOS_VOID) {
-        stdin_file = KOS_io_get_file(ctx, file_obj);
-        if ( ! stdin_file)
-            RAISE_ERROR(KOS_ERROR_EXCEPTION);
-    }
+    if (file_obj != KOS_VOID)
+        TRY(get_file(ctx, file_obj, &stdin_file));
 
     /* Get 'stdout' */
     file_obj = KOS_array_read(ctx, args.o, 6);
     TRY_OBJID(file_obj);
-    if (file_obj != KOS_VOID) {
-        stdout_file = KOS_io_get_file(ctx, file_obj);
-        if ( ! stdout_file)
-            RAISE_ERROR(KOS_ERROR_EXCEPTION);
-    }
+    if (file_obj != KOS_VOID)
+        TRY(get_file(ctx, file_obj, &stdout_file));
 
     /* Get 'stderr' */
     file_obj = KOS_array_read(ctx, args.o, 7);
     TRY_OBJID(file_obj);
-    if (file_obj != KOS_VOID) {
-        stderr_file = KOS_io_get_file(ctx, file_obj);
-        if ( ! stderr_file)
-            RAISE_ERROR(KOS_ERROR_EXCEPTION);
-    }
+    if (file_obj != KOS_VOID)
+        TRY(get_file(ctx, file_obj, &stderr_file));
 
 #ifdef _WIN32
     {
         PROCESS_INFORMATION proc_info;
         STARTUPINFO         startup_info;
         DWORD               last_err     = 0;
-
-        TRY(redirect_io(ctx, stdin_file,  &handle_stdin));
-        TRY(redirect_io(ctx, stdout_file, &handle_stdout));
-        TRY(redirect_io(ctx, stderr_file, &handle_stderr));
 
         KOS_suspend_context(ctx);
 
@@ -1256,9 +1229,9 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
         memset(&startup_info, 0, sizeof(startup_info));
         startup_info.cb         = (DWORD)sizeof(startup_info);
         startup_info.dwFlags    = STARTF_USESTDHANDLES;
-        startup_info.hStdInput  = (handle_stdin  != INVALID_HANDLE_VALUE) ? handle_stdin  : GetStdHandle(STD_INPUT_HANDLE);
-        startup_info.hStdOutput = (handle_stdout != INVALID_HANDLE_VALUE) ? handle_stdout : GetStdHandle(STD_OUTPUT_HANDLE);
-        startup_info.hStdError  = (handle_stderr != INVALID_HANDLE_VALUE) ? handle_stderr : GetStdHandle(STD_ERROR_HANDLE);
+        startup_info.hStdInput  = (stdin_file  != INVALID_HANDLE_VALUE) ? stdin_file  : GetStdHandle(STD_INPUT_HANDLE);
+        startup_info.hStdOutput = (stdout_file != INVALID_HANDLE_VALUE) ? stdout_file : GetStdHandle(STD_OUTPUT_HANDLE);
+        startup_info.hStdError  = (stderr_file != INVALID_HANDLE_VALUE) ? stderr_file : GetStdHandle(STD_ERROR_HANDLE);
 
         if ( ! CreateProcess(KOS_NULL,
                              args_array,
@@ -1371,12 +1344,12 @@ cleanup:
     KOS_mempool_destroy(&alloc);
 
 #ifdef _WIN32
-    if (handle_stdin != INVALID_HANDLE_VALUE)
-        CloseHandle(handle_stdin);
-    if (handle_stdout != INVALID_HANDLE_VALUE)
-        CloseHandle(handle_stdout);
-    if (handle_stderr != INVALID_HANDLE_VALUE)
-        CloseHandle(handle_stderr);
+    if (stdin_file != INVALID_HANDLE_VALUE)
+        CloseHandle(stdin_file);
+    if (stdout_file != INVALID_HANDLE_VALUE)
+        CloseHandle(stdout_file);
+    if (stderr_file != INVALID_HANDLE_VALUE)
+        CloseHandle(stderr_file);
 #endif
 
     return error ? KOS_BADPTR : process.o;
@@ -1661,6 +1634,8 @@ KOS_INIT_MODULE(os)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
         { KOS_CONST_ID(str_default_value), KOS_VOID   },
         { KOS_BADPTR,                      KOS_BADPTR }
     };
+
+    KOS_init_debug_output();
 
     KOS_init_local_with(ctx, &module, module_obj);
     KOS_init_locals(ctx, 3, &wait_func, &priv, &wait_proto);

@@ -1943,6 +1943,8 @@ KOS_INIT_MODULE(re)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
         { KOS_BADPTR,               KOS_BADPTR      }
     };
 
+    KOS_init_debug_output();
+
     KOS_init_local_with(ctx, &module, module_obj);
     KOS_init_local(     ctx, &proto);
 

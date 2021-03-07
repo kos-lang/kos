@@ -106,7 +106,9 @@ with const f = io.create(defs_base_name + ".gnu.def") {
     f.print("{")
 
     for const t in defs.symbols {
-        f.print("    \(t.token);")
+        if ! t.token.ends_with("_win") {
+            f.print("    \(t.token);")
+        }
     }
 
     f.print("};")
@@ -115,7 +117,9 @@ with const f = io.create(defs_base_name + ".gnu.def") {
 # Dump symbols for MacOS linker
 with const f = io.create(defs_base_name + ".macos.def") {
     for const t in defs.symbols {
-        f.print("_\(t.token)")
+        if ! t.token.ends_with("_win") {
+            f.print("_\(t.token)")
+        }
     }
 }
 

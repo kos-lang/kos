@@ -12,9 +12,15 @@
 extern "C" {
 #endif
 
+#ifdef _WIN32
+typedef void *KOS_FILE_HANDLE; /* HANDLE */
+#else
+typedef FILE *KOS_FILE_HANDLE;
+#endif
+
 KOS_API
-FILE *KOS_io_get_file(KOS_CONTEXT ctx,
-                      KOS_OBJ_ID  file_obj);
+KOS_FILE_HANDLE KOS_io_get_file(KOS_CONTEXT ctx,
+                                KOS_OBJ_ID  file_obj);
 
 #ifdef __cplusplus
 }

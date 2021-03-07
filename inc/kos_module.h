@@ -173,4 +173,15 @@ do {                                                                   \
 #   define KOS_INIT_MODULE(name) int kos_module_##name##_init
 #endif
 
+#ifdef _WIN32
+#   define KOS_init_debug_output kos_init_debug_output_win
+#else
+#   define KOS_init_debug_output() ((void)0)
+#endif
+
+#ifdef _WIN32
+KOS_API
+void kos_init_debug_output_win(void);
+#endif
+
 #endif

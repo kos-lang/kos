@@ -28,6 +28,7 @@
 #include <string.h>
 
 #ifdef _WIN32
+#   include <crtdbg.h>
 #   pragma warning( disable : 4191 ) /* 'type cast': unsafe conversion from 'LIB_FUNCTION' to 'KOS_BUILTIN_INIT' */
 #endif
 
@@ -2251,3 +2252,14 @@ uint32_t KOS_module_func_get_code_size(KOS_MODULE *module,
 
     return addr2func ? addr2func->code_size : 0U;
 }
+
+#ifdef _WIN32
+void kos_init_debug_output_win(void)
+{
+    /* Redirect debug messages to stderr */
+    _CrtSetReportMode(_CRT_ERROR,  _CRTDBG_MODE_FILE);
+    _CrtSetReportFile(_CRT_ERROR,  _CRTDBG_FILE_STDERR);
+    _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);
+    _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
+}
+#endif

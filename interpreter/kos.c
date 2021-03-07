@@ -23,9 +23,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef _WIN32
-#   include <crtdbg.h>
-#else
+#ifndef _WIN32
 #   include <signal.h>
 #endif
 
@@ -44,22 +42,6 @@ static void print_usage(void);
 
 static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf);
 
-#ifdef _WIN32
-static int print_debug_report(int report_type, char *message, int *return_value)
-{
-    fprintf(stderr, "%s: %s\n",
-            (report_type == _CRT_WARN)  ? "warning" :
-            (report_type == _CRT_ERROR) ? "error"   :
-                                          "assertion failed",
-            message);
-    fflush(stderr);
-
-    *return_value = 0;
-
-    return 1;
-}
-#endif
-
 int main(int argc, char *argv[])
 {
     PROF_ZONE(MODULE)
@@ -76,11 +58,9 @@ int main(int argc, char *argv[])
     KOS_CONTEXT  ctx;
     KOS_VECTOR   buf;
 
-#ifdef _WIN32
-    /* Redirect debugging messages to stderr */
-    _CrtSetReportHook(print_debug_report);
-    _CrtSetReportMode(_CRT_ASSERT, 0);
-#else
+    KOS_init_debug_output();
+
+#ifndef _WIN32
     /* Disable SIGPIPE */
     signal(SIGPIPE, SIG_IGN);
 #endif

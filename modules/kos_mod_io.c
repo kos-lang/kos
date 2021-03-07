@@ -467,8 +467,8 @@ cleanup:
     return error;
 }
 
-FILE *KOS_io_get_file(KOS_CONTEXT ctx,
-                      KOS_OBJ_ID  file_obj)
+KOS_FILE_HANDLE KOS_io_get_file(KOS_CONTEXT ctx,
+                                KOS_OBJ_ID  file_obj)
 {
     KOS_LOCAL  file_;
     KOS_OBJ_ID io_module_obj;
@@ -499,7 +499,20 @@ cleanup:
         assert(KOS_is_exception_pending(ctx));
     }
 
+#ifdef _WIN32
+    if (file) {
+        const KOS_FILE_HANDLE handle = (KOS_FILE_HANDLE)_get_osfhandle(_fileno(file));
+
+        if (handle == INVALID_HANDLE_VALUE)
+            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_file_not_open));
+
+        return handle;
+    }
+
+    return INVALID_HANDLE_VALUE;
+#else
     return file;
+#endif
 }
 
 /* @item io file.prototype.close()

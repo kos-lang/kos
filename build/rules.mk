@@ -74,7 +74,7 @@ target         ?=
 ifeq ($(UNAME), Windows)
     LIBFLAGS ?=
     ifeq ($(debug), 0)
-        CFLAGS   += -O2 -D_DEBUG -Gs4096 -GL -MTd -Z7
+        CFLAGS   += -O2 -DNDEBUG -Gs4096 -GL -MT
         LDFLAGS  += -LTCG
         LIBFLAGS += -LTCG
     else

@@ -53,6 +53,7 @@ _KOS_instance_register_builtin
 _KOS_instance_register_thread
 _KOS_instance_set_args
 _KOS_instance_unregister_thread
+_KOS_io_get_file
 _KOS_is_generator
 _KOS_iterator_next
 _KOS_load_module
@@ -96,7 +97,6 @@ _KOS_new_string_from_buffer
 _KOS_new_string_from_codes
 _KOS_object_to_string
 _KOS_object_to_string_or_cstr_vec
-_KOS_io_get_file
 _KOS_print_exception
 _KOS_print_to_cstr_vec
 _KOS_raise_errno

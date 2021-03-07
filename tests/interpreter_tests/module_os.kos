@@ -139,65 +139,6 @@ if bin_true {
     }
 }
 
-# TODO REMOVE THIS IS A TEST
-if bin_cat {
-    const src  = "__spawn_test_src"
-    const dest = "__spawn_test_dest"
-
-    fs.remove(src)
-    fs.remove(dest)
-
-    const data = "data \(os.sysname)"
-
-    with const f = io.create(src) {
-        f.print(data)
-    }
-
-    with const f = io.create(dest) {
-        const proc = os.spawn(program = bin_cat, args = [src], stdout = f, stderr = f, inherit_env = false, env = { abc: "def" })
-        assert proc.pid > 0
-
-        const status = proc.wait().status
-        assert status == 0
-    }
-
-    with const f = io.open(dest) {
-        assert (f.read_lines() -> "".join) == data
-    }
-
-    fs.remove(src)
-    fs.remove(dest)
-}
-
-# TODO REMOVE THIS IS A TEST
-if bin_cat {
-    const name = "__spawn_test_file"
-    fs.remove(name)
-    with const f = io.create(name) {
-        f.print("hello")
-        f.print("world")
-    }
-
-    const p = io.pipe();
-    defer { p.read.close() }
-
-    var proc = void
-    with p.write {
-        proc = os.spawn(program = bin_cat, args = [name], stdout = p.write, inherit_env = false, env = { abc: "def" })
-    }
-    assert proc.pid > 0
-
-    const it = p.read.read_lines()
-    assert it() == "hello"
-    assert it() == "world"
-    expect_fail(it)
-
-    const ret = proc.wait()
-    assert ret.status == 0
-
-    fs.remove(name)
-}
-
 # Spawn and redirect stdout and stderr to the same file
 if bin_cat {
     const src  = "__spawn_test_src"
@@ -258,7 +199,7 @@ if bin_cat {
 }
 
 # Spawn and redirect stdin from a pipe and stdout and stderr to a file
-if bin_cat && (os.sysname != "Windows") { # TODO
+if bin_cat {
     const name = "__spawn_test_file2"
     fs.remove(name)
 
