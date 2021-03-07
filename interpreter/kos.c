@@ -56,7 +56,7 @@ static int print_debug_report(int report_type, char *message, int *return_value)
 
     *return_value = 0;
 
-    return TRUE;
+    return 1;
 }
 #endif
 

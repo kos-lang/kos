@@ -78,7 +78,7 @@ ifeq ($(UNAME), Windows)
         LDFLAGS  += -LTCG
         LIBFLAGS += -LTCG
     else
-        CFLAGS  += -Z7 -MTd
+        CFLAGS  += -D_DEBUG -Z7 -MTd
         LDFLAGS += -DEBUG
     endif
 
