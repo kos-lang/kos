@@ -1,5 +1,6 @@
+![img](interpreter/artwork/kos_64.png)
 The Kos Programming Language
-----------------------------
+============================
 
 Kos is a general purpose scripting language, which builds on top of the most
 successful scripting languages, but is designed with usability in mind.
