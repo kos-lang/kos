@@ -56,6 +56,10 @@
             <!-- MODULE_COMPONENT_REFS -->
         </Feature>
 
+        <!-- Program icon -->
+        <Icon Id="KosProgramIcon" SourceFile="kos.ico" />
+        <Property Id="ARPPRODUCTICON" Value="KosProgramIcon" />
+
         <!-- Installer UI -->
         <Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR" />
         <UIRef Id="WixUI_InstallDir" />

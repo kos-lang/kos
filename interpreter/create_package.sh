@@ -119,7 +119,7 @@ elif [ "$UNAME" = "Windows" ]; then
     create_pkg_dir
 
     sed "s/0\.1/$VERSION/" < interpreter/windows/kos.wxs > "$PKGDIR"/"Kos-$VERSION.wxs"
-    cp interpreter/windows/kos.ico "$PKGDIR"/
+    cp interpreter/artwork/kos.ico "$PKGDIR"/
 
     cd "$PKGDIR"
     MODDEFS=""
