@@ -48,6 +48,10 @@ do {
         assert f.write(init_buf) == f
         assert f.write(init_buf).write(init_buf) == f
 
+        assert f.position == 27
+
+        f.flush()
+
         assert f.size == 27
 
         f.close()

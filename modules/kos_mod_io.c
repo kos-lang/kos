@@ -1064,9 +1064,9 @@ static int64_t get_epoch_time_us(const LARGE_INTEGER *time)
  *  * uid        - id of the owner
  *  * gid        - id of the owning group
  *  * device     - array containing major and minor device numbers if the object is a device
- *  * atime      - last access time, in microseconds since Epoch)
- *  * mtime      - last modification time, in microseconds since Epoch)
- *  * ctime      - creation time, in microseconds since Epoch)
+ *  * atime      - last access time, in microseconds since Epoch
+ *  * mtime      - last modification time, in microseconds since Epoch
+ *  * ctime      - creation time, in microseconds since Epoch
  *
  * The precision of time properties is OS-dependent.  For example,
  * on POSIX-compatible OS-es these properties have 1 second precision.
@@ -1247,39 +1247,60 @@ static KOS_OBJ_ID get_file_size(KOS_CONTEXT ctx,
                                 KOS_OBJ_ID  this_obj,
                                 KOS_OBJ_ID  args_obj)
 {
-    int   error = KOS_SUCCESS;
-    FILE *file  = KOS_NULL;
-    long  orig_pos;
-    long  size  = 0;
+    int     error = KOS_SUCCESS;
+    FILE   *file  = KOS_NULL;
+    int64_t size  = 0;
 
     TRY(get_file_object(ctx, this_obj, &file, MUST_BE_OPEN));
 
-    /* TODO use fstat */
+#ifdef _WIN32
+    {
+        HANDLE             handle;
+        FILE_STANDARD_INFO std_info = { 0 };
+        BOOL               ok       = FALSE;
 
-    orig_pos = ftell(file);
-    if (orig_pos < 0) {
-        KOS_raise_errno(ctx, KOS_NULL);
-        RAISE_ERROR(KOS_ERROR_EXCEPTION);
-    }
+        KOS_suspend_context(ctx);
 
-    if (fseek(file, 0, SEEK_END)) {
-        KOS_raise_errno(ctx, KOS_NULL);
-        RAISE_ERROR(KOS_ERROR_EXCEPTION);
-    }
+        handle = (HANDLE)_get_osfhandle(_fileno(file));
 
-    size = ftell(file);
-    if (size < 0) {
-        KOS_raise_errno(ctx, KOS_NULL);
-        RAISE_ERROR(KOS_ERROR_EXCEPTION);
-    }
+        ok = handle != INVALID_HANDLE_VALUE;
 
-    if (fseek(file, orig_pos, SEEK_SET)) {
-        KOS_raise_errno(ctx, KOS_NULL);
-        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        if (ok)
+            ok = GetFileInformationByHandleEx(handle, FileStandardInfo,
+                                              &std_info, sizeof(std_info));
+
+        KOS_resume_context(ctx);
+
+        if ( ! ok)
+            RAISE_EXCEPTION_STR(str_err_file_stat);
+
+        size = (int64_t)std_info.EndOfFile.QuadPart;
     }
+#else
+    {
+        struct stat st;
+        int         stored_errno = 0;
+
+        KOS_suspend_context(ctx);
+
+        error = fstat(fileno(file), &st);
+
+        if (error)
+            stored_errno = errno;
+
+        KOS_resume_context(ctx);
+
+        if (error) {
+            KOS_raise_errno_value(ctx, "fstat", stored_errno);
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+
+        size = (int64_t)st.st_size;
+    }
+#endif
 
 cleanup:
-    return error ? KOS_BADPTR : KOS_new_int(ctx, (int64_t)size);
+    return error ? KOS_BADPTR : KOS_new_int(ctx, size);
 }
 
 /* @item io file.prototype.position
