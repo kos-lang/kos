@@ -1261,6 +1261,8 @@ static KOS_OBJ_ID get_file_size(KOS_CONTEXT ctx,
         FILE_STANDARD_INFO std_info = { 0 };
         BOOL               ok       = FALSE;
 
+        KOS_DECLARE_STATIC_CONST_STRING(str_err_file_stat, "unable to obtain information about file");
+
         KOS_suspend_context(ctx);
 
         handle = (HANDLE)_get_osfhandle(_fileno(file));
