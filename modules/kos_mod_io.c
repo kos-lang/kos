@@ -1242,6 +1242,8 @@ cleanup:
  *     file.prototype.size
  *
  * Read-only size of the opened file object.
+ *
+ * When writing data to a file, its size may not be immediately refleced, until flush is performed.
  */
 static KOS_OBJ_ID get_file_size(KOS_CONTEXT ctx,
                                 KOS_OBJ_ID  this_obj,

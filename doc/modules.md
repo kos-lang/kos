@@ -3143,9 +3143,9 @@ The property is an object containing the following elements:
  * uid        - id of the owner
  * gid        - id of the owning group
  * device     - array containing major and minor device numbers if the object is a device
- * atime      - last access time, in microseconds since Epoch)
- * mtime      - last modification time, in microseconds since Epoch)
- * ctime      - creation time, in microseconds since Epoch)
+ * atime      - last access time, in microseconds since Epoch
+ * mtime      - last modification time, in microseconds since Epoch
+ * ctime      - creation time, in microseconds since Epoch
 
 The precision of time properties is OS-dependent.  For example,
 on POSIX-compatible OS-es these properties have 1 second precision.
@@ -3292,6 +3292,8 @@ file.prototype.size
     file.prototype.size
 
 Read-only size of the opened file object.
+
+When writing data to a file, its size may not be immediately refleced, until flush is performed.
 
 file.prototype.write()
 ----------------------
