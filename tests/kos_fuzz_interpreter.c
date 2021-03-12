@@ -38,8 +38,11 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 
             if (IS_BAD_PTR(module_id))
                 error = KOS_ERROR_EXCEPTION;
-            else
-                error = KOS_run_module(ctx, module_id);
+            else {
+                const KOS_OBJ_ID ret = KOS_run_module(ctx, module_id);
+                if (IS_BAD_PTR(ret))
+                    error = KOS_ERROR_EXCEPTION;
+            }
         }
 
         if (error == KOS_ERROR_EXCEPTION)
