@@ -100,7 +100,7 @@ static int is_prompt(char c)
 enum ESC_TYPE {
     ESC_NONE,
     ESC_OTHER,
-    ESC_UNHANDLED_6N
+    ESC_6N
 };
 
 /* Handles incoming escape sequences from client */
@@ -138,10 +138,10 @@ static size_t handle_escape(int tty_fd, char *buf, size_t max_size, enum ESC_TYP
 
                             if ((len > 5) && ((unsigned)len < sizeof(esc_buf)))
                                 if (write(tty_fd, esc_buf, len) == len)
-                                    *esc_found = ESC_OTHER;
+                                    *esc_found = ESC_6N;
                         }
                         else
-                            *esc_found = ESC_UNHANDLED_6N;
+                            *esc_found = ESC_6N;
                     }
 
                     break;
@@ -229,9 +229,8 @@ static enum RECEIVE_STATUS receive_one_batch_of_input(int tty_fd, int timeout_ms
             for (i = 0; i < buf_size; i++)
                 output_byte((int)(unsigned char)buf[i]);
 
-            /* For unhandled ESC[6N, pretend we had a prompt, because the
-             * client is waiting for some response. */
-            if (esc_found == ESC_UNHANDLED_6N)
+            /* If we received ESC[6n, the client may be waiting for response. */
+            if (esc_found == ESC_6N)
                 status = RECEIVED_PROMPT;
 
             if ( ! esc_found && ! status)
@@ -329,10 +328,11 @@ static uint64_t get_time_ms(void)
 enum INPUT_STATUS {
     NO_INPUT,
     SOME_INPUT,
+    INPUT_PROMPT,
     INPUT_ERROR
 };
 
-static enum INPUT_STATUS receive_input(int tty_fd, CHILD_INFO *child_info, int script_eof)
+static enum INPUT_STATUS receive_input(int tty_fd, CHILD_INFO *child_info, int timeout_ms)
 {
     enum RECEIVE_STATUS saved_status     = RECEIVED_NOTHING;
     uint64_t            start_time_ms    = get_time_ms();
@@ -341,10 +341,9 @@ static enum INPUT_STATUS receive_input(int tty_fd, CHILD_INFO *child_info, int s
 
     do {
 
-        const int max_time_ms = (saved_status == RECEIVED_PROMPT) ? 1 : script_eof ? 50 : 1000;
-        const int timeout_ms  = (cur_wait_time_ms < max_time_ms) ? (max_time_ms - cur_wait_time_ms) : max_time_ms;
+        const int cur_timeout_ms = (cur_wait_time_ms < timeout_ms) ? (timeout_ms - cur_wait_time_ms) : 0;
 
-        enum RECEIVE_STATUS status = receive_one_batch_of_input(tty_fd, timeout_ms);
+        enum RECEIVE_STATUS status = receive_one_batch_of_input(tty_fd, cur_timeout_ms);
 
         prev_time_ms     = get_time_ms();
         cur_wait_time_ms = (int)(prev_time_ms - start_time_ms);
@@ -355,22 +354,25 @@ static enum INPUT_STATUS receive_input(int tty_fd, CHILD_INFO *child_info, int s
                 return INPUT_ERROR;
 
             case RECEIVED_NOTHING:
-                if ((cur_wait_time_ms > max_time_ms) && prompts_seen)
-                    return status ? SOME_INPUT : NO_INPUT;
+                if (cur_wait_time_ms > timeout_ms)
+                    return (saved_status == RECEIVED_SOMETHING) ? SOME_INPUT : NO_INPUT;
                 break;
 
             default:
-                start_time_ms    = get_time_ms();
-                prev_time_ms     = start_time_ms;
-                cur_wait_time_ms = 0;
-                if (saved_status != RECEIVED_PROMPT)
-                    saved_status = status;
+                if (status == RECEIVED_PROMPT)
+                    return INPUT_PROMPT;
+                saved_status = status;
                 break;
         }
 
     } while ( ! check_child_status(child_info, WUNTRACED | WNOHANG));
 
     return INPUT_ERROR;
+}
+
+static enum INPUT_STATUS receive_pending_input(int tty_fd, CHILD_INFO *child_info)
+{
+    return receive_input(tty_fd, child_info, 1);
 }
 
 static unsigned char from_hex(char c)
@@ -385,9 +387,16 @@ static unsigned char from_hex(char c)
         return 0;
 }
 
-/* Extracts a single command from script read from stdin and sends it to the tty tty_fd.
- * Returns 0 on success and non-zero on failure or end of script. */
-static int send_one_line_from_script(int tty_fd, CHILD_INFO *child_info, int *eol)
+enum SEND_RESULT {
+    SEND_OK,
+    SEND_END_OF_SCRIPT,
+    SEND_ERROR,
+    SEND_SUSPEND,
+    SEND_WAIT_FOR_CURSOR
+};
+
+/* Extracts a single command from script read from stdin and sends it to the tty tty_fd. */
+static enum SEND_RESULT send_one_line_from_script(int tty_fd, CHILD_INFO *child_info)
 {
     static char   script_buf[64 * 1024];
     static size_t size;
@@ -396,8 +405,7 @@ static int send_one_line_from_script(int tty_fd, CHILD_INFO *child_info, int *eo
     size_t        comment_size = 0;
     size_t        cmd_size;
     size_t        line_size;
-
-    *eol = 0;
+    int           eol          = 0;
 
     if (to_read) {
         const ssize_t num_read = read(STDIN_FILENO, &script_buf[size], to_read);
@@ -410,7 +418,7 @@ static int send_one_line_from_script(int tty_fd, CHILD_INFO *child_info, int *eo
     }
 
     if ( ! size)
-        return 1;
+        return SEND_END_OF_SCRIPT;
 
     /* Find end of line */
     {
@@ -461,8 +469,8 @@ static int send_one_line_from_script(int tty_fd, CHILD_INFO *child_info, int *eo
                 break;
 
             switch (ptr[1]) {
-                case 'r':  c = '\r';   to_delete = 1; *eol = 1; break;
-                case 'n':  c = '\n';   to_delete = 1; *eol = 1; break;
+                case 'r':  c = '\r';   to_delete = 1; eol = 1; break;
+                case 'n':  c = '\n';   to_delete = 1; eol = 1; break;
                 case 'e':  c = '\x1B'; to_delete = 1; break;
                 case 'a':  c = '\a';   to_delete = 1; break;
                 case '\\': c = '\\';   to_delete = 1; break;
@@ -474,7 +482,7 @@ static int send_one_line_from_script(int tty_fd, CHILD_INFO *child_info, int *eo
 
                         /* Ctrl-C works like Enter */
                         if (c == 3)
-                            *eol = 1;
+                            eol = 1;
                     }
                     break;
 
@@ -492,13 +500,10 @@ static int send_one_line_from_script(int tty_fd, CHILD_INFO *child_info, int *eo
                 ++ptr;
         }
 
-        if ((cmd_size == 1) && (*script_buf == 4))
-            *eol = 1;
-
         /* Ctrl-Z */
         if ((cmd_size == 1) && (*script_buf == 0x1A)) {
-            if (receive_input(tty_fd, child_info, 1) == INPUT_ERROR)
-                return 1;
+            if (receive_pending_input(tty_fd, child_info) == INPUT_ERROR)
+                return SEND_ERROR;
         }
 
         num_written = write(tty_fd, script_buf, cmd_size);
@@ -506,10 +511,10 @@ static int send_one_line_from_script(int tty_fd, CHILD_INFO *child_info, int *eo
         if (num_written != (ssize_t)cmd_size) {
             if (num_written < 0)
                 perror("send error");
-            return 1;
+            return SEND_ERROR;
         }
 
-        /* Ctrl-Z */
+        /* Ctrl-Z -- wait for child to become suspended */
         if ((cmd_size == 1) && (*script_buf == 0x1A)) {
 
             const uint64_t start_time_ms = get_time_ms();
@@ -521,7 +526,7 @@ static int send_one_line_from_script(int tty_fd, CHILD_INFO *child_info, int *eo
                 struct timespec ts;
 
                 if (check_child_status(child_info, WUNTRACED | WNOHANG))
-                    return 1;
+                    return SEND_ERROR;
 
                 if (get_time_ms() - start_time_ms > 5000) {
                     if (verbose)
@@ -540,8 +545,8 @@ static int send_one_line_from_script(int tty_fd, CHILD_INFO *child_info, int *eo
     /* Handle special commands for pseudotty placed in comments */
     if (comment && (comment_size > 1) && (*comment != ' ')) {
 
-        static const char cmt_disable_cursor_pos[] = "disable_cursor_pos";
-        static const char cmt_resize[]             = "resize";
+        static const char cmt_disable_cursor_pos[] = "disable_cursor_pos";  /* Disable responses to \e[6n */
+        static const char cmt_resize[]             = "resize";              /* Send SIGWINCH */
 
         if ((comment_size >= sizeof(cmt_disable_cursor_pos) - 1) &&
             (strncmp(cmt_disable_cursor_pos, comment, sizeof(cmt_disable_cursor_pos) - 1) == 0)) {
@@ -565,17 +570,14 @@ static int send_one_line_from_script(int tty_fd, CHILD_INFO *child_info, int *eo
                 if (cursor_pos > console_width)
                     cursor_pos = console_width;
 
-                if (receive_input(tty_fd, child_info, 1) == INPUT_ERROR)
-                    return 1;
+                if (receive_pending_input(tty_fd, child_info) == INPUT_ERROR)
+                    return SEND_ERROR;
 
                 if (kill(child_info->child_pid, SIGWINCH) != 0) {
                     perror("kill(SIGWINCH) error");
                     size = 0;
-                    return 1;
+                    return SEND_ERROR;
                 }
-
-                if (receive_input(tty_fd, child_info, 1) == INPUT_ERROR)
-                    return 1;
             }
         }
     }
@@ -585,29 +587,19 @@ static int send_one_line_from_script(int tty_fd, CHILD_INFO *child_info, int *eo
         memmove(&script_buf[0], &script_buf[line_size], size - line_size);
     size -= line_size;
 
-    return size ? 0 : 1;
-}
+    if (eol)
+        return SEND_WAIT_FOR_CURSOR;
 
-static int run_one_command_from_script(int tty_fd, CHILD_INFO *child_info)
-{
-    int eol = 0;
-
-    do {
-        const int error = send_one_line_from_script(tty_fd, child_info, &eol);
-
-        if (error)
-            return error;
-    } while ( ! eol);
-
-    return 0;
+    return size ? SEND_OK : SEND_END_OF_SCRIPT;
 }
 
 int main(int argc, char *argv[])
 {
-    int        master_fd     = -1;
-    int        prog_arg      = 1;
-    char      *term_tty_name = NULL;
-    CHILD_INFO child_info;
+    int              master_fd     = -1;
+    int              prog_arg      = 1;
+    char            *term_tty_name = NULL;
+    enum SEND_RESULT send_result   = SEND_WAIT_FOR_CURSOR;
+    CHILD_INFO       child_info;
 
     child_info.running = 0;
     child_info.stopped = 0;
@@ -624,7 +616,7 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    master_fd = posix_openpt(O_RDWR);
+    master_fd = posix_openpt(O_RDWR | O_NOCTTY);
     if (master_fd == -1) {
         perror("posix_openpt error");
         goto cleanup;
@@ -719,16 +711,30 @@ int main(int argc, char *argv[])
 
     /* Execute the script and receive output from child */
     do {
+        enum INPUT_STATUS status;
 
-        enum INPUT_STATUS status = receive_input(master_fd, &child_info, 0);
+        if (send_result == SEND_WAIT_FOR_CURSOR) {
+            status = receive_input(master_fd, &child_info, 10000);
+
+            if (status != INPUT_PROMPT) {
+                fprintf(stderr, "Expected to receive cursor query from the child\n");
+                break;
+            }
+
+            send_result = (status == INPUT_ERROR) ? SEND_ERROR : SEND_OK;
+        }
+
+        if ((send_result != SEND_END_OF_SCRIPT) && (send_result != SEND_ERROR)) {
+            status = receive_input(master_fd, &child_info, 0);
+
+            if (status != INPUT_ERROR)
+                send_result = send_one_line_from_script(master_fd, &child_info);
+        }
+        else
+            status = receive_input(master_fd, &child_info, 1);
 
         if (status == INPUT_ERROR)
             break;
-
-        if (run_one_command_from_script(master_fd, &child_info)) {
-            receive_input(master_fd, &child_info, 1);
-            break;
-        }
     } while (child_info.running);
 
     close(master_fd);
