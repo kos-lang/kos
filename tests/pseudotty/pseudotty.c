@@ -7,7 +7,9 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
+#include <pthread.h>
 #include <signal.h>
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,39 +23,258 @@
 static int console_width = 20; /* Number of columns in the simulated console */
 static int cursor_pos    = 1;  /* Simulated cursor position                  */
 static int enable_esc_6n = 1;  /* Enable support for "get cursor pos" escape */
+static int output_mode   = 0;  /* What is currently being printed on stdout  */
 static int saw_eol       = 0;  /* EOL detection for detecting prompts        */
 static int prompts_seen  = 0;  /* Count prompts received from client         */
 static int verbose       = 0;  /* Enables debug output                       */
 
+enum OUTPUT_MODE {
+    OUTPUT_NONE,
+    OUTPUT_SENT,
+    OUTPUT_RECEIVED,
+    OUTPUT_DISABLE_CURSOR_POS,
+    OUTPUT_RESIZE
+};
+
 extern char **environ;
 
-static int is_input_pending(int fd, int timeout_ms)
+typedef struct RECEIVE_BUFFER_S {
+    uint8_t         buf[4096];
+    size_t          num_received;
+    int             thread_initialized;
+    int             tty_fd;
+    int             stop_pipe[2];
+    int             recv_pipe[2];
+    pthread_t       thread;
+    pthread_mutex_t mutex;
+} RECEIVE_BUFFER;
+
+static void init_buffer(RECEIVE_BUFFER *buf)
 {
-    struct pollfd pfd;
-
-    pfd.fd      = fd;
-    pfd.events  = POLLIN | POLLPRI;
-    pfd.revents = 0;
-
-    return poll(&pfd, 1, timeout_ms);
+    buf->num_received       = 0;
+    buf->thread_initialized = 0;
 }
 
-static int read_byte(int fd)
+static void destroy_thread(RECEIVE_BUFFER *buf)
 {
-    char          c;
-    const ssize_t num_read = read(fd, &c, 1);
+    if (buf->thread_initialized) {
+        if (write(buf->stop_pipe[1], "x", 1) == 1)
+            pthread_join(buf->thread, NULL);
 
-    return (num_read > 0) ? (int)(unsigned char)c : EOF;
+        pthread_mutex_destroy(&buf->mutex);
+
+        close(buf->recv_pipe[0]);
+        close(buf->recv_pipe[1]);
+        close(buf->stop_pipe[0]);
+        close(buf->stop_pipe[1]);
+
+        buf->thread_initialized = 0;
+    }
+}
+
+#define ENABLE_THREAD 0
+
+#if ENABLE_THREAD
+static void *receive_thread(void *cookie)
+{
+    RECEIVE_BUFFER *const buf = (RECEIVE_BUFFER *)cookie;
+
+    struct pollfd pfd[2];
+
+    for (;;) {
+
+        int num_ready;
+
+        pfd[0].fd      = buf->tty_fd;
+        pfd[0].events  = POLLIN;
+        pfd[0].revents = 0;
+        pfd[1].fd      = buf->stop_pipe[0];
+        pfd[1].events  = POLLIN;
+        pfd[1].revents = 0;
+
+        num_ready = poll(pfd, 2, -1);
+
+        if (num_ready < 0) {
+            if (errno == EAGAIN)
+                continue;
+
+            perror("poll");
+            break;
+        }
+
+        if (pfd[0].revents & POLLIN) {
+            int ovrfl = 0;
+
+            pthread_mutex_lock(&buf->mutex);
+
+            do {
+                int           c;
+                const ssize_t num_read = read(buf->tty_fd, &c, 1);
+
+                if ( ! num_read) {
+                    pthread_mutex_unlock(&buf->mutex);
+                    return NULL;
+                }
+
+                if (buf->num_received < sizeof(buf->buf))
+                    buf->buf[buf->num_received++] = (uint8_t)(unsigned)c;
+                else if ( ! ovrfl) {
+                    fprintf(stderr, "Buffer overflow\n");
+                    ovrfl = 1;
+                }
+
+                pfd[0].fd      = buf->tty_fd;
+                pfd[0].events  = POLLIN;
+                pfd[0].revents = 0;
+            } while ((poll(pfd, 1, 0) == 1) && (pfd[0].revents & POLLIN));
+
+            pthread_mutex_unlock(&buf->mutex);
+
+            write(buf->recv_pipe[1], "x", 1);
+        }
+
+        /* Notification that the thread should exit */
+        if (pfd[1].revents & POLLIN)
+            break;
+    }
+
+    return NULL;
+}
+#endif
+
+static int spawn_thread(RECEIVE_BUFFER *buf, int tty_fd)
+{
+#if ENABLE_THREAD
+    int error;
+
+    assert( ! buf->thread_initialized);
+
+    buf->tty_fd = tty_fd;
+
+    if (pipe(buf->stop_pipe)) {
+        perror("pipe");
+        return errno;
+    }
+
+    if (pipe(buf->recv_pipe)) {
+        error = errno;
+        perror("pipe");
+        close(buf->stop_pipe[0]);
+        close(buf->stop_pipe[1]);
+        return error;
+    }
+
+    error = pthread_mutex_init(&buf->mutex, NULL);
+    if (error) {
+        close(buf->recv_pipe[0]);
+        close(buf->recv_pipe[1]);
+        close(buf->stop_pipe[0]);
+        close(buf->stop_pipe[1]);
+        fprintf(stderr, "Failed to create mutex\n");
+        return error;
+    }
+
+    error = pthread_create(&buf->thread, NULL, receive_thread, buf);
+    if (error) {
+        pthread_mutex_destroy(&buf->mutex);
+        close(buf->recv_pipe[0]);
+        close(buf->recv_pipe[1]);
+        close(buf->stop_pipe[0]);
+        close(buf->stop_pipe[1]);
+        fprintf(stderr, "Failed to create thread\n");
+        return error;
+    }
+
+    buf->thread_initialized = 1;
+#else
+    buf->tty_fd = tty_fd;
+#endif
+
+    return 0;
+}
+
+static void set_output_mode(enum OUTPUT_MODE mode)
+{
+    if (mode != (enum OUTPUT_MODE)output_mode) {
+        if (output_mode != OUTPUT_NONE)
+            putchar('\n');
+
+        switch (output_mode) {
+            case OUTPUT_DISABLE_CURSOR_POS:
+                printf("C:disable_cursor_pos\n");
+                break;
+
+            case OUTPUT_RESIZE:
+                printf("C:resize %d\n", console_width);
+                break;
+
+            default:
+                break;
+        }
+
+        printf("%c:", mode == OUTPUT_SENT ? 'S' : 'R');
+        output_mode = mode;
+    }
+}
+
+static size_t read_input(RECEIVE_BUFFER *buf, uint8_t *input_buf, int timeout_ms)
+{
+#if ENABLE_THREAD
+    uint8_t       x;
+    struct pollfd pfd;
+    size_t        num_read;
+
+    pfd.fd      = buf->recv_pipe[0];
+    pfd.events  = POLLIN;
+    pfd.revents = 0;
+
+    if ((poll(&pfd, 1, timeout_ms) < 1) || ! (pfd.revents & POLLIN))
+        return 0;
+
+    read(buf->recv_pipe[0], &x, 1);
+
+    pthread_mutex_lock(&buf->mutex);
+
+    num_read = buf->num_received;
+    if (num_read)
+        memcpy(input_buf, buf->buf, num_read);
+    buf->num_received = 0;
+
+    pthread_mutex_unlock(&buf->mutex);
+
+    return num_read;
+#else
+    size_t num_read = 0;
+
+    while (num_read < sizeof(buf->buf)) {
+        struct pollfd pfd;
+
+        pfd.fd      = buf->tty_fd;
+        pfd.events  = POLLIN | POLLPRI;
+        pfd.revents = 0;
+
+        if (poll(&pfd, 1, (num_read == 0) ? timeout_ms : 0) != 1)
+            break;
+
+        if (read(buf->tty_fd, &input_buf[num_read], 1) != 1)
+            break;
+        ++num_read;
+    }
+
+    return num_read;
+#endif
 }
 
 static void output_byte(int byte)
 {
+    set_output_mode(OUTPUT_RECEIVED);
+
     if (byte == 0x0D) {
         putchar('\\');
         putchar('r');
     }
     else if (byte == 0x0A)
-        putchar('\n');
+        printf("\nR:");
     else if (byte == 0x1B) {
         putchar('\\');
         putchar('e');
@@ -66,6 +287,15 @@ static void output_byte(int byte)
         printf("\\x%02x", byte);
     else
         putchar((char)byte);
+}
+
+static void print_sent(const char *buf, size_t size)
+{
+    if (verbose) {
+        set_output_mode(OUTPUT_SENT);
+
+        fwrite(buf, 1, size, stdout);
+    }
 }
 
 static void update_cursor(int byte)
@@ -91,10 +321,53 @@ static void print_color(int color, const char *text)
     fflush(stdout);
 }
 
+static void print_error(const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+
+    if (output_mode != OUTPUT_NONE)
+        putchar('\n');
+
+    fflush(stdout);
+    fflush(stderr);
+
+    if (verbose)
+        fprintf(stderr, "\033[1;%dm", RED);
+
+    fprintf(stderr, "E:");
+    vfprintf(stderr, format, args);
+
+    if (verbose)
+        fprintf(stderr, "\033[0m");
+
+    va_end(args);
+
+    fflush(stdout);
+    fflush(stderr);
+
+    output_mode = OUTPUT_NONE;
+}
+
 /* Crude prompt detection from Kos */
 static int is_prompt(char c)
 {
     return (c == '>') || (c == '_');
+}
+
+static void send_cursor(int tty_fd)
+{
+    if (enable_esc_6n) {
+        char      esc_buf[20];
+        const int len = snprintf(esc_buf, sizeof(esc_buf), "\x1B[1;%dR", cursor_pos);
+
+        print_sent("\\e", 2);
+        print_sent(esc_buf + 1, len - 1);
+
+        write(tty_fd, esc_buf, len);
+    }
+    else
+        write(tty_fd, "", 1);
 }
 
 enum ESC_TYPE {
@@ -104,23 +377,32 @@ enum ESC_TYPE {
 };
 
 /* Handles incoming escape sequences from client */
-static size_t handle_escape(int tty_fd, char *buf, size_t max_size, enum ESC_TYPE *esc_found)
+static size_t handle_escape(RECEIVE_BUFFER *buf, uint8_t *input_buf, size_t *num_read, char *out_buf, size_t max_size, enum ESC_TYPE *esc_found)
 {
     size_t buf_size = 1;
 
-    buf[0] = '\x1B';
+    out_buf[0] = '\x1B';
 
     *esc_found = ESC_NONE;
 
     do {
-        const int byte = read_byte(tty_fd);
+        uint8_t byte;
 
-        if (byte == EOF)
-            break;
+        if ( ! (*num_read)) {
+            *num_read = read_input(buf, input_buf, 10000);
+            if ( ! *num_read)
+                break;
+        }
 
-        buf[buf_size++] = (char)byte;
+        byte = input_buf[0];
 
-        if ((buf_size == 2) && (buf[1] != '['))
+        --(*num_read);
+        if (*num_read)
+            memmove(input_buf, &input_buf[1], *num_read);
+
+        out_buf[buf_size++] = (char)byte;
+
+        if ((buf_size == 2) && (out_buf[1] != '['))
             break;
 
         if (isalpha(byte)) {
@@ -130,19 +412,8 @@ static size_t handle_escape(int tty_fd, char *buf, size_t max_size, enum ESC_TYP
                     static const char get_cursor_pos[] = "\x1B[6n";
 
                     if ((buf_size == sizeof(get_cursor_pos) - 1) &&
-                        (memcmp(buf, get_cursor_pos, sizeof(get_cursor_pos) - 1) == 0)) {
-
-                        if (enable_esc_6n) {
-                            char      esc_buf[20];
-                            const int len = snprintf(esc_buf, sizeof(esc_buf), "\x1B[1;%dR", cursor_pos);
-
-                            if ((len > 5) && ((unsigned)len < sizeof(esc_buf)))
-                                if (write(tty_fd, esc_buf, len) == len)
-                                    *esc_found = ESC_6N;
-                        }
-                        else
-                            *esc_found = ESC_6N;
-                    }
+                            (memcmp(out_buf, get_cursor_pos, sizeof(get_cursor_pos) - 1) == 0))
+                        *esc_found = ESC_6N;
 
                     break;
                 }
@@ -150,8 +421,8 @@ static size_t handle_escape(int tty_fd, char *buf, size_t max_size, enum ESC_TYP
                 case 'C': {
                     unsigned delta = 0;
 
-                    buf[buf_size] = 0;
-                    if (sscanf(buf, "\x1B[%uC", &delta) == 1) {
+                    out_buf[buf_size] = 0;
+                    if (sscanf(out_buf, "\x1B[%uC", &delta) == 1) {
                         if ((delta > (unsigned)console_width) || ((cursor_pos + (int)delta) > console_width))
                             cursor_pos = console_width;
                         else
@@ -165,8 +436,8 @@ static size_t handle_escape(int tty_fd, char *buf, size_t max_size, enum ESC_TYP
                 case 'D': {
                     unsigned delta = 0;
 
-                    buf[buf_size] = 0;
-                    if (sscanf(buf, "\x1B[%uD", &delta) == 1) {
+                    out_buf[buf_size] = 0;
+                    if (sscanf(out_buf, "\x1B[%uD", &delta) == 1) {
                         if (delta >= (unsigned)cursor_pos)
                             cursor_pos = 1;
                         else
@@ -202,44 +473,53 @@ enum RECEIVE_STATUS {
     RECEIVED_PROMPT
 };
 
-/* Receives input from tty_fd and writes it out to stdout.
+/* Reads input from receive buffer and writes it out to stdout.
  * Translates non-printable characters (except \n) to escape sequences.
  */
-static enum RECEIVE_STATUS receive_one_batch_of_input(int tty_fd, int timeout_ms)
+static enum RECEIVE_STATUS receive_one_batch_of_input(RECEIVE_BUFFER *buf, int timeout_ms)
 {
-    int                 pending;
-    enum RECEIVE_STATUS status = RECEIVED_NOTHING;
+    const int           orig_timeout_ms = timeout_ms;
+    enum RECEIVE_STATUS status          = RECEIVED_NOTHING;
+    size_t              num_read;
+    uint8_t             input_buf[sizeof(buf->buf)];
 
-    pending = is_input_pending(tty_fd, timeout_ms);
+    num_read   = read_input(buf, input_buf, timeout_ms);
+    timeout_ms = 0;
 
-    while (pending == 1) {
-        const int byte = read_byte(tty_fd);
+    while (num_read) {
+        const uint8_t byte = input_buf[0];
 
-        if (byte == EOF)
-            break;
+        --num_read;
+        if (num_read)
+            memmove(input_buf, &input_buf[1], num_read);
 
         if (byte == 0x1B) {
-            char          buf[16];
+            char          esc_buf[16];
             enum ESC_TYPE esc_found;
             size_t        i;
-            const size_t  buf_size = handle_escape(tty_fd, buf, sizeof(buf), &esc_found);
+            const size_t  esc_size = handle_escape(buf, input_buf, &num_read, esc_buf, sizeof(esc_buf), &esc_found);
 
-            assert(buf_size > 0);
+            assert(esc_size > 0);
 
-            for (i = 0; i < buf_size; i++)
-                output_byte((int)(unsigned char)buf[i]);
+            for (i = 0; i < esc_size; i++)
+                output_byte((int)(unsigned char)esc_buf[i]);
 
             /* If we received ESC[6n, the client may be waiting for response. */
-            if (esc_found == ESC_6N)
-                status = RECEIVED_PROMPT;
+            if (esc_found == ESC_6N) {
+                send_cursor(buf->tty_fd);
+                timeout_ms = orig_timeout_ms;
+            }
 
             if ( ! esc_found && ! status)
                 status = RECEIVED_SOMETHING;
         }
         else {
+            int break_after_prompt = 0;
+
             if ((char)byte == '\n')
                 saw_eol = 1;
             else if (saw_eol && is_prompt((char)byte)) {
+                break_after_prompt = 1;
                 saw_eol = 0;
                 ++prompts_seen;
                 status = RECEIVED_PROMPT;
@@ -250,17 +530,24 @@ static enum RECEIVE_STATUS receive_one_batch_of_input(int tty_fd, int timeout_ms
 
             output_byte(byte);
             update_cursor(byte);
+
+            if (break_after_prompt) {
+                if (verbose)
+                    print_color(GREEN, "PROMPT");
+                putchar('\n');
+                output_mode = OUTPUT_NONE;
+            }
         }
 
-        pending = is_input_pending(tty_fd, 0);
+        if ( ! num_read) {
+            num_read   = read_input(buf, input_buf, timeout_ms);
+            timeout_ms = 0;
+        }
     }
-
-    if (verbose && status)
-        print_color(GREEN, status == RECEIVED_PROMPT ? "P" : "S");
 
     fflush(stdout);
 
-    return (pending < 0) ? RECEIVE_ERROR : status;
+    return status;
 }
 
 typedef struct {
@@ -301,11 +588,11 @@ static int check_child_status(CHILD_INFO *child_info, int options)
         return 0;
     }
     else if (WIFSIGNALED(status)) {
-        fprintf(stderr, "Child exited due to signal %d\n", WTERMSIG(status));
+        print_error("Child exited due to signal %d\n", WTERMSIG(status));
         child_info->running = 0;
     }
     else {
-        fprintf(stderr, "Unexpected child exit\n");
+        print_error("Unexpected child exit\n");
         child_info->running = 0;
     }
 
@@ -332,7 +619,7 @@ enum INPUT_STATUS {
     INPUT_ERROR
 };
 
-static enum INPUT_STATUS receive_input(int tty_fd, CHILD_INFO *child_info, int timeout_ms)
+static enum INPUT_STATUS receive_input(RECEIVE_BUFFER *buf, CHILD_INFO *child_info, int timeout_ms)
 {
     enum RECEIVE_STATUS saved_status     = RECEIVED_NOTHING;
     uint64_t            start_time_ms    = get_time_ms();
@@ -343,7 +630,7 @@ static enum INPUT_STATUS receive_input(int tty_fd, CHILD_INFO *child_info, int t
 
         const int cur_timeout_ms = (cur_wait_time_ms < timeout_ms) ? (timeout_ms - cur_wait_time_ms) : 0;
 
-        enum RECEIVE_STATUS status = receive_one_batch_of_input(tty_fd, cur_timeout_ms);
+        enum RECEIVE_STATUS status = receive_one_batch_of_input(buf, cur_timeout_ms);
 
         prev_time_ms     = get_time_ms();
         cur_wait_time_ms = (int)(prev_time_ms - start_time_ms);
@@ -370,11 +657,6 @@ static enum INPUT_STATUS receive_input(int tty_fd, CHILD_INFO *child_info, int t
     return INPUT_ERROR;
 }
 
-static enum INPUT_STATUS receive_pending_input(int tty_fd, CHILD_INFO *child_info)
-{
-    return receive_input(tty_fd, child_info, 1);
-}
-
 static unsigned char from_hex(char c)
 {
     if ((c >= '0') && (c <= '9'))
@@ -395,8 +677,8 @@ enum SEND_RESULT {
     SEND_WAIT_FOR_CURSOR
 };
 
-/* Extracts a single command from script read from stdin and sends it to the tty tty_fd. */
-static enum SEND_RESULT send_one_line_from_script(int tty_fd, CHILD_INFO *child_info)
+/* Extracts a single command from script read from stdin and sends it to the child. */
+static enum SEND_RESULT send_one_line_from_script(RECEIVE_BUFFER *buf, CHILD_INFO *child_info)
 {
     static char   script_buf[64 * 1024];
     static size_t size;
@@ -450,11 +732,7 @@ static enum SEND_RESULT send_one_line_from_script(int tty_fd, CHILD_INFO *child_
         char   *end = &script_buf[cmd_size];
         char   *ptr = &script_buf[0];
 
-        if (verbose) {
-            char size_str[16];
-            snprintf(size_str, sizeof(size_str), "S%u", (unsigned)cmd_size);
-            print_color(YELLOW, size_str);
-        }
+        print_sent(ptr, cmd_size);
 
         /* Convert escaped characters */
         while (ptr < end) {
@@ -502,11 +780,11 @@ static enum SEND_RESULT send_one_line_from_script(int tty_fd, CHILD_INFO *child_
 
         /* Ctrl-Z */
         if ((cmd_size == 1) && (*script_buf == 0x1A)) {
-            if (receive_pending_input(tty_fd, child_info) == INPUT_ERROR)
+            if (receive_input(buf, child_info, 1) == INPUT_ERROR)
                 return SEND_ERROR;
         }
 
-        num_written = write(tty_fd, script_buf, cmd_size);
+        num_written = write(buf->tty_fd, script_buf, cmd_size);
 
         if (num_written != (ssize_t)cmd_size) {
             if (num_written < 0)
@@ -551,7 +829,7 @@ static enum SEND_RESULT send_one_line_from_script(int tty_fd, CHILD_INFO *child_
         if ((comment_size >= sizeof(cmt_disable_cursor_pos) - 1) &&
             (strncmp(cmt_disable_cursor_pos, comment, sizeof(cmt_disable_cursor_pos) - 1) == 0)) {
 
-            printf("[[disable_cursor_pos]]");
+            output_mode = OUTPUT_DISABLE_CURSOR_POS;
             enable_esc_6n = 0;
         }
         else if ((comment_size >= sizeof(cmt_resize) - 1) &&
@@ -564,20 +842,24 @@ static enum SEND_RESULT send_one_line_from_script(int tty_fd, CHILD_INFO *child_
 
             if (sscanf(comment, "%u", &new_width) == 1) {
 
-                printf("[[resize %u]]", new_width);
+                if (receive_input(buf, child_info, 1) == INPUT_ERROR)
+                    return SEND_ERROR;
+
+                output_mode = OUTPUT_RESIZE;
 
                 console_width = (int)new_width;
                 if (cursor_pos > console_width)
                     cursor_pos = console_width;
-
-                if (receive_pending_input(tty_fd, child_info) == INPUT_ERROR)
-                    return SEND_ERROR;
 
                 if (kill(child_info->child_pid, SIGWINCH) != 0) {
                     perror("kill(SIGWINCH) error");
                     size = 0;
                     return SEND_ERROR;
                 }
+
+                /* Force waiting for cursor */
+                if (receive_input(buf, child_info, 10) == INPUT_ERROR)
+                    return SEND_ERROR;
             }
         }
     }
@@ -600,10 +882,14 @@ int main(int argc, char *argv[])
     char            *term_tty_name = NULL;
     enum SEND_RESULT send_result   = SEND_WAIT_FOR_CURSOR;
     CHILD_INFO       child_info;
+    RECEIVE_BUFFER   buf;
 
-    child_info.running = 0;
-    child_info.stopped = 0;
-    child_info.status  = EXIT_FAILURE;
+    child_info.child_pid = -1;
+    child_info.running   = 0;
+    child_info.stopped   = 0;
+    child_info.status    = EXIT_FAILURE;
+
+    init_buffer(&buf);
 
     if ((argc >= 2) && (strcmp(argv[1], "--verbose") == 0)) {
         verbose  = 1;
@@ -643,6 +929,9 @@ int main(int argc, char *argv[])
         goto cleanup;
     }
 
+    if (spawn_thread(&buf, master_fd))
+        goto cleanup;
+
     child_info.running = 0;
     child_info.child_pid = fork();
     if (child_info.child_pid == -1) {
@@ -659,6 +948,9 @@ int main(int argc, char *argv[])
         static char *env[128];
         static char  term[] = "TERM=test";
         static char  cols[] = "COLUMNS=20";
+
+        /* The receive thread has not survived the fork */
+        buf.thread_initialized = 0;
 
         /* Close fd of the master pseudo tty in child process */
         close(master_fd);
@@ -714,24 +1006,20 @@ int main(int argc, char *argv[])
         enum INPUT_STATUS status;
 
         if (send_result == SEND_WAIT_FOR_CURSOR) {
-            status = receive_input(master_fd, &child_info, 10000);
+            status = receive_input(&buf, &child_info, 10000);
 
             if (status != INPUT_PROMPT) {
-                fprintf(stderr, "Expected to receive cursor query from the child\n");
+                print_error("Expected to receive cursor query from the child\n");
                 break;
             }
 
             send_result = (status == INPUT_ERROR) ? SEND_ERROR : SEND_OK;
         }
 
-        if ((send_result != SEND_END_OF_SCRIPT) && (send_result != SEND_ERROR)) {
-            status = receive_input(master_fd, &child_info, 0);
-
-            if (status != INPUT_ERROR)
-                send_result = send_one_line_from_script(master_fd, &child_info);
-        }
+        if ((send_result != SEND_END_OF_SCRIPT) && (send_result != SEND_ERROR))
+            send_result = send_one_line_from_script(&buf, &child_info);
         else
-            status = receive_input(master_fd, &child_info, 1);
+            status = receive_input(&buf, &child_info, 1);
 
         if (status == INPUT_ERROR)
             break;
@@ -743,6 +1031,14 @@ int main(int argc, char *argv[])
     check_child_status(&child_info, 0);
 
 cleanup:
+    destroy_thread(&buf);
+
+    if (child_info.child_pid != 0) {
+        if (output_mode != OUTPUT_NONE)
+            putchar('\n');
+        printf("EXIT:%d\n", child_info.status);
+    }
+
     if (master_fd != -1)
         close(master_fd);
 

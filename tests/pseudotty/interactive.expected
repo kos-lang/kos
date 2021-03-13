@@ -1,64 +1,101 @@
-Kos 0.1 interactive interpreter\r
-\e[9999C\e[6n\r> \e[0K[[disable_cursor_pos]]print(42)\r
-42\r
-\e[9999C\e[6n\r> \e[0K\a\a\a\a\a\a\a\a\r
-\r> \e[0K\r
-\r> \e[0Kabcd\r
-\r> \e[0K\r
-\r> \e[0K[123]\r> print(42)\e[0K\r> print(42\e[0K\r> print(4\e[0K\r> [123]\e[0K\e[1D\r> [12]\e[0K\e[1D\r
-[12]\r
-\r> \e[0Kxyz\r> [12]\e[0K\r> print(42)\e[0K\r
-42\r
-\r> \e[0K\r> print(42)\e[0K\r> \e[0K\r> print(42)\e[0K\r> \e[0Ki\e[1D\r> ri\e[0K\e[1D\e[1Cn\e[1D\e[1D\e[1D\a\r> prin\e[0K\e[3D\e[1C\e[1C\e[1C\at(84)\r
-84\r
-\r> \e[0K\r> print(84)\e[0K\r> print(84\e[0K12345678)\r
-8412345678\r
-\r> \e[0K\r> print(8412345678)\e[0K\r> print(8412345678\e[0K9\r> rint(84123456789)\e[0K\r
-84123456789\r
-\r> \e[0K\r> rint(84123456789)\e[0K\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\r> rint(840123456789)\e[10D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\r> print(840123456789\e[18D\a\r> rint(840123456789)\e[18D\r> print(840123456789\e[17D\r
-840123456789\r
-\r> \e[0Kes\e[2D\r> "es\e[0K\e[2D\r> "tes\e[0K\e[2D\e[2Ct1"\r
-"test1"\r
-\r> \e[0Kes\e[2D\r> "es\e[0K\e[2D\r> "tes\e[0K\e[2D\e[2Ct2"\r
-"test2"\r
-\r> \e[0Kes\e[2D\r> "es\e[0K\e[2D\r> "tes\e[0K\e[2D\e[2Ct3"\r
-"test3"\r
-\r> \e[0Kes\e[2D\r> "es\e[0K\e[2D\r> "tes\e[0K\e[2D\e[2Ct4"\r
-"test4"\r
-\r> \e[0Kes\e[2D\r> "es\e[0K\e[2D\r> "tes\e[0K\e[2D\e[2Ct5"\r
-"test5"\r
-\r> \e[0KBCDEFGHIJKLMNOPQR\r> CDEFGHIJKLMNOPQRS\e[0K\r> DEFGHIJKLMNOPQRST\e[0K\r> EFGHIJKLMNOPQRSTU\e[0K\r> BCDEFGHIJKLMNOPQRS\e[18D\r> ABCDEFGHIJKLMNOPQR\e[17D\r> EFGHIJKLMNOPQRSTU\e[0K\r> FGHIJKLMNOPQRSTUV\e[0K\r> GHIJKLMNOPQRSTUVW\e[0K\r> HIJKLMNOPQRSTUVWX\e[0K\r> IJKLMNOPQRSTUVWXY\e[0K\r> ABCDEFGHIJKLMNOPQR\e[18D\r> "ABCDEFGHIJKLMNOPQ\e[17D\r> IJKLMNOPQRSTUVWXY\e[0K\r> JKLMNOPQRSTUVWXYZ\e[0K\r> KLMNOPQRSTUVWXYZ"\e[0K\r
-"ABCDEFGHIJKLMNOPQRSTUVWXYZ"\r
-\r> \e[0Kx"Hello"y\r> x"Hello"\e[0K\e[8D\e[1C\r> "Hello"\e[0K\e[7D\a\r
-"Hello"\r
-\r> \e[0Kx"abc defghijklmn\r> "abc defghijklmno\e[0K\r> abc defghijklmnop\e[0K\r> bc defghijklmnopq\e[0K\r> c defghijklmnopqr\e[0K\r>  defghijklmnopqrs\e[0K\r> defghijklmnopqrst\e[0K\r> efghijklmnopqrst.\e[0K\r> fghijklmnopqrst.u\e[0K\r> ghijklmnopqrst.uv\e[0K\r> hijklmnopqrst.uvw\e[0K\r> ijklmnopqrst.uvwx\e[0K\r> jklmnopqrst.uvwxy\e[0K\r> klmnopqrst.uvwxyz\e[0K\r> lmnopqrst.uvwxyz"\e[0K\r> mnopqrst.uvwxyz"y\e[0K\r> x"abc defghijklmno\e[18D\e[1C\r> "abc defghijklmnop\e[18D\r> mnopqrst.uvwxyz"y\e[0K\r> mnopqrst.uvwxyz"\e[0K\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\r> lmnopqrst.uvwxyz"\e[0K\e[17D\r> klmnopqrst.uvwxyz"\e[18D\r> jklmnopqrst.uvwxyz\e[18D\r> ijklmnopqrst.uvwxy\e[18D\r> hijklmnopqrst.uvwx\e[18D\r> ghijklmnopqrst.uvw\e[18D\r> fghijklmnopqrst.uv\e[18D\r> efghijklmnopqrst.u\e[18D\r> defghijklmnopqrst.\e[18D\r> defghijklmnopqrst.\e[18D\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\r> efghijklmnopqrst.u\e[1D\r> efghijklmnopqrstuv\e[2D\r
-"abcdefghijklmnopqrstuvwxyz"\r
-\r> \e[0Kx"Hello2"y\a\e[1D\r> x"Hello2"\e[0K\a\e[9D\r> "Hello2"\e[0K\e[8D\r
-"Hello2"\r
-\r> \e[0Kx"abc defghijklmn\r> "abc defghijklmno\e[0K\r> abc defghijklmnop\e[0K\r> bc defghijklmnopq\e[0K\r> c defghijklmnopqr\e[0K\r>  defghijklmnopqrs\e[0K\r> defghijklmnopqrst\e[0K\r> efghijklmnopqrst.\e[0K\r> fghijklmnopqrst.u\e[0K\r> ghijklmnopqrst.uv\e[0K\r> hijklmnopqrst.uvw\e[0K\r> ijklmnopqrst.uvwx\e[0K\r> jklmnopqrst.uvwxy\e[0K\r> klmnopqrst.uvwxyz\e[0K\r> lmnopqrst.uvwxyz"\e[0K\r> mnopqrst.uvwxyz"y\e[0K\r> x"abc defghijklmno\e[18D\r> "abc defghijklmnop\e[18D\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\r> abc defghijklmnopq\e[1D\r> bc defghijklmnopqr\e[1D\r> c defghijklmnopqrs\e[1D\r>  defghijklmnopqrst\e[1D\r> defghijklmnopqrst.\e[1D\r> defghijklmnopqrstu\e[1D\r> lmnopqrstuvwxyz"y\e[0K\e[1D\r> lmnopqrstuvwxyz"\e[0K\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\r> klmnopqrstuvwxyz"\e[0K\e[17D\r> jklmnopqrstuvwxyz"\e[18D\r> ijklmnopqrstuvwxyz\e[18D\r> hijklmnopqrstuvwxy\e[18D\r> ghijklmnopqrstuvwx\e[18D\r> fghijklmnopqrstuvw\e[18D\r> efghijklmnopqrstuv\e[18D\r> defghijklmnopqrstu\e[18D\r>  defghijklmnopqrst\e[18D\r> defghijklmnopqrstu\e[18D\r
-"abcdefghijklmnopqrstuvwxyz"\r
-\r> \e[0K123xyz\e[1D\e[1D\e[1D\r> 123yz\e[0K\e[2D\r> 123z\e[0K\e[1D\r> 123\e[0K\a\r
-123\r
-\r> \e[0K123xyz\e[1D\e[1D\e[1D\e[0K\r
-123\r
-\r> \e[0K\r> 123\e[0K\r> 123\e[0K\r> klmnopqrstuvwxyz"\e[0K\r> "abcdefghijklmnopq\e[18D\e[1C\e[1C\e[1C\e[0K"\r
-"ab"\r
-\r> \e[0K\r> "ab"\e[0K\r> 123\e[0K\r> 123\e[0K\r> klmnopqrstuvwxyz"\e[0K\e[1D\e[1D\e[1D\e[1D\e[0K"\r
-"abcdefghijklmnopqrstuvw"\r
-\r> \e[0K1234567890\r> \e[0K"abcd"\r
-"abcd"\r
-\r> \e[0K12345678901234567\r> 23456789012345678\e[0K\r> 34567890123456789\e[0K\r> 45678901234567890\e[0K\r> 56789012345678901\e[0K\r> 67890123456789012\e[0K\r> 78901234567890123\e[0K\r> 89012345678901234\e[0K\r> 90123456789012345\e[0K\r> 01234567890123456\e[0K\r> 12345678901234567\e[0K\r> 23456789012345678\e[0K\r> 34567890123456789\e[0K\r> 45678901234567890\e[0K\r> 56789012345678901\e[0K\r> 67890123456789012\e[0K\r> 78901234567890123\e[0K\r> 89012345678901234\e[0K\r> 90123456789012345\e[0K\r> 01234567890123456\e[0K\r> 12345678901234567\e[0K\r> 23456789012345678\e[0K\r> 34567890123456789\e[0K\r> 45678901234567890\e[0K\r> \e[0K"abcd"\r
-"abcd"\r
-\r> \e[0K\a      Abc      45\r>      Abc      456\e[0K\r>     Abc      456 \e[0K\r>    Abc      456  \e[0K\r>   Abc      456   \e[0K\r>  Abc      456    \e[0K\r> Abc      456     \e[0K\r> bc      456      \e[0K\r> c      456      7\e[0K\r>       456      78\e[0K\r>      456      789\e[0K\r>     456      789 \e[0K\r>    456      789  \e[0K\r>   456      789   \e[0K\r>  456      789    \e[0K\r> 456      789     \e[0K\r> 56      789      \e[0K\r> 6      789      0\e[0K\r> 6      789      \e[0K\e[9D\r> 456      789      \e[18D\r> Abc      456      \e[18D\e[1C\e[1C\r> c      456      78\e[18D\e[1C\e[1C\e[1C\e[1C\r>    456      789   \e[18D\e[6C\r>    456+      789  \e[11D\r
-1245\r
-\r> \e[0K      123      45\r>      123      456\e[0K\r>     123      456 \e[0K\r>    123      456  \e[0K\r>   123      456   \e[0K\r>  123      456    \e[0K\r> 123      456     \e[0K\r> 23      456      \e[0K\r> 3      456      7\e[0K\r>       456      78\e[0K\r>      456      789\e[0K\r>     456      789 \e[0K\r>    456      789  \e[0K\r>   456      789   \e[0K\r>  456      789    \e[0K\r> 456      789     \e[0K\r> 56      789      \e[0K\r> 6      789      0\e[0K\r> 6      789      \e[0K\r>       123      456\e[18D\r>       456      789\e[18D\r> 0      456      78\e[17D\r> 0+      456      7\e[16D\e[9C\r> 0+      456-      \e[6D\r
--333\r
-\r> \e[0K123     456\e[11D\e[3C\r>      456\e[0K\e[8D\r
-456\r
-\r> \e[0Kp\ar\ai\an\at\a(84)\r
-84\r
-\r> \e[0K256->\e[H\e[2J\r> 256->\e[0Kprint\r
-256\r
-\r> \e[0K\a"\r> "\xc2\x8f\e[0K\r> "\xc2\x8f\xe8\x82\x83\e[0K"\e[1D\e[1D\r> "\xe8\x82\x83"\e[0K\e[2D\r
-"\x{8083}"\r
-\r> \e[0K
+R:Kos 0.1 interactive interpreter\r
+R:\e[9999C\e[6n\r>
+R: \e[0K
+C:disable_cursor_pos
+R:print(42)\r
+R:42\r
+R:\e[9999C\e[6n\r>
+R: \e[0K\a\a\a\a\a\a\a\a\a\r
+R:\r>
+R: \e[0K\r
+R:\r>
+R: \e[0Kabcd\r
+R:\r>
+R: \e[0K\r
+R:\r>
+R: \e[0K[123]\r> print(42)\e[0K\r> print(42\e[0K\r> print(4\e[0K\r> [123]\e[0K\e[1D\r> [12]\e[0K\e[1D\r
+R:[12]\r
+R:\r>
+R: \e[0Kxyz\r> [12]\e[0K\r> print(42)\e[0K\r
+R:42\r
+R:\r>
+R: \e[0K\r> print(42)\e[0K\r> \e[0K\r> print(42)\e[0K\r> \e[0Ki\e[1D\r> ri\e[0K\e[1D\e[1Cn\e[1D\e[1D\e[1D\a\r> prin\e[0K\e[3D\e[1C\e[1C\e[1C\at(84)\r
+R:84\r
+R:\r>
+R: \e[0K\r> print(84)\e[0K\r> print(84\e[0K12345678)\r
+R:8412345678\r
+R:\r>
+R: \e[0K\r> print(8412345678)\e[0K\r> print(8412345678\e[0K9\r> rint(84123456789)\e[0K\r
+R:84123456789\r
+R:\r>
+R: \e[0K\r> rint(84123456789)\e[0K\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\r> rint(840123456789)\e[10D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\r> print(840123456789\e[18D\a\r> rint(840123456789)\e[18D\r> print(840123456789\e[17D\r
+R:840123456789\r
+R:\r>
+R: \e[0Kes\e[2D\r> "es\e[0K\e[2D\r> "tes\e[0K\e[2D\e[2Ct1"\r
+R:"test1"\r
+R:\r>
+R: \e[0Kes\e[2D\r> "es\e[0K\e[2D\r> "tes\e[0K\e[2D\e[2Ct2"\r
+R:"test2"\r
+R:\r>
+R: \e[0Kes\e[2D\r> "es\e[0K\e[2D\r> "tes\e[0K\e[2D\e[2Ct3"\r
+R:"test3"\r
+R:\r>
+R: \e[0Kes\e[2D\r> "es\e[0K\e[2D\r> "tes\e[0K\e[2D\e[2Ct4"\r
+R:"test4"\r
+R:\r>
+R: \e[0Kes\e[2D\r> "es\e[0K\e[2D\r> "tes\e[0K\e[2D\e[2Ct5"\r
+R:"test5"\r
+R:\r>
+R: \e[0KBCDEFGHIJKLMNOPQR\r> CDEFGHIJKLMNOPQRS\e[0K\r> DEFGHIJKLMNOPQRST\e[0K\r> EFGHIJKLMNOPQRSTU\e[0K\r> BCDEFGHIJKLMNOPQRS\e[18D\r> ABCDEFGHIJKLMNOPQR\e[17D\r> EFGHIJKLMNOPQRSTU\e[0K\r> FGHIJKLMNOPQRSTUV\e[0K\r> GHIJKLMNOPQRSTUVW\e[0K\r> HIJKLMNOPQRSTUVWX\e[0K\r> IJKLMNOPQRSTUVWXY\e[0K\r> ABCDEFGHIJKLMNOPQR\e[18D\r> "ABCDEFGHIJKLMNOPQ\e[17D\r> IJKLMNOPQRSTUVWXY\e[0K\r> JKLMNOPQRSTUVWXYZ\e[0K\r> KLMNOPQRSTUVWXYZ"\e[0K\r
+R:"ABCDEFGHIJKLMNOPQRSTUVWXYZ"\r
+R:\r>
+R: \e[0Kx"Hello"y\r> x"Hello"\e[0K\e[8D\e[1C\r> "Hello"\e[0K\e[7D\a\r
+R:"Hello"\r
+R:\r>
+R: \e[0Kx"abc defghijklmn\r> "abc defghijklmno\e[0K\r> abc defghijklmnop\e[0K\r> bc defghijklmnopq\e[0K\r> c defghijklmnopqr\e[0K\r>  defghijklmnopqrs\e[0K\r> defghijklmnopqrst\e[0K\r> efghijklmnopqrst.\e[0K\r> fghijklmnopqrst.u\e[0K\r> ghijklmnopqrst.uv\e[0K\r> hijklmnopqrst.uvw\e[0K\r> ijklmnopqrst.uvwx\e[0K\r> jklmnopqrst.uvwxy\e[0K\r> klmnopqrst.uvwxyz\e[0K\r> lmnopqrst.uvwxyz"\e[0K\r> mnopqrst.uvwxyz"y\e[0K\r> x"abc defghijklmno\e[18D\e[1C\r> "abc defghijklmnop\e[18D\r> mnopqrst.uvwxyz"y\e[0K\r> mnopqrst.uvwxyz"\e[0K\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\r> lmnopqrst.uvwxyz"\e[0K\e[17D\r> klmnopqrst.uvwxyz"\e[18D\r> jklmnopqrst.uvwxyz\e[18D\r> ijklmnopqrst.uvwxy\e[18D\r> hijklmnopqrst.uvwx\e[18D\r> ghijklmnopqrst.uvw\e[18D\r> fghijklmnopqrst.uv\e[18D\r> efghijklmnopqrst.u\e[18D\r> defghijklmnopqrst.\e[18D\r> defghijklmnopqrst.\e[18D\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\r> efghijklmnopqrst.u\e[1D\r> efghijklmnopqrstuv\e[2D\r
+R:"abcdefghijklmnopqrstuvwxyz"\r
+R:\r>
+R: \e[0Kx"Hello2"y\a\e[1D\r> x"Hello2"\e[0K\a\e[9D\r> "Hello2"\e[0K\e[8D\r
+R:"Hello2"\r
+R:\r>
+R: \e[0Kx"abc defghijklmn\r> "abc defghijklmno\e[0K\r> abc defghijklmnop\e[0K\r> bc defghijklmnopq\e[0K\r> c defghijklmnopqr\e[0K\r>  defghijklmnopqrs\e[0K\r> defghijklmnopqrst\e[0K\r> efghijklmnopqrst.\e[0K\r> fghijklmnopqrst.u\e[0K\r> ghijklmnopqrst.uv\e[0K\r> hijklmnopqrst.uvw\e[0K\r> ijklmnopqrst.uvwx\e[0K\r> jklmnopqrst.uvwxy\e[0K\r> klmnopqrst.uvwxyz\e[0K\r> lmnopqrst.uvwxyz"\e[0K\r> mnopqrst.uvwxyz"y\e[0K\r> x"abc defghijklmno\e[18D\r> "abc defghijklmnop\e[18D\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\e[1C\r> abc defghijklmnopq\e[1D\r> bc defghijklmnopqr\e[1D\r> c defghijklmnopqrs\e[1D\r>  defghijklmnopqrst\e[1D\r> defghijklmnopqrst.\e[1D\r> defghijklmnopqrstu\e[1D\r> lmnopqrstuvwxyz"y\e[0K\e[1D\r> lmnopqrstuvwxyz"\e[0K\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\e[1D\r> klmnopqrstuvwxyz"\e[0K\e[17D\r> jklmnopqrstuvwxyz"\e[18D\r> ijklmnopqrstuvwxyz\e[18D\r> hijklmnopqrstuvwxy\e[18D\r> ghijklmnopqrstuvwx\e[18D\r> fghijklmnopqrstuvw\e[18D\r> efghijklmnopqrstuv\e[18D\r> defghijklmnopqrstu\e[18D\r>  defghijklmnopqrst\e[18D\r> defghijklmnopqrstu\e[18D\r
+R:"abcdefghijklmnopqrstuvwxyz"\r
+R:\r>
+R: \e[0K123xyz\e[1D\e[1D\e[1D\r> 123yz\e[0K\e[2D\r> 123z\e[0K\e[1D\r> 123\e[0K\a\r
+R:123\r
+R:\r>
+R: \e[0K123xyz\e[1D\e[1D\e[1D\e[0K\r
+R:123\r
+R:\r>
+R: \e[0K\r> 123\e[0K\r> 123\e[0K\r> klmnopqrstuvwxyz"\e[0K\r> "abcdefghijklmnopq\e[18D\e[1C\e[1C\e[1C\e[0K"\r
+R:"ab"\r
+R:\r>
+R: \e[0K\r> "ab"\e[0K\r> 123\e[0K\r> 123\e[0K\r> klmnopqrstuvwxyz"\e[0K\e[1D\e[1D\e[1D\e[1D\e[0K"\r
+R:"abcdefghijklmnopqrstuvw"\r
+R:\r>
+R: \e[0K1234567890\r> \e[0K"abcd"\r
+R:"abcd"\r
+R:\r>
+R: \e[0K12345678901234567\r> 23456789012345678\e[0K\r> 34567890123456789\e[0K\r> 45678901234567890\e[0K\r> 56789012345678901\e[0K\r> 67890123456789012\e[0K\r> 78901234567890123\e[0K\r> 89012345678901234\e[0K\r> 90123456789012345\e[0K\r> 01234567890123456\e[0K\r> 12345678901234567\e[0K\r> 23456789012345678\e[0K\r> 34567890123456789\e[0K\r> 45678901234567890\e[0K\r> 56789012345678901\e[0K\r> 67890123456789012\e[0K\r> 78901234567890123\e[0K\r> 89012345678901234\e[0K\r> 90123456789012345\e[0K\r> 01234567890123456\e[0K\r> 12345678901234567\e[0K\r> 23456789012345678\e[0K\r> 34567890123456789\e[0K\r> 45678901234567890\e[0K\r> \e[0K"abcd"\r
+R:"abcd"\r
+R:\r>
+R: \e[0K\a      Abc      45\r>      Abc      456\e[0K\r>     Abc      456 \e[0K\r>    Abc      456  \e[0K\r>   Abc      456   \e[0K\r>  Abc      456    \e[0K\r> Abc      456     \e[0K\r> bc      456      \e[0K\r> c      456      7\e[0K\r>       456      78\e[0K\r>      456      789\e[0K\r>     456      789 \e[0K\r>    456      789  \e[0K\r>   456      789   \e[0K\r>  456      789    \e[0K\r> 456      789     \e[0K\r> 56      789      \e[0K\r> 6      789      0\e[0K\r> 6      789      \e[0K\e[9D\r> 456      789      \e[18D\r> Abc      456      \e[18D\e[1C\e[1C\r> c      456      78\e[18D\e[1C\e[1C\e[1C\e[1C\r>    456      789   \e[18D\e[6C\r>    456+      789  \e[11D\r
+R:1245\r
+R:\r>
+R: \e[0K      123      45\r>      123      456\e[0K\r>     123      456 \e[0K\r>    123      456  \e[0K\r>   123      456   \e[0K\r>  123      456    \e[0K\r> 123      456     \e[0K\r> 23      456      \e[0K\r> 3      456      7\e[0K\r>       456      78\e[0K\r>      456      789\e[0K\r>     456      789 \e[0K\r>    456      789  \e[0K\r>   456      789   \e[0K\r>  456      789    \e[0K\r> 456      789     \e[0K\r> 56      789      \e[0K\r> 6      789      0\e[0K\r> 6      789      \e[0K\r>       123      456\e[18D\r>       456      789\e[18D\r> 0      456      78\e[17D\r> 0+      456      7\e[16D\e[9C\r> 0+      456-      \e[6D\r
+R:-333\r
+R:\r>
+R: \e[0K123     456\e[11D\e[3C\r>      456\e[0K\e[8D\r
+R:456\r
+R:\r>
+R: \e[0Kp\ar\ai\an\at\a(84)\r
+R:84\r
+R:\r>
+R: \e[0K256->\e[H\e[2J\r> 256->\e[0Kprint\r
+R:256\r
+R:\r>
+R: \e[0K\a"\r> "\xc2\x8f\e[0K\r> "\xc2\x8f\xe8\x82\x83\e[0K"\e[1D\e[1D\r> "\xe8\x82\x83"\e[0K\e[2D\r
+R:"\x{8083}"\r
+R:\r>
+R: \e[0K
+EXIT:0

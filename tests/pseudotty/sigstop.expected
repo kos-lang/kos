@@ -1,8 +1,13 @@
-Kos 0.1 interactive interpreter\r
-\e[9999C\e[6n\r> \e[0Kprint(123)\r
-123\r
-\e[9999C\e[6n\r> \e[0K456\r> 456\e[0K+1\r
-457\r
-\e[9999C\e[6n\r> \e[0K\r> 456+1\e[0K\r
-457\r
-\e[9999C\e[6n\r> \e[0K
+R:Kos 0.1 interactive interpreter\r
+R:\e[9999C\e[6n\r>
+R: \e[0Kprint(123)\r
+R:123\r
+R:\e[9999C\e[6n\r>
+R: \e[0K456\r> 456\e[0K+1\r
+R:457\r
+R:\e[9999C\e[6n\r>
+R: \e[0K\r> 456+1\e[0K\r
+R:457\r
+R:\e[9999C\e[6n\r>
+R: \e[0K
+EXIT:0
