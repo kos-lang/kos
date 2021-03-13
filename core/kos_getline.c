@@ -1274,6 +1274,7 @@ static int dispatch_key(struct TERM_EDIT *edit, int *key)
             *key = KEY_ENTER;
             return console_write("\r\n", 2);
 
+        case 0:             return KOS_SUCCESS;
         case EOF:           return check_error(stdin);
         case KEY_ESC:       return dispatch_esc(edit);
         case KEY_BACKSPACE: return action_backspace(edit);
