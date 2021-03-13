@@ -672,6 +672,8 @@ static enum INPUT_STATUS receive_input(RECEIVE_BUFFER     *buf,
                 if (wait_for == WAIT_FOR_CURSOR_QUERY)
                     return INPUT_PROMPT;
 
+                /* fall through */
+
             default:
                 if (status == RECEIVED_PROMPT)
                     return INPUT_PROMPT;
