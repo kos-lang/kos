@@ -355,8 +355,10 @@ static int is_prompt(char c)
     return (c == '>') || (c == '_');
 }
 
-static void send_cursor(int tty_fd)
+static int send_cursor(int tty_fd)
 {
+    ssize_t num_written;
+
     if (enable_esc_6n) {
         char      esc_buf[20];
         const int len = snprintf(esc_buf, sizeof(esc_buf), "\x1B[1;%dR", cursor_pos);
@@ -364,10 +366,12 @@ static void send_cursor(int tty_fd)
         print_sent("\\e", 2);
         print_sent(esc_buf + 1, len - 1);
 
-        write(tty_fd, esc_buf, len);
+        num_written = write(tty_fd, esc_buf, len);
     }
     else
-        write(tty_fd, "", 1);
+        num_written = write(tty_fd, "", 1);
+
+    return (num_written > 0) ? 0 : 1;
 }
 
 enum ESC_TYPE {
@@ -377,7 +381,12 @@ enum ESC_TYPE {
 };
 
 /* Handles incoming escape sequences from client */
-static size_t handle_escape(RECEIVE_BUFFER *buf, uint8_t *input_buf, size_t *num_read, char *out_buf, size_t max_size, enum ESC_TYPE *esc_found)
+static size_t handle_escape(RECEIVE_BUFFER *buf,
+                            uint8_t        *input_buf,
+                            size_t         *num_read,
+                            char           *out_buf,
+                            size_t          max_size,
+                            enum ESC_TYPE  *esc_found)
 {
     size_t buf_size = 1;
 
@@ -470,7 +479,8 @@ enum RECEIVE_STATUS {
     RECEIVED_NOTHING,
     RECEIVE_ERROR,
     RECEIVED_SOMETHING,
-    RECEIVED_PROMPT
+    RECEIVED_PROMPT,
+    RECEIVED_6N
 };
 
 /* Reads input from receive buffer and writes it out to stdout.
@@ -506,8 +516,12 @@ static enum RECEIVE_STATUS receive_one_batch_of_input(RECEIVE_BUFFER *buf, int t
 
             /* If we received ESC[6n, the client may be waiting for response. */
             if (esc_found == ESC_6N) {
-                send_cursor(buf->tty_fd);
+                if (send_cursor(buf->tty_fd))
+                    return RECEIVE_ERROR;
+
                 timeout_ms = orig_timeout_ms;
+                if (status != RECEIVED_PROMPT)
+                    status = RECEIVED_6N;
             }
 
             if ( ! esc_found && ! status)
@@ -619,11 +633,20 @@ enum INPUT_STATUS {
     INPUT_ERROR
 };
 
-static enum INPUT_STATUS receive_input(RECEIVE_BUFFER *buf, CHILD_INFO *child_info, int timeout_ms)
+enum WAIT_CONDITION {
+    DRAIN_INPUT,
+    WAIT_FOR_CURSOR_QUERY,
+    WAIT_FOR_PROMPT
+};
+
+static enum INPUT_STATUS receive_input(RECEIVE_BUFFER     *buf,
+                                       CHILD_INFO         *child_info,
+                                       enum WAIT_CONDITION wait_for)
 {
     enum RECEIVE_STATUS saved_status     = RECEIVED_NOTHING;
     uint64_t            start_time_ms    = get_time_ms();
     uint64_t            prev_time_ms     = start_time_ms;
+    const int           timeout_ms       = (wait_for == DRAIN_INPUT) ? 5 : 10000;
     int                 cur_wait_time_ms = 0;
 
     do {
@@ -644,6 +667,10 @@ static enum INPUT_STATUS receive_input(RECEIVE_BUFFER *buf, CHILD_INFO *child_in
                 if (cur_wait_time_ms > timeout_ms)
                     return (saved_status == RECEIVED_SOMETHING) ? SOME_INPUT : NO_INPUT;
                 break;
+
+            case RECEIVED_6N:
+                if (wait_for == WAIT_FOR_CURSOR_QUERY)
+                    return INPUT_PROMPT;
 
             default:
                 if (status == RECEIVED_PROMPT)
@@ -780,7 +807,7 @@ static enum SEND_RESULT send_one_line_from_script(RECEIVE_BUFFER *buf, CHILD_INF
 
         /* Ctrl-Z */
         if ((cmd_size == 1) && (*script_buf == 0x1A)) {
-            if (receive_input(buf, child_info, 1) == INPUT_ERROR)
+            if (receive_input(buf, child_info, DRAIN_INPUT) == INPUT_ERROR)
                 return SEND_ERROR;
         }
 
@@ -842,7 +869,7 @@ static enum SEND_RESULT send_one_line_from_script(RECEIVE_BUFFER *buf, CHILD_INF
 
             if (sscanf(comment, "%u", &new_width) == 1) {
 
-                if (receive_input(buf, child_info, 1) == INPUT_ERROR)
+                if (receive_input(buf, child_info, DRAIN_INPUT) == INPUT_ERROR)
                     return SEND_ERROR;
 
                 output_mode = OUTPUT_RESIZE;
@@ -858,7 +885,7 @@ static enum SEND_RESULT send_one_line_from_script(RECEIVE_BUFFER *buf, CHILD_INF
                 }
 
                 /* Force waiting for cursor */
-                if (receive_input(buf, child_info, 10) == INPUT_ERROR)
+                if (receive_input(buf, child_info, WAIT_FOR_CURSOR_QUERY) == INPUT_ERROR)
                     return SEND_ERROR;
             }
         }
@@ -1006,7 +1033,7 @@ int main(int argc, char *argv[])
         enum INPUT_STATUS status;
 
         if (send_result == SEND_WAIT_FOR_CURSOR) {
-            status = receive_input(&buf, &child_info, 10000);
+            status = receive_input(&buf, &child_info, WAIT_FOR_PROMPT);
 
             if (status != INPUT_PROMPT) {
                 print_error("Expected to receive cursor query from the child\n");
@@ -1019,7 +1046,7 @@ int main(int argc, char *argv[])
         if ((send_result != SEND_END_OF_SCRIPT) && (send_result != SEND_ERROR))
             send_result = send_one_line_from_script(&buf, &child_info);
         else
-            status = receive_input(&buf, &child_info, 1);
+            status = receive_input(&buf, &child_info, DRAIN_INPUT);
 
         if (status == INPUT_ERROR)
             break;
