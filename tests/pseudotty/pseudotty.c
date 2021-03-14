@@ -38,161 +38,6 @@ enum OUTPUT_MODE {
 
 extern char **environ;
 
-typedef struct RECEIVE_BUFFER_S {
-    uint8_t         buf[4096];
-    size_t          num_received;
-    int             thread_initialized;
-    int             tty_fd;
-    int             stop_pipe[2];
-    int             recv_pipe[2];
-    pthread_t       thread;
-    pthread_mutex_t mutex;
-} RECEIVE_BUFFER;
-
-static void init_buffer(RECEIVE_BUFFER *buf)
-{
-    buf->num_received       = 0;
-    buf->thread_initialized = 0;
-}
-
-static void destroy_thread(RECEIVE_BUFFER *buf)
-{
-    if (buf->thread_initialized) {
-        if (write(buf->stop_pipe[1], "x", 1) == 1)
-            pthread_join(buf->thread, NULL);
-
-        pthread_mutex_destroy(&buf->mutex);
-
-        close(buf->recv_pipe[0]);
-        close(buf->recv_pipe[1]);
-        close(buf->stop_pipe[0]);
-        close(buf->stop_pipe[1]);
-
-        buf->thread_initialized = 0;
-    }
-}
-
-#define ENABLE_THREAD 0
-
-#if ENABLE_THREAD
-static void *receive_thread(void *cookie)
-{
-    RECEIVE_BUFFER *const buf = (RECEIVE_BUFFER *)cookie;
-
-    struct pollfd pfd[2];
-
-    for (;;) {
-
-        int num_ready;
-
-        pfd[0].fd      = buf->tty_fd;
-        pfd[0].events  = POLLIN;
-        pfd[0].revents = 0;
-        pfd[1].fd      = buf->stop_pipe[0];
-        pfd[1].events  = POLLIN;
-        pfd[1].revents = 0;
-
-        num_ready = poll(pfd, 2, -1);
-
-        if (num_ready < 0) {
-            if (errno == EAGAIN)
-                continue;
-
-            perror("poll");
-            break;
-        }
-
-        if (pfd[0].revents & POLLIN) {
-            int ovrfl = 0;
-
-            pthread_mutex_lock(&buf->mutex);
-
-            do {
-                int           c;
-                const ssize_t num_read = read(buf->tty_fd, &c, 1);
-
-                if ( ! num_read) {
-                    pthread_mutex_unlock(&buf->mutex);
-                    return NULL;
-                }
-
-                if (buf->num_received < sizeof(buf->buf))
-                    buf->buf[buf->num_received++] = (uint8_t)(unsigned)c;
-                else if ( ! ovrfl) {
-                    fprintf(stderr, "Buffer overflow\n");
-                    ovrfl = 1;
-                }
-
-                pfd[0].fd      = buf->tty_fd;
-                pfd[0].events  = POLLIN;
-                pfd[0].revents = 0;
-            } while ((poll(pfd, 1, 0) == 1) && (pfd[0].revents & POLLIN));
-
-            pthread_mutex_unlock(&buf->mutex);
-
-            write(buf->recv_pipe[1], "x", 1);
-        }
-
-        /* Notification that the thread should exit */
-        if (pfd[1].revents & POLLIN)
-            break;
-    }
-
-    return NULL;
-}
-#endif
-
-static int spawn_thread(RECEIVE_BUFFER *buf, int tty_fd)
-{
-#if ENABLE_THREAD
-    int error;
-
-    assert( ! buf->thread_initialized);
-
-    buf->tty_fd = tty_fd;
-
-    if (pipe(buf->stop_pipe)) {
-        perror("pipe");
-        return errno;
-    }
-
-    if (pipe(buf->recv_pipe)) {
-        error = errno;
-        perror("pipe");
-        close(buf->stop_pipe[0]);
-        close(buf->stop_pipe[1]);
-        return error;
-    }
-
-    error = pthread_mutex_init(&buf->mutex, NULL);
-    if (error) {
-        close(buf->recv_pipe[0]);
-        close(buf->recv_pipe[1]);
-        close(buf->stop_pipe[0]);
-        close(buf->stop_pipe[1]);
-        fprintf(stderr, "Failed to create mutex\n");
-        return error;
-    }
-
-    error = pthread_create(&buf->thread, NULL, receive_thread, buf);
-    if (error) {
-        pthread_mutex_destroy(&buf->mutex);
-        close(buf->recv_pipe[0]);
-        close(buf->recv_pipe[1]);
-        close(buf->stop_pipe[0]);
-        close(buf->stop_pipe[1]);
-        fprintf(stderr, "Failed to create thread\n");
-        return error;
-    }
-
-    buf->thread_initialized = 1;
-#else
-    buf->tty_fd = tty_fd;
-#endif
-
-    return 0;
-}
-
 static void set_output_mode(enum OUTPUT_MODE mode)
 {
     if (mode != (enum OUTPUT_MODE)output_mode) {
@@ -217,52 +62,26 @@ static void set_output_mode(enum OUTPUT_MODE mode)
     }
 }
 
-static size_t read_input(RECEIVE_BUFFER *buf, uint8_t *input_buf, int timeout_ms)
+static size_t read_input(int tty_fd, uint8_t *input_buf, size_t input_buf_size, int timeout_ms)
 {
-#if ENABLE_THREAD
-    uint8_t       x;
-    struct pollfd pfd;
-    size_t        num_read;
-
-    pfd.fd      = buf->recv_pipe[0];
-    pfd.events  = POLLIN;
-    pfd.revents = 0;
-
-    if ((poll(&pfd, 1, timeout_ms) < 1) || ! (pfd.revents & POLLIN))
-        return 0;
-
-    read(buf->recv_pipe[0], &x, 1);
-
-    pthread_mutex_lock(&buf->mutex);
-
-    num_read = buf->num_received;
-    if (num_read)
-        memcpy(input_buf, buf->buf, num_read);
-    buf->num_received = 0;
-
-    pthread_mutex_unlock(&buf->mutex);
-
-    return num_read;
-#else
     size_t num_read = 0;
 
-    while (num_read < sizeof(buf->buf)) {
+    while (num_read < input_buf_size) {
         struct pollfd pfd;
 
-        pfd.fd      = buf->tty_fd;
+        pfd.fd      = tty_fd;
         pfd.events  = POLLIN | POLLPRI;
         pfd.revents = 0;
 
         if (poll(&pfd, 1, (num_read == 0) ? timeout_ms : 0) != 1)
             break;
 
-        if (read(buf->tty_fd, &input_buf[num_read], 1) != 1)
+        if (read(tty_fd, &input_buf[num_read], 1) != 1)
             break;
         ++num_read;
     }
 
     return num_read;
-#endif
 }
 
 static void output_byte(int byte)
@@ -369,6 +188,8 @@ static int send_cursor(int tty_fd)
         num_written = write(tty_fd, esc_buf, len);
     }
     else
+        /* Send \0 to the child.  KOS_get_line() ignores \0s and at the same time it will
+         * detect that \e[6n is not supported and it will use COLUMNS from env instead. */
         num_written = write(tty_fd, "", 1);
 
     return (num_written > 0) ? 0 : 1;
@@ -381,8 +202,9 @@ enum ESC_TYPE {
 };
 
 /* Handles incoming escape sequences from client */
-static size_t handle_escape(RECEIVE_BUFFER *buf,
+static size_t handle_escape(int             tty_fd,
                             uint8_t        *input_buf,
+                            size_t          input_buf_size,
                             size_t         *num_read,
                             char           *out_buf,
                             size_t          max_size,
@@ -398,7 +220,7 @@ static size_t handle_escape(RECEIVE_BUFFER *buf,
         uint8_t byte;
 
         if ( ! (*num_read)) {
-            *num_read = read_input(buf, input_buf, 10000);
+            *num_read = read_input(tty_fd, input_buf, input_buf_size, 10000);
             if ( ! *num_read)
                 break;
         }
@@ -483,17 +305,17 @@ enum RECEIVE_STATUS {
     RECEIVED_6N
 };
 
-/* Reads input from receive buffer and writes it out to stdout.
+/* Reads input from the TTY and writes it out to stdout.
  * Translates non-printable characters (except \n) to escape sequences.
  */
-static enum RECEIVE_STATUS receive_one_batch_of_input(RECEIVE_BUFFER *buf, int timeout_ms)
+static enum RECEIVE_STATUS receive_one_batch_of_input(int tty_fd, int timeout_ms)
 {
     const int           orig_timeout_ms = timeout_ms;
     enum RECEIVE_STATUS status          = RECEIVED_NOTHING;
     size_t              num_read;
-    uint8_t             input_buf[sizeof(buf->buf)];
+    uint8_t             input_buf[1024];
 
-    num_read   = read_input(buf, input_buf, timeout_ms);
+    num_read   = read_input(tty_fd, input_buf, sizeof(input_buf), timeout_ms);
     timeout_ms = 0;
 
     while (num_read) {
@@ -507,7 +329,8 @@ static enum RECEIVE_STATUS receive_one_batch_of_input(RECEIVE_BUFFER *buf, int t
             char          esc_buf[16];
             enum ESC_TYPE esc_found;
             size_t        i;
-            const size_t  esc_size = handle_escape(buf, input_buf, &num_read, esc_buf, sizeof(esc_buf), &esc_found);
+            const size_t  esc_size = handle_escape(tty_fd, input_buf, sizeof(input_buf), &num_read,
+                                                   esc_buf, sizeof(esc_buf), &esc_found);
 
             assert(esc_size > 0);
 
@@ -516,7 +339,7 @@ static enum RECEIVE_STATUS receive_one_batch_of_input(RECEIVE_BUFFER *buf, int t
 
             /* If we received ESC[6n, the client may be waiting for response. */
             if (esc_found == ESC_6N) {
-                if (send_cursor(buf->tty_fd))
+                if (send_cursor(tty_fd))
                     return RECEIVE_ERROR;
 
                 timeout_ms = orig_timeout_ms;
@@ -554,7 +377,7 @@ static enum RECEIVE_STATUS receive_one_batch_of_input(RECEIVE_BUFFER *buf, int t
         }
 
         if ( ! num_read) {
-            num_read   = read_input(buf, input_buf, timeout_ms);
+            num_read   = read_input(tty_fd, input_buf, sizeof(input_buf), timeout_ms);
             timeout_ms = 0;
         }
     }
@@ -639,7 +462,7 @@ enum WAIT_CONDITION {
     WAIT_FOR_PROMPT
 };
 
-static enum INPUT_STATUS receive_input(RECEIVE_BUFFER     *buf,
+static enum INPUT_STATUS receive_input(int                 tty_fd,
                                        CHILD_INFO         *child_info,
                                        enum WAIT_CONDITION wait_for)
 {
@@ -653,7 +476,7 @@ static enum INPUT_STATUS receive_input(RECEIVE_BUFFER     *buf,
 
         const int cur_timeout_ms = (cur_wait_time_ms < timeout_ms) ? (timeout_ms - cur_wait_time_ms) : 0;
 
-        enum RECEIVE_STATUS status = receive_one_batch_of_input(buf, cur_timeout_ms);
+        enum RECEIVE_STATUS status = receive_one_batch_of_input(tty_fd, cur_timeout_ms);
 
         prev_time_ms     = get_time_ms();
         cur_wait_time_ms = (int)(prev_time_ms - start_time_ms);
@@ -707,7 +530,7 @@ enum SEND_RESULT {
 };
 
 /* Extracts a single command from script read from stdin and sends it to the child. */
-static enum SEND_RESULT send_one_line_from_script(RECEIVE_BUFFER *buf, CHILD_INFO *child_info)
+static enum SEND_RESULT send_one_line_from_script(int tty_fd, CHILD_INFO *child_info)
 {
     static char   script_buf[64 * 1024];
     static size_t size;
@@ -809,11 +632,11 @@ static enum SEND_RESULT send_one_line_from_script(RECEIVE_BUFFER *buf, CHILD_INF
 
         /* Ctrl-Z */
         if ((cmd_size == 1) && (*script_buf == 0x1A)) {
-            if (receive_input(buf, child_info, DRAIN_INPUT) == INPUT_ERROR)
+            if (receive_input(tty_fd, child_info, DRAIN_INPUT) == INPUT_ERROR)
                 return SEND_ERROR;
         }
 
-        num_written = write(buf->tty_fd, script_buf, cmd_size);
+        num_written = write(tty_fd, script_buf, cmd_size);
 
         if (num_written != (ssize_t)cmd_size) {
             if (num_written < 0)
@@ -871,7 +694,7 @@ static enum SEND_RESULT send_one_line_from_script(RECEIVE_BUFFER *buf, CHILD_INF
 
             if (sscanf(comment, "%u", &new_width) == 1) {
 
-                if (receive_input(buf, child_info, DRAIN_INPUT) == INPUT_ERROR)
+                if (receive_input(tty_fd, child_info, DRAIN_INPUT) == INPUT_ERROR)
                     return SEND_ERROR;
 
                 output_mode = OUTPUT_RESIZE;
@@ -887,7 +710,7 @@ static enum SEND_RESULT send_one_line_from_script(RECEIVE_BUFFER *buf, CHILD_INF
                 }
 
                 /* Force waiting for cursor */
-                if (receive_input(buf, child_info, WAIT_FOR_CURSOR_QUERY) == INPUT_ERROR)
+                if (receive_input(tty_fd, child_info, WAIT_FOR_CURSOR_QUERY) == INPUT_ERROR)
                     return SEND_ERROR;
             }
         }
@@ -911,14 +734,11 @@ int main(int argc, char *argv[])
     char            *term_tty_name = NULL;
     enum SEND_RESULT send_result   = SEND_WAIT_FOR_CURSOR;
     CHILD_INFO       child_info;
-    RECEIVE_BUFFER   buf;
 
     child_info.child_pid = -1;
     child_info.running   = 0;
     child_info.stopped   = 0;
     child_info.status    = EXIT_FAILURE;
-
-    init_buffer(&buf);
 
     if ((argc >= 2) && (strcmp(argv[1], "--verbose") == 0)) {
         verbose  = 1;
@@ -958,9 +778,6 @@ int main(int argc, char *argv[])
         goto cleanup;
     }
 
-    if (spawn_thread(&buf, master_fd))
-        goto cleanup;
-
     child_info.running = 0;
     child_info.child_pid = fork();
     if (child_info.child_pid == -1) {
@@ -977,9 +794,6 @@ int main(int argc, char *argv[])
         static char *env[128];
         static char  term[] = "TERM=test";
         static char  cols[] = "COLUMNS=20";
-
-        /* The receive thread has not survived the fork */
-        buf.thread_initialized = 0;
 
         /* Close fd of the master pseudo tty in child process */
         close(master_fd);
@@ -1035,7 +849,7 @@ int main(int argc, char *argv[])
         enum INPUT_STATUS status;
 
         if (send_result == SEND_WAIT_FOR_CURSOR) {
-            status = receive_input(&buf, &child_info, WAIT_FOR_PROMPT);
+            status = receive_input(master_fd, &child_info, WAIT_FOR_PROMPT);
 
             if (status != INPUT_PROMPT) {
                 print_error("Expected to receive cursor query from the child\n");
@@ -1046,9 +860,9 @@ int main(int argc, char *argv[])
         }
 
         if ((send_result != SEND_END_OF_SCRIPT) && (send_result != SEND_ERROR))
-            send_result = send_one_line_from_script(&buf, &child_info);
+            send_result = send_one_line_from_script(master_fd, &child_info);
         else
-            status = receive_input(&buf, &child_info, DRAIN_INPUT);
+            status = receive_input(master_fd, &child_info, DRAIN_INPUT);
 
         if (status == INPUT_ERROR)
             break;
@@ -1060,8 +874,6 @@ int main(int argc, char *argv[])
     check_child_status(&child_info, 0);
 
 cleanup:
-    destroy_thread(&buf);
-
     if (child_info.child_pid != 0) {
         if (output_mode != OUTPUT_NONE)
             putchar('\n');
