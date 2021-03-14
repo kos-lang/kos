@@ -753,6 +753,34 @@ do {
 #============================================================================#
 
 do {
+    fun unused_but_written_default(a, b = 42)
+    {
+        b = 0
+        return a + 1
+    }
+    assert unused_but_written_default(10) == 11
+    assert unused_but_written_default(20, 40) == 21
+
+    check(unused_but_written_default, { registers: 2, instructions: 3, size: 9 })
+}
+
+#============================================================================#
+
+do {
+    fun unused_ellipsis(a, b...)
+    {
+        b = 0
+        return a + 1
+    }
+    assert unused_ellipsis(10) == 11
+    assert unused_ellipsis(20, 40, 50) == 21
+
+    check(unused_ellipsis, { registers: 2, instructions: 3, size: 9 })
+}
+
+#============================================================================#
+
+do {
     var ext = 42
 
     fun shadowed_and_unused

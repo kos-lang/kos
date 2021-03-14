@@ -792,9 +792,7 @@ static int parameter_defaults(KOS_COMP_UNIT *program,
 
             ++num_def;
 
-            assert(var->num_reads || ! var->num_assignments);
-
-            if (var->num_reads)
+            if (var->num_reads + var->num_assignments)
                 num_def_used = num_def;
         }
     }
@@ -806,9 +804,7 @@ static int parameter_defaults(KOS_COMP_UNIT *program,
         lookup_var(program, node->children, 1, &var, KOS_NULL);
         assert(var);
 
-        assert(var->num_reads || ! var->num_assignments);
-
-        if (var->num_reads)
+        if (var->num_reads + var->num_assignments)
             num_def_used = num_def;
     }
 
