@@ -105,6 +105,7 @@ EXPORTS
     KOS_raise_exception
     KOS_raise_exception_cstring
     KOS_raise_generator_end
+    KOS_raise_last_error
     KOS_raise_printf
     KOS_realloc
     KOS_repl

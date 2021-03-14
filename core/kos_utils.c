@@ -1653,6 +1653,57 @@ void KOS_raise_errno(KOS_CONTEXT ctx, const char *prefix)
     KOS_raise_errno_value(ctx, prefix, errno);
 }
 
+#ifdef _WIN32
+KOS_DECLARE_STATIC_CONST_STRING(str_err_last_error, "Windows error");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_colon,      ": ");
+
+void KOS_raise_last_error(KOS_CONTEXT ctx, const char *prefix, DWORD error_value)
+{
+    char *msg = KOS_NULL;
+    DWORD msg_size;
+
+    msg_size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+                             KOS_NULL,
+                             error_value,
+                             LANG_USER_DEFAULT,
+                             (LPTSTR)&msg,
+                             1024,
+                             KOS_NULL);
+
+    while (msg_size && (msg[msg_size - 1] == '\r' || msg[msg_size - 1] == '\n'))
+        --msg_size;
+
+    if (msg_size) {
+        KOS_LOCAL str[3];
+
+        KOS_init_locals(ctx, 3, &str[0], &str[1], &str[2]);
+
+        str[2].o = KOS_new_string(ctx, msg, msg_size);
+        LocalFree(msg);
+
+        if ( ! IS_BAD_PTR(str[2].o) && prefix) {
+            str[0].o = KOS_new_cstring(ctx, prefix);
+
+            if (IS_BAD_PTR(str[0].o))
+                str[2].o = KOS_BADPTR;
+            else {
+                str[1].o = KOS_CONST_ID(str_err_colon);
+                str[2].o = KOS_string_add_n(ctx, str, 3);
+            }
+        }
+
+        if (IS_BAD_PTR(str[2].o))
+            KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+        else
+            KOS_raise_exception(ctx, str[2].o);
+
+        KOS_destroy_top_locals(ctx, &str[0], &str[2]);
+    }
+    else
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_last_error));
+}
+#endif
+
 KOS_OBJ_ID KOS_new_iterator_copy(KOS_CONTEXT ctx,
                                  KOS_OBJ_ID  iter_id)
 {

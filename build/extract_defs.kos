@@ -4,6 +4,20 @@ import io
 import kos
 import base.*
 
+# Some symbols are specific to an OS
+const os_filter = {
+    KOS_raise_last_error: "win"
+}
+
+fun check_symbol(symbol, os)
+{
+    if ! (symbol in os_filter) {
+        return true
+    }
+
+    return os_filter[symbol] == os
+}
+
 class create_defs {
     constructor {
         this.symbols = []
@@ -106,7 +120,9 @@ with const f = io.create(defs_base_name + ".gnu.def") {
     f.print("{")
 
     for const t in defs.symbols {
-        f.print("    \(t.token);")
+        if check_symbol(t.token, "gnu") {
+            f.print("    \(t.token);")
+        }
     }
 
     f.print("};")
@@ -115,7 +131,9 @@ with const f = io.create(defs_base_name + ".gnu.def") {
 # Dump symbols for MacOS linker
 with const f = io.create(defs_base_name + ".macos.def") {
     for const t in defs.symbols {
-        f.print("_\(t.token)")
+        if check_symbol(t.token, "macos") {
+            f.print("_\(t.token)")
+        }
     }
 }
 
@@ -123,7 +141,9 @@ with const f = io.create(defs_base_name + ".macos.def") {
 with const f = io.create(defs_base_name + ".win.def") {
     f.print("EXPORTS")
     for const t in defs.symbols {
-        const data_suffix = t.data ? " DATA" : ""
-        f.print("    \(t.token)\(data_suffix)")
+        if check_symbol(t.token, "win") {
+            const data_suffix = t.data ? " DATA" : ""
+            f.print("    \(t.token)\(data_suffix)")
+        }
     }
 }

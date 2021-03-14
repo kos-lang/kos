@@ -575,34 +575,6 @@ cleanup:
 
 #ifdef _WIN32
 
-static void raise_last_error(KOS_CONTEXT ctx, DWORD err)
-{
-    char *msg = KOS_NULL;
-    DWORD msg_size;
-
-    msg_size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
-                             KOS_NULL,
-                             err,
-                             LANG_USER_DEFAULT,
-                             (LPTSTR)&msg,
-                             1024,
-                             KOS_NULL);
-
-    while (msg_size && (msg[msg_size - 1] == '\r' || msg[msg_size - 1] == '\n'))
-        --msg_size;
-
-    if (msg_size) {
-        const KOS_OBJ_ID msg_str = KOS_new_string(ctx, msg, msg_size);
-        LocalFree(msg);
-
-        KOS_raise_exception(ctx, msg_str);
-    }
-    else {
-        KOS_DECLARE_STATIC_CONST_STRING(str_err_create_process, "CreateProcess failed");
-        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_create_process));
-    }
-}
-
 static void release_pid(struct KOS_WAIT_S *wait_info)
 {
     if (wait_info->h_process != INVALID_HANDLE_VALUE)
@@ -916,7 +888,7 @@ static int get_file(KOS_CONTEXT ctx, KOS_OBJ_ID file_obj, HANDLE *new_handle)
 
         if ( ! DuplicateHandle(GetCurrentProcess(), handle, GetCurrentProcess(), new_handle,
                                0, TRUE, DUPLICATE_SAME_ACCESS))
-            raise_last_error(ctx, GetLastError());
+            KOS_raise_last_error(ctx, "DuplicateHandle", GetLastError());
     }
 
     return KOS_SUCCESS;
@@ -1245,7 +1217,7 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
         KOS_resume_context(ctx);
 
         if (last_err) {
-            raise_last_error(ctx, last_err);
+            raise_last_error(ctx, "CreateProcess", last_err);
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
     }
@@ -1433,7 +1405,7 @@ static KOS_OBJ_ID wait_for_child(KOS_CONTEXT ctx,
             if (result != WAIT_OBJECT_0) {
 
                 if (result == WAIT_FAILED) {
-                    raise_last_error(ctx, last_err);
+                    KOS_raise_last_error(ctx, "WaitForSingleObject", last_err);
                     RAISE_ERROR(KOS_ERROR_EXCEPTION);
                 }
                 else
@@ -1444,7 +1416,7 @@ static KOS_OBJ_ID wait_for_child(KOS_CONTEXT ctx,
             RAISE_EXCEPTION_STR(str_err_wait);
 
         if ( ! GetExitCodeProcess(h_process, &exit_code)) {
-            raise_last_error(ctx, GetLastError());
+            KOS_raise_last_error(ctx, "GetExitCodeProcess", GetLastError());
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
 
