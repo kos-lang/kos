@@ -122,6 +122,8 @@ Table of Contents
   * [debug](#debug)
     * [backtrace()](#backtrace)
   * [fs](#fs)
+    * [chdir()](#chdir)
+    * [cwd()](#cwd)
     * [is\_file()](#is_file)
     * [remove()](#remove)
   * [gc](#gc)
@@ -2959,6 +2961,34 @@ from an exception object.
 
 fs
 ==
+
+chdir()
+-------
+
+    chdir(path)
+
+Changes the current working directory to the one specified by `filename`.
+
+Throws an exception if the operation fails.
+
+Returns the argument.
+
+Example:
+
+    > chdir("/tmp")
+    "/tmp"
+
+cwd()
+-----
+
+    cwd()
+
+Returns a string containing the current working directory.
+
+Example:
+
+    > cwd()
+    "/home/user"
 
 is_file()
 ---------

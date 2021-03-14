@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2014-2021 Chris Dragan
+
+import base
+import fs
+
+##############################################################################
+# fs.cwd(), fs.chdir()
+
+do {
+    const saved_path = fs.cwd();
+
+    assert typeof saved_path == "string"
+
+    assert fs.chdir("/") == "/"
+
+    const root_dir = fs.cwd()
+
+    assert (root_dir == "/") || (root_dir.size == 3 && root_dir.ends_with(":\\"))
+
+    assert fs.chdir(saved_path) == saved_path
+
+    assert fs.cwd() == saved_path
+}
+
