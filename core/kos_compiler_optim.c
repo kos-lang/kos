@@ -274,6 +274,7 @@ static KOS_SCOPE *push_scope(KOS_COMP_UNIT      *program,
         KOS_FRAME *const frame = (KOS_FRAME *)scope;
         program->cur_frame     = frame;
         frame->num_binds       = 0;
+        frame->num_self_refs   = 0;
         frame->uses_base_proto = 0;
         frame->is_open         = 1;
     }
@@ -393,14 +394,11 @@ static void pop_scope(KOS_COMP_UNIT *program)
         assert(frame);
 
         /* Record a potential for optimizing a function load for self-referencing function */
-        if (frame->num_self_refs && ! frame->num_binds && frame->num_binds_prev)
+        if ((frame->num_self_refs == frame->num_binds) && (frame->num_binds_prev > frame->num_self_refs))
             ++program->num_optimizations;
 
-        frame->is_open        =  0;
-        frame->num_binds_prev =  frame->num_binds;
-
-        if (frame->num_binds)
-            frame->num_binds += frame->num_self_refs;
+        frame->is_open        = 0;
+        frame->num_binds_prev = frame->num_binds;
 
         program->cur_frame = ((KOS_FRAME *)scope)->parent_frame;
     }
@@ -954,7 +952,7 @@ static int is_const_fun(KOS_VAR *var)
 
     /* Function which uses independent variables from outer scopes must be passed
      * through a closure */
-    if (frame->num_binds)
+    if (frame->num_binds > frame->num_self_refs)
         return 0;
 
     /* For self-referencing functions, make sure that there are no independent variable
@@ -1004,8 +1002,7 @@ static void mark_binds(KOS_COMP_UNIT *program,
         do {
             if (is_self_ref_fun)
                 ++frame->num_self_refs;
-            else
-                ++frame->num_binds;
+            ++frame->num_binds;
 
             frame = frame->parent_frame;
             assert(frame);

@@ -5052,7 +5052,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
 
     /* Choose instruction for loading the function */
     constant->load_instr = (uint8_t)
-        (((fun_node->type == NT_CONSTRUCTOR_LITERAL) || frame->num_def_used || frame->num_binds)
+        (((fun_node->type == NT_CONSTRUCTOR_LITERAL) || frame->num_def_used || (frame->num_binds > frame->num_self_refs))
              ? (constant->header.index < 256 ? INSTR_LOAD_FUN8   : INSTR_LOAD_FUN)
              : (constant->header.index < 256 ? INSTR_LOAD_CONST8 : INSTR_LOAD_CONST));
 
@@ -5277,7 +5277,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
         constant->flags |= KOS_COMP_FUN_CLOSURE;
 
     /* Check if instruction choice was correct */
-    assert(constant->num_binds || ! frame->num_binds);
+    assert(constant->num_binds || (frame->num_self_refs == frame->num_binds));
     assert((fun_node->type == NT_CONSTRUCTOR_LITERAL) || ! constant->num_binds || frame->num_binds || frame->num_def_used);
     assert(scope->num_args - constant->min_args == frame->num_def_used);
 

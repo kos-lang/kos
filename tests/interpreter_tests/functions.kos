@@ -2149,6 +2149,35 @@ do {
     assert spawn(0) == 5
 }
 
+# Closure used via self-referencing function
+do {
+    fun level0(a)
+    {
+        fun level1
+        {
+            fun level2(b)
+            {
+                return [b, level1]
+            }
+            return [a, level2]
+        }
+        return level1
+    }
+
+    const level1 = level0(42)
+    const ret1   = level1()
+    assert typeof ret1 == "array"
+    assert ret1.size == 2
+    assert ret1[0] == 42
+    assert typeof ret1[1] == "function"
+    const level2 = ret1[1]
+    const ret2   = level2(24)
+    assert typeof ret2 == "array"
+    assert ret2.size == 2
+    assert ret2[0] == 24
+    assert ret2[1] == level1
+}
+
 ##############################################################################
 # Iterate over functions
 do {
