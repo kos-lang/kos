@@ -25,8 +25,12 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
-
-#ifdef _MSC_VER
+#ifdef _WIN32
+#   define WIN32_LEAN_AND_MEAN
+#   pragma warning( push )
+#   pragma warning( disable : 4255 4668 )
+#   include <windows.h>
+#   pragma warning( pop )
 #   pragma warning( disable : 4996 ) /* strerror: This function or variable may be unsafe */
 #endif
 
@@ -1657,7 +1661,7 @@ void KOS_raise_errno(KOS_CONTEXT ctx, const char *prefix)
 KOS_DECLARE_STATIC_CONST_STRING(str_err_last_error, "Windows error");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_colon,      ": ");
 
-void KOS_raise_last_error(KOS_CONTEXT ctx, const char *prefix, DWORD error_value)
+void KOS_raise_last_error(KOS_CONTEXT ctx, const char *prefix, unsigned error_value)
 {
     char *msg = KOS_NULL;
     DWORD msg_size;

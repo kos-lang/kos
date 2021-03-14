@@ -143,7 +143,7 @@ static KOS_OBJ_ID cwd(KOS_CONTEXT ctx,
         size = GetCurrentDirectory((DWORD)path_cstr.size, path_cstr.buffer);
 
         if ( ! size) {
-            KOS_raise_last_error(ctx, "GetCurrentDirectory", GetLastError());
+            KOS_raise_last_error(ctx, "GetCurrentDirectory", (unsigned)GetLastError());
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
 
@@ -215,7 +215,7 @@ static KOS_OBJ_ID kos_chdir(KOS_CONTEXT ctx,
 
 #ifdef _WIN32
     if ( ! SetCurrentDirectory(path_cstr.buffer)) {
-        KOS_raise_last_error(ctx, "SetCurrentDirectory", GetLastError());
+        KOS_raise_last_error(ctx, "SetCurrentDirectory", (unsigned)GetLastError());
         error = KOS_ERROR_EXCEPTION;
     }
 #else

@@ -888,7 +888,7 @@ static int get_file(KOS_CONTEXT ctx, KOS_OBJ_ID file_obj, HANDLE *new_handle)
 
         if ( ! DuplicateHandle(GetCurrentProcess(), handle, GetCurrentProcess(), new_handle,
                                0, TRUE, DUPLICATE_SAME_ACCESS))
-            KOS_raise_last_error(ctx, "DuplicateHandle", GetLastError());
+            KOS_raise_last_error(ctx, "DuplicateHandle", (unsigned)GetLastError());
     }
 
     return KOS_SUCCESS;
@@ -1217,7 +1217,7 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
         KOS_resume_context(ctx);
 
         if (last_err) {
-            raise_last_error(ctx, "CreateProcess", last_err);
+            raise_last_error(ctx, "CreateProcess", (unsigned)last_err);
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
     }
@@ -1405,7 +1405,7 @@ static KOS_OBJ_ID wait_for_child(KOS_CONTEXT ctx,
             if (result != WAIT_OBJECT_0) {
 
                 if (result == WAIT_FAILED) {
-                    KOS_raise_last_error(ctx, "WaitForSingleObject", last_err);
+                    KOS_raise_last_error(ctx, "WaitForSingleObject", (unsigned)last_err);
                     RAISE_ERROR(KOS_ERROR_EXCEPTION);
                 }
                 else
@@ -1416,7 +1416,7 @@ static KOS_OBJ_ID wait_for_child(KOS_CONTEXT ctx,
             RAISE_EXCEPTION_STR(str_err_wait);
 
         if ( ! GetExitCodeProcess(h_process, &exit_code)) {
-            KOS_raise_last_error(ctx, "GetExitCodeProcess", GetLastError());
+            KOS_raise_last_error(ctx, "GetExitCodeProcess", (unsigned)GetLastError());
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
 

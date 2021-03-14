@@ -145,7 +145,7 @@ void KOS_raise_errno_value(KOS_CONTEXT ctx, const char *prefix, int error_value)
 
 #ifdef _WIN32
 KOS_API
-void KOS_raise_last_error(KOS_CONTEXT ctx, const char *prefix, DWORD error_value);
+void KOS_raise_last_error(KOS_CONTEXT ctx, const char *prefix, unsigned error_value);
 #endif
 
 KOS_API
