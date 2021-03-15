@@ -2134,6 +2134,16 @@ do {
     assert add_with_def(first = 9000, fourth = 200) == 9211
 }
 
+# Unused named arg
+do {
+    fun f(unused)
+    {
+        return 42
+    }
+
+    assert f(unused = 1) == 42
+}
+
 # Recursion
 do {
     const max_level = 5

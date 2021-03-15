@@ -875,12 +875,15 @@ static KOS_OBJ_ID get_named_args(KOS_CONTEXT ctx,
         assert(IS_SMALL_INT(idx_id));
         assert(GET_SMALL_INT(idx_id) >= 0);
         assert(GET_SMALL_INT(idx_id) < ~0U);
-        assert(num_found <= max_args);
 
-        idx       = (uint32_t)GET_SMALL_INT(idx_id);
-        end_found = KOS_max(end_found, idx + 1U);
+        idx = (uint32_t)GET_SMALL_INT(idx_id);
 
-        TRY(KOS_array_write(ctx, args.o, (int)idx, KOS_get_walk_value(input.o)));
+        /* Unused args may be optimized-out */
+        if (idx < max_args) {
+            end_found = KOS_max(end_found, idx + 1U);
+
+            TRY(KOS_array_write(ctx, args.o, (int)idx, KOS_get_walk_value(input.o)));
+        }
     }
 
     for (i = 0; i < min_args; i++) {
