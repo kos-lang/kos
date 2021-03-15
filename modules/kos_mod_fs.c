@@ -124,7 +124,6 @@ static KOS_OBJ_ID cwd(KOS_CONTEXT ctx,
 {
     KOS_VECTOR path_cstr;
     KOS_OBJ_ID path_obj  = KOS_BADPTR;
-    char      *buf;
     size_t     need_size = 128;
     int        error     = KOS_SUCCESS;
 
@@ -154,6 +153,8 @@ static KOS_OBJ_ID cwd(KOS_CONTEXT ctx,
     }
 #else
     for (;;) {
+
+        char *buf;
 
         if (KOS_vector_resize(&path_cstr, need_size)) {
             KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);

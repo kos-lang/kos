@@ -1217,7 +1217,7 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
         KOS_resume_context(ctx);
 
         if (last_err) {
-            raise_last_error(ctx, "CreateProcess", (unsigned)last_err);
+            KOS_raise_last_error(ctx, "CreateProcess", (unsigned)last_err);
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
     }
