@@ -1407,43 +1407,26 @@ static uint32_t set_mark_state_loc(struct KOS_MARK_LOC_S mark_loc,
     return 0;
 }
 
-static void apply_mask(KOS_ATOMIC(uint32_t) *bitmap, uint32_t mask)
+static void clear_page_mark_state(KOS_PAGE *page, uint32_t size)
 {
-    const uint32_t value = KOS_atomic_read_relaxed_u32(*bitmap);
-
-    KOS_atomic_write_relaxed_u32(*bitmap, value & mask);
-}
-
-static void clear_mark_state(KOS_OBJ_ID obj_id, uint32_t size)
-{
-    struct KOS_MARK_LOC_S mark_loc = get_mark_location(obj_id);
+    KOS_ATOMIC(uint32_t) *bitmap = get_bitmap(page);
 
     uint32_t num_slots = size >> KOS_OBJ_ALIGN_BITS;
 
-    uint32_t mask = ~0U << mark_loc.mask_idx;
-
-    if (mark_loc.mask_idx + num_slots * 2 <= 32) {
-
-        mask &= ~(mask << (num_slots * 2));
-
-        apply_mask(mark_loc.bitmap, ~mask);
-
-        return;
-    }
-
-    apply_mask(mark_loc.bitmap, ~mask);
-    num_slots -= (32U - mark_loc.mask_idx) >> 1;
-
-    ++mark_loc.bitmap;
-
     while (num_slots >= 16U) {
-        KOS_atomic_write_relaxed_u32(*mark_loc.bitmap, 0U);
+        KOS_atomic_write_relaxed_u32(*bitmap, 0U);
 
-        ++mark_loc.bitmap;
+        ++bitmap;
         num_slots -= 16U;
     }
 
-    apply_mask(mark_loc.bitmap, ~0U << (num_slots * 2));
+    if (num_slots) {
+        uint32_t value = KOS_atomic_read_relaxed_u32(*bitmap);
+
+        value &= ~0U << (num_slots * 2);
+
+        KOS_atomic_write_relaxed_u32(*bitmap, value);
+    }
 }
 
 static uint32_t set_mark_state(KOS_OBJ_ID            obj_id,
@@ -2330,7 +2313,7 @@ static void update_incomplete_page(KOS_HEAP                *heap,
      * these objects will not be processed again by a subsequent evacuation
      * pass. */
     kos_set_object_type_size(*hdr, OBJ_OPAQUE, incomplete->offset);
-    clear_mark_state((KOS_OBJ_ID)((uintptr_t)hdr + 1), incomplete->offset);
+    clear_page_mark_state(incomplete->page, incomplete->offset);
     clear_opaque(hdr);
 
     push_page_with_objects(heap, incomplete->page);
