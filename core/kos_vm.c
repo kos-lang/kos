@@ -3249,11 +3249,12 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                                                       value,
                                                       KOS_atomic_read_relaxed_obj(OBJPTR(ITERATOR, iter.o)->obj),
                                                       KOS_EMPTY_ARRAY);
-                            TRY_OBJID(value);
 
                             assert(ctx->regs_idx == regs_idx);
 
                             iter.o = KOS_destroy_top_locals(ctx, &saved_pair, &iter);
+
+                            TRY_OBJID(value);
                         }
 
                         TRY(KOS_array_write(ctx, pair, 0, KOS_get_walk_key(iter.o)));
