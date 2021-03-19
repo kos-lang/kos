@@ -1,4 +1,4 @@
-R:Kos 0.1 interactive interpreter\r
+R:Kos 0.1.0 interactive interpreter\r
 R:\e[9999C\e[6n\r>
 R: \e[0Kprint(123)\r
 R:123\r

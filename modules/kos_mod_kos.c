@@ -426,6 +426,7 @@ int kos_module_kos_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "version_major",        KOS_VERSION_MAJOR);
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "version_minor",        KOS_VERSION_MINOR);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "version_revision",     KOS_VERSION_REVISION);
 
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "token_whitespace",     TT_WHITESPACE);
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "token_eol",            TT_EOL);

@@ -5,25 +5,24 @@ set -e
 # Determine version being built
 VERSION_MAJOR=0
 VERSION_MINOR=1
+VERSION_REVISION=0
 if [ $# -gt 0 ]; then
     VERSION="$1"
-    if [ "${VERSION%/*}" = "refs/tags" ]; then
-        VERSION="${VERSION#*/*/}"
-        if echo "$VERSION" | grep -q "^v[0-9]\+\.[0-9]\+$"; then
-            VERSION_MAJOR="${VERSION%.*}"
-            VERSION_MAJOR="${VERSION_MAJOR#v}"
-            VERSION_MINOR="${VERSION#*.}"
-            echo "Packaging version $VERSION_MAJOR.${VERSION_MINOR}"
-        else
-            echo "Ignoring invalid version: $VERSION"
-            echo "Expected version to be in the form: v1.2"
-        fi
+    [ "${VERSION%/*}" = "refs/tags" ] && VERSION="${VERSION#*/*/}"
+
+    if echo "$VERSION" | grep -q "^v\?[0-9]\+\.[0-9]\+\.[0-9]\+$"; then
+        VERSION_MAJOR="${VERSION%.*.*}"
+        VERSION_MAJOR="${VERSION_MAJOR#v}"
+        VERSION_MINOR="${VERSION#*.}"
+        VERSION_REVISION="${VERSION_MINOR#*.}"
+        VERSION_MINOR="${VERSION_MINOR%.*}"
     else
-        echo "Ignoring invalid version parameter: $VERSION"
-        echo "Expected version to be in the form: refs/tags/123"
+        echo "Ignoring invalid version: $VERSION"
+        echo "Expected version to be in the form: v1.2.3"
     fi
 fi
-VERSION="$VERSION_MAJOR.$VERSION_MINOR"
+VERSION="$VERSION_MAJOR.$VERSION_MINOR.$VERSION_REVISION"
+echo "Packaging version $VERSION"
 
 # Determine OS
 UNAME=$(uname -s)
@@ -56,7 +55,7 @@ create_pkg_dir()
 {
     rm -rf Out
 
-    make -j "$JOBS" test builtin_modules=0 strict=1 version_major="$VERSION_MAJOR" version_minor="$VERSION_MINOR"
+    make -j "$JOBS" test builtin_modules=0 strict=1 version_major="$VERSION_MAJOR" version_minor="$VERSION_MINOR" version_revision="$VERSION_REVISION"
 
     local KOS
     if [ "$UNAME" = "Windows" ]; then

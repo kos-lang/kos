@@ -21,6 +21,6 @@ rm -rf "$4"
 
 [ -f "$3.expected" ] || die "Error: Missing '$3.expected'"
 
-sed "/Kos .* interactive interpreter/s/[0-9]*\.[0-9]*/0.1/" < "$4".tmp > "$4"
+sed "/Kos .* interactive interpreter/s/[0-9]*\.[0-9]*\.[0-9]/0.1.0/" < "$4".tmp > "$4"
 
 diff -w "$3.expected" "$4"

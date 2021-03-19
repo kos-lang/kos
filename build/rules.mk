@@ -283,8 +283,11 @@ endif
 
 ifdef version_major
     ifdef version_minor
-        CFLAGS += -DKOS_VERSION_MAJOR=$(version_major)
-        CFLAGS += -DKOS_VERSION_MINOR=$(version_minor)
+        ifdef version_revision
+            CFLAGS += -DKOS_VERSION_MAJOR=$(version_major)
+            CFLAGS += -DKOS_VERSION_MINOR=$(version_minor)
+            CFLAGS += -DKOS_VERSION_REVISION=$(version_revision)
+        endif
     endif
 endif
 

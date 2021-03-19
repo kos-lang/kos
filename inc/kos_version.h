@@ -13,4 +13,8 @@
 #   define KOS_VERSION_MINOR 1
 #endif
 
+#ifndef KOS_VERSION_REVISION
+#   define KOS_VERSION_REVISION 0
+#endif
+
 #endif

@@ -29,7 +29,7 @@
 
 #define TO_STR_INTERNAL(x) #x
 #define TO_STR(x) TO_STR_INTERNAL(x)
-#define KOS_VERSION_STRING "Kos " TO_STR(KOS_VERSION_MAJOR) "." TO_STR(KOS_VERSION_MINOR)
+#define KOS_VERSION_STRING "Kos " TO_STR(KOS_VERSION_MAJOR) "." TO_STR(KOS_VERSION_MINOR) "." TO_STR(KOS_VERSION_REVISION)
 
 static const char str_cmdline[] = "<commandline>";
 static const char str_stdin[]   = "<stdin>";
