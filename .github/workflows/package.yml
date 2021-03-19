@@ -39,11 +39,13 @@ jobs:
       - name: Remove link.exe from MSYS2
         shell: msys2 {0}
         run: rm -f /bin/link.exe
+      - name: Add path to WiX Toolset
+        shell: cmd
+        run: echo "C:\Program Files (x86)\WiX Toolset v3.11\bin" >> $GITHUB_PATH
       - name: Package
         shell: cmd
         run: |
           call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x86
-          set PATH="%PATH%:C:\Program Files (x86)\WiX Toolset v3.11\bin"
           msys2 -c "interpreter/create_package.sh $GITHUB_REF"
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
