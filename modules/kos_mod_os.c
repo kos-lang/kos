@@ -964,7 +964,7 @@ static int find_program(KOS_CONTEXT           ctx,
 
         const char *path_env = getenv("PATH");
 
-        while (*path_env) {
+        while (path_env && *path_env) {
 
             const char  *colon    = strchr(path_env, ':');
             const size_t path_len = colon ? (size_t)(colon - path_env) : strlen(path_env);
