@@ -28,6 +28,7 @@ KOS_DECLARE_STATIC_CONST_STRING(str_err_args_not_array,           "function argu
 KOS_DECLARE_STATIC_CONST_STRING(str_err_cannot_yield,             "function is not a generator");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_corrupted_defaults,       "argument defaults are corrupted");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_div_by_zero,              "division by zero");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_div_overflow,             "division overflow");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_generator_running,        "generator is running");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_byte_value,       "buffer element value out of range");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_index,            "index out of range");
@@ -218,28 +219,22 @@ static KOS_OBJ_ID div_integer(KOS_CONTEXT ctx,
                               int64_t     a,
                               KOS_OBJ_ID  bobj)
 {
-    KOS_OBJ_ID ret;
+    KOS_OBJ_ID     ret;
+    const KOS_TYPE btype = GET_OBJ_TYPE(bobj);
 
     switch (GET_OBJ_TYPE(bobj)) {
 
-        case OBJ_SMALL_INTEGER: {
-
-            const int64_t b = GET_SMALL_INT(bobj);
-
-            if (b)
-                ret = KOS_new_int(ctx, a / b);
-            else {
-                KOS_raise_exception(ctx, KOS_CONST_ID(str_err_div_by_zero));
-                ret = KOS_BADPTR;
-            }
-            break;
-        }
-
+        case OBJ_SMALL_INTEGER:
+            /* fall-through */
         case OBJ_INTEGER: {
 
-            const int64_t b = OBJPTR(INTEGER, bobj)->value;
+            const int64_t b = (btype == OBJ_SMALL_INTEGER) ? GET_SMALL_INT(bobj) : OBJPTR(INTEGER, bobj)->value;
 
-            if (b)
+            if ((b == -1) && (a == (int64_t)((uint64_t)1 << 63))) {
+                KOS_raise_exception(ctx, KOS_CONST_ID(str_err_div_overflow));
+                ret = KOS_BADPTR;
+            }
+            else if (b)
                 ret = KOS_new_int(ctx, a / b);
             else {
                 KOS_raise_exception(ctx, KOS_CONST_ID(str_err_div_by_zero));
@@ -310,28 +305,22 @@ static KOS_OBJ_ID mod_integer(KOS_CONTEXT ctx,
                               int64_t     a,
                               KOS_OBJ_ID  bobj)
 {
-    KOS_OBJ_ID ret;
+    KOS_OBJ_ID     ret;
+    const KOS_TYPE btype = GET_OBJ_TYPE(bobj);
 
     switch (GET_OBJ_TYPE(bobj)) {
 
-        case OBJ_SMALL_INTEGER: {
-
-            const int64_t b = GET_SMALL_INT(bobj);
-
-            if (b)
-                ret = KOS_new_int(ctx, a % b);
-            else {
-                KOS_raise_exception(ctx, KOS_CONST_ID(str_err_div_by_zero));
-                ret = KOS_BADPTR;
-            }
-            break;
-        }
-
+        case OBJ_SMALL_INTEGER:
+            /* fall-through */
         case OBJ_INTEGER: {
 
-            const int64_t b = OBJPTR(INTEGER, bobj)->value;
+            const int64_t b = (btype == OBJ_SMALL_INTEGER) ? GET_SMALL_INT(bobj) : OBJPTR(INTEGER, bobj)->value;
 
-            if (b)
+            if ((b == -1) && (a == (int64_t)((uint64_t)1 << 63))) {
+                KOS_raise_exception(ctx, KOS_CONST_ID(str_err_div_overflow));
+                ret = KOS_BADPTR;
+            }
+            else if (b)
                 ret = KOS_new_int(ctx, a % b);
             else {
                 KOS_raise_exception(ctx, KOS_CONST_ID(str_err_div_by_zero));

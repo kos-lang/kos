@@ -293,6 +293,18 @@ do {
     expect_fail(() => 10 / bi)
     expect_fail(() => 10 / bf)
 }
+do {
+    fun div_by_m1(a)
+    {
+        return a / -1
+    }
+    fun mod_by_m1(a)
+    {
+        return a % -1
+    }
+    expect_fail(() => div_by_m1(0x8000_0000_0000_0000))
+    expect_fail(() => mod_by_m1(0x8000_0000_0000_0000))
+}
 
 ##############################################################################
 # %

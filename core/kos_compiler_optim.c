@@ -15,6 +15,7 @@
 #include <string.h>
 
 static const char str_err_div_by_zero[]             = "division by zero";
+static const char str_err_div_overflow[]            = "division overflow";
 static const char str_err_number_out_of_range[]     = "number out of range";
 static const char str_err_sum_of_strings_too_long[] = "sum of two strings exceeds 65535 characters";
 
@@ -1185,6 +1186,13 @@ static void announce_div_by_zero(KOS_COMP_UNIT      *program,
     program->error_token = &node->token;
 }
 
+static void announce_div_overflow(KOS_COMP_UNIT      *program,
+                                  const KOS_AST_NODE *node)
+{
+    program->error_str   = str_err_div_overflow;
+    program->error_token = &node->token;
+}
+
 static int optimize_binary_op(KOS_COMP_UNIT      *program,
                               KOS_AST_NODE       *node,
                               const KOS_AST_NODE *a,
@@ -1287,6 +1295,10 @@ static int optimize_binary_op(KOS_COMP_UNIT      *program,
                     announce_div_by_zero(program, node);
                     RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
                 }
+                if ((numeric_b.u.i == -1) && (numeric_a.u.i == (int64_t)((uint64_t)1 << 63))) {
+                    announce_div_overflow(program, node);
+                    RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
+                }
                 numeric_a.u.i /= numeric_b.u.i;
             }
             else {
@@ -1302,6 +1314,10 @@ static int optimize_binary_op(KOS_COMP_UNIT      *program,
             if (numeric_a.type == KOS_INTEGER_VALUE) {
                 if ( ! numeric_b.u.i) {
                     announce_div_by_zero(program, node);
+                    RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
+                }
+                if ((numeric_b.u.i == -1) && (numeric_a.u.i == (int64_t)((uint64_t)1 << 63))) {
+                    announce_div_overflow(program, node);
                     RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
                 }
                 numeric_a.u.i %= numeric_b.u.i;
