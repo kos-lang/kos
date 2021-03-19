@@ -43,6 +43,7 @@ jobs:
         shell: cmd
         run: |
           call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x86
+          set PATH="%PATH%:C:\Program Files (x86)\WiX Toolset v3.11\bin"
           msys2 -c "interpreter/create_package.sh $GITHUB_REF"
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
