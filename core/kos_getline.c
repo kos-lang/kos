@@ -479,13 +479,20 @@ static int hide_cursor(void)
 
 static int show_cursor(void)
 {
-    static const char hide_escape[] = "\x1B[?25h";
+    static const char show_escape[] = "\x1B[?25h";
 
-    return console_write(hide_escape, sizeof(hide_escape) - 1);
+    return console_write(show_escape, sizeof(show_escape) - 1);
 }
 #else
-#define hide_cursor() KOS_SUCCESS
-#define show_cursor() KOS_SUCCESS
+static int hide_cursor(void)
+{
+    return KOS_SUCCESS;
+}
+
+static int show_cursor(void)
+{
+    return KOS_SUCCESS;
+}
 #endif
 
 static int clear_and_redraw(struct TERM_EDIT *edit)
