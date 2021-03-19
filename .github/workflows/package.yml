@@ -1,9 +1,35 @@
 name: Package
 
 on:
-  create
+  push:
+    tags:
+      - 'v*.*.*'
 
 jobs:
+  release:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      version_number: ${{ steps.version.outputs.version_number }}
+
+    steps:
+      - name: Set version number
+        run: |
+          echo "::set-output name=version::${GITHUB_REF#*/*/}"
+          echo "::set-output name=version_number::${GITHUB_REF#*/*/v}"
+        id: version
+      - name: Create release
+        uses: actions/create-release@v1
+        id: create_release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          draft: true
+          prerelase: false
+          release_name: ${{ steps.version.outputs.version }}
+          tag_name: ${{ github.ref }}
+          body: Release ${{ steps.version.outputs.version }}
+
   default:
     strategy:
       matrix:
@@ -12,22 +38,42 @@ jobs:
           - ubuntu-16.04
 
     runs-on: ${{ matrix.os }}
-
+    needs: release
     timeout-minutes: 3
 
     steps:
       - uses: actions/checkout@v2
       - name: Package
-        run: interpreter/create_package.sh "$GITHUB_REF"
+        run: interpreter/create_package.sh ${{ needs.release.outputs.version }}
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
         with:
           name: package
-          path: Out/release/kos-*.*
+          path: Out/release/kos-${{ needs.release.outputs.version_number }}.*
+      - name: Upload deb
+        uses: actions/upload-release-asset@v1
+        if: ${{ matrix.os == 'ubuntu-16.04' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: Out/release/kos-${{ needs.release.outputs.version_number }}.deb
+          asset_name: kos-${{ needs.release.outputs.version_number }}.deb
+          asset_content_type: application/octet-stream
+      - name: Upload pkg
+        uses: actions/upload-release-asset@v1
+        if: ${{ matrix.os == 'macos-latest' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: Out/release/kos-${{ needs.release.outputs.version_number }}.pkg
+          asset_name: kos-${{ needs.release.outputs.version_number }}.pkg
+          asset_content_type: application/octet-stream
 
   windows:
     runs-on: windows-latest
-
+    needs: release
     timeout-minutes: 10
 
     steps:
@@ -45,9 +91,18 @@ jobs:
         shell: cmd
         run: |
           call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x86
-          msys2 -c "interpreter/create_package.sh $GITHUB_REF"
+          msys2 -c "interpreter/create_package.sh ${{ needs.release.outputs.version }}"
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
         with:
           name: package
-          path: Out/release/Kos-*.*
+          path: Out/release/Kos-${{ needs.release.outputs.version_number }}.*
+      - name: Upload msi
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: Out/release/kos-${{ needs.release.outputs.version_number }}.msi
+          asset_name: Kos-${{ needs.release.outputs.version_number }}.msi
+          asset_content_type: application/octet-stream

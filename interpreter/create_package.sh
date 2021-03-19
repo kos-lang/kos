@@ -8,8 +8,6 @@ VERSION_MINOR=1
 VERSION_REVISION=0
 if [ $# -gt 0 ]; then
     VERSION="$1"
-    [ "${VERSION%/*}" = "refs/tags" ] && VERSION="${VERSION#*/*/}"
-
     if echo "$VERSION" | grep -q "^v\?[0-9]\+\.[0-9]\+\.[0-9]\+$"; then
         VERSION_MAJOR="${VERSION%.*.*}"
         VERSION_MAJOR="${VERSION_MAJOR#v}"
