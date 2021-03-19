@@ -11,6 +11,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       version_number: ${{ steps.version.outputs.version_number }}
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
 
     steps:
       - name: Set version number
@@ -25,7 +26,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         with:
           draft: true
-          prerelase: false
+          prerelease: false
           release_name: ${{ steps.version.outputs.version }}
           tag_name: ${{ github.ref }}
           body: Release ${{ steps.version.outputs.version }}
@@ -56,7 +57,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ needs.release.outputs.upload_url }}
           asset_path: Out/release/kos-${{ needs.release.outputs.version_number }}.deb
           asset_name: kos-${{ needs.release.outputs.version_number }}.deb
           asset_content_type: application/octet-stream
@@ -66,7 +67,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ needs.release.outputs.upload_url }}
           asset_path: Out/release/kos-${{ needs.release.outputs.version_number }}.pkg
           asset_name: kos-${{ needs.release.outputs.version_number }}.pkg
           asset_content_type: application/octet-stream
@@ -102,7 +103,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ needs.release.outputs.upload_url }}
           asset_path: Out/release/kos-${{ needs.release.outputs.version_number }}.msi
           asset_name: Kos-${{ needs.release.outputs.version_number }}.msi
           asset_content_type: application/octet-stream
