@@ -81,7 +81,7 @@ jobs:
           retention-days: 5
 
   upload:
-    runs-on: ubuntu-20.04
+    runs-on: windows-latest
     needs:
       - release
       - default
