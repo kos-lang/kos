@@ -49,24 +49,41 @@ BUILDDIR=Out/release
 PKGDIR="$BUILDDIR"/package
 PKGNAME="kos-$VERSION"
 
+compile_kos()
+{
+    make -j "$JOBS" "$@" builtin_modules=0 strict=1 version_major="$VERSION_MAJOR" version_minor="$VERSION_MINOR" version_revision="$VERSION_REVISION"
+}
+
+collect_package()
+{
+    local BUILDDIR_LOCAL="$1"
+    local PKGDIR_LOCAL="$1/package"
+
+    if [ "$UNAME" = "Windows" ]; then
+        mkdir -p "$PKGDIR_LOCAL"/modules
+        cp "$BUILDDIR_LOCAL"/interpreter/kos.exe "$PKGDIR_LOCAL"/
+        cp "$BUILDDIR_LOCAL"/interpreter/modules/* "$PKGDIR_LOCAL"/modules/
+    else
+        mkdir -p "$PKGDIR_LOCAL"/bin
+        mkdir -p "$PKGDIR_LOCAL"/share/kos/modules
+        ln "$BUILDDIR_LOCAL"/interpreter/kos "$PKGDIR_LOCAL"/bin/
+        ln "$BUILDDIR_LOCAL"/share/kos/modules/* "$PKGDIR_LOCAL"/share/kos/modules/
+    fi
+}
+
 create_pkg_dir()
 {
     rm -rf Out
 
-    make -j "$JOBS" test builtin_modules=0 strict=1 version_major="$VERSION_MAJOR" version_minor="$VERSION_MINOR" version_revision="$VERSION_REVISION"
+    compile_kos test
+
+    collect_package "$BUILDDIR"
 
     local KOS
     if [ "$UNAME" = "Windows" ]; then
         KOS="$PKGDIR/kos.exe"
-        mkdir -p "$PKGDIR"/modules
-        cp "$BUILDDIR"/interpreter/kos.exe "$PKGDIR"/
-        cp "$BUILDDIR"/interpreter/modules/* "$PKGDIR"/modules/
     else
         KOS="$PKGDIR/bin/kos"
-        mkdir -p "$PKGDIR"/bin
-        mkdir -p "$PKGDIR"/share/kos/modules
-        ln "$BUILDDIR"/interpreter/kos "$PKGDIR"/bin/
-        ln "$BUILDDIR"/share/kos/modules/* "$PKGDIR"/share/kos/modules/
     fi
 
     # Test the package
@@ -79,10 +96,22 @@ create_pkg_dir()
 
 if [ "$UNAME" = "Darwin" ]; then
     create_pkg_dir
-    PKGNAME="$PKGNAME-macos-amd64"
-    productbuild --root "$PKGDIR" /usr/local --product interpreter/macos/kos.plist "$BUILDDIR"/"$PKGNAME.pkg"
+
+    PKGNAME_AMD64="$PKGNAME-macos-x86_64"
+    productbuild --root "$PKGDIR" /usr/local --product interpreter/macos/kos-x86_64.plist "$BUILDDIR"/"$PKGNAME_AMD64.pkg"
     cd "$BUILDDIR"
-    shasum -a 256 "$PKGNAME.pkg" | tee "$PKGNAME.pkg.sha"
+    shasum -a 256 "$PKGNAME_AMD64.pkg" | tee "$PKGNAME_AMD64.pkg.sha"
+    cd - >/dev/null
+
+    compile_kos target=arm64
+    collect_package "$BUILDDIR-arm64"
+
+    PKGNAME_ARM64="$PKGNAME-macos-arm64"
+    productbuild --root "$BUILDDIR-arm64/package" /usr/local --product interpreter/macos/kos-arm64.plist "$BUILDDIR-arm64"/"$PKGNAME_ARM64.pkg"
+    cd "$BUILDDIR-arm64"
+    shasum -a 256 "$PKGNAME_ARM64.pkg" | tee "$PKGNAME_ARM64.pkg.sha"
+    cd - >/dev/null
+
 elif [ "$UNAME" = "Linux" ]; then
     # Package sources
     zip -r -9 "$PKGNAME-src.zip" *

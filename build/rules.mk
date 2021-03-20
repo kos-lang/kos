@@ -19,6 +19,11 @@ else
     out_dir_base_rel = Out/debug
 endif
 
+target ?=
+ifneq ($(target),)
+    out_dir_base_rel := $(out_dir_base_rel)-$(target)
+endif
+
 kos_dir     ?= $(call inv_path,$(depth))
 out_dir_base = $(kos_dir)$(out_dir_base_rel)
 out_dir_rel  = $(out_dir_base_rel)/$(depth)
@@ -70,7 +75,6 @@ LDFLAGS        ?=
 EXE_LDFLAGS    ?=
 SHARED_LDFLAGS ?=
 native         ?= 0
-target         ?=
 ifeq ($(UNAME), Windows)
     LIBFLAGS ?=
     ifeq ($(debug), 0)
@@ -230,7 +234,11 @@ ifeq ($(UNAME), Darwin)
     ifeq ($(target), ios)
         APPLE_FLAGS ?= -mios-version-min=7.0 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk
     else
-        APPLE_FLAGS ?= -mmacosx-version-min=10.9
+        ifeq ($(target), arm64)
+            APPLE_FLAGS ?= -arch arm64 -mmacosx-version-min=11.0
+        else
+            APPLE_FLAGS ?= -mmacosx-version-min=10.9
+        endif
     endif
     CFLAGS  += $(APPLE_FLAGS)
     LDFLAGS += $(APPLE_FLAGS)
