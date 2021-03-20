@@ -79,11 +79,13 @@ create_pkg_dir()
 
 if [ "$UNAME" = "Darwin" ]; then
     create_pkg_dir
+    PKGNAME="$PKGNAME-macos-amd64"
     productbuild --root "$PKGDIR" /usr/local --product interpreter/macos/kos.plist "$BUILDDIR"/"$PKGNAME.pkg"
     cd "$BUILDDIR"
     shasum -a 256 "$PKGNAME.pkg" | tee "$PKGNAME.pkg.sha"
 elif [ "$UNAME" = "Linux" ]; then
     create_pkg_dir
+    PKGNAME="$PKGNAME-linux-amd64"
 
     mkdir "$PKGDIR"/usr
     mv "$PKGDIR"/bin "$PKGDIR"/share "$PKGDIR"/usr/
@@ -114,8 +116,9 @@ elif [ "$UNAME" = "Linux" ]; then
     shasum -a 256 "$PKGNAME.deb" | tee "$PKGNAME.deb.sha"
 elif [ "$UNAME" = "Windows" ]; then
     create_pkg_dir
+    PKGNAME="$PKGNAME-windows-x86"
 
-    sed "s/0\.1/$VERSION/" < interpreter/windows/kos.wxs > "$PKGDIR"/"Kos-$VERSION.wxs"
+    sed "s/0\.1/$VERSION/" < interpreter/windows/kos.wxs > "$PKGDIR"/"$PKGNAME.wxs"
     cp interpreter/artwork/kos.ico "$PKGDIR"/
 
     cd "$PKGDIR"
@@ -128,14 +131,14 @@ elif [ "$UNAME" = "Windows" ]; then
         MODDEFS="$MODDEFS<\\/Component>"
         MODREFS="$MODREFS<ComponentRef Id='${MOD}.Component' \\/>"
     done
-    sed -i "s/^.*MODULE_COMPONENT_DEFS.*$/$MODDEFS/ ; s/^.*MODULE_COMPONENT_REFS.*$/$MODREFS/" "Kos-$VERSION.wxs"
+    sed -i "s/^.*MODULE_COMPONENT_DEFS.*$/$MODDEFS/ ; s/^.*MODULE_COMPONENT_REFS.*$/$MODREFS/" "$PKGNAME.wxs"
 
-    candle.exe "Kos-$VERSION.wxs"
-    light.exe -ext WixUIExtension "Kos-$VERSION.wixobj"
+    candle.exe "$PKGNAME.wxs"
+    light.exe -ext WixUIExtension "$PKGNAME.wixobj"
 
-    mv "Kos-$VERSION.msi" ..
+    mv "$PKGNAME.msi" ..
     cd ..
-    shasum -a 256 "Kos-$VERSION.msi" | tee "Kos-$VERSION.msi.sha"
+    shasum -a 256 "$PKGNAME.msi" | tee "$PKGNAME.msi.sha"
 else
     echo "Unsupported OS '$UNAME'" >&2
     exit 1

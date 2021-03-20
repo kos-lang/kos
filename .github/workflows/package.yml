@@ -51,25 +51,45 @@ jobs:
         with:
           name: package
           path: Out/release/kos-${{ needs.release.outputs.version_number }}.*
-      - name: Upload deb
+      - name: Upload amd64 deb
         uses: actions/upload-release-asset@v1
         if: ${{ matrix.os == 'ubuntu-16.04' }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
           upload_url: ${{ needs.release.outputs.upload_url }}
-          asset_path: Out/release/kos-${{ needs.release.outputs.version_number }}.deb
-          asset_name: kos-${{ needs.release.outputs.version_number }}.deb
+          asset_path: Out/release/kos-${{ needs.release.outputs.version_number }}-linux-amd64.deb
+          asset_name: kos-${{ needs.release.outputs.version_number }}-linux-amd64.deb
           asset_content_type: application/octet-stream
-      - name: Upload pkg
+      - name: Upload amd64 deb sha
+        uses: actions/upload-release-asset@v1
+        if: ${{ matrix.os == 'ubuntu-16.04' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ needs.release.outputs.upload_url }}
+          asset_path: Out/release/kos-${{ needs.release.outputs.version_number }}-linux-amd64.deb.sha
+          asset_name: kos-${{ needs.release.outputs.version_number }}-linux-amd64.deb.sha
+          asset_content_type: application/octet-stream
+      - name: Upload amd64 pkg
         uses: actions/upload-release-asset@v1
         if: ${{ matrix.os == 'macos-latest' }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
           upload_url: ${{ needs.release.outputs.upload_url }}
-          asset_path: Out/release/kos-${{ needs.release.outputs.version_number }}.pkg
-          asset_name: kos-${{ needs.release.outputs.version_number }}.pkg
+          asset_path: Out/release/kos-${{ needs.release.outputs.version_number }}-macos-amd64.pkg
+          asset_name: kos-${{ needs.release.outputs.version_number }}-macos-amd64.pkg
+          asset_content_type: application/octet-stream
+      - name: Upload amd64 pkg sha
+        uses: actions/upload-release-asset@v1
+        if: ${{ matrix.os == 'macos-latest' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ needs.release.outputs.upload_url }}
+          asset_path: Out/release/kos-${{ needs.release.outputs.version_number }}-macos-amd64.pkg.sha
+          asset_name: kos-${{ needs.release.outputs.version_number }}-macos-amd64.pkg.sha
           asset_content_type: application/octet-stream
 
   windows:
@@ -97,13 +117,22 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: package
-          path: Out/release/Kos-${{ needs.release.outputs.version_number }}.*
-      - name: Upload msi
+          path: Out/release/kos-${{ needs.release.outputs.version_number }}.*
+      - name: Upload amd64 msi
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
           upload_url: ${{ needs.release.outputs.upload_url }}
-          asset_path: Out/release/kos-${{ needs.release.outputs.version_number }}.msi
-          asset_name: Kos-${{ needs.release.outputs.version_number }}.msi
+          asset_path: Out/release/kos-${{ needs.release.outputs.version_number }}-windows-amd64.msi
+          asset_name: kos-${{ needs.release.outputs.version_number }}-windows-amd64.msi
+          asset_content_type: application/octet-stream
+      - name: Upload amd64 msi sha
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ needs.release.outputs.upload_url }}
+          asset_path: Out/release/kos-${{ needs.release.outputs.version_number }}-windows-amd64.msi.sha
+          asset_name: kos-${{ needs.release.outputs.version_number }}-windows-amd64.msi.sha
           asset_content_type: application/octet-stream
