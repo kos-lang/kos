@@ -109,6 +109,8 @@ elif [ "$UNAME" = "Linux" ]; then
     tar czf "$PKGNAME-src.tar.gz" --exclude="$PKGNAME-src.zip" *
     shasum -a 256 "$PKGNAME-src.zip" | tee "$PKGNAME-src.zip.sha"
     shasum -a 256 "$PKGNAME-src.tar.gz" | tee "$PKGNAME-src.tar.gz.sha"
+    mkdir -p "$BUILDDIR"
+    mv "$PKGNAME"-src* "$BUILDDIR"/
 
     create_pkg_dir
 
