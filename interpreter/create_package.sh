@@ -103,15 +103,6 @@ if [ "$UNAME" = "Darwin" ]; then
     shasum -a 256 "$PKGNAME_AMD64.pkg" | tee "$PKGNAME_AMD64.pkg.sha"
     cd - >/dev/null
 
-    compile_kos target=arm64
-    collect_package "$BUILDDIR-arm64"
-
-    PKGNAME_ARM64="$PKGNAME-macos-arm64"
-    productbuild --root "$BUILDDIR-arm64/package" /usr/local --product interpreter/macos/kos-arm64.plist "$BUILDDIR-arm64"/"$PKGNAME_ARM64.pkg"
-    cd "$BUILDDIR-arm64"
-    shasum -a 256 "$PKGNAME_ARM64.pkg" | tee "$PKGNAME_ARM64.pkg.sha"
-    cd - >/dev/null
-
 elif [ "$UNAME" = "Linux" ]; then
     # Package sources
     zip -r -9 "$PKGNAME-src.zip" *

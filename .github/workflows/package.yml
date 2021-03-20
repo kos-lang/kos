@@ -126,26 +126,6 @@ jobs:
           asset_path: Out/release/kos-${{ needs.release.outputs.version_number }}-macos-x86_64.pkg.sha
           asset_name: kos-${{ needs.release.outputs.version_number }}-macos-x86_64.pkg.sha
           asset_content_type: application/octet-stream
-      - name: Upload arm64 pkg
-        uses: actions/upload-release-asset@v1
-        if: ${{ matrix.os == 'macos-latest' }}
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          upload_url: ${{ needs.release.outputs.upload_url }}
-          asset_path: Out/release/kos-${{ needs.release.outputs.version_number }}-macos-arm64.pkg
-          asset_name: kos-${{ needs.release.outputs.version_number }}-macos-arm64.pkg
-          asset_content_type: application/octet-stream
-      - name: Upload arm64 pkg sha
-        uses: actions/upload-release-asset@v1
-        if: ${{ matrix.os == 'macos-latest' }}
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          upload_url: ${{ needs.release.outputs.upload_url }}
-          asset_path: Out/release/kos-${{ needs.release.outputs.version_number }}-macos-arm64.pkg.sha
-          asset_name: kos-${{ needs.release.outputs.version_number }}-macos-arm64.pkg.sha
-          asset_content_type: application/octet-stream
 
   windows:
     runs-on: windows-latest
