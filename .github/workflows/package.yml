@@ -51,6 +51,7 @@ jobs:
         with:
           name: package
           path: Out/release/kos-${{ needs.release.outputs.version_number }}*
+          retention-days: 5
 
   windows:
     runs-on: windows-latest
@@ -77,9 +78,10 @@ jobs:
         with:
           name: package
           path: Out/release/kos-${{ needs.release.outputs.version_number }}*
+          retention-days: 5
 
   upload:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     needs:
       - release
       - default
@@ -89,13 +91,12 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           path: "./artifacts"
-      - run: ls -l artifacts
       - name: Upload release assets
         uses: actions/github-script@v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const script        = require(`${process.env.GITHUB_WORKSPACE}/tools/github/upload-release-asset.js`);
-            const artifacts_dir = `${process.env.GITHUB_WORKSPACE}/artifacts`;
+            const artifacts_dir = `${process.env.GITHUB_WORKSPACE}/artifacts/package`;
             const release_id    = "${{ needs.release.outputs.id }}";
             console.log(script({github, context, artifacts_dir, release_id}));
