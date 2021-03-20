@@ -96,7 +96,21 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const script        = require(`${process.env.GITHUB_WORKSPACE}/tools/github/upload-release-asset.js`);
             const artifacts_dir = `${process.env.GITHUB_WORKSPACE}/artifacts/package`;
             const release_id    = "${{ needs.release.outputs.id }}";
-            console.log(script({github, context, artifacts_dir, release_id}));
+            const glob          = require('glob');
+            const path          = require('path');
+            const fs            = require('fs');
+            glob(artifacts_dir + '/**/*', { nodir: true }, async function(err, files) {
+                for (const file of files) {
+                    const filename = path.basename(file);
+                    console.log(`Uploading ${filename}`);
+                    await github.repos.uploadReleaseAsset({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        release_id: release_id,
+                        name: filename,
+                        data: fs.readFileSync(file)
+                    })
+                }
+            });
