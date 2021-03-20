@@ -47,6 +47,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Package
         run: interpreter/create_package.sh ${{ needs.release.outputs.version }}
+      - run: npm ci
       - name: Upload release assets
         uses: actions/github-script@v3
         with:
