@@ -52,7 +52,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const script = require(`${process.env.GITHUB_WORKSPACE}/.github/scripts/upload_release_asset.js`);
+            const script = require(`${process.env.GITHUB_WORKSPACE}/tools/github/upload_release_asset.js`);
             const artifacts_dir = `${process.env.GITHUB_WORKSPACE}/Out/release`;
             const release_id = "${{ needs.release.outputs.id }}";
             console.log(script({github, context, artifacts_dir, release_id}));
@@ -83,7 +83,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const script = require(`${process.env.GITHUB_WORKSPACE}/.github/scripts/upload_release_asset.js`);
+            const script = require(`${process.env.GITHUB_WORKSPACE}/tools/github/upload_release_asset.js`);
             const artifacts_dir = `${process.env.GITHUB_WORKSPACE}/Out/release`;
             const release_id = "${{ needs.release.outputs.id }}";
             console.log(script({github, context, artifacts_dir, release_id}));
