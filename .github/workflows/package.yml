@@ -81,7 +81,7 @@ jobs:
           retention-days: 5
 
   upload:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     needs:
       - release
       - default
@@ -100,4 +100,4 @@ jobs:
             const script        = require(`${process.env.GITHUB_WORKSPACE}/.github/scripts/upload-release-asset.js`);
             const artifacts_dir = `${process.env.GITHUB_WORKSPACE}/artifacts/package`;
             const release_id    = "${{ needs.release.outputs.id }}";
-            console.log(script({github, context, artifacts_dir, release_id}));
+            script({github, context, artifacts_dir, release_id});
