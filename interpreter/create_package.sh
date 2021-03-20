@@ -105,7 +105,7 @@ if [ "$UNAME" = "Darwin" ]; then
 
 elif [ "$UNAME" = "Linux" ]; then
     # Package sources
-    zip -r -9 "$PKGNAME-src.zip" *
+    zip -r -9 -q "$PKGNAME-src.zip" *
     tar czf "$PKGNAME-src.tar.gz" --exclude="$PKGNAME-src.zip" *
     shasum -a 256 "$PKGNAME-src.zip" | tee "$PKGNAME-src.zip.sha"
     shasum -a 256 "$PKGNAME-src.tar.gz" | tee "$PKGNAME-src.tar.gz.sha"
