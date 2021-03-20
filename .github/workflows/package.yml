@@ -91,6 +91,7 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           path: "./artifacts"
+      - run: npm install glob
       - name: Upload release assets
         uses: actions/github-script@v3
         with:
