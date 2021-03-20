@@ -110,9 +110,10 @@ elif [ "$UNAME" = "Linux" ]; then
     shasum -a 256 "$PKGNAME-src.zip" | tee "$PKGNAME-src.zip.sha"
     shasum -a 256 "$PKGNAME-src.tar.gz" | tee "$PKGNAME-src.tar.gz.sha"
     mkdir -p "$BUILDDIR"
-    mv "$PKGNAME"-src* "$BUILDDIR"/
 
     create_pkg_dir
+
+    mv "$PKGNAME"-src* "$BUILDDIR"/
 
     PKGNAME="$PKGNAME-linux-amd64"
 
