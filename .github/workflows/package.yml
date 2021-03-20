@@ -47,12 +47,14 @@ jobs:
       - uses: actions/checkout@v2
       - name: Package
         run: interpreter/create_package.sh ${{ needs.release.outputs.version }}
+      - name: Show
+        run: pwd && ls -l tools/github
       - name: Upload release assets
         uses: actions/github-script@v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const script = require(`${process.env.GITHUB_WORKSPACE}/tools/github/upload_release_asset.js`);
+            const script = require(`${process.env.GITHUB_WORKSPACE}/tools/github/upload-release-asset.js`);
             const artifacts_dir = `${process.env.GITHUB_WORKSPACE}/Out/release`;
             const release_id = "${{ needs.release.outputs.id }}";
             console.log(script({github, context, artifacts_dir, release_id}));
@@ -83,7 +85,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const script = require(`${process.env.GITHUB_WORKSPACE}/tools/github/upload_release_asset.js`);
+            const script = require(`${process.env.GITHUB_WORKSPACE}/tools/github/upload-release-asset.js`);
             const artifacts_dir = `${process.env.GITHUB_WORKSPACE}/Out/release`;
             const release_id = "${{ needs.release.outputs.id }}";
             console.log(script({github, context, artifacts_dir, release_id}));
