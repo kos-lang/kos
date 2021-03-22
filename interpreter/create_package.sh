@@ -94,6 +94,30 @@ create_pkg_dir()
     cd ..
 }
 
+pkg_sources()
+{
+    local PKGBASENAME="$1"
+    local OUTDIR="$2"
+
+    rm -rf "$PKGBASENAME"
+    mkdir "$PKGBASENAME"
+    cp -a *md Makefile build core doc inc interpreter modules tests tools "$PKGBASENAME"/
+
+    sed -i -r "/define *KOS_VERSION_MAJOR/s/[0-9]+/$VERSION_MAJOR/" "$PKGBASENAME"/inc/kos_version.h
+    sed -i -r "/define *KOS_VERSION_MINOR/s/[0-9]+/$VERSION_MINOR/" "$PKGBASENAME"/inc/kos_version.h
+    sed -i -r "/define *KOS_VERSION_REVISION/s/[0-9]+/$VERSION_REVISION/" "$PKGBASENAME"/inc/kos_version.h
+
+    tar czf "$OUTDIR"/"$PKGBASENAME".tar.gz "$PKGBASENAME"
+    zip -r -9 -q "$OUTDIR"/"$PKGBASENAME".zip "$PKGBASENAME"
+
+    rm -rf "$PKGBASENAME"
+
+    cd "$OUTDIR"
+    shasum -a 256 "$PKGBASENAME".tar.gz | tee "$PKGBASENAME".tar.gz.sha
+    shasum -a 256 "$PKGBASENAME".zip | tee "$PKGBASENAME".zip.sha
+    cd - > /dev/null
+}
+
 if [ "$UNAME" = "Darwin" ]; then
     create_pkg_dir
 
@@ -104,19 +128,9 @@ if [ "$UNAME" = "Darwin" ]; then
     cd - >/dev/null
 
 elif [ "$UNAME" = "Linux" ]; then
-    # Package sources
-    rm -rf Out "$PKGNAME-src".*
-    sed -i -r "/define *KOS_VERSION_MAJOR/s/[0-9]+/$VERSION_MAJOR/" inc/kos_version.h
-    sed -i -r "/define *KOS_VERSION_MINOR/s/[0-9]+/$VERSION_MINOR/" inc/kos_version.h
-    sed -i -r "/define *KOS_VERSION_REVISION/s/[0-9]+/$VERSION_REVISION/" inc/kos_version.h
-    zip -r -9 -q "$PKGNAME-src.zip" *
-    tar czf "$PKGNAME-src.tar.gz" --exclude="$PKGNAME-src.zip" *
-    shasum -a 256 "$PKGNAME-src.zip" | tee "$PKGNAME-src.zip.sha"
-    shasum -a 256 "$PKGNAME-src.tar.gz" | tee "$PKGNAME-src.tar.gz.sha"
-
     create_pkg_dir
 
-    mv "$PKGNAME"-src* "$BUILDDIR"/
+    pkg_sources "$PKGNAME"-src "$BUILDDIR"
 
     PKGNAME="$PKGNAME-linux-amd64"
 
