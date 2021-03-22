@@ -1958,10 +1958,18 @@ static int is_for_range(KOS_COMP_UNIT      *program,
     node = node->next;
     if (node) {
 
+        /* Expaned or named args not supported */
+        if ((node->type == NT_EXPAND) || (node->type == NT_NAMED_ARGUMENTS))
+            return 0;
+
         /* Second argument (optional) */
         node = node->next;
         if ( ! node)
             return 1;
+
+        /* Expaned or named args not supported */
+        if ((node->type == NT_EXPAND) || (node->type == NT_NAMED_ARGUMENTS))
+            return 0;
 
         /* Third argument (optional) */
         node = node->next;
