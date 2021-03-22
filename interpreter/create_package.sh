@@ -105,11 +105,14 @@ if [ "$UNAME" = "Darwin" ]; then
 
 elif [ "$UNAME" = "Linux" ]; then
     # Package sources
+    rm -rf Out "$PKGNAME-src".*
+    sed -i -r "/define *KOS_VERSION_MAJOR/s/[0-9]+/$VERSION_MAJOR/" inc/kos_version.h
+    sed -i -r "/define *KOS_VERSION_MINOR/s/[0-9]+/$VERSION_MINOR/" inc/kos_version.h
+    sed -i -r "/define *KOS_VERSION_REVISION/s/[0-9]+/$VERSION_REVISION/" inc/kos_version.h
     zip -r -9 -q "$PKGNAME-src.zip" *
     tar czf "$PKGNAME-src.tar.gz" --exclude="$PKGNAME-src.zip" *
     shasum -a 256 "$PKGNAME-src.zip" | tee "$PKGNAME-src.zip.sha"
     shasum -a 256 "$PKGNAME-src.tar.gz" | tee "$PKGNAME-src.tar.gz.sha"
-    mkdir -p "$BUILDDIR"
 
     create_pkg_dir
 
