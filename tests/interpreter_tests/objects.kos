@@ -1198,6 +1198,15 @@ do {
 }
 
 do {
+    assert base.count_elements(base.object(void)) == 0
+    assert base.count_elements(base.object({})) == 0
+    assert base.count_elements(base.object("")) == 0
+    assert base.count_elements(base.object([])) == 0
+
+    expect_fail(() => base.object(0))
+    expect_fail(() => base.object([""]))
+    expect_fail(() => base.object([0,""]))
+
     expect_fail(() => base.object([void]))
     expect_fail(() => base.object([{}]))
     expect_fail(() => base.object([""]))

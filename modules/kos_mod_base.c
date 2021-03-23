@@ -51,6 +51,7 @@ KOS_DECLARE_STATIC_CONST_STRING(str_err_not_function,             "object is not
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_generator,            "object is not a generator");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_string,               "object is not a string");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_thread,               "object is not a thread");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_object_arg_not_iterable,  "argument passed to object class is not iterable");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_too_many_repeats,         "invalid string repeat count");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_unsup_operand_types,      "unsupported operand types");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_use_async,                "use async to launch threads");
@@ -946,7 +947,8 @@ static KOS_OBJ_ID object_constructor(KOS_CONTEXT ctx,
             else {
                 int64_t idx;
 
-                assert(GET_OBJ_TYPE(elem.o) <= OBJ_INTEGER);
+                if (GET_OBJ_TYPE(elem.o) > OBJ_INTEGER)
+                    RAISE_EXCEPTION_STR(str_err_object_arg_not_iterable);
 
                 TRY(KOS_get_integer(ctx, elem.o, &idx));
 
