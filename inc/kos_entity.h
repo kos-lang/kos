@@ -30,9 +30,7 @@ typedef enum KOS_ENTITY_TYPE_E {
     OBJ_LAST_TYPE      = OBJ_CLASS, /* Last type exposed to the language */
 
     /* Internal types */
-
     OBJ_OPAQUE         = 22, /* Contains binary user data, contents not recognized by GC */
-
     OBJ_HUGE_TRACKER   = 24,
     OBJ_OBJECT_STORAGE = 26,
     OBJ_ARRAY_STORAGE  = 28,
@@ -43,7 +41,7 @@ typedef enum KOS_ENTITY_TYPE_E {
     OBJ_STACK          = 38,
 
     /* Just the last valid object id, not a real object type */
-    OBJ_LAST           = OBJ_STACK
+    OBJ_LAST_POSSIBLE  = OBJ_STACK
 } KOS_TYPE;
 
 struct KOS_ENTITY_PLACEHOLDER;
@@ -61,7 +59,11 @@ struct KOS_ENTITY_PLACEHOLDER;
  * If bit 0 is a '1', the rest of KOS_OBJ_ID is treated as the pointer without
  * that bit set.  The actual pointer to the object is KOS_OBJ_ID minus 1.
  *
- * Heap objects are tracked by the garbage collector.
+ * Heap objects are tracked by the garbage collector.  "Heap" in this context means
+ * the VM's heap, managed by the garbage collector.
+ *
+ * Off-heap objects are allocated using malloc(), but they have a tracker object
+ * (OBJ_HUGE_TRACKER) associated with them, which is allocated on the heap.
  */
 typedef struct KOS_ENTITY_PLACEHOLDER *KOS_OBJ_ID;
 
@@ -72,7 +74,7 @@ typedef struct KOS_OBJ_HEADER_S {
      * encodes size of the allocation and object type.
      *
      * Bits 0..7 contain object type, with bit 0 always being set to 0.
-     * Bits 8..n contain allocation size in bytes.
+     * Bits 8..n contain allocation size, in bytes.
      *
      * When objects are being moved to a new page during garbage collections,
      * size_and_type contains an object identifier of the new, target object that
@@ -80,6 +82,9 @@ typedef struct KOS_OBJ_HEADER_S {
      *
      * For off-heap objects, the size field stores the offset from the pointer
      * to the allocation to the object itself (where the object header is).
+     * It means that the pointer to the actual allocation is obtained by
+     * subtracting the value of the size field from the KOS_OBJ_ID - 1.
+     *
      * For static objects (e.g. KOS_VOID, KOS_TRUE), the size field is zero.
      */
     KOS_OBJ_ID size_and_type;
@@ -319,13 +324,20 @@ struct KOS_CONST_ARRAY_S {
 typedef void (*KOS_FINALIZE)(KOS_CONTEXT ctx,
                              void       *priv);
 
+typedef const struct KOS_PRIVATE_CLASS_S *KOS_PRIVATE_CLASS;
+
 typedef struct KOS_OBJECT_S {
     KOS_OBJ_HEADER         header;
     KOS_ATOMIC(KOS_OBJ_ID) props;
     KOS_OBJ_ID             prototype;
-    KOS_ATOMIC(void *)     priv;
-    KOS_FINALIZE           finalize;
 } KOS_OBJECT;
+
+typedef struct KOS_OBJECT_WITH_PRIVATE_S {
+    KOS_OBJECT         object;
+    KOS_PRIVATE_CLASS  priv_class;
+    KOS_ATOMIC(void *) priv;
+    KOS_FINALIZE       finalize;
+} KOS_OBJECT_WITH_PRIVATE;
 
 enum KOS_BUF_FLAGS_E {
     KOS_READ_ONLY = 1

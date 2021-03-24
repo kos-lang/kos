@@ -40,6 +40,8 @@ static void finalize(KOS_CONTEXT ctx,
     }
 }
 
+KOS_DECLARE_PRIVATE_CLASS(random_priv_class);
+
 /* @item random random()
  *
  *     random([seed])
@@ -94,10 +96,8 @@ static KOS_OBJ_ID kos_random(KOS_CONTEXT ctx,
 
     args.o = args_obj;
 
-    ret.o = KOS_new_object_with_prototype(ctx, this_obj);
+    ret.o = KOS_new_object_with_private(ctx, this_obj, &random_priv_class, finalize);
     TRY_OBJID(ret.o);
-
-    OBJPTR(OBJECT, ret.o)->finalize = finalize;
 
     seed.o = KOS_array_read(ctx, args.o, 0);
     TRY_OBJID(seed.o);
@@ -149,10 +149,7 @@ static int get_rng(KOS_CONTEXT         ctx,
 
     assert( ! IS_BAD_PTR(this_obj));
 
-    if (GET_OBJ_TYPE(this_obj) != OBJ_OBJECT)
-        RAISE_EXCEPTION(str_err_not_random);
-
-    rng_ptr = (KOS_RNG_CONTAINER *)KOS_object_get_private_ptr(this_obj);
+    rng_ptr = (KOS_RNG_CONTAINER *)KOS_object_get_private(this_obj, &random_priv_class);
     if ( ! rng_ptr)
         RAISE_EXCEPTION(str_err_not_random);
 

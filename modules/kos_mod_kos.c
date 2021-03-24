@@ -56,6 +56,8 @@ static void finalize(KOS_CONTEXT ctx,
         KOS_free(priv);
 }
 
+KOS_DECLARE_PRIVATE_CLASS(lexer_priv_class);
+
 KOS_DECLARE_STATIC_CONST_STRING(str_input, "input");
 
 static const KOS_ARG_DESC raw_lexer_args[2] = {
@@ -94,7 +96,7 @@ static KOS_OBJ_ID raw_lexer(KOS_CONTEXT ctx,
 
     /* Instantiate the lexer on first invocation */
     if (GET_OBJ_TYPE(lexer.o) != OBJ_OBJECT ||
-        ! KOS_object_get_private_ptr(lexer.o)) {
+        ! KOS_object_get_private(lexer.o, &lexer_priv_class)) {
 
         uint32_t buf_size;
 
@@ -107,7 +109,7 @@ static KOS_OBJ_ID raw_lexer(KOS_CONTEXT ctx,
 
         buf_size = KOS_get_buffer_size(init.o);
 
-        lexer.o = KOS_new_object(ctx);
+        lexer.o = KOS_new_object_with_private(ctx, KOS_VOID, &lexer_priv_class, finalize);
         TRY_OBJID(lexer.o);
 
         kos_lexer = (KOS_LEXER_OBJ *)KOS_malloc(sizeof(KOS_LEXER_OBJ) + buf_size - 1);
@@ -115,8 +117,6 @@ static KOS_OBJ_ID raw_lexer(KOS_CONTEXT ctx,
             KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
             goto cleanup;
         }
-
-        OBJPTR(OBJECT, lexer.o)->finalize = finalize;
 
         KOS_object_set_private_ptr(lexer.o, kos_lexer);
 
@@ -168,7 +168,7 @@ static KOS_OBJ_ID raw_lexer(KOS_CONTEXT ctx,
     else {
         assert(GET_OBJ_TYPE(lexer.o) == OBJ_OBJECT);
 
-        kos_lexer = (KOS_LEXER_OBJ *)KOS_object_get_private_ptr(lexer.o);
+        kos_lexer = (KOS_LEXER_OBJ *)KOS_object_get_private(lexer.o, &lexer_priv_class);
 
         if (KOS_get_array_size(args.o) > 0) {
 

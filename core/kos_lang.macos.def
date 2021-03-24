@@ -90,11 +90,14 @@ _KOS_new_int
 _KOS_new_iterator
 _KOS_new_iterator_copy
 _KOS_new_object
+_KOS_new_object_with_private
 _KOS_new_object_with_prototype
 _KOS_new_string
 _KOS_new_string_esc
 _KOS_new_string_from_buffer
 _KOS_new_string_from_codes
+_KOS_object_get_private
+_KOS_object_swap_private
 _KOS_object_to_string
 _KOS_object_to_string_or_cstr_vec
 _KOS_print_exception

@@ -40,12 +40,11 @@
 #endif
 
 KOS_DECLARE_STATIC_CONST_STRING(str_err_bad_flags,                  "incorrect file open flags");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_file_not_open,              "file not open");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_file_not_open,              "file not open or not a file object");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_buffer_size,        "buffer size out of range");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_io_module_priv_data_failed, "failed to get private data from module io");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_buffer,                 "argument to file.read_some is not a buffer");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_buffer_or_str,          "argument to file.write is neither a buffer nor a string");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_not_file,                   "object is not a file");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_too_many_to_read,           "requested read size exceeds buffer size limit");
 KOS_DECLARE_STATIC_CONST_STRING(str_position,                       "position");
 KOS_DECLARE_STATIC_CONST_STRING(str_read,                           "read");
@@ -78,6 +77,8 @@ static void finalize(KOS_CONTEXT ctx,
         fclose((FILE *)priv);
 }
 
+KOS_DECLARE_PRIVATE_CLASS(file_priv_class);
+
 enum CLOSE_FLAG {
     NO_CLOSE,
     AUTO_CLOSE
@@ -98,11 +99,8 @@ static KOS_OBJ_ID make_file_object(KOS_CONTEXT     ctx,
     obj_id = KOS_array_read(ctx, obj_id, 0);
     TRY_OBJID(obj_id);
 
-    obj_id = KOS_new_object_with_prototype(ctx, obj_id);
+    obj_id = KOS_new_object_with_private(ctx, obj_id, &file_priv_class, auto_close ? finalize : KOS_NULL);
     TRY_OBJID(obj_id);
-
-    if (auto_close)
-        OBJPTR(OBJECT, obj_id)->finalize = finalize;
 
     KOS_object_set_private_ptr(obj_id, file);
 
@@ -209,7 +207,7 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
-    ret.o = KOS_new_object_with_prototype(ctx, this_.o);
+    ret.o = KOS_new_object_with_private(ctx, this_.o, &file_priv_class, finalize);
     TRY_OBJID(ret.o);
 
     TRY(KOS_set_builtin_dynamic_property(ctx,
@@ -218,8 +216,6 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
                                          KOS_get_module(ctx),
                                          get_file_pos,
                                          set_file_pos));
-
-    OBJPTR(OBJECT, ret.o)->finalize = finalize;
 
     KOS_object_set_private_ptr(ret.o, file);
     file = KOS_NULL;
@@ -403,101 +399,31 @@ cleanup:
     return error ? KOS_BADPTR : ret.o;
 }
 
-enum EXPECTED_FILE_STATE_E {
-    CAN_BE_CLOSED,
-    MUST_BE_OPEN
-};
-
-static int verify_file(KOS_CONTEXT ctx,
-                       KOS_OBJ_ID  file_obj,
-                       KOS_OBJ_ID  io_module_obj)
-{
-    KOS_LOCAL  file_;
-    KOS_OBJ_ID proto_obj;
-    int        error = KOS_SUCCESS;
-
-    assert( ! IS_BAD_PTR(file_obj));
-    assert( ! IS_BAD_PTR(io_module_obj));
-
-    KOS_init_local_with(ctx, &file_, file_obj);
-
-    if (GET_OBJ_TYPE(file_.o) != OBJ_OBJECT)
-        RAISE_EXCEPTION_STR(str_err_not_file);
-
-    proto_obj = KOS_atomic_read_relaxed_obj(OBJPTR(MODULE, io_module_obj)->priv);
-    if (IS_BAD_PTR(proto_obj) || kos_seq_fail())
-        RAISE_EXCEPTION_STR(str_err_io_module_priv_data_failed);
-
-    proto_obj = KOS_array_read(ctx, proto_obj, 0);
-    TRY_OBJID(proto_obj);
-
-    if ( ! KOS_has_prototype(ctx, file_.o, proto_obj))
-        RAISE_EXCEPTION_STR(str_err_not_file);
-
-cleanup:
-    KOS_destroy_top_local(ctx, &file_);
-
-    return error;
-}
-
 static int get_file_object(KOS_CONTEXT                ctx,
                            KOS_OBJ_ID                 file_obj,
-                           FILE                     **file,
-                           enum EXPECTED_FILE_STATE_E must_be_open)
+                           FILE                     **file)
 {
-    KOS_LOCAL  file_;
-    KOS_OBJ_ID io_module_obj;
-    int        error = KOS_SUCCESS;
+    *file = (FILE *)KOS_object_get_private(file_obj, &file_priv_class);
 
-    KOS_init_local_with(ctx, &file_, file_obj);
+    if ( ! *file) {
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_file_not_open));
+        return KOS_ERROR_EXCEPTION;
+    }
 
-    io_module_obj = KOS_get_module(ctx);
-    assert( ! IS_BAD_PTR(io_module_obj));
-
-    TRY(verify_file(ctx, file_.o, io_module_obj));
-
-    *file = (FILE *)KOS_object_get_private_ptr(file_.o);
-
-    if (must_be_open && ! *file)
-        RAISE_EXCEPTION_STR(str_err_file_not_open);
-
-cleanup:
-    KOS_destroy_top_local(ctx, &file_);
-
-    return error;
+    return KOS_SUCCESS;
 }
 
 KOS_FILE_HANDLE KOS_io_get_file(KOS_CONTEXT ctx,
                                 KOS_OBJ_ID  file_obj)
 {
-    KOS_LOCAL  file_;
-    KOS_OBJ_ID io_module_obj;
-    FILE      *file  = KOS_NULL;
-    int        error = KOS_SUCCESS;
+    FILE *file = KOS_NULL;
 
     assert( ! IS_BAD_PTR(file_obj));
 
-    KOS_init_local_with(ctx, &file_, file_obj);
-
-    io_module_obj = KOS_load_module(ctx, "io", 2);
-    TRY_OBJID(io_module_obj);
-
-    TRY(verify_file(ctx, file_.o, io_module_obj));
-
-    file = (FILE *)KOS_object_get_private_ptr(file_.o);
+    file = (FILE *)KOS_object_get_private(file_obj, &file_priv_class);
 
     if ( ! file)
-        RAISE_EXCEPTION_STR(str_err_file_not_open);
-
-cleanup:
-    KOS_destroy_top_local(ctx, &file_);
-
-    if (file) {
-        assert( ! KOS_is_exception_pending(ctx));
-    }
-    else {
-        assert(KOS_is_exception_pending(ctx));
-    }
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_file_not_open));
 
 #ifdef _WIN32
     if (file) {
@@ -526,13 +452,17 @@ static KOS_OBJ_ID kos_close(KOS_CONTEXT ctx,
                             KOS_OBJ_ID  args_obj)
 {
     FILE *file  = KOS_NULL;
-    int   error = get_file_object(ctx, this_obj, &file, CAN_BE_CLOSED);
+    int   error = KOS_SUCCESS;
 
-    if ( ! error && file) {
+    if (GET_OBJ_TYPE(this_obj) != OBJ_OBJECT)
+        RAISE_EXCEPTION_STR(str_err_file_not_open);
+
+    file = (FILE *)KOS_object_swap_private(this_obj, &file_priv_class, KOS_NULL);
+
+    if (file)
         fclose(file);
-        KOS_object_set_private_ptr(this_obj, (void *)KOS_NULL);
-    }
 
+cleanup:
     return error ? KOS_BADPTR : KOS_VOID;
 }
 
@@ -555,13 +485,13 @@ static KOS_OBJ_ID print(KOS_CONTEXT ctx,
                         KOS_OBJ_ID  this_obj,
                         KOS_OBJ_ID  args_obj)
 {
-    FILE      *file  = KOS_NULL;
-    int        error = get_file_object(ctx, this_obj, &file, CAN_BE_CLOSED);
+    FILE      *file  = (FILE *)KOS_object_get_private(this_obj, &file_priv_class);
+    int        error = KOS_SUCCESS;
     KOS_VECTOR cstr;
 
     KOS_vector_init(&cstr);
 
-    if ( ! error && file) {
+    if (file) {
 
         KOS_LOCAL this_;
 
@@ -606,14 +536,12 @@ static KOS_OBJ_ID flush(KOS_CONTEXT ctx,
                         KOS_OBJ_ID  args_obj)
 {
     KOS_LOCAL this_;
-    FILE     *file  = KOS_NULL;
-    int       error;
+    FILE     *file  = (FILE *)KOS_object_get_private(this_obj, &file_priv_class);
+    int       error = KOS_SUCCESS;
 
     KOS_init_local_with(ctx, &this_, this_obj);
 
-    error = get_file_object(ctx, this_.o, &file, CAN_BE_CLOSED);
-
-    if ( ! error && file) {
+    if (file) {
         int stored_errno = 0;
 
         KOS_suspend_context(ctx);
@@ -678,7 +606,7 @@ static KOS_OBJ_ID read_line(KOS_CONTEXT ctx,
 
     KOS_vector_init(&buf);
 
-    TRY(get_file_object(ctx, this_obj, &file, MUST_BE_OPEN));
+    TRY(get_file_object(ctx, this_obj, &file));
 
     arg = KOS_array_read(ctx, args_obj, 0);
     TRY_OBJID(arg);
@@ -778,7 +706,7 @@ static KOS_OBJ_ID read_some(KOS_CONTEXT ctx,
     KOS_init_local(     ctx, &buf);
     KOS_init_local_with(ctx, &args, args_obj);
 
-    TRY(get_file_object(ctx, this_obj, &file, MUST_BE_OPEN));
+    TRY(get_file_object(ctx, this_obj, &file));
 
     arg = KOS_array_read(ctx, args.o, 0);
     TRY_OBJID(arg);
@@ -870,7 +798,7 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
     args.o  = args_obj;
     this_.o = this_obj;
 
-    TRY(get_file_object(ctx, this_.o, &file, MUST_BE_OPEN));
+    TRY(get_file_object(ctx, this_.o, &file));
 
     for (i_arg = 0; i_arg < num_args; i_arg++) {
 
@@ -970,7 +898,7 @@ static KOS_OBJ_ID get_file_eof(KOS_CONTEXT ctx,
                                KOS_OBJ_ID  args_obj)
 {
     FILE *file   = KOS_NULL;
-    int   error  = get_file_object(ctx, this_obj, &file, MUST_BE_OPEN);
+    int   error  = get_file_object(ctx, this_obj, &file);
     int   status = 0;
 
     if ( ! error)
@@ -991,7 +919,7 @@ static KOS_OBJ_ID get_file_error(KOS_CONTEXT ctx,
                                  KOS_OBJ_ID  args_obj)
 {
     FILE *file   = KOS_NULL;
-    int   error  = get_file_object(ctx, this_obj, &file, MUST_BE_OPEN);
+    int   error  = get_file_object(ctx, this_obj, &file);
     int   status = 0;
 
     if ( ! error)
@@ -1011,7 +939,7 @@ static KOS_OBJ_ID get_file_fd(KOS_CONTEXT ctx,
                               KOS_OBJ_ID  args_obj)
 {
     FILE *file   = KOS_NULL;
-    int   error  = get_file_object(ctx, this_obj, &file, MUST_BE_OPEN);
+    int   error  = get_file_object(ctx, this_obj, &file);
     int   fd     = 0;
 
 #ifdef _WIN32
@@ -1081,7 +1009,7 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
                                 KOS_OBJ_ID  args_obj)
 {
     FILE     *file  = KOS_NULL;
-    int       error = get_file_object(ctx, this_obj, &file, MUST_BE_OPEN);
+    int       error = get_file_object(ctx, this_obj, &file);
     KOS_LOCAL info;
     KOS_LOCAL aux;
 
@@ -1253,7 +1181,7 @@ static KOS_OBJ_ID get_file_size(KOS_CONTEXT ctx,
     FILE   *file  = KOS_NULL;
     int64_t size  = 0;
 
-    TRY(get_file_object(ctx, this_obj, &file, MUST_BE_OPEN));
+    TRY(get_file_object(ctx, this_obj, &file));
 
 #ifdef _WIN32
     {
@@ -1327,7 +1255,7 @@ static KOS_OBJ_ID get_file_pos(KOS_CONTEXT ctx,
     int   stored_errno = 0;
     long  pos          = 0;
 
-    TRY(get_file_object(ctx, this_obj, &file, MUST_BE_OPEN));
+    TRY(get_file_object(ctx, this_obj, &file));
 
     KOS_suspend_context(ctx);
 
@@ -1384,7 +1312,7 @@ static KOS_OBJ_ID set_file_pos(KOS_CONTEXT ctx,
 
     assert(KOS_get_array_size(args_obj) >= 1);
 
-    TRY(get_file_object(ctx, this_obj, &file, MUST_BE_OPEN));
+    TRY(get_file_object(ctx, this_obj, &file));
 
     arg = KOS_array_read(ctx, args_obj, 0);
 

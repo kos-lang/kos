@@ -5,6 +5,7 @@
 #include "../core/kos_heap.h"
 #include "../inc/kos_array.h"
 #include "../inc/kos_buffer.h"
+#include "../inc/kos_constants.h"
 #include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_module.h"
@@ -476,7 +477,7 @@ static int verify_empty_object(KOS_OBJ_ID obj_id)
     TEST(GET_OBJ_TYPE(obj_id) == OBJ_OBJECT);
     TEST(IS_BAD_PTR(KOS_atomic_read_relaxed_obj(OBJPTR(OBJECT, obj_id)->props)));
     TEST(IS_BAD_PTR(OBJPTR(OBJECT, obj_id)->prototype));
-    TEST(KOS_object_get_private_ptr(obj_id) == 0);
+    TEST(kos_get_object_size(OBJPTR(OBJECT, obj_id)->header) < sizeof(KOS_OBJECT_WITH_PRIVATE));
     return 0;
 }
 
@@ -499,6 +500,13 @@ static KOS_OBJ_ID alloc_empty_object(KOS_CONTEXT  ctx,
     return obj_id;
 }
 
+static void finalize_47(KOS_CONTEXT ctx, void *priv)
+{
+    *(int *)priv = 47;
+}
+
+KOS_DECLARE_PRIVATE_CLASS(priv_class_47);
+
 static int verify_object(KOS_OBJ_ID obj_id)
 {
     KOS_OBJ_ID v;
@@ -506,7 +514,7 @@ static int verify_object(KOS_OBJ_ID obj_id)
 
     TEST(GET_OBJ_TYPE(obj_id) == OBJ_OBJECT);
 
-    TEST((intptr_t)KOS_object_get_private_ptr(obj_id) == 44);
+    TEST((intptr_t)KOS_object_get_private(obj_id, &priv_class_47) == 0);
 
     v = OBJPTR(OBJECT, obj_id)->prototype;
     TEST( ! IS_BAD_PTR(v));
@@ -556,7 +564,7 @@ static KOS_OBJ_ID alloc_object(KOS_CONTEXT  ctx,
     uint32_t    i;
     KOS_OBJ_ID  obj_id[5];
     OBJECT_DESC desc[5] = {
-        { OBJ_OBJECT,         (uint32_t)sizeof(KOS_OBJECT)  },
+        { OBJ_OBJECT,         (uint32_t)sizeof(KOS_OBJECT) },
         { OBJ_OBJECT_STORAGE, (uint32_t)(sizeof(KOS_OBJECT_STORAGE) + sizeof(KOS_PITEM) * 3) },
         { OBJ_INTEGER,        (uint32_t)sizeof(KOS_INTEGER) },
         { OBJ_INTEGER,        (uint32_t)sizeof(KOS_INTEGER) },
@@ -568,7 +576,6 @@ static KOS_OBJ_ID alloc_object(KOS_CONTEXT  ctx,
 
     kos_init_object(OBJPTR(OBJECT, obj_id[0]), obj_id[2]);
     KOS_atomic_write_relaxed_ptr(OBJPTR(OBJECT, obj_id[0])->props, obj_id[1]);
-    KOS_object_set_private_ptr(obj_id[0], (void *)(intptr_t)44);
 
     KOS_atomic_write_relaxed_u32(OBJPTR(OBJECT_STORAGE, obj_id[1])->capacity,       4);
     KOS_atomic_write_relaxed_u32(OBJPTR(OBJECT_STORAGE, obj_id[1])->num_slots_used, 1);
@@ -605,17 +612,12 @@ static KOS_OBJ_ID alloc_object(KOS_CONTEXT  ctx,
     return obj_id[0];
 }
 
-static void finalize_47(KOS_CONTEXT ctx, void *priv)
-{
-    *(int *)priv = 47;
-}
-
 static int verify_finalize(KOS_OBJ_ID obj_id)
 {
     TEST(GET_OBJ_TYPE(obj_id) == OBJ_OBJECT);
     TEST(IS_BAD_PTR(KOS_atomic_read_relaxed_obj(OBJPTR(OBJECT, obj_id)->props)));
     TEST(IS_BAD_PTR(OBJPTR(OBJECT, obj_id)->prototype));
-    TEST(KOS_object_get_private_ptr(obj_id) != 0);
+    TEST(KOS_object_get_private(obj_id, &priv_class_47) != 0);
     return 0;
 }
 
@@ -626,14 +628,15 @@ static KOS_OBJ_ID alloc_finalize(KOS_CONTEXT  ctx,
                                  uint32_t    *total_size,
                                  VERIFY_FUNC *verify)
 {
-    KOS_OBJ_ID obj_id = alloc_page_with_object(ctx, OBJ_OBJECT, sizeof(KOS_OBJECT));
+    KOS_OBJ_ID obj_id = alloc_page_with_object(ctx, OBJ_OBJECT, sizeof(KOS_OBJECT_WITH_PRIVATE));
 
     if (IS_BAD_PTR(obj_id))
         return KOS_BADPTR;
 
     kos_init_object(OBJPTR(OBJECT, obj_id), KOS_BADPTR);
     KOS_object_set_private_ptr(obj_id, &private_test);
-    OBJPTR(OBJECT, obj_id)->finalize = finalize_47;
+    ((KOS_OBJECT_WITH_PRIVATE *)OBJPTR(OBJECT, obj_id))->finalize   = finalize_47;
+    ((KOS_OBJECT_WITH_PRIVATE *)OBJPTR(OBJECT, obj_id))->priv_class = &priv_class_47;
 
     *num_objs   = 1;
     *total_size = get_obj_size(obj_id);
@@ -1180,7 +1183,9 @@ static int test_object(ALLOC_FUNC    alloc_object_func,
 
     size = get_obj_size(obj.o);
 
-    if (GET_OBJ_TYPE(obj.o) == OBJ_OBJECT && OBJPTR(OBJECT, obj.o)->finalize == finalize_47)
+    if ((GET_OBJ_TYPE(obj.o) == OBJ_OBJECT) &&
+        ((size_t)size >= sizeof(KOS_OBJECT_WITH_PRIVATE)) &&
+        (((KOS_OBJECT_WITH_PRIVATE *)OBJPTR(OBJECT, obj.o))->finalize == finalize_47))
         f47 = 1;
 
     TEST(!f47 || private_test == 1);
@@ -1563,9 +1568,8 @@ int main(void)
 
         TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
 
-        KOS_init_local_with(ctx, &obj, KOS_new_object(ctx));
+        KOS_init_local_with(ctx, &obj, KOS_new_object_with_private(ctx, KOS_VOID, &priv_class_47, finalize_47));
         KOS_object_set_private_ptr(obj.o, &finalized);
-        OBJPTR(OBJECT, obj.o)->finalize = finalize_47;
 
         TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
@@ -1616,12 +1620,11 @@ int main(void)
         for (i = 0; i < NELEMS(local); i++) {
             KOS_init_ulocal(ctx, &local[i]);
 
-            local[i].o = KOS_new_object(ctx);
+            local[i].o = KOS_new_object_with_private(ctx, KOS_VOID, &priv_class_47, finalize_47);
             TEST( ! IS_BAD_PTR(local[i].o));
 
             finalized[i] = 0;
             KOS_object_set_private_ptr(local[i].o, &finalized[i]);
-            OBJPTR(OBJECT, local[i].o)->finalize = finalize_47;
         }
 
         TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
@@ -1659,12 +1662,11 @@ int main(void)
         for (i = 0; i < NELEMS(local); i++) {
             KOS_init_local(ctx, &local[i]);
 
-            local[i].o = KOS_new_object(ctx);
+            local[i].o = KOS_new_object_with_private(ctx, KOS_VOID, &priv_class_47, finalize_47);
             TEST( ! IS_BAD_PTR(local[i].o));
 
             finalized[i] = 0;
             KOS_object_set_private_ptr(local[i].o, &finalized[i]);
-            OBJPTR(OBJECT, local[i].o)->finalize = finalize_47;
         }
 
         TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
@@ -1691,12 +1693,11 @@ int main(void)
         KOS_init_locals(ctx, 3, &local[0], &local[1], &local[2]);
 
         for (i = 0; i < NELEMS(local); i++) {
-            local[i].o = KOS_new_object(ctx);
+            local[i].o = KOS_new_object_with_private(ctx, KOS_VOID, &priv_class_47, finalize_47);
             TEST( ! IS_BAD_PTR(local[i].o));
 
             finalized[i] = 0;
             KOS_object_set_private_ptr(local[i].o, &finalized[i]);
-            OBJPTR(OBJECT, local[i].o)->finalize = finalize_47;
         }
 
         TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
@@ -1745,12 +1746,11 @@ int main(void)
             for (i = 0; i < NELEMS(local); i++) {
                 KOS_init_ulocal(ctx, &local[i]);
 
-                local[i].o = KOS_new_object(ctx);
+                local[i].o = KOS_new_object_with_private(ctx, KOS_VOID, &priv_class_47, finalize_47);
                 TEST( ! IS_BAD_PTR(local[i].o));
 
                 finalized[i] = 0;
                 KOS_object_set_private_ptr(local[i].o, &finalized[i]);
-                OBJPTR(OBJECT, local[i].o)->finalize = finalize_47;
             }
 
             TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
@@ -1795,11 +1795,10 @@ int main(void)
 
         KOS_init_local(ctx, &obj);
 
-        obj.o = KOS_new_object(ctx);
+        obj.o = KOS_new_object_with_private(ctx, KOS_VOID, &priv_class_47, finalize_47);
         TEST( ! IS_BAD_PTR(obj.o));
 
         KOS_object_set_private_ptr(obj.o, &finalized);
-        OBJPTR(OBJECT, obj.o)->finalize = finalize_47;
 
         TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
 

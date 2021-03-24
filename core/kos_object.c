@@ -90,6 +90,33 @@ KOS_OBJ_ID KOS_new_object_with_prototype(KOS_CONTEXT ctx,
     return OBJID(OBJECT, obj);
 }
 
+KOS_OBJ_ID KOS_new_object_with_private(KOS_CONTEXT       ctx,
+                                       KOS_OBJ_ID        prototype_obj,
+                                       KOS_PRIVATE_CLASS priv_class,
+                                       KOS_FINALIZE      finalize)
+{
+    KOS_OBJECT *obj;
+    KOS_LOCAL   prototype;
+
+    KOS_init_local_with(ctx, &prototype, prototype_obj);
+
+    obj = (KOS_OBJECT *)kos_alloc_object(ctx, KOS_ALLOC_MOVABLE, OBJ_OBJECT, sizeof(KOS_OBJECT_WITH_PRIVATE));
+
+    if (obj) {
+        assert(kos_get_object_type(obj->header) == OBJ_OBJECT);
+        kos_init_object(obj, prototype.o);
+
+        ((KOS_OBJECT_WITH_PRIVATE *)obj)->priv_class = priv_class;
+        ((KOS_OBJECT_WITH_PRIVATE *)obj)->finalize   = finalize;
+
+        KOS_atomic_write_relaxed_ptr(((KOS_OBJECT_WITH_PRIVATE *)obj)->priv, (void *)KOS_NULL);
+    }
+
+    KOS_destroy_top_local(ctx, &prototype);
+
+    return OBJID(OBJECT, obj);
+}
+
 static KOS_ATOMIC(KOS_OBJ_ID) *get_properties(KOS_OBJ_ID obj_id)
 {
     KOS_ATOMIC(KOS_OBJ_ID) *props;
@@ -138,9 +165,6 @@ static KOS_OBJ_ID alloc_buffer(KOS_CONTEXT ctx, unsigned capacity)
 void kos_init_object(KOS_OBJECT *obj, KOS_OBJ_ID prototype)
 {
     obj->prototype = prototype;
-    obj->finalize  = KOS_NULL;
-
-    KOS_atomic_write_relaxed_ptr(obj->priv,  (void *)KOS_NULL);
     KOS_atomic_write_relaxed_ptr(obj->props, KOS_BADPTR);
 }
 
@@ -930,6 +954,42 @@ int KOS_has_prototype(KOS_CONTEXT ctx,
     } while ( ! IS_BAD_PTR(obj_id));
 
     return 0;
+}
+
+void *KOS_object_get_private(KOS_OBJ_ID obj, KOS_PRIVATE_CLASS priv_class)
+{
+    KOS_OBJECT_WITH_PRIVATE *obj_ptr;
+
+    if (GET_OBJ_TYPE(obj) != OBJ_OBJECT)
+        return KOS_NULL;
+
+    obj_ptr = (KOS_OBJECT_WITH_PRIVATE *)OBJPTR(OBJECT, obj);
+
+    if (kos_get_object_size(obj_ptr->object.header) < sizeof(KOS_OBJECT_WITH_PRIVATE))
+        return KOS_NULL;
+
+    if (obj_ptr->priv_class != priv_class)
+        return KOS_NULL;
+
+    return KOS_atomic_read_relaxed_ptr(obj_ptr->priv);
+}
+
+void* KOS_object_swap_private(KOS_OBJ_ID obj, KOS_PRIVATE_CLASS priv_class, void *new_priv)
+{
+    KOS_OBJECT_WITH_PRIVATE *obj_ptr;
+
+    if (GET_OBJ_TYPE(obj) != OBJ_OBJECT)
+        return new_priv;
+
+    obj_ptr = (KOS_OBJECT_WITH_PRIVATE *)OBJPTR(OBJECT, obj);
+
+    if (kos_get_object_size(obj_ptr->object.header) < sizeof(KOS_OBJECT_WITH_PRIVATE))
+        return new_priv;
+
+    if (obj_ptr->priv_class != priv_class)
+        return new_priv;
+
+    return KOS_atomic_swap_ptr(obj_ptr->priv, new_priv);
 }
 
 KOS_OBJ_ID kos_new_object_walk(KOS_CONTEXT      ctx,

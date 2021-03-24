@@ -1870,6 +1870,8 @@ static void thread_finalize(KOS_CONTEXT ctx,
         kos_thread_disown((KOS_THREAD *)priv);
 }
 
+KOS_DECLARE_PRIVATE_CLASS(thread_priv_class);
+
 /* @item base function.prototype.async()
  *
  *     function.prototype.async(this, args)
@@ -1912,8 +1914,10 @@ static KOS_OBJ_ID async(KOS_CONTEXT ctx,
     func.o     = this_obj;
     arg_args.o = args_obj;
 
-    thread_obj.o = KOS_new_object_with_prototype(ctx,
-            ctx->inst->prototypes.thread_proto);
+    thread_obj.o = KOS_new_object_with_private(ctx,
+                                               ctx->inst->prototypes.thread_proto,
+                                               &thread_priv_class,
+                                               thread_finalize);
     TRY_OBJID(thread_obj.o);
 
     KOS_object_set_private_ptr(thread_obj.o, (void *)KOS_NULL);
@@ -1935,8 +1939,6 @@ static KOS_OBJ_ID async(KOS_CONTEXT ctx,
     kos_thread_add_ref(thread);
 
     KOS_object_set_private_ptr(thread_obj.o, thread);
-
-    OBJPTR(OBJECT, thread_obj.o)->finalize = thread_finalize;
 
 cleanup:
     thread_obj.o = KOS_destroy_top_locals(ctx, &func, &thread_obj);
@@ -1966,28 +1968,22 @@ static KOS_OBJ_ID wait(KOS_CONTEXT ctx,
                        KOS_OBJ_ID  this_obj,
                        KOS_OBJ_ID  args_obj)
 {
-    KOS_THREAD         *thread;
-    KOS_INSTANCE *const inst  = ctx->inst;
-    KOS_OBJ_ID          retval;
+    KOS_THREAD *thread;
+    KOS_OBJ_ID  retval;
 
     if (GET_OBJ_TYPE(this_obj) != OBJ_OBJECT) {
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_thread));
         return KOS_BADPTR;
     }
 
-    if ( ! KOS_has_prototype(ctx, this_obj, inst->prototypes.thread_proto)) {
-        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_thread));
-        return KOS_BADPTR;
-    }
-
-    thread = (KOS_THREAD *)KOS_object_get_private_ptr(this_obj);
+    thread = (KOS_THREAD *)KOS_object_get_private(this_obj, &thread_priv_class);
 
     if (thread && kos_is_current_thread(thread)) {
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_join_self));
         return KOS_BADPTR;
     }
 
-    thread = (KOS_THREAD *)KOS_object_swap_private_ptr(this_obj, (void *)KOS_NULL);
+    thread = (KOS_THREAD *)KOS_object_swap_private(this_obj, &thread_priv_class, (void *)KOS_NULL);
 
     if ( ! thread) {
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_already_joined));

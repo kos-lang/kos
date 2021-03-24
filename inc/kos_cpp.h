@@ -1260,14 +1260,6 @@ inline object context::new_object()
     return object(*this, check_error(KOS_new_object(ctx_)));
 }
 
-template<typename T>
-object context::new_object(T* priv)
-{
-    const object obj = new_object();
-    KOS_object_set_private_ptr(obj, priv);
-    return obj;
-}
-
 inline array context::new_array(unsigned size)
 {
     return array(*this, check_error(KOS_new_array(ctx_, size)));
@@ -1294,10 +1286,29 @@ typename remove_reference<T>::type extract_arg(context ctx, array& args_obj)
 }
 
 template<typename T>
-T* get_priv(KOS_OBJ_ID obj)
+class private_class {
+    public:
+        static T* get(KOS_OBJ_ID obj) {
+            assert(GET_OBJ_TYPE(obj) == OBJ_OBJECT);
+            return static_cast<T*>(KOS_object_get_private(obj, &priv_class));
+        }
+
+    private:
+        friend class context;
+        static const struct KOS_PRIVATE_CLASS_S priv_class;
+};
+
+template<typename T>
+const struct KOS_PRIVATE_CLASS_S private_class<T>::priv_class = { };
+
+template<typename T>
+object context::new_object(T* priv)
 {
-    assert(GET_OBJ_TYPE(obj) == OBJ_OBJECT);
-    return static_cast<T*>(KOS_object_get_private_ptr(obj));
+    // TODO add finalize and prototype
+    const object obj = object(*this, check_error(
+                KOS_new_object_with_private(ctx_, KOS_VOID, &private_class<T>::priv_class, KOS_NULL)));
+    KOS_object_set_private_ptr(obj, priv);
+    return obj;
 }
 
 #ifdef KOS_CPP11
@@ -1339,7 +1350,7 @@ template<typename T, typename Ret, typename... Args, int... indices>
 KOS_OBJ_ID invoke_internal(context ctx, Ret (T::*fun)(Args...), KOS_OBJ_ID this_obj, array args, seq<indices...>)
 {
     unused(args);
-    T* const obj = get_priv<T>(this_obj);
+    T* const obj = private_class<T>::get(this_obj);
     return to_object_ptr(ctx, (obj->*fun)(extract_arg<indices, Args>(ctx, args)...));
 }
 
@@ -1347,7 +1358,7 @@ template<typename T, typename... Args, int... indices>
 KOS_OBJ_ID invoke_internal(context ctx, void (T::*fun)(Args...), KOS_OBJ_ID this_obj, array args, seq<indices...>)
 {
     unused(args);
-    T* const obj = get_priv<T>(this_obj);
+    T* const obj = private_class<T>::get(this_obj);
     (obj->*fun)(extract_arg<indices, Args>(ctx, args)...);
     return KOS_VOID;
 }
@@ -1356,7 +1367,7 @@ template<typename T, typename Ret, typename... Args, int... indices>
 KOS_OBJ_ID invoke_internal(context ctx, Ret (T::*fun)(Args...) const, KOS_OBJ_ID this_obj, array args, seq<indices...>)
 {
     unused(args);
-    T* const obj = get_priv<T>(this_obj);
+    T* const obj = private_class<T>::get(this_obj);
     return to_object_ptr(ctx, (obj->*fun)(extract_arg<indices, Args>(ctx, args)...));
 }
 
@@ -1364,7 +1375,7 @@ template<typename T, typename... Args, int... indices>
 KOS_OBJ_ID invoke_internal(context ctx, void (T::*fun)(Args...) const, KOS_OBJ_ID this_obj, array args, seq<indices...>)
 {
     unused(args);
-    T* const obj = get_priv<T>(this_obj);
+    T* const obj = private_class<T>::get(this_obj);
     (obj->*fun)(extract_arg<indices, Args>(ctx, args)...);
     return KOS_VOID;
 }
@@ -1469,21 +1480,21 @@ KOS_OBJ_ID invoke_internal(context ctx, void (*fun)(T1, T2, T3, T4), KOS_OBJ_ID 
 template<typename T, typename Ret>
 KOS_OBJ_ID invoke_internal(context ctx, Ret (T::*fun)(), KOS_OBJ_ID this_obj, array args)
 {
-    T* const obj = get_priv<T>(this_obj);
+    T* const obj = private_class<T>::get(this_obj);
     return to_object_ptr(ctx, (obj->*fun)());
 }
 
 template<typename T, typename Ret, typename T1>
 KOS_OBJ_ID invoke_internal(context ctx, Ret (T::*fun)(T1), KOS_OBJ_ID this_obj, array args)
 {
-    T* const obj = get_priv<T>(this_obj);
+    T* const obj = private_class<T>::get(this_obj);
     return to_object_ptr(ctx, (obj->*fun)(extract_arg<0, T1>(ctx, args)));
 }
 
 template<typename T, typename Ret, typename T1, typename T2>
 KOS_OBJ_ID invoke_internal(context ctx, Ret (T::*fun)(T1, T2), KOS_OBJ_ID this_obj, array args)
 {
-    T* const obj = get_priv<T>(this_obj);
+    T* const obj = private_class<T>::get(this_obj);
     return to_object_ptr(ctx, (obj->*fun)(extract_arg<0, T1>(ctx, args),
                                           extract_arg<1, T2>(ctx, args)));
 }
@@ -1491,7 +1502,7 @@ KOS_OBJ_ID invoke_internal(context ctx, Ret (T::*fun)(T1, T2), KOS_OBJ_ID this_o
 template<typename T, typename Ret, typename T1, typename T2, typename T3>
 KOS_OBJ_ID invoke_internal(context ctx, Ret (T::*fun)(T1, T2, T3), KOS_OBJ_ID this_obj, array args)
 {
-    T* const obj = get_priv<T>(this_obj);
+    T* const obj = private_class<T>::get(this_obj);
     return to_object_ptr(ctx, (obj->*fun)(extract_arg<0, T1>(ctx, args),
                                           extract_arg<1, T2>(ctx, args),
                                           extract_arg<2, T3>(ctx, args)));
@@ -1500,7 +1511,7 @@ KOS_OBJ_ID invoke_internal(context ctx, Ret (T::*fun)(T1, T2, T3), KOS_OBJ_ID th
 template<typename T, typename Ret, typename T1, typename T2, typename T3, typename T4>
 KOS_OBJ_ID invoke_internal(context ctx, Ret (T::*fun)(T1, T2, T3, T4), KOS_OBJ_ID this_obj, array args)
 {
-    T* const obj = get_priv<T>(this_obj);
+    T* const obj = private_class<T>::get(this_obj);
     return to_object_ptr(ctx, (obj->*fun)(extract_arg<0, T1>(ctx, args),
                                           extract_arg<1, T2>(ctx, args),
                                           extract_arg<2, T3>(ctx, args),
@@ -1510,7 +1521,7 @@ KOS_OBJ_ID invoke_internal(context ctx, Ret (T::*fun)(T1, T2, T3, T4), KOS_OBJ_I
 template<typename T>
 KOS_OBJ_ID invoke_internal(context ctx, void (T::*fun)(), KOS_OBJ_ID this_obj, array args)
 {
-    T* const obj = get_priv<T>(this_obj);
+    T* const obj = private_class<T>::get(this_obj);
     (obj->*fun)();
     return KOS_VOID;
 }
@@ -1518,7 +1529,7 @@ KOS_OBJ_ID invoke_internal(context ctx, void (T::*fun)(), KOS_OBJ_ID this_obj, a
 template<typename T, typename T1>
 KOS_OBJ_ID invoke_internal(context ctx, void (T::*fun)(T1), KOS_OBJ_ID this_obj, array args)
 {
-    T* const obj = get_priv<T>(this_obj);
+    T* const obj = private_class<T>::get(this_obj);
     (obj->*fun)(extract_arg<0, T1>(ctx, args));
     return KOS_VOID;
 }
@@ -1526,7 +1537,7 @@ KOS_OBJ_ID invoke_internal(context ctx, void (T::*fun)(T1), KOS_OBJ_ID this_obj,
 template<typename T, typename T1, typename T2>
 KOS_OBJ_ID invoke_internal(context ctx, void (T::*fun)(T1, T2), KOS_OBJ_ID this_obj, array args)
 {
-    T* const obj = get_priv<T>(this_obj);
+    T* const obj = private_class<T>::get(this_obj);
     (obj->*fun)(extract_arg<0, T1>(ctx, args),
                 extract_arg<1, T2>(ctx, args));
     return KOS_VOID;
@@ -1535,7 +1546,7 @@ KOS_OBJ_ID invoke_internal(context ctx, void (T::*fun)(T1, T2), KOS_OBJ_ID this_
 template<typename T, typename T1, typename T2, typename T3>
 KOS_OBJ_ID invoke_internal(context ctx, void (T::*fun)(T1, T2, T3), KOS_OBJ_ID this_obj, array args)
 {
-    T* const obj = get_priv<T>(this_obj);
+    T* const obj = private_class<T>::get(this_obj);
     (obj->*fun)(extract_arg<0, T1>(ctx, args),
                 extract_arg<1, T2>(ctx, args),
                 extract_arg<2, T3>(ctx, args));
@@ -1545,7 +1556,7 @@ KOS_OBJ_ID invoke_internal(context ctx, void (T::*fun)(T1, T2, T3), KOS_OBJ_ID t
 template<typename T, typename T1, typename T2, typename T3, typename T4>
 KOS_OBJ_ID invoke_internal(context ctx, void (T::*fun)(T1, T2, T3, T4), KOS_OBJ_ID this_obj, array args)
 {
-    T* const obj = get_priv<T>(this_obj);
+    T* const obj = private_class<T>::get(this_obj);
     (obj->*fun)(extract_arg<0, T1>(ctx, args),
                 extract_arg<1, T2>(ctx, args),
                 extract_arg<2, T3>(ctx, args),
@@ -1556,21 +1567,21 @@ KOS_OBJ_ID invoke_internal(context ctx, void (T::*fun)(T1, T2, T3, T4), KOS_OBJ_
 template<typename T, typename Ret>
 KOS_OBJ_ID invoke_internal(context ctx, Ret (T::*fun)() const, KOS_OBJ_ID this_obj, array args)
 {
-    T* const obj = get_priv<T>(this_obj);
+    T* const obj = private_class<T>::get(this_obj);
     return to_object_ptr(ctx, (obj->*fun)());
 }
 
 template<typename T, typename Ret, typename T1>
 KOS_OBJ_ID invoke_internal(context ctx, Ret (T::*fun)(T1) const, KOS_OBJ_ID this_obj, array args)
 {
-    T* const obj = get_priv<T>(this_obj);
+    T* const obj = private_class<T>::get(this_obj);
     return to_object_ptr(ctx, (obj->*fun)(extract_arg<0, T1>(ctx, args)));
 }
 
 template<typename T, typename Ret, typename T1, typename T2>
 KOS_OBJ_ID invoke_internal(context ctx, Ret (T::*fun)(T1, T2) const, KOS_OBJ_ID this_obj, array args)
 {
-    T* const obj = get_priv<T>(this_obj);
+    T* const obj = private_class<T>::get(this_obj);
     return to_object_ptr(ctx, (obj->*fun)(extract_arg<0, T1>(ctx, args),
                                           extract_arg<1, T2>(ctx, args)));
 }
@@ -1578,7 +1589,7 @@ KOS_OBJ_ID invoke_internal(context ctx, Ret (T::*fun)(T1, T2) const, KOS_OBJ_ID 
 template<typename T, typename Ret, typename T1, typename T2, typename T3>
 KOS_OBJ_ID invoke_internal(context ctx, Ret (T::*fun)(T1, T2, T3) const, KOS_OBJ_ID this_obj, array args)
 {
-    T* const obj = get_priv<T>(this_obj);
+    T* const obj = private_class<T>::get(this_obj);
     return to_object_ptr(ctx, (obj->*fun)(extract_arg<0, T1>(ctx, args),
                                           extract_arg<1, T2>(ctx, args),
                                           extract_arg<2, T3>(ctx, args)));
@@ -1587,7 +1598,7 @@ KOS_OBJ_ID invoke_internal(context ctx, Ret (T::*fun)(T1, T2, T3) const, KOS_OBJ
 template<typename T, typename Ret, typename T1, typename T2, typename T3, typename T4>
 KOS_OBJ_ID invoke_internal(context ctx, Ret (T::*fun)(T1, T2, T3, T4) const, KOS_OBJ_ID this_obj, array args)
 {
-    T* const obj = get_priv<T>(this_obj);
+    T* const obj = private_class<T>::get(this_obj);
     return to_object_ptr(ctx, (obj->*fun)(extract_arg<0, T1>(ctx, args),
                                           extract_arg<1, T2>(ctx, args),
                                           extract_arg<2, T3>(ctx, args),
@@ -1597,7 +1608,7 @@ KOS_OBJ_ID invoke_internal(context ctx, Ret (T::*fun)(T1, T2, T3, T4) const, KOS
 template<typename T>
 KOS_OBJ_ID invoke_internal(context ctx, void (T::*fun)() const, KOS_OBJ_ID this_obj, array args)
 {
-    T* const obj = get_priv<T>(this_obj);
+    T* const obj = private_class<T>::get(this_obj);
     (obj->*fun)();
     return KOS_VOID;
 }
@@ -1605,7 +1616,7 @@ KOS_OBJ_ID invoke_internal(context ctx, void (T::*fun)() const, KOS_OBJ_ID this_
 template<typename T, typename T1>
 KOS_OBJ_ID invoke_internal(context ctx, void (T::*fun)(T1) const, KOS_OBJ_ID this_obj, array args)
 {
-    T* const obj = get_priv<T>(this_obj);
+    T* const obj = private_class<T>::get(this_obj);
     (obj->*fun)(extract_arg<0, T1>(ctx, args));
     return KOS_VOID;
 }
@@ -1613,7 +1624,7 @@ KOS_OBJ_ID invoke_internal(context ctx, void (T::*fun)(T1) const, KOS_OBJ_ID thi
 template<typename T, typename T1, typename T2>
 KOS_OBJ_ID invoke_internal(context ctx, void (T::*fun)(T1, T2) const, KOS_OBJ_ID this_obj, array args)
 {
-    T* const obj = get_priv<T>(this_obj);
+    T* const obj = private_class<T>::get(this_obj);
     (obj->*fun)(extract_arg<0, T1>(ctx, args),
                 extract_arg<1, T2>(ctx, args));
     return KOS_VOID;
@@ -1622,7 +1633,7 @@ KOS_OBJ_ID invoke_internal(context ctx, void (T::*fun)(T1, T2) const, KOS_OBJ_ID
 template<typename T, typename T1, typename T2, typename T3>
 KOS_OBJ_ID invoke_internal(context ctx, void (T::*fun)(T1, T2, T3) const, KOS_OBJ_ID this_obj, array args)
 {
-    T* const obj = get_priv<T>(this_obj);
+    T* const obj = private_class<T>::get(this_obj);
     (obj->*fun)(extract_arg<0, T1>(ctx, args),
                 extract_arg<1, T2>(ctx, args),
                 extract_arg<2, T3>(ctx, args));
@@ -1632,7 +1643,7 @@ KOS_OBJ_ID invoke_internal(context ctx, void (T::*fun)(T1, T2, T3) const, KOS_OB
 template<typename T, typename T1, typename T2, typename T3, typename T4>
 KOS_OBJ_ID invoke_internal(context ctx, void (T::*fun)(T1, T2, T3, T4) const, KOS_OBJ_ID this_obj, array args)
 {
-    T* const obj = get_priv<T>(this_obj);
+    T* const obj = private_class<T>::get(this_obj);
     (obj->*fun)(extract_arg<0, T1>(ctx, args),
                 extract_arg<1, T2>(ctx, args),
                 extract_arg<2, T3>(ctx, args),

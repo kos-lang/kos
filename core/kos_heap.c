@@ -333,9 +333,9 @@ static void finalize_object(KOS_CONTEXT     ctx,
 
         case OBJ_OBJECT: {
 
-            KOS_OBJECT *obj = (KOS_OBJECT *)hdr;
+            KOS_OBJECT_WITH_PRIVATE *obj = (KOS_OBJECT_WITH_PRIVATE *)hdr;
 
-            if (obj->finalize) {
+            if ((kos_get_object_size(*hdr) >= sizeof(KOS_OBJECT_WITH_PRIVATE)) && obj->finalize) {
 
                 obj->finalize(ctx, KOS_atomic_read_relaxed_ptr(obj->priv));
 
@@ -2091,7 +2091,7 @@ static void mark_unused_objects_opaque(KOS_CONTEXT   ctx,
             const KOS_OBJ_ID new_obj = st.size_and_type;
             assert( ! IS_BAD_PTR(new_obj));
             assert(kos_is_heap_object(new_obj));
-            assert(READ_OBJ_TYPE(new_obj) <= OBJ_LAST);
+            assert(READ_OBJ_TYPE(new_obj) <= OBJ_LAST_POSSIBLE);
             st = *(KOS_OBJ_HEADER *)((intptr_t)new_obj - 1);
         }
 
@@ -2130,7 +2130,7 @@ static void update_child_ptr(KOS_OBJ_ID *obj_id_ptr)
         assert(color & BLACK);
 #endif
 
-        assert(IS_SMALL_INT(new_obj) || IS_BAD_PTR(new_obj) || READ_OBJ_TYPE(new_obj) <= OBJ_LAST);
+        assert(IS_SMALL_INT(new_obj) || IS_BAD_PTR(new_obj) || READ_OBJ_TYPE(new_obj) <= OBJ_LAST_POSSIBLE);
 
         /* Objects in pages retained keep their size in their size field */
         if (kos_is_heap_object(new_obj))

@@ -1155,6 +1155,8 @@ static void finalize(KOS_CONTEXT ctx, void *priv)
         KOS_free(priv);
 }
 
+KOS_DECLARE_PRIVATE_CLASS(regex_priv_class);
+
 static int parse_re(KOS_CONTEXT ctx, KOS_OBJ_ID regex_str, KOS_OBJ_ID regex)
 {
     int                 error;
@@ -1217,8 +1219,6 @@ static int parse_re(KOS_CONTEXT ctx, KOS_OBJ_ID regex_str, KOS_OBJ_ID regex)
 
         disassemble(re, re_cstr);
     }
-
-    OBJPTR(OBJECT, regex)->finalize = finalize;
 
     KOS_object_set_private_ptr(regex, re);
 
@@ -1844,7 +1844,7 @@ static KOS_OBJ_ID re_ctor(KOS_CONTEXT ctx,
     if (GET_OBJ_TYPE(regex_str.o) != OBJ_STRING)
         RAISE_EXCEPTION_STR(str_err_regex_not_a_string);
 
-    regex.o = KOS_new_object_with_prototype(ctx, this_obj);
+    regex.o = KOS_new_object_with_private(ctx, this_obj, &regex_priv_class, finalize);
     TRY_OBJID(regex.o);
 
     TRY(parse_re(ctx, regex_str.o, regex.o));
@@ -1909,7 +1909,7 @@ static KOS_OBJ_ID re_find(KOS_CONTEXT ctx,
 
     end_pos = (int)KOS_get_string_length(str.o);
 
-    re = (struct RE_OBJ *)KOS_object_get_private_ptr(this_obj);
+    re = (struct RE_OBJ *)KOS_object_get_private(this_obj, &regex_priv_class);
     if ( ! re)
         RAISE_EXCEPTION_STR(str_err_not_re);
 

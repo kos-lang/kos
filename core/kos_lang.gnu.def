@@ -91,11 +91,14 @@
     KOS_new_iterator;
     KOS_new_iterator_copy;
     KOS_new_object;
+    KOS_new_object_with_private;
     KOS_new_object_with_prototype;
     KOS_new_string;
     KOS_new_string_esc;
     KOS_new_string_from_buffer;
     KOS_new_string_from_codes;
+    KOS_object_get_private;
+    KOS_object_swap_private;
     KOS_object_to_string;
     KOS_object_to_string_or_cstr_vec;
     KOS_print_exception;

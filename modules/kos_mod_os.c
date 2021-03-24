@@ -786,6 +786,8 @@ static void wait_finalize(KOS_CONTEXT ctx,
     }
 }
 
+KOS_DECLARE_PRIVATE_CLASS(wait_priv_class);
+
 static KOS_OBJ_ID get_wait_proto(KOS_CONTEXT ctx)
 {
     int        error  = KOS_SUCCESS;
@@ -815,7 +817,7 @@ static KOS_OBJ_ID create_wait_object(KOS_CONTEXT ctx)
     obj_id = get_wait_proto(ctx);
     TRY_OBJID(obj_id);
 
-    obj_id = KOS_new_object_with_prototype(ctx, obj_id);
+    obj_id = KOS_new_object_with_private(ctx, obj_id, &wait_priv_class, wait_finalize);
     TRY_OBJID(obj_id);
 
     wait_info = (struct KOS_WAIT_S *)KOS_malloc(sizeof(struct KOS_WAIT_S));
@@ -832,8 +834,6 @@ static KOS_OBJ_ID create_wait_object(KOS_CONTEXT ctx)
 
     KOS_object_set_private_ptr(obj_id, wait_info);
 
-    OBJPTR(OBJECT, obj_id)->finalize = wait_finalize;
-
 cleanup:
     return error ? KOS_BADPTR : obj_id;
 }
@@ -842,30 +842,16 @@ static int get_wait_info(KOS_CONTEXT         ctx,
                          KOS_OBJ_ID          obj_id,
                          struct KOS_WAIT_S **out_wait_info)
 {
-    KOS_LOCAL          obj;
-    KOS_OBJ_ID         proto_id;
     struct KOS_WAIT_S *wait_info;
-    int                error = KOS_SUCCESS;
 
-    KOS_init_local_with(ctx, &obj, obj_id);
-
-    proto_id = get_wait_proto(ctx);
-    TRY_OBJID(proto_id);
-
-    if ( ! KOS_has_prototype(ctx, obj.o, proto_id))
-        RAISE_EXCEPTION_STR(str_err_not_spawned);
-
-    wait_info = (struct KOS_WAIT_S *)KOS_object_get_private_ptr(obj.o);
-
-    if ( ! wait_info)
-        RAISE_EXCEPTION_STR(str_err_not_spawned);
+    wait_info = (struct KOS_WAIT_S *)KOS_object_get_private(obj_id, &wait_priv_class);
+    if ( ! wait_info) {
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_spawned));
+        return KOS_ERROR_EXCEPTION;
+    }
 
     *out_wait_info = wait_info;
-
-cleanup:
-    KOS_destroy_top_local(ctx, &obj);
-
-    return error;
+    return KOS_SUCCESS;
 }
 
 #ifdef _WIN32
@@ -1122,7 +1108,7 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
     process.o = create_wait_object(ctx);
     TRY_OBJID(process.o);
 
-    wait_info = (struct KOS_WAIT_S *)KOS_object_get_private_ptr(process.o);
+    TRY(get_wait_info(ctx, process.o, &wait_info));
 
     /* Get 'cwd' */
     value_obj = KOS_array_read(ctx, args.o, 3);
