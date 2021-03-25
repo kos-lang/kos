@@ -7,17 +7,17 @@
 #endif
 
 #ifdef KOS_EXTERNAL_MODULES
-#   define EXTERN_DEF(x)
+#   define EXTERN_DEF(module, flags)
 #else
-#   define EXTERN_DEF(x) MODULE_DEF(x)
+#   define EXTERN_DEF(module, flags) MODULE_DEF(module, flags)
 #endif
 
-MODULE_DEF(base)
-MODULE_DEF(datetime)
-MODULE_DEF(fs)
-MODULE_DEF(io)
-MODULE_DEF(kos)
-EXTERN_DEF(math)
-EXTERN_DEF(os)
-MODULE_DEF(random)
-EXTERN_DEF(re)
+MODULE_DEF(base,     KOS_MODULE_NEEDS_KOS_SOURCE)
+MODULE_DEF(datetime, KOS_MODULE_NEEDS_KOS_SOURCE)
+MODULE_DEF(fs,       0)
+MODULE_DEF(io,       KOS_MODULE_NEEDS_KOS_SOURCE)
+MODULE_DEF(kos,      KOS_MODULE_NEEDS_KOS_SOURCE)
+EXTERN_DEF(math,     KOS_MODULE_NEEDS_KOS_SOURCE)
+EXTERN_DEF(os,       0)
+MODULE_DEF(random,   KOS_MODULE_NEEDS_KOS_SOURCE)
+EXTERN_DEF(re,       KOS_MODULE_NEEDS_KOS_SOURCE)

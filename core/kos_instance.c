@@ -57,7 +57,7 @@ struct KOS_PERF_S kos_perf = {
 };
 #endif
 
-#ifdef CONFIG_SEQFAIL
+#if defined(CONFIG_SEQFAIL) || defined(CONFIG_FUZZ)
 static int                  kos_seq_init      = 0;
 static KOS_ATOMIC(uint32_t) kos_seq;
 static uint32_t             kos_seq_threshold = ~0U;
@@ -87,6 +87,11 @@ int kos_seq_fail(void)
         return KOS_ERROR_INTERNAL;
 
     return KOS_SUCCESS;
+}
+
+void kos_set_seq_point(int seq_point)
+{
+    kos_seq_init = seq_point;
 }
 #endif
 
@@ -746,12 +751,17 @@ static int save_module_lib(KOS_CONTEXT ctx, KOS_SHARED_LIB lib)
 KOS_OBJ_ID kos_register_module_init(KOS_CONTEXT      ctx,
                                     KOS_OBJ_ID       module_name_obj,
                                     KOS_SHARED_LIB   lib,
-                                    KOS_BUILTIN_INIT init)
+                                    KOS_BUILTIN_INIT init,
+                                    unsigned         flags)
 {
     struct KOS_MODULE_INIT_S *mod_init_ptr;
     KOS_INSTANCE       *const inst  = ctx->inst;
     KOS_LOCAL                 module_name;
     KOS_LOCAL                 mod_init;
+
+#ifdef CONFIG_FUZZ
+    flags &= ~KOS_MODULE_NEEDS_KOS_SOURCE;
+#endif
 
     KOS_init_local(     ctx, &mod_init);
     KOS_init_local_with(ctx, &module_name, module_name_obj);
@@ -764,8 +774,9 @@ KOS_OBJ_ID kos_register_module_init(KOS_CONTEXT      ctx,
     if ( ! mod_init_ptr)
         goto cleanup;
 
-    mod_init_ptr->lib  = lib;
-    mod_init_ptr->init = init;
+    mod_init_ptr->lib   = lib;
+    mod_init_ptr->init  = init;
+    mod_init_ptr->flags = flags;
 
     mod_init.o = OBJID(OPAQUE, (KOS_OPAQUE *)mod_init_ptr);
 
@@ -798,14 +809,15 @@ cleanup:
 
 int KOS_instance_register_builtin(KOS_CONTEXT      ctx,
                                   const char      *module,
-                                  KOS_BUILTIN_INIT init)
+                                  KOS_BUILTIN_INIT init,
+                                  unsigned         flags)
 {
     const KOS_OBJ_ID module_name = KOS_new_cstring(ctx, module);
 
     if (IS_BAD_PTR(module_name))
         return KOS_ERROR_EXCEPTION;
 
-    return IS_BAD_PTR(kos_register_module_init(ctx, module_name, KOS_NULL, init))
+    return IS_BAD_PTR(kos_register_module_init(ctx, module_name, KOS_NULL, init, flags))
            ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
 }
 

@@ -300,12 +300,14 @@ struct KOS_MODULE_INIT_S {
     KOS_OBJ_HEADER   hdr;
     KOS_SHARED_LIB   lib;
     KOS_BUILTIN_INIT init;
+    unsigned         flags;
 };
 
 KOS_OBJ_ID kos_register_module_init(KOS_CONTEXT      ctx,
                                     KOS_OBJ_ID       module_name_obj,
                                     KOS_SHARED_LIB   lib,
-                                    KOS_BUILTIN_INIT init);
+                                    KOS_BUILTIN_INIT init,
+                                    unsigned         flags);
 
 /*==========================================================================*/
 /* KOS_HEAP                                                                 */

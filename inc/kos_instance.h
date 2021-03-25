@@ -298,12 +298,19 @@ int KOS_instance_set_args(KOS_CONTEXT  ctx,
 
 typedef int (*KOS_BUILTIN_INIT)(KOS_CONTEXT ctx, KOS_OBJ_ID module);
 
+typedef enum KOS_NATIVE_MODULE_FLAGS_E {
+    KOS_MODULE_NEEDS_KOS_SOURCE = 1
+} KOS_NATIVE_MODULE_FLAGS;
+
+typedef unsigned (*KOS_GET_FLAGS)(void);
+
 typedef void *KOS_SHARED_LIB;
 
 KOS_API
 int KOS_instance_register_builtin(KOS_CONTEXT      ctx,
                                   const char      *module,
-                                  KOS_BUILTIN_INIT init);
+                                  KOS_BUILTIN_INIT init,
+                                  unsigned         flags);
 
 KOS_API
 int KOS_instance_register_thread(KOS_INSTANCE *inst,

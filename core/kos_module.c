@@ -65,10 +65,11 @@ static unsigned rfind_path(const char *path,
 static int load_native(KOS_CONTEXT ctx, KOS_OBJ_ID module_name, KOS_VECTOR *cpath, KOS_OBJ_ID *mod_init)
 {
     static const char ext[] = KOS_SHARED_LIB_EXT;
-    unsigned          pos;
-    KOS_SHARED_LIB    lib;
     KOS_BUILTIN_INIT  init  = KOS_NULL;
+    KOS_SHARED_LIB    lib;
     KOS_VECTOR        error_cstr;
+    unsigned          pos;
+    unsigned          flags = KOS_MODULE_NEEDS_KOS_SOURCE;
 
     *mod_init = KOS_BADPTR;
 
@@ -124,6 +125,13 @@ static int load_native(KOS_CONTEXT ctx, KOS_OBJ_ID module_name, KOS_VECTOR *cpat
         if (lib)
             init = kos_seq_fail() ? KOS_NULL : (KOS_BUILTIN_INIT)kos_get_library_function(lib, "init_kos_module", &error_cstr);
 
+        if (init) {
+            const KOS_GET_FLAGS flags_fn =
+                (KOS_GET_FLAGS)kos_get_library_function(lib, "get_kos_module_flags", &error_cstr);
+            if (flags_fn)
+                flags = flags_fn();
+        }
+
         KOS_resume_context(ctx);
 
         module_name = KOS_destroy_top_local(ctx, &saved_name);
@@ -145,7 +153,7 @@ static int load_native(KOS_CONTEXT ctx, KOS_OBJ_ID module_name, KOS_VECTOR *cpat
 
     KOS_vector_destroy(&error_cstr);
 
-    *mod_init = kos_register_module_init(ctx, module_name, lib, init);
+    *mod_init = kos_register_module_init(ctx, module_name, lib, init, flags);
 
     return IS_BAD_PTR(*mod_init) ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
 }
@@ -207,7 +215,7 @@ static int find_module(KOS_CONTEXT            ctx,
              */
             if (has_dot) {
                 if (native_mod_init)
-                    RAISE_ERROR(KOS_ERROR_NOT_FOUND);
+                    RAISE_ERROR(KOS_SUCCESS_RETURN);
 
                 TRY(load_native(ctx, components[2].o, &cpath, mod_init));
 
@@ -243,7 +251,7 @@ static int find_module(KOS_CONTEXT            ctx,
         uint32_t      num_paths = KOS_get_array_size(inst->modules.search_paths);
 
         if (!num_paths)
-            RAISE_ERROR(KOS_ERROR_NOT_FOUND);
+            RAISE_ERROR(native_mod_init ? KOS_SUCCESS_RETURN : KOS_ERROR_NOT_FOUND);
 
         for (i = 0; i < num_paths; i++) {
             int have_src;
@@ -280,11 +288,21 @@ static int find_module(KOS_CONTEXT            ctx,
         }
 
         if (IS_BAD_PTR(dir.o))
-            error = KOS_ERROR_NOT_FOUND;
+            error = native_mod_init ? KOS_SUCCESS_RETURN : KOS_ERROR_NOT_FOUND;
     }
 
 cleanup:
-    if (!error) {
+    if (error == KOS_SUCCESS_RETURN) {
+        unsigned flags;
+
+        assert( ! IS_BAD_PTR(*mod_init));
+
+        flags = ((struct KOS_MODULE_INIT_S *)OBJPTR(OPAQUE, *mod_init))->flags;
+
+        error = (flags & KOS_MODULE_NEEDS_KOS_SOURCE) ? KOS_ERROR_NOT_FOUND : KOS_SUCCESS;
+    }
+
+    if ( ! error) {
         *out_abs_dir  = dir.o;
         *out_abs_path = path.o;
     }
@@ -385,13 +403,20 @@ cleanup:
 
 static int load_file(KOS_CONTEXT  ctx,
                      KOS_OBJ_ID   path_obj,
-                     KOS_FILEBUF *file_buf)
+                     KOS_FILEBUF *file_buf,
+                     unsigned     flags)
 {
     int        error = KOS_SUCCESS;
     KOS_VECTOR cpath;
 
     KOS_vector_init(&cpath);
     TRY(KOS_string_to_cstr_vec(ctx, path_obj, &cpath));
+
+    if ( ! kos_does_file_exist(cpath.buffer) && ! (flags & KOS_MODULE_NEEDS_KOS_SOURCE)) {
+        file_buf->buffer = KOS_NULL;
+        file_buf->size   = 0;
+        goto cleanup;
+    }
 
     error = kos_load_file(cpath.buffer, file_buf);
 
@@ -1704,7 +1729,12 @@ static KOS_OBJ_ID import_module(KOS_CONTEXT ctx,
 
     /* Load module file */
     if ( ! data) {
-        TRY(load_file(ctx, module_path.o, &file_buf));
+        unsigned flags = KOS_MODULE_NEEDS_KOS_SOURCE;
+
+        if ( ! IS_BAD_PTR(mod_init.o))
+            flags = ((struct KOS_MODULE_INIT_S *)OBJPTR(OPAQUE, mod_init.o))->flags;
+
+        TRY(load_file(ctx, module_path.o, &file_buf, flags));
         data      = file_buf.buffer;
         data_size = (unsigned)file_buf.size;
     }

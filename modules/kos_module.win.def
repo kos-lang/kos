@@ -1,2 +1,3 @@
 EXPORTS
     init_kos_module
+    get_kos_module_flags

@@ -171,9 +171,11 @@ do {                                                                   \
 } while (0)
 
 #ifdef KOS_EXTERNAL_MODULES
-#   define KOS_INIT_MODULE(name) KOS_EXTERN_C KOS_EXPORT_SYMBOL int init_kos_module
+#   define KOS_INIT_MODULE(name, flags) \
+        KOS_EXTERN_C KOS_EXPORT_SYMBOL unsigned get_kos_module_flags(void) { return (flags); } \
+        KOS_EXTERN_C KOS_EXPORT_SYMBOL int init_kos_module
 #else
-#   define KOS_INIT_MODULE(name) int kos_module_##name##_init
+#   define KOS_INIT_MODULE(name, flags) int kos_module_##name##_init
 #endif
 
 #ifdef _WIN32

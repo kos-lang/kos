@@ -809,7 +809,7 @@ static const KOS_ARG_DESC pow_args[3] = {
     { KOS_BADPTR,               KOS_BADPTR }
 };
 
-KOS_INIT_MODULE(math)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
+KOS_INIT_MODULE(math, KOS_MODULE_NEEDS_KOS_SOURCE)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 {
     int       error = KOS_SUCCESS;
     KOS_LOCAL module;
