@@ -5,8 +5,10 @@
 #include "kos_lexer.h"
 #include "../inc/kos_defs.h"
 #include "../inc/kos_error.h"
+#include "kos_debug.h"
 #include "kos_utf8_internal.h"
 #include <assert.h>
+#include <stdlib.h>
 #include <string.h>
 
 static const char str_err_bin[]                 = "unexpected character, binary digit expected";
@@ -782,6 +784,34 @@ static KOS_KEYWORD_TYPE find_keyword(const char *begin, const char *end)
     return kw;
 }
 
+#if defined(CONFIG_SEQFAIL) || defined(CONFIG_FUZZ)
+static void set_seq_fail(const char *begin, const char *end)
+{
+    static const char str_seq[] = "seq";
+    long              value;
+    char             *found_end = KOS_NULL;
+
+    /* Must end with non-digit to avoid strtol going outside of the buffer */
+    if ((begin >= end) || ((end[-1] >= '0') && (end[-1] <= '9')))
+        return;
+
+    while ((begin < end) && (*begin == ' '))
+        ++begin;
+
+    if ((begin + sizeof(str_seq) >= end) || memcmp(begin, str_seq, sizeof(str_seq) - 1))
+        return;
+
+    begin += sizeof(str_seq) - 1;
+
+    value = strtol(begin, &found_end, 10);
+
+    if (found_end != begin)
+        kos_set_seq_point((int)value);
+}
+#else
+#   define set_seq_fail(begin, end) ((void)0)
+#endif
+
 void kos_lexer_init(KOS_LEXER  *lexer,
                     uint16_t    file_id,
                     const char *begin,
@@ -929,11 +959,13 @@ int kos_lexer_next_token(KOS_LEXER          *lexer,
                         token->type = TT_COMMENT;
                         collect_all_until_eol(lexer);
                         end = lexer->prefetch_end;
+                        set_seq_fail(begin2 + 1, end);
                     }
                     else if (*begin2 == '*') {
                         token->type = TT_COMMENT;
                         collect_block_comment(lexer);
                         end = lexer->prefetch_end;
+                        set_seq_fail(begin2 + 1, end - 2);
                     }
                     else {
                         token->type = TT_OPERATOR;
@@ -950,6 +982,7 @@ int kos_lexer_next_token(KOS_LEXER          *lexer,
                 token->type = TT_COMMENT;
                 collect_all_until_eol(lexer);
                 end = lexer->prefetch_end;
+                set_seq_fail(begin + 1, end);
                 break;
             case LT_EOF:
                 token->type = TT_EOF;
