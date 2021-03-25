@@ -18,6 +18,7 @@
 #include <string.h>
 
 #ifdef _WIN32
+#   include <setjmp.h>
 #   define WIN32_LEAN_AND_MEAN
 #   pragma warning( push )
 #   pragma warning( disable : 4255 4668 )
@@ -172,23 +173,21 @@ static int init_terminal(TERM_INFO *old_info)
     const HANDLE h_input  = GetStdHandle(STD_INPUT_HANDLE);
     const HANDLE h_output = GetStdHandle(STD_OUTPUT_HANDLE);
 
-    /* TODO report errors properly */
-
     if ((h_input == INVALID_HANDLE_VALUE) || (h_output == INVALID_HANDLE_VALUE))
-        return KOS_ERROR_ERRNO;
+        return KOS_ERROR_LAST_ERROR;
 
     if ( ! GetConsoleMode(h_input, &old_info->input_mode))
-        return KOS_ERROR_ERRNO;
+        return KOS_ERROR_LAST_ERROR;
 
     if ( ! GetConsoleMode(h_output, &old_info->output_mode))
-        return KOS_ERROR_ERRNO;
+        return KOS_ERROR_LAST_ERROR;
 
     if ( ! SetConsoleMode(h_input, ENABLE_WINDOW_INPUT | ENABLE_VIRTUAL_TERMINAL_INPUT))
-        return KOS_ERROR_ERRNO;
+        return KOS_ERROR_NO_VIRTUAL_TERMINAL;
 
     if ( ! SetConsoleMode(h_output, ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING)) {
         SetConsoleMode(h_input, old_info->input_mode);
-        return KOS_ERROR_ERRNO;
+        return KOS_ERROR_NO_VIRTUAL_TERMINAL;
     }
 
     SetConsoleCtrlHandler(ctrl_c_handler, TRUE);
@@ -1306,6 +1305,74 @@ static int dispatch_key(struct TERM_EDIT *edit, int *key)
     }
 }
 
+#ifdef _WIN32
+
+static jmp_buf jmpbuf;
+
+static void ctrlc_signal_handler(int sig)
+{
+    assert(sig == SIGINT);
+    longjmp(jmpbuf, sig);
+}
+
+static int legacy_get_line(KOS_GETLINE *state,
+                           const char  *prompt,
+                           KOS_VECTOR  *buf)
+{
+    fwrite(prompt, 1, strlen(prompt), stdout);
+
+    for (;;) {
+        const size_t   old_size  = buf->size;
+        const size_t   increment = 4096U;
+        size_t         num_read;
+        void           (*old_signal)(int);
+        char*          ret_buf;
+
+        if (KOS_vector_resize(buf, old_size + increment)) {
+            fprintf(stderr, "Out of memory\n");
+            return KOS_ERROR_OUT_OF_MEMORY;
+        }
+
+        if ( ! setjmp(jmpbuf)) {
+            old_signal = signal(SIGINT, ctrlc_signal_handler);
+
+            ret_buf = fgets(buf->buffer + old_size, (int)increment, stdin);
+
+            signal(SIGINT, old_signal);
+        }
+        else {
+            printf("\n");
+            signal(SIGINT, old_signal);
+            ret_buf = buf->buffer + old_size;
+            *ret_buf = 0;
+            buf->size = old_size;
+            return KOS_ERROR_INTERRUPTED;
+        }
+
+        if ( ! ret_buf) {
+
+            buf->size = old_size;
+
+            if (feof(stdin))
+                return KOS_SUCCESS_RETURN;
+
+            fprintf(stderr, "Failed reading from stdin\n");
+            return KOS_ERROR_ERRNO;
+        }
+
+        num_read = strlen(buf->buffer + old_size);
+
+        buf->size = old_size + num_read;
+
+        if (num_read + 1 < increment)
+            break;
+    }
+
+    return KOS_SUCCESS;
+}
+
+#endif
+
 int kos_getline(KOS_GETLINE      *state,
                 enum KOS_PROMPT_E prompt,
                 KOS_VECTOR       *buf)
@@ -1336,6 +1403,14 @@ int kos_getline(KOS_GETLINE      *state,
         edit.interactive = 1;
 
         error = init_terminal(&old_term_info);
+
+#ifdef _WIN32
+        /* Older versions of Windows don't support escape sequences */
+        if (error == KOS_ERROR_NO_VIRTUAL_TERMINAL) {
+            KOS_mempool_destroy(&edit.temp_allocator);
+            return legacy_get_line(state, edit.prompt, buf);
+        }
+#endif
     }
 
 #ifdef _WIN32

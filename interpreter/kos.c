@@ -355,6 +355,19 @@ static int enforce_eol(KOS_VECTOR *buf)
     return KOS_SUCCESS;
 }
 
+static int get_errno(int error)
+{
+    if (error == KOS_ERROR_ERRNO)
+        return errno;
+
+#ifdef _WIN32
+    if (error == KOS_ERROR_LAST_ERROR)
+        return (int)GetLastError();
+#endif
+
+    return 0;
+}
+
 static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
 {
     PROF_ZONE(MODULE)
@@ -397,8 +410,7 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
 
         error = kos_getline(&state, PROMPT_FIRST_LINE, buf);
 
-        if (error == KOS_ERROR_ERRNO)
-            stored_errno = errno;
+        stored_errno = get_errno(error);
 
         KOS_resume_context(ctx);
 
@@ -406,9 +418,10 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
             if (error == KOS_ERROR_INTERRUPTED)
                 continue;
 
-            assert(error == KOS_SUCCESS_RETURN ||
+            assert(error == KOS_SUCCESS_RETURN      ||
                    error == KOS_ERROR_OUT_OF_MEMORY ||
-                   error == KOS_ERROR_ERRNO);
+                   error == KOS_ERROR_ERRNO         ||
+                   error == KOS_ERROR_LAST_ERROR);
             break;
         }
 
@@ -422,8 +435,7 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
 
             error = kos_getline(&state, PROMPT_SUBSEQUENT_LINE, &tmp_buf);
 
-            if (error == KOS_ERROR_ERRNO)
-                stored_errno = errno;
+            stored_errno = get_errno(error);
 
             KOS_resume_context(ctx);
 
@@ -431,6 +443,7 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
                 assert(error == KOS_ERROR_OUT_OF_MEMORY ||
                        error == KOS_ERROR_INTERRUPTED   ||
                        error == KOS_ERROR_ERRNO         ||
+                       error == KOS_ERROR_LAST_ERROR    ||
                        error == KOS_SUCCESS_RETURN);
                 break;
             }
@@ -490,6 +503,13 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
         KOS_raise_errno_value(ctx, KOS_NULL, stored_errno);
         error = KOS_ERROR_EXCEPTION;
     }
+
+#ifdef _WIN32
+    if (error == KOS_ERROR_LAST_ERROR) {
+        KOS_raise_last_error(ctx, KOS_NULL, (unsigned)stored_errno);
+        error = KOS_ERROR_EXCEPTION;
+    }
+#endif
 
     if (error == KOS_SUCCESS_RETURN)
         error = KOS_SUCCESS;
