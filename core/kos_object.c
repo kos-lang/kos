@@ -965,7 +965,7 @@ void *KOS_object_get_private(KOS_OBJ_ID obj, KOS_PRIVATE_CLASS priv_class)
 
     obj_ptr = (KOS_OBJECT_WITH_PRIVATE *)OBJPTR(OBJECT, obj);
 
-    if (kos_get_object_size(obj_ptr->object.header) < sizeof(KOS_OBJECT_WITH_PRIVATE))
+    if (kos_get_object_size(obj_ptr->header) < sizeof(KOS_OBJECT_WITH_PRIVATE))
         return KOS_NULL;
 
     if (obj_ptr->priv_class != priv_class)
@@ -983,7 +983,7 @@ void* KOS_object_swap_private(KOS_OBJ_ID obj, KOS_PRIVATE_CLASS priv_class, void
 
     obj_ptr = (KOS_OBJECT_WITH_PRIVATE *)OBJPTR(OBJECT, obj);
 
-    if (kos_get_object_size(obj_ptr->object.header) < sizeof(KOS_OBJECT_WITH_PRIVATE))
+    if (kos_get_object_size(obj_ptr->header) < sizeof(KOS_OBJECT_WITH_PRIVATE))
         return new_priv;
 
     if (obj_ptr->priv_class != priv_class)

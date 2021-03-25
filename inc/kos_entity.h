@@ -332,11 +332,14 @@ typedef struct KOS_OBJECT_S {
     KOS_OBJ_ID             prototype;
 } KOS_OBJECT;
 
+/* If an object has private data, its size field (header.size_and_type) indicates that. */
 typedef struct KOS_OBJECT_WITH_PRIVATE_S {
-    KOS_OBJECT         object;
-    KOS_PRIVATE_CLASS  priv_class;
-    KOS_ATOMIC(void *) priv;
-    KOS_FINALIZE       finalize;
+    KOS_OBJ_HEADER         header;
+    KOS_ATOMIC(KOS_OBJ_ID) props;
+    KOS_OBJ_ID             prototype;
+    KOS_PRIVATE_CLASS      priv_class;
+    KOS_ATOMIC(void *)     priv;
+    KOS_FINALIZE           finalize;
 } KOS_OBJECT_WITH_PRIVATE;
 
 enum KOS_BUF_FLAGS_E {

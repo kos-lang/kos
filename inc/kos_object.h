@@ -11,7 +11,7 @@ struct KOS_PRIVATE_CLASS_S {
     uint8_t dummy;
 };
 
-#define KOS_DECLARE_PRIVATE_CLASS(name) static const struct KOS_PRIVATE_CLASS_S name
+#define KOS_DECLARE_PRIVATE_CLASS(name) static const struct KOS_PRIVATE_CLASS_S name = { 0U }
 
 #ifdef __cplusplus
 template<typename T>
