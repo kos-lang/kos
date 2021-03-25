@@ -24,6 +24,7 @@
 #   pragma warning( disable : 4255 4668 )
 #   include <windows.h>
 #   pragma warning( pop )
+#   pragma warning( disable : 4611 ) /* interaction between '_setjmp' and C++ object destruction is non-portable */
 #   pragma warning( disable : 4996 ) /* 'sscanf': This function may be unsafe */
 #else
 #   include <errno.h>
