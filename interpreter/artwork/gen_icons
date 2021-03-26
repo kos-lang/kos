@@ -1,0 +1,10 @@
+#!/bin/bash
+
+set -euo pipefail
+
+magick convert kos.svg -resize 16x16 kos_16.png
+magick convert kos.svg -resize 32x32 kos_32.png
+magick convert kos.svg -resize 64x64 kos_64.png
+magick convert kos.svg -resize 256x256 kos_256.png
+
+magick convert kos_16.png kos_32.png kos_64.png kos.ico
