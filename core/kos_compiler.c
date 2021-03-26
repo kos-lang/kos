@@ -2140,7 +2140,7 @@ static int for_range(KOS_COMP_UNIT      *program,
 
     var_node = assg_node->children;
     assert(var_node);
-    lhs_type = var_node->type;
+    lhs_type = (KOS_NODE_TYPE)var_node->type;
     assert(lhs_type == NT_VAR || lhs_type == NT_CONST || lhs_type == NT_LEFT_HAND_SIDE);
 
     node = var_node->next;

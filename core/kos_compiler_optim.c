@@ -807,7 +807,7 @@ static int for_in_stmt(KOS_COMP_UNIT *program,
     assert( ! scope_node->next);
 
     node     = node->children;
-    lhs_type = node->type;
+    lhs_type = (KOS_NODE_TYPE)node->type;
     assert(lhs_type == NT_VAR || lhs_type == NT_CONST || lhs_type == NT_LEFT_HAND_SIDE);
 
     kos_activate_new_vars(program, node);
