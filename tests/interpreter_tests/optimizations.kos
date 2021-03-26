@@ -872,7 +872,7 @@ do {
     assert range_begin_end(5, 7) == 11
     assert range_dec(8, 3) == 18
 
-    check(range_num,       { registers: 5, instructions: 9, size: 34 })
-    check(range_begin_end, { registers: 6, instructions: 9, size: 34 })
-    check(range_dec,       { registers: 6, instructions: 9, size: 34 })
+    check(range_num,       { registers: 6, instructions: 10, size: 37 })
+    check(range_begin_end, { registers: 7, instructions: 10, size: 37 })
+    check(range_dec,       { registers: 7, instructions: 10, size: 37 })
 }

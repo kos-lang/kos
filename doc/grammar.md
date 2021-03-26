@@ -842,7 +842,7 @@ which shall produce a container over which the loop will iterate.
     ForLoopControl ::= ForInExpression
                      | ( "(" ForInExpression ")" )
 
-    ForInExpression ::= ( VarList | ConstList ) "in" RHSExpression
+    ForInExpression ::= ( VarList | ConstList | IdentifierList ) "in" RHSExpression
 
 Variables declared in the loop control expression are visible
 only within the compound statement.

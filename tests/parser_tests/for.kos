@@ -53,6 +53,24 @@ for (const a in b) {}
 )
 
 @------------------------------------------------------------------------------
+for a, b in c {}
+
+@ 0
+
+(scope 1 1
+    (for_in 1 1 for
+        (in 1 10 in
+            (left_hand_side 1 5 a
+                (identifier 1 5 a)
+                (identifier 1 8 b)
+            )
+            (identifier 1 13 c)
+        )
+        (scope 1 15 {)
+    )
+)
+
+@------------------------------------------------------------------------------
 for (var a in b); # Open curly brace expected
 
 @ 10 1 17
@@ -68,9 +86,14 @@ for (var a in b;;) {} # Close parenthesis expected
 @ 10 1 16
 
 @------------------------------------------------------------------------------
-for var a = 0; ; a += 1 : # Open curly brace expected
+for var a in [] : # Open curly brace expected
 
-@ 10 1 14
+@ 10 1 17
+
+@------------------------------------------------------------------------------
+for var a = 0; ; a += 1 : # Expected 'in'
+
+@ 10 1 11
 
 @------------------------------------------------------------------------------
 for var a in 1 : # Open curly brace expected

@@ -46,7 +46,6 @@ typedef enum KOS_NODE_TYPE_U {
     NT_PROPERTY,            /* property definition in object literal */
     NT_NAMED_ARGUMENTS,     /* named arguments in invocation */
     NT_IN,                  /* the 'in' part of the for-in loop */
-    NT_EXPRESSION_LIST,     /* pre-loop or post-loop expressions in for loop */
     NT_CATCH,               /* catch clause in a try statement */
     NT_DEFAULT,             /* a default section in a switch statement */
     NT_CASE,                /* a specific case section in a switch statement */

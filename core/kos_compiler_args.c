@@ -617,7 +617,7 @@ static int visit_node(KOS_COMP_UNIT *program,
             /* fall through */
         case NT_IN:
             /* fall through */
-        case NT_EXPRESSION_LIST:
+        case NT_LEFT_HAND_SIDE:
             /* fall through */
         case NT_ARRAY_LITERAL:
             /* fall through */

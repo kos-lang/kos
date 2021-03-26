@@ -52,6 +52,91 @@ do {
 }
 
 do {
+    var sum = 0
+    for const i in fun { yield 1; yield 3; yield 5 } ( ) {
+        sum += i
+        if i == 3 { break }
+    }
+    assert sum == 4
+}
+
+do {
+    var c = 10
+    var d = 20
+    var sum = 0
+    for c, d in { a: 1, b: 2 } {
+        sum += d
+        if c == "a" {
+            break
+        }
+    }
+    assert c == "a"
+    assert d == 1
+    assert (sum == 1) || (sum == 3)
+}
+
+do {
+    var k = 10
+    var v = 20
+    var sum = 0
+    for k, v in { c: 3 } {
+        sum += v
+    }
+    assert k == "c"
+    assert v == 3
+    assert sum == 3
+}
+
+do {
+    var v = false
+    var sum = 0
+    for v in range(4) {
+        sum += v
+    }
+    assert v == void
+    assert sum == 6
+}
+
+do {
+    var v = -1
+    var sum = 0
+    for v in [ 10, 11, 12 ] {
+        sum += v
+    }
+    assert v == void
+    assert sum == 33
+}
+
+do {
+    var v = -1
+    var sum = 0
+    while v == -1 {
+        const fun_range = (v == -1) ? range : void
+        for v in fun_range(4) {
+            sum += v
+        }
+    }
+    assert v == void
+    assert sum == 6
+}
+
+do {
+    var begin = 5
+    var end   = 10
+    var sum   = 0
+
+    for const i in range(begin, end) {
+        sum += i
+        begin += 1
+        end   -= 1
+    }
+
+    assert sum == 5 + 6 + 7 + 8 + 9
+    assert begin == 10
+    assert end   == 5
+}
+
+do {
     var   c     = 0
     const step1 = 2
     const step2 = 3

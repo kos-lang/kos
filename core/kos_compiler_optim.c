@@ -739,18 +739,117 @@ cleanup:
     return error;
 }
 
+static int check_self_ref_fun(KOS_VAR *var)
+{
+    const KOS_AST_NODE *const fun_node = var->value;
+    KOS_FRAME                *frame;
+
+    if ( ! var->is_const || ! fun_node)
+        return 0;
+
+    if (fun_node->type != NT_FUNCTION_LITERAL &&
+        fun_node->type != NT_CONSTRUCTOR_LITERAL)
+        return 0;
+
+    assert(fun_node->is_scope);
+    frame = (KOS_FRAME *)fun_node->u.scope;
+    assert(frame);
+    assert(frame->scope.has_frame);
+
+    return frame->is_open;
+}
+
+static void mark_binds(KOS_COMP_UNIT *program,
+                       KOS_VAR       *var)
+{
+    assert((var->type != VAR_LOCAL) && (var->type != VAR_ARGUMENT));
+    assert(var->scope);
+
+    if (var->type & VAR_INDEPENDENT) {
+
+        KOS_FRAME       *frame           = program->cur_frame;
+        KOS_FRAME *const target_frame    = var->scope->owning_frame;
+        const int        is_self_ref_fun = check_self_ref_fun(var);
+
+        assert(frame != target_frame);
+        assert(frame);
+        assert(target_frame);
+
+        do {
+            if (is_self_ref_fun)
+                ++frame->num_self_refs;
+            ++frame->num_binds;
+
+            frame = frame->parent_frame;
+            assert(frame);
+        } while (frame != target_frame);
+    }
+}
+
 static int for_in_stmt(KOS_COMP_UNIT *program,
                        KOS_AST_NODE  *node)
 {
-    int error;
+    KOS_AST_NODE *scope_node;
+    KOS_AST_NODE *rhs_node;
+    KOS_NODE_TYPE lhs_type;
+    int           is_terminal;
+    int           error;
 
     push_scope(program, node);
 
-    assert(node->children);
-    assert(node->children->children);
-    kos_activate_new_vars(program, node->children->children);
+    node = node->children;
+    assert(node);
+    assert(node->type == NT_IN);
 
-    error = visit_child_nodes(program, node);
+    scope_node = node->next;
+    assert(scope_node);
+    assert(scope_node->type == NT_SCOPE);
+    assert( ! scope_node->next);
+
+    node     = node->children;
+    lhs_type = node->type;
+    assert(lhs_type == NT_VAR || lhs_type == NT_CONST || lhs_type == NT_LEFT_HAND_SIDE);
+
+    kos_activate_new_vars(program, node);
+
+    rhs_node = node->next;
+    assert(rhs_node);
+    assert( ! rhs_node->next);
+
+    node = node->children;
+
+    for ( ; node; node = node->next) {
+
+        assert((node->type == NT_IDENTIFIER) || (node->type == NT_VOID_LITERAL));
+
+        if (node->type == NT_IDENTIFIER) {
+
+            KOS_VAR *var = KOS_NULL;
+            int      is_local;
+
+            lookup_var(program, node, 1, &var, &is_local);
+
+            if ( ! var->num_reads_prev && (var->type != VAR_GLOBAL)) {
+                assert(lhs_type != NT_LEFT_HAND_SIDE);
+                collapse(node, NT_VOID_LITERAL, TT_KEYWORD, KW_VOID, KOS_NULL, 0);
+                ++program->num_optimizations;
+            }
+            else if (lhs_type == NT_LEFT_HAND_SIDE) {
+                assert( ! var->is_const);
+                ++var->num_assignments;
+
+                if (is_local)
+                    ++var->local_assignments;
+                else
+                    mark_binds(program, var);
+            }
+        }
+    }
+
+    error = visit_node(program, rhs_node, &is_terminal);
+
+    if ( ! error)
+        error = visit_node(program, scope_node, &is_terminal);
 
     pop_scope(program);
 
@@ -962,53 +1061,6 @@ static int is_const_fun(KOS_VAR *var)
         return 0;
 
     return 1;
-}
-
-static int check_self_ref_fun(KOS_VAR *var)
-{
-    const KOS_AST_NODE *const fun_node = var->value;
-    KOS_FRAME                *frame;
-
-    if ( ! var->is_const || ! fun_node)
-        return 0;
-
-    if (fun_node->type != NT_FUNCTION_LITERAL &&
-        fun_node->type != NT_CONSTRUCTOR_LITERAL)
-        return 0;
-
-    assert(fun_node->is_scope);
-    frame = (KOS_FRAME *)fun_node->u.scope;
-    assert(frame);
-    assert(frame->scope.has_frame);
-
-    return frame->is_open;
-}
-
-static void mark_binds(KOS_COMP_UNIT *program,
-                       KOS_VAR       *var)
-{
-    assert((var->type != VAR_LOCAL) && (var->type != VAR_ARGUMENT));
-    assert(var->scope);
-
-    if (var->type & VAR_INDEPENDENT) {
-
-        KOS_FRAME       *frame           = program->cur_frame;
-        KOS_FRAME *const target_frame    = var->scope->owning_frame;
-        const int        is_self_ref_fun = check_self_ref_fun(var);
-
-        assert(frame != target_frame);
-        assert(frame);
-        assert(target_frame);
-
-        do {
-            if (is_self_ref_fun)
-                ++frame->num_self_refs;
-            ++frame->num_binds;
-
-            frame = frame->parent_frame;
-            assert(frame);
-        } while (frame != target_frame);
-    }
 }
 
 static void identifier(KOS_COMP_UNIT *program,
@@ -2124,8 +2176,6 @@ static int visit_node(KOS_COMP_UNIT *program,
         case NT_NAMED_ARGUMENTS:
             /* fall through */
         case NT_IN:
-            /* fall through */
-        case NT_EXPRESSION_LIST:
             /* fall through */
         case NT_ARRAY_LITERAL:
             /* fall through */

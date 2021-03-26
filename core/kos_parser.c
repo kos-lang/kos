@@ -30,9 +30,9 @@ static const char str_err_expected_const_or_expr[]    = "expected 'const' or exp
 static const char str_err_expected_curly_close[]      = "expected '}'";
 static const char str_err_expected_curly_open[]       = "expected '{'";
 static const char str_err_expected_expression[]       = "expected expression";
-static const char str_err_expected_for_in[]           = "expected 'in' expression";
 static const char str_err_expected_ident_or_str[]     = "expected identifier or string literal";
 static const char str_err_expected_identifier[]       = "expected identifier";
+static const char str_err_expected_in[]               = "expected 'in' keyword";
 static const char str_err_expected_invocation[]       = "expected invocation";
 static const char str_err_expected_lambda_op[]        = "expected '=>'";
 static const char str_err_expected_member_expr[]      = "expected literal, identifier or '('";
@@ -1832,7 +1832,6 @@ static int member_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
 }
 
 static int expr_var_const(KOS_PARSER    *parser,
-                          int            allow_in,
                           int            allow_multi_assignment,
                           int            is_public,
                           KOS_AST_NODE **ret)
@@ -1887,7 +1886,7 @@ static int expr_var_const(KOS_PARSER    *parser,
         TRY(next_token(parser));
     }
 
-    if ((parser->token.keyword != KW_IN || !allow_in) && (parser->token.op != OT_SET)) {
+    if (parser->token.op != OT_SET) {
         parser->error_str = str_err_expected_var_assignment;
         error = KOS_ERROR_PARSE_FAILED;
         goto cleanup;
@@ -2029,33 +2028,20 @@ cleanup:
     return error;
 }
 
-static int expr(KOS_PARSER *parser, int allow_in, int allow_var, KOS_AST_NODE **ret)
-{
-    int error;
-
-    if (allow_var) {
-        error = next_token(parser);
-
-        if (!error) {
-            if (parser->token.keyword == KW_VAR || parser->token.keyword == KW_CONST)
-                error = expr_var_const(parser, allow_in, 1, 0, ret);
-            else {
-                parser->unget = 1;
-                error = expr_no_var(parser, ret);
-            }
-        }
-    }
-    else
-        error = expr_no_var(parser, ret);
-
-    return error;
-}
-
 static int expr_stmt(KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
-    int error = expr(parser, 0, 1, ret);
+    int error = next_token(parser);
 
-    if (!error)
+    if ( ! error) {
+        if (parser->token.keyword == KW_VAR || parser->token.keyword == KW_CONST)
+            error = expr_var_const(parser, 1, 0, ret);
+        else {
+            parser->unget = 1;
+            error = expr_no_var(parser, ret);
+        }
+    }
+
+    if ( ! error)
         error = assume_separator(parser, ST_SEMICOLON);
 
     return error;
@@ -2463,7 +2449,7 @@ static int with_stmt_continued(KOS_PARSER   *parser,
     KOS_AST_NODE *try_node = KOS_NULL;
 
     if (parser->token.keyword == KW_CONST)
-        TRY(expr_var_const(parser, 0, 0, 0, &node));
+        TRY(expr_var_const(parser, 0, 0, &node));
 
     else {
 
@@ -2797,27 +2783,65 @@ cleanup:
     return error;
 }
 
-static int for_expr_list(KOS_PARSER        *parser,
-                         KOS_SEPARATOR_TYPE end_sep,
-                         KOS_AST_NODE     **ret)
+static int for_in_expr(KOS_PARSER        *parser,
+                       KOS_SEPARATOR_TYPE end_sep,
+                       KOS_AST_NODE     **ret)
 {
-    int error = KOS_SUCCESS;
+    KOS_AST_NODE *node  = KOS_NULL;
+    int           error = KOS_SUCCESS;
 
-    KOS_AST_NODE *node = KOS_NULL;
+    TRY(next_token(parser));
 
-    TRY(new_node(parser, ret, NT_EXPRESSION_LIST));
+    TRY(new_node(parser, &node, NT_LEFT_HAND_SIDE));
 
-    /* TODO allow variable without var or const */
-    TRY(expr(parser, 1, 1, &node));
+    if ((parser->token.keyword == KW_VAR) || (parser->token.keyword == KW_CONST)) {
+        node->type = (parser->token.keyword == KW_VAR) ? NT_VAR : NT_CONST;
 
-    if (node->type == NT_IN) {
-        *ret = node;
-        node = KOS_NULL;
+        TRY(next_token(parser));
     }
-    else {
-        parser->error_str = str_err_expected_for_in;
-        error = KOS_ERROR_PARSE_FAILED;
+
+    if ((parser->token.type != TT_IDENTIFIER) || (parser->token.keyword != KW_NONE)) {
+        parser->error_str = str_err_expected_identifier;
+        error             = KOS_ERROR_PARSE_FAILED;
+        goto cleanup;
     }
+
+    TRY(push_node(parser, node, NT_IDENTIFIER, KOS_NULL));
+
+    for (;;) {
+        TRY(next_token(parser));
+
+        if (parser->token.sep != ST_COMMA)
+            break;
+
+        TRY(next_token(parser));
+
+        if ((parser->token.type != TT_IDENTIFIER) || (parser->token.keyword != KW_NONE)) {
+            parser->error_str = str_err_expected_identifier;
+            error             = KOS_ERROR_PARSE_FAILED;
+            goto cleanup;
+        }
+
+        TRY(push_node(parser, node, NT_IDENTIFIER, KOS_NULL));
+    }
+
+    if (parser->token.keyword != KW_IN) {
+        parser->error_str = str_err_expected_in;
+        error             = KOS_ERROR_PARSE_FAILED;
+        goto cleanup;
+    }
+
+    TRY(new_node(parser, ret, NT_IN));
+
+    ast_push(*ret, node);
+    node = KOS_NULL;
+
+    TRY(right_hand_side_expr(parser, &node));
+
+    /* TODO check for unsupported types, e.g. function */
+
+    ast_push(*ret, node);
+    node = KOS_NULL;
 
 cleanup:
     return error;
@@ -2839,7 +2863,7 @@ static int for_stmt(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
     TRY(fetch_optional_paren(parser, &has_paren));
 
-    TRY(for_expr_list(parser, ST_SEMICOLON, &node));
+    TRY(for_in_expr(parser, ST_SEMICOLON, &node));
 
     assert(node->type == NT_IN);
 
@@ -3057,7 +3081,7 @@ static int public_stmt(KOS_PARSER *parser, KOS_AST_NODE **ret)
             case KW_VAR:
                 /* fall through */
             case KW_CONST:
-                error = expr_var_const(parser, 0, 0, 1, ret);
+                error = expr_var_const(parser, 0, 1, ret);
                 break;
 
             case KW_FUN:

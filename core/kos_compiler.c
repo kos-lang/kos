@@ -1298,12 +1298,8 @@ static int process_scope(KOS_COMP_UNIT      *program,
 #ifndef NDEBUG
             skip_tmp = (reg && reg->tmp) ? 1 : 0;
 
-            /* TODO: NT_EXPRESSION_LIST is a bit more difficult to check,
-             * because it can contain multiple variable declarations and
-             * assignments.  For now we skip checking it. */
-            if (child->type != NT_EXPRESSION_LIST &&
-                    ((child->type != NT_ASSIGNMENT && child->type != NT_MULTI_ASSIGNMENT)
-                        || (child->children->type == NT_LEFT_HAND_SIDE))) {
+            if ((child->type != NT_ASSIGNMENT && child->type != NT_MULTI_ASSIGNMENT) ||
+                (child->children->type == NT_LEFT_HAND_SIDE)) {
 
                 const int used_regs = count_used_regs(program);
                 assert(used_regs == initial_used_regs + skip_tmp);
@@ -2011,7 +2007,9 @@ static int for_in(KOS_COMP_UNIT      *program,
 
     var_node = assg_node->children;
     assert(var_node);
-    assert(var_node->type == NT_VAR || var_node->type == NT_CONST);
+    assert(var_node->type == NT_VAR   ||
+           var_node->type == NT_CONST ||
+           var_node->type == NT_LEFT_HAND_SIDE);
 
     expr_node = var_node->next;
     assert(expr_node);
@@ -2039,13 +2037,15 @@ static int for_in(KOS_COMP_UNIT      *program,
 
     reg = KOS_NULL;
 
-    if ( ! var_node->next) {
+    if ((var_node->type == NT_IDENTIFIER) || var_node->next) {
+        if ( ! var_node->next) {
 
-        TRY(lookup_local_var(program, var_node, &item_reg));
-        assert(item_reg);
+            TRY(lookup_local_var(program, var_node, &item_reg));
+            assert(item_reg);
+        }
+        else
+            TRY(gen_reg(program, &item_reg));
     }
-    else
-        TRY(gen_reg(program, &item_reg));
 
     initial_jump_offs = program->cur_offs;
     TRY(gen_instr1(program, INSTR_JUMP, 0));
@@ -2062,10 +2062,20 @@ static int for_in(KOS_COMP_UNIT      *program,
 
             KOS_REG *var_reg = KOS_NULL;
 
-            TRY(lookup_local_var(program, var_node, &var_reg));
-            assert(var_reg);
+            if (var_node->type == NT_IDENTIFIER) {
+
+                TRY(lookup_local_var(program, var_node, &var_reg));
+                assert(var_reg);
+            }
+            else {
+                assert(var_node->type == NT_VOID_LITERAL);
+            }
+
+            TRY(gen_reg(program, &var_reg));
 
             TRY(gen_instr2(program, INSTR_NEXT, var_reg->reg, item_reg->reg));
+
+            free_reg(program, var_reg);
         }
     }
 
@@ -2077,6 +2087,8 @@ static int for_in(KOS_COMP_UNIT      *program,
     assert(!reg);
 
     TRY(add_addr2line(program, &assg_node->token, KOS_FALSE_VALUE));
+
+    TRY(gen_reg(program, &item_reg));
 
     next_jump_offs = program->cur_offs;
     TRY(gen_instr3(program, INSTR_NEXT_JUMP, item_reg->reg, iter_reg->reg, 0));
@@ -2101,12 +2113,6 @@ cleanup:
 static int for_range(KOS_COMP_UNIT      *program,
                      const KOS_AST_NODE *node)
 {
-    int                 error;
-    int                 initial_jump_offs;
-    int                 loop_start_offs;
-    int                 next_jump_offs;
-    int                 loop_jump_offs;
-    int                 decrement      = 0;
     const KOS_AST_NODE *var_node;
     const KOS_AST_NODE *assg_node;
     KOS_REG            *reg            = KOS_NULL;
@@ -2116,6 +2122,13 @@ static int for_range(KOS_COMP_UNIT      *program,
     KOS_REG            *step_reg       = KOS_NULL;
     KOS_BREAK_OFFS     *old_break_offs = program->cur_frame->break_offs;
     KOS_SCOPE          *prev_try_scope = push_try_scope(program);
+    KOS_NODE_TYPE       lhs_type;
+    int                 decrement      = 0;
+    int                 initial_jump_offs;
+    int                 loop_start_offs;
+    int                 next_jump_offs;
+    int                 loop_jump_offs;
+    int                 error;
 
     program->cur_frame->break_offs = KOS_NULL;
 
@@ -2127,7 +2140,8 @@ static int for_range(KOS_COMP_UNIT      *program,
 
     var_node = assg_node->children;
     assert(var_node);
-    assert(var_node->type == NT_VAR || var_node->type == NT_CONST);
+    lhs_type = var_node->type;
+    assert(lhs_type == NT_VAR || lhs_type == NT_CONST || lhs_type == NT_LEFT_HAND_SIDE);
 
     node = var_node->next;
     assert(node);
@@ -2148,21 +2162,35 @@ static int for_range(KOS_COMP_UNIT      *program,
         program->error_str   = str_err_too_many_vars_for_range;
         RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
     }
-    assert(var_node->type == NT_IDENTIFIER);
-    assert(var_node->is_var);
-    assert(var_node->u.var);
+    assert((var_node->type == NT_IDENTIFIER) || (var_node->type == NT_VOID_LITERAL));
 
-    TRY(lookup_local_var(program, var_node, &item_reg));
-    assert(item_reg);
+    if (var_node->type == NT_IDENTIFIER) {
+        assert(var_node->is_var);
+        assert(var_node->u.var);
 
-    if (var_node->u.var->is_const)
-        iter_reg = item_reg;
-    else
+        TRY(lookup_local_var(program, var_node, &item_reg));
+        assert(item_reg);
+
+        if (var_node->u.var->is_const)
+            iter_reg = item_reg;
+    }
+
+    if ( ! iter_reg)
         TRY(gen_reg(program, &iter_reg));
+
+    TRY(gen_reg(program, &end_reg));
 
     /* range(end) */
     if ( ! node->next) {
-        TRY(visit_node(program, node, &end_reg));
+        reg = end_reg;
+
+        TRY(visit_node(program, node, &reg));
+
+        if (reg != end_reg) {
+            TRY(gen_instr2(program, INSTR_MOVE, end_reg->reg, reg->reg));
+            free_reg(program, reg);
+        }
+        reg = KOS_NULL;
 
         TRY(gen_reg(program, &iter_reg));
         TRY(gen_instr2(program, INSTR_LOAD_INT8, iter_reg->reg, 0));
@@ -2180,10 +2208,17 @@ static int for_range(KOS_COMP_UNIT      *program,
             TRY(gen_instr2(program, INSTR_MOVE, iter_reg->reg, reg->reg));
             free_reg(program, reg);
         }
-        reg = KOS_NULL;
+
+        reg = end_reg;
 
         node = node->next;
-        TRY(visit_node(program, node, &end_reg));
+        TRY(visit_node(program, node, &reg));
+
+        if (reg != end_reg) {
+            TRY(gen_instr2(program, INSTR_MOVE, end_reg->reg, reg->reg));
+            free_reg(program, reg);
+        }
+        reg = KOS_NULL;
 
         node = node->next;
         if (node) {
@@ -2239,7 +2274,7 @@ static int for_range(KOS_COMP_UNIT      *program,
 
     update_jump_offs(program, initial_jump_offs, program->cur_offs);
 
-    if (iter_reg != item_reg)
+    if ((iter_reg != item_reg) && item_reg)
         TRY(gen_instr2(program, INSTR_MOVE, item_reg->reg, iter_reg->reg));
 
     TRY(gen_reg(program, &reg));
@@ -2253,8 +2288,12 @@ static int for_range(KOS_COMP_UNIT      *program,
     update_jump_offs(program, loop_jump_offs, loop_start_offs);
     finish_break_continue(program, next_jump_offs, old_break_offs);
 
+    if (lhs_type == NT_LEFT_HAND_SIDE)
+        TRY(gen_instr1(program, INSTR_LOAD_VOID, item_reg->reg));
+
     free_reg(program, reg);
-    free_reg(program, item_reg);
+    if (item_reg)
+        free_reg(program, item_reg);
     if (iter_reg != item_reg)
         free_reg(program, iter_reg);
     free_reg(program, end_reg);
@@ -4589,32 +4628,6 @@ cleanup:
     return error;
 }
 
-static int expression_list(KOS_COMP_UNIT      *program,
-                           const KOS_AST_NODE *node,
-                           KOS_REG           **reg)
-{
-    int error = KOS_SUCCESS;
-
-    node = node->children;
-
-    for ( ; node; node = node->next) {
-
-        KOS_REG *tmp_reg = KOS_NULL;
-
-        error = add_addr2line(program, &node->token, KOS_FALSE_VALUE);
-        if (error)
-            break;
-
-        error = visit_node(program, node, &tmp_reg);
-        if (error)
-            break;
-        if (tmp_reg)
-            free_reg(program, tmp_reg);
-    }
-
-    return error;
-}
-
 static int identifier(KOS_COMP_UNIT      *program,
                       const KOS_AST_NODE *node,
                       KOS_REG           **reg)
@@ -5822,9 +5835,6 @@ static int visit_node(KOS_COMP_UNIT      *program,
             /* fall through */
         case NT_MULTI_ASSIGNMENT:
             error = assignment(program, node);
-            break;
-        case NT_EXPRESSION_LIST:
-            error = expression_list(program, node, reg);
             break;
         case NT_IDENTIFIER:
             error = identifier(program, node, reg);

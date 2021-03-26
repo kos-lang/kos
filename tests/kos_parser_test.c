@@ -55,7 +55,6 @@ static const char *const node_types[] = {
     "property",
     "named_arguments",
     "in",
-    "expression_list",
     "catch",
     "default",
     "case",
