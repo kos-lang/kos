@@ -166,6 +166,7 @@ void kos_init_object(KOS_OBJECT *obj, KOS_OBJ_ID prototype)
 {
     obj->prototype = prototype;
     KOS_atomic_write_relaxed_ptr(obj->props, KOS_BADPTR);
+    obj->priv_class = KOS_NULL;
 }
 
 static int is_key_equal(KOS_OBJ_ID key,
@@ -960,13 +961,12 @@ void *KOS_object_get_private(KOS_OBJ_ID obj, KOS_PRIVATE_CLASS priv_class)
 {
     KOS_OBJECT_WITH_PRIVATE *obj_ptr;
 
+    assert(priv_class);
+
     if (GET_OBJ_TYPE(obj) != OBJ_OBJECT)
         return KOS_NULL;
 
     obj_ptr = (KOS_OBJECT_WITH_PRIVATE *)OBJPTR(OBJECT, obj);
-
-    if (kos_get_object_size(obj_ptr->header) < sizeof(KOS_OBJECT_WITH_PRIVATE))
-        return KOS_NULL;
 
     if (obj_ptr->priv_class != priv_class)
         return KOS_NULL;
@@ -978,13 +978,12 @@ void* KOS_object_swap_private(KOS_OBJ_ID obj, KOS_PRIVATE_CLASS priv_class, void
 {
     KOS_OBJECT_WITH_PRIVATE *obj_ptr;
 
+    assert(priv_class);
+
     if (GET_OBJ_TYPE(obj) != OBJ_OBJECT)
         return new_priv;
 
     obj_ptr = (KOS_OBJECT_WITH_PRIVATE *)OBJPTR(OBJECT, obj);
-
-    if (kos_get_object_size(obj_ptr->header) < sizeof(KOS_OBJECT_WITH_PRIVATE))
-        return new_priv;
 
     if (obj_ptr->priv_class != priv_class)
         return new_priv;

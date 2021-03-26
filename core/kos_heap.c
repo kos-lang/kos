@@ -335,13 +335,14 @@ static void finalize_object(KOS_CONTEXT     ctx,
 
             KOS_OBJECT_WITH_PRIVATE *obj = (KOS_OBJECT_WITH_PRIVATE *)hdr;
 
-            if ((kos_get_object_size(*hdr) >= sizeof(KOS_OBJECT_WITH_PRIVATE)) && obj->finalize) {
+            if (obj->priv_class && obj->finalize) {
 
                 obj->finalize(ctx, KOS_atomic_read_relaxed_ptr(obj->priv));
 
                 assert( ! KOS_is_exception_pending(ctx));
 
-                obj->finalize = KOS_NULL;
+                obj->priv_class = KOS_NULL;
+                obj->finalize   = KOS_NULL;
                 KOS_atomic_write_relaxed_ptr(obj->priv, (void *)KOS_NULL);
 
                 ++stats->num_objs_finalized;

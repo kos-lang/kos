@@ -477,7 +477,7 @@ static int verify_empty_object(KOS_OBJ_ID obj_id)
     TEST(GET_OBJ_TYPE(obj_id) == OBJ_OBJECT);
     TEST(IS_BAD_PTR(KOS_atomic_read_relaxed_obj(OBJPTR(OBJECT, obj_id)->props)));
     TEST(IS_BAD_PTR(OBJPTR(OBJECT, obj_id)->prototype));
-    TEST(kos_get_object_size(OBJPTR(OBJECT, obj_id)->header) < sizeof(KOS_OBJECT_WITH_PRIVATE));
+    TEST( ! OBJPTR(OBJECT, obj_id)->priv_class);
     return 0;
 }
 
@@ -1184,7 +1184,7 @@ static int test_object(ALLOC_FUNC    alloc_object_func,
     size = get_obj_size(obj.o);
 
     if ((GET_OBJ_TYPE(obj.o) == OBJ_OBJECT) &&
-        ((size_t)size >= sizeof(KOS_OBJECT_WITH_PRIVATE)) &&
+        OBJPTR(OBJECT, obj.o)->priv_class &&
         (((KOS_OBJECT_WITH_PRIVATE *)OBJPTR(OBJECT, obj.o))->finalize == finalize_47))
         f47 = 1;
 
