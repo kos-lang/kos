@@ -1409,7 +1409,11 @@ int kos_getline(KOS_GETLINE      *state,
         /* Older versions of Windows don't support escape sequences */
         if (error == KOS_ERROR_NO_VIRTUAL_TERMINAL) {
             KOS_mempool_destroy(&edit.temp_allocator);
-            return legacy_get_line(state, edit.prompt, buf);
+
+            SetConsoleCtrlHandler(ctrl_c_handler, TRUE);
+            error = legacy_get_line(state, edit.prompt, buf);
+            SetConsoleCtrlHandler(ctrl_c_handler, FALSE);
+            return error;
         }
 #endif
     }
