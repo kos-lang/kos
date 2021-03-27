@@ -71,6 +71,76 @@ for a, b in c {}
 )
 
 @------------------------------------------------------------------------------
+for _ in x { }
+for const _ in y { }
+for var _ in z { }
+for _, _ in u { }
+for const _, _ in v { }
+for var _, _ in w { }
+
+@ 0
+
+(scope 1 1
+    (for_in 1 1 for
+        (in 1 7 in
+            (left_hand_side 1 5 _
+                (placeholder 1 5 _)
+            )
+            (identifier 1 10 x)
+        )
+        (scope 1 12 {)
+    )
+    (for_in 2 1 for
+        (in 2 13 in
+            (const 2 5 const
+                (placeholder 2 11 _)
+            )
+            (identifier 2 16 y)
+        )
+        (scope 2 18 {)
+    )
+    (for_in 3 1 for
+        (in 3 11 in
+            (var 3 5 var
+                (placeholder 3 9 _)
+            )
+            (identifier 3 14 z)
+        )
+        (scope 3 16 {)
+    )
+    (for_in 4 1 for
+        (in 4 10 in
+            (left_hand_side 4 5 _
+                (placeholder 4 5 _)
+                (placeholder 4 8 _)
+            )
+            (identifier 4 13 u)
+        )
+        (scope 4 15 {)
+    )
+    (for_in 5 1 for
+        (in 5 16 in
+            (const 5 5 const
+                (placeholder 5 11 _)
+                (placeholder 5 14 _)
+            )
+            (identifier 5 19 v)
+        )
+        (scope 5 21 {)
+    )
+    (for_in 6 1 for
+        (in 6 14 in
+            (var 6 5 var
+                (placeholder 6 9 _)
+                (placeholder 6 12 _)
+            )
+            (identifier 6 17 w)
+        )
+        (scope 6 19 {)
+    )
+)
+
+@------------------------------------------------------------------------------
 for (var a in b); # Open curly brace expected
 
 @ 10 1 17

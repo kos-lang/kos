@@ -2068,7 +2068,7 @@ static int for_in(KOS_COMP_UNIT      *program,
                 assert(var_reg);
             }
             else {
-                assert(var_node->type == NT_VOID_LITERAL);
+                assert(var_node->type == NT_PLACEHOLDER);
             }
 
             TRY(gen_reg(program, &var_reg));
@@ -2162,7 +2162,7 @@ static int for_range(KOS_COMP_UNIT      *program,
         program->error_str   = str_err_too_many_vars_for_range;
         RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
     }
-    assert((var_node->type == NT_IDENTIFIER) || (var_node->type == NT_VOID_LITERAL));
+    assert((var_node->type == NT_IDENTIFIER) || (var_node->type == NT_PLACEHOLDER));
 
     if (var_node->type == NT_IDENTIFIER) {
         assert(var_node->is_var);
@@ -4493,7 +4493,7 @@ static int assignment(KOS_COMP_UNIT      *program,
     assert(is_lhs ||
             (node->children &&
                 (node->children->type == NT_IDENTIFIER ||
-                 node->children->type == NT_VOID_LITERAL)));
+                 node->children->type == NT_PLACEHOLDER)));
 
     node = node->children;
     assert(node);
@@ -4501,7 +4501,7 @@ static int assignment(KOS_COMP_UNIT      *program,
     if (node_type == NT_ASSIGNMENT) {
 
         assert( ! node->next);
-        assert(node->type != NT_VOID_LITERAL);
+        assert(node->type != NT_PLACEHOLDER);
 
         if (assg_node->token.op != OT_SET)
             /* TODO check lhs variable type */
@@ -4606,7 +4606,7 @@ static int assignment(KOS_COMP_UNIT      *program,
             else if (node->type == NT_IDENTIFIER)
                 TRY(assign_non_local(program, (KOS_OPERATOR_TYPE)assg_node->token.op, node, reg));
 
-            else if (node->type != NT_VOID_LITERAL) {
+            else if (node->type != NT_PLACEHOLDER) {
 
                 assert(node->type == NT_SLICE);
                 assert(assg_node->token.op == OT_SET);

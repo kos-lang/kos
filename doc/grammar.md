@@ -203,16 +203,18 @@ The following reserved keywords are defined:
 * `with`
 * `yield`
 
-Keywords `true`, `false` and `void` are output by the lexer as special literal
+Keywords `true`, `false`, `void` and `_` are output by the lexer as special literal
 types.
 
-    TrueLiteral     ::= "t" "r" "u" "e"
+    TrueLiteral         ::= "t" "r" "u" "e"
     
-    FalseLiteral    ::= "f" "a" "l" "s" "e"
+    FalseLiteral        ::= "f" "a" "l" "s" "e"
 
-    BOOLEAN_LITERAL ::= TrueLiteral | FalseLiteral
+    BOOLEAN_LITERAL     ::= TrueLiteral | FalseLiteral
 
-    VOID_LITERAL    ::= "v" "o" "i" "d"
+    VOID_LITERAL        ::= "v" "o" "i" "d"
+
+    PLACEHOLDER_LITERAL ::= "_"
 
 The following keywords are currently reserved - `get`, `static` and `set`.
 
@@ -1007,7 +1009,7 @@ Expressions
                                 ( MemberExpression Refinement )
 
     AssignmentTarget ::= MutableAssignmentTarget |
-                         VOID_LITERAL
+                         PLACEHOLDER_LITERAL
 
     RHSExpression ::= StreamExpression
                     | AsyncExpression

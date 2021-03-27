@@ -137,6 +137,22 @@ do {
 }
 
 do {
+    var sum = ""
+    for const k, _ in { "1": -1, "2": -2 } {
+        sum += k
+    }
+    assert sum == "12" || sum == "21"
+}
+
+do {
+    var sum = 0
+    for const _, v in { "1": -1, "2": -2 } {
+        sum += v
+    }
+    assert sum == -3
+}
+
+do {
     var   c     = 0
     const step1 = 2
     const step2 = 3

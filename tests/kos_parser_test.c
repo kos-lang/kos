@@ -60,6 +60,7 @@ static const char *const node_types[] = {
     "case",
     "fallthrough",
     "landmark",
+    "placeholder",
     "identifier",
     "number",
     "string",

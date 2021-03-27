@@ -1544,14 +1544,14 @@ do {
     assert obj.d == "d"
 
     obj = { }
-    obj.a, void, obj.b, obj.a = input
+    obj.a, _, obj.b, obj.a = input
     assert obj.a == "d"
     assert obj.b == "c"
 
     obj = { }
     var ary = [ 0, 0 ]
     var c = void
-    void, ary[1], obj["a"], c = input
+    _, ary[1], obj["a"], c = input
     assert ary[0] == 0
     assert ary[1] == "b"
     assert obj.a == "c"

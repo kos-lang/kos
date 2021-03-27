@@ -820,7 +820,7 @@ static int for_in_stmt(KOS_COMP_UNIT *program,
 
     for ( ; node; node = node->next) {
 
-        assert((node->type == NT_IDENTIFIER) || (node->type == NT_VOID_LITERAL));
+        assert((node->type == NT_IDENTIFIER) || (node->type == NT_PLACEHOLDER));
 
         if (node->type == NT_IDENTIFIER) {
 
@@ -831,7 +831,7 @@ static int for_in_stmt(KOS_COMP_UNIT *program,
 
             if ( ! var->num_reads_prev && (var->type != VAR_GLOBAL)) {
                 assert(lhs_type != NT_LEFT_HAND_SIDE);
-                collapse(node, NT_VOID_LITERAL, TT_KEYWORD, KW_VOID, KOS_NULL, 0);
+                collapse(node, NT_PLACEHOLDER, TT_KEYWORD, KW_UNDERSCORE, KOS_NULL, 0);
                 ++program->num_optimizations;
             }
             else if (lhs_type == NT_LEFT_HAND_SIDE) {
@@ -1192,7 +1192,7 @@ static int assignment(KOS_COMP_UNIT *program,
             }
 
             if ( ! var->num_reads_prev && (var->type != VAR_GLOBAL)) {
-                collapse(node, NT_VOID_LITERAL, TT_KEYWORD, KW_VOID, KOS_NULL, 0);
+                collapse(node, NT_PLACEHOLDER, TT_KEYWORD, KW_UNDERSCORE, KOS_NULL, 0);
                 ++program->num_optimizations;
             }
             else {
@@ -1215,7 +1215,7 @@ static int assignment(KOS_COMP_UNIT *program,
                 }
             }
         }
-        else if (node->type != NT_VOID_LITERAL) {
+        else if (node->type != NT_PLACEHOLDER) {
             assert(node->type != NT_LINE_LITERAL &&
                    node->type != NT_THIS_LITERAL &&
                    node->type != NT_SUPER_PROTO_LITERAL);

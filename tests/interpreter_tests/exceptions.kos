@@ -838,7 +838,7 @@ do {
 
     var exception = void
     try {
-        void, void, a, b, c = [ 1, 2, 3, 4 ]
+        _, _, a, b, c = [ 1, 2, 3, 4 ]
     }
     catch const e {
         exception = e

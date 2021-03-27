@@ -19,7 +19,7 @@ static const char str_err_eol_before_par[]            = "ambiguous syntax: end o
 static const char str_err_eol_before_sq[]             = "ambiguous syntax: end of line before '[' - consider adding a ';'";
 static const char str_err_eol_before_op[]             = "ambiguous syntax: end of line before operator - consider adding a ';'";
 static const char str_err_exceeded_ast_depth[]        = "expression depth exceeded";
-static const char str_err_expected_assignable[]       = "expected identifier, refinement, slice or 'void' for multi-assignment";
+static const char str_err_expected_assignable[]       = "expected identifier, refinement, slice or '_' for multi-assignment";
 static const char str_err_expected_case[]             = "expected 'case'";
 static const char str_err_expected_case_or_default[]  = "expected 'case' or 'default'";
 static const char str_err_expected_case_statements[]  = "expected statements after 'case'";
@@ -925,6 +925,9 @@ static int primary_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
                         break;
                     case KW_VOID:
                         error = new_node(parser, ret, NT_VOID_LITERAL);
+                        break;
+                    case KW_UNDERSCORE:
+                        error = new_node(parser, ret, NT_PLACEHOLDER);
                         break;
                     default:
                         parser->error_str = str_err_expected_member_expr;
@@ -1925,7 +1928,7 @@ static int check_multi_assgn_lhs(KOS_PARSER         *parser,
 
     if (type == NT_REFINEMENT ||
         type == NT_IDENTIFIER ||
-        type == NT_VOID_LITERAL ||
+        type == NT_PLACEHOLDER ||
         type == NT_SLICE)
 
         return KOS_SUCCESS;
@@ -1952,7 +1955,7 @@ static int expr_no_var(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
     if (parser->token.sep == ST_SEMICOLON || parser->token.sep == ST_PAREN_CLOSE
         || (node_type != NT_IDENTIFIER && node_type != NT_REFINEMENT &&
-            node_type != NT_SLICE && node_type != NT_VOID_LITERAL)
+            node_type != NT_SLICE && node_type != NT_PLACEHOLDER)
         || (parser->token.sep != ST_COMMA && ! (parser->token.op & OT_ASSIGNMENT) && parser->had_eol)
         || parser->token.type == TT_EOF)
     {
@@ -1969,7 +1972,7 @@ static int expr_no_var(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
         if (parser->token.sep == ST_COMMA)
             TRY(check_multi_assgn_lhs(parser, node));
-        else if (node_type == NT_VOID_LITERAL) {
+        else if (node_type == NT_PLACEHOLDER) {
             parser->error_str = str_err_expected_semicolon;
             error = KOS_ERROR_PARSE_FAILED;
             goto cleanup;
@@ -2800,13 +2803,13 @@ static int for_in_expr(KOS_PARSER        *parser,
         TRY(next_token(parser));
     }
 
-    if ((parser->token.type != TT_IDENTIFIER) || (parser->token.keyword != KW_NONE)) {
+    if ((parser->token.type != TT_IDENTIFIER) && (parser->token.keyword == KW_NONE || parser->token.keyword != KW_UNDERSCORE)) {
         parser->error_str = str_err_expected_identifier;
         error             = KOS_ERROR_PARSE_FAILED;
         goto cleanup;
     }
 
-    TRY(push_node(parser, node, NT_IDENTIFIER, KOS_NULL));
+    TRY(push_node(parser, node, (parser->token.keyword == KW_UNDERSCORE) ? NT_PLACEHOLDER : NT_IDENTIFIER, KOS_NULL));
 
     for (;;) {
         TRY(next_token(parser));
@@ -2816,13 +2819,13 @@ static int for_in_expr(KOS_PARSER        *parser,
 
         TRY(next_token(parser));
 
-        if ((parser->token.type != TT_IDENTIFIER) || (parser->token.keyword != KW_NONE)) {
+        if ((parser->token.type != TT_IDENTIFIER) && (parser->token.keyword == KW_NONE || parser->token.keyword != KW_UNDERSCORE)) {
             parser->error_str = str_err_expected_identifier;
             error             = KOS_ERROR_PARSE_FAILED;
             goto cleanup;
         }
 
-        TRY(push_node(parser, node, NT_IDENTIFIER, KOS_NULL));
+        TRY(push_node(parser, node, (parser->token.keyword == KW_UNDERSCORE) ? NT_PLACEHOLDER : NT_IDENTIFIER, KOS_NULL));
     }
 
     if (parser->token.keyword != KW_IN) {

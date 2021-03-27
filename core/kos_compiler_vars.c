@@ -623,8 +623,10 @@ static int var_node(KOS_COMP_UNIT *program,
     KOS_VAR                    *var;
 
     for (node = node->children; node; node = node->next) {
-        TRY(define_var(program, is_const, node, &var));
-        var->is_active = VAR_INACTIVE;
+        if (node->type != NT_PLACEHOLDER) {
+            TRY(define_var(program, is_const, node, &var));
+            var->is_active = VAR_INACTIVE;
+        }
     }
 
 cleanup:
@@ -936,12 +938,12 @@ int kos_is_self_ref_func(const KOS_AST_NODE *node)
         return 0;
 
     assert(node->children->type == NT_IDENTIFIER ||
-           node->children->type == NT_VOID_LITERAL);
+           node->children->type == NT_PLACEHOLDER);
 
     /* Multi-assignment */
     if (node->children->next) {
         assert(node->children->next->type == NT_IDENTIFIER ||
-               node->children->next->type == NT_VOID_LITERAL);
+               node->children->next->type == NT_PLACEHOLDER);
         return 0;
     }
 
@@ -1080,6 +1082,8 @@ static int visit_node(KOS_COMP_UNIT *program,
             /* fall through */
         case NT_VOID_LITERAL:
             /* fall through */
+        case NT_PLACEHOLDER:
+            /* fall through */
         case NT_LINE_LITERAL:
             assert( ! node->children);
             error = KOS_SUCCESS;
@@ -1135,7 +1139,7 @@ void kos_activate_var(KOS_COMP_UNIT      *program,
     KOS_VAR *var;
 
     /* Result of optimization */
-    if (node->type == NT_VOID_LITERAL)
+    if (node->type == NT_PLACEHOLDER)
         return;
 
     assert(node->type == NT_IDENTIFIER);

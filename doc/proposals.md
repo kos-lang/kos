@@ -1,15 +1,13 @@
 ﻿Enhancement proposals
 =====================
 
-* Add { } support for switch case instead of : (retain : ???)
+* Add { } support for switch case instead of : and make : optional before {
 
 * Hook Ctrl-C in interpreter to interrupt all threads
 
 * Add warnings about variable shadowing
 
 * ? Callstack from shallow is missing built-in function
-
-* Use _ as operator for empty extraction instead of void, like in Python
 
 * Allow _ in parameters of the target of -> stream operator
 
@@ -37,7 +35,7 @@
 
 * Expand object in-place, e.g. { a: 1, b..., c: 2 }
 
-* Add syntax coloring for Eclipse, IntelliJ IDEA
+* Add syntax coloring for VSCode, Eclipse, IntelliJ IDEA
 
 * ? Support multi-line strings the Python way
 

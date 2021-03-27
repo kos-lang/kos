@@ -576,6 +576,8 @@ static int visit_node(KOS_COMP_UNIT *program,
             /* fall through */
         case NT_VOID_LITERAL:
             /* fall through */
+        case NT_PLACEHOLDER:
+            /* fall through */
         case NT_BREAK:
             /* fall through */
         case NT_CONTINUE:

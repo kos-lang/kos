@@ -52,6 +52,7 @@ typedef enum KOS_NODE_TYPE_U {
     NT_FALLTHROUGH,         /* a fallthrough statement at the end of a case section */
     NT_LANDMARK,            /* auxiliary node to save location of other tokens, e.g. '{' */
 
+    NT_PLACEHOLDER,
     NT_IDENTIFIER,
     NT_NUMERIC_LITERAL,
     NT_STRING_LITERAL,
