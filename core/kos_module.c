@@ -818,6 +818,8 @@ static KOS_OBJ_ID format_error(KOS_CONTEXT  ctx,
 
     parts[0].o = KOS_get_file_name(ctx, OBJPTR(MODULE, module_obj)->path);
     TRY_OBJID(parts[0].o);
+    if (KOS_get_string_length(parts[0].o) == 0)
+        parts[0].o = OBJPTR(MODULE, module_obj)->name;
 
     parts[1].o = KOS_CONST_ID(str_format_colon);
 
