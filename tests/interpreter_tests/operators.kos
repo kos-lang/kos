@@ -1557,3 +1557,24 @@ do {
     assert obj.a == "c"
     assert c == "d"
 }
+
+##############################################################################
+# multi-assignment with placeholder
+do {
+    const a, _, b = [ 1, 2, 3 ]
+    assert a == 1
+    assert b == 3
+}
+do {
+    var a, _, b = [ 1, 2, 3 ]
+    assert a == 1
+    assert b == 3
+}
+do {
+    var a, b = [ void, void ]
+    assert a == void
+    assert b == void
+    a, _, b = [ 1, 2, 3 ]
+    assert a == 1
+    assert b == 3
+}

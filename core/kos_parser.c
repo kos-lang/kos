@@ -1839,35 +1839,43 @@ static int expr_var_const(KOS_PARSER    *parser,
                           int            is_public,
                           KOS_AST_NODE **ret)
 {
-    int           error         = KOS_SUCCESS;
-    KOS_AST_NODE *node          = KOS_NULL;
-    KOS_AST_NODE *ident_node    = KOS_NULL;
-    KOS_NODE_TYPE node_type     = NT_ASSIGNMENT;
-    KOS_NODE_TYPE var_node_type = parser->token.keyword == KW_CONST
-                                          ? NT_CONST : NT_VAR;
+    KOS_AST_NODE    *node          = KOS_NULL;
+    KOS_AST_NODE    *ident_node    = KOS_NULL;
+    KOS_NODE_TYPE    node_type     = NT_ASSIGNMENT;
+    KOS_NODE_TYPE    var_node_type = parser->token.keyword == KW_CONST ? NT_CONST : NT_VAR;
+    KOS_KEYWORD_TYPE kw;
+    int              error         = KOS_SUCCESS;
 
     TRY(new_node(parser, &node, var_node_type));
 
     TRY(next_token(parser));
 
-    if (parser->token.type != TT_IDENTIFIER) {
+    kw = (KOS_KEYWORD_TYPE)parser->token.keyword;
+
+    if ((parser->token.type != TT_IDENTIFIER) && (is_public || kw == KW_NONE || kw != KW_UNDERSCORE)) {
         parser->error_str = str_err_expected_identifier;
-        error = KOS_ERROR_PARSE_FAILED;
+        error             = KOS_ERROR_PARSE_FAILED;
         goto cleanup;
     }
 
-    TRY(push_node(parser, node, NT_IDENTIFIER, &ident_node));
+    TRY(push_node(parser, node, (kw == KW_UNDERSCORE) ? NT_PLACEHOLDER : NT_IDENTIFIER, &ident_node));
 
     if (is_public)
         TRY(push_node(parser, ident_node, NT_EXPORT, KOS_NULL));
 
     TRY(next_token(parser));
 
+    if ((kw == KW_UNDERSCORE) && (parser->token.sep != ST_COMMA)) {
+        parser->error_str = str_err_expected_comma;
+        error             = KOS_ERROR_PARSE_FAILED;
+        goto cleanup;
+    }
+
     if (parser->token.sep == ST_COMMA) {
 
         if ( ! allow_multi_assignment) {
             parser->error_str = str_err_expected_var_assignment;
-            error = KOS_ERROR_PARSE_FAILED;
+            error             = KOS_ERROR_PARSE_FAILED;
             goto cleanup;
         }
 
@@ -1878,20 +1886,22 @@ static int expr_var_const(KOS_PARSER    *parser,
 
         TRY(next_token(parser));
 
-        if (parser->token.type != TT_IDENTIFIER) {
+        kw = (KOS_KEYWORD_TYPE)parser->token.keyword;
+
+        if ((parser->token.type != TT_IDENTIFIER) && (kw == KW_NONE || kw != KW_UNDERSCORE)) {
             parser->error_str = str_err_expected_identifier;
-            error = KOS_ERROR_PARSE_FAILED;
+            error             = KOS_ERROR_PARSE_FAILED;
             goto cleanup;
         }
 
-        TRY(push_node(parser, node, NT_IDENTIFIER, KOS_NULL));
+        TRY(push_node(parser, node, (kw == KW_UNDERSCORE) ? NT_PLACEHOLDER : NT_IDENTIFIER, KOS_NULL));
 
         TRY(next_token(parser));
     }
 
     if (parser->token.op != OT_SET) {
         parser->error_str = str_err_expected_var_assignment;
-        error = KOS_ERROR_PARSE_FAILED;
+        error             = KOS_ERROR_PARSE_FAILED;
         goto cleanup;
     }
 

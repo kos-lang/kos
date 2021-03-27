@@ -998,15 +998,21 @@ Expressions
 
     ConstList ::= "const" IdentifierList
 
-    IdentifierList ::= Identifier ( "," Identifier )*
+    IdentifierList ::= Identifier
+                     | MultipleIdentifiers
 
-    AssignmentTargetList ::= MutableAssignmentTarget |
-                             MultiAssignmentTargetList
+    MultipleIdentifiers ::= IdentifierOrPlaceholder "," IdentifierOrPlaceholder ( "," IdentifierOrPlaceholder )*
+
+    IdentifierOrPlaceholder ::= Identifier
+                              | PLACEHOLDER_LITERAL
+
+    AssignmentTargetList ::= MutableAssignmentTarget
+                           | MultiAssignmentTargetList
 
     MultiAssignmentTargetList ::= AssignmentTarget "," AssignmentTarget ( "," AssignmentTarget )*
 
-    MutableAssignmentTarget ::= Identifier |
-                                ( MemberExpression Refinement )
+    MutableAssignmentTarget ::= Identifier
+                              | ( MemberExpression Refinement )
 
     AssignmentTarget ::= MutableAssignmentTarget |
                          PLACEHOLDER_LITERAL

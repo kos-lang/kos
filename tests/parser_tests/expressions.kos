@@ -601,6 +601,54 @@ const y = (1 + 2) << 3;
 )
 
 @------------------------------------------------------------------------------
+# Multiple variables, one placeholder
+var _, x = []
+var x, _ = []
+
+@ 0
+
+(scope 1 1
+    (multi_assignment 2 10 =
+        (var 2 1 var
+            (placeholder 2 5 _)
+            (identifier 2 8 x)
+        )
+        (array 2 12 [)
+    )
+    (multi_assignment 3 10 =
+        (var 3 1 var
+            (identifier 3 5 x)
+            (placeholder 3 8 _)
+        )
+        (array 3 12 [)
+    )
+)
+
+@------------------------------------------------------------------------------
+# Multiple constants, one placeholder
+const _, x = []
+const x, _ = []
+
+@ 0
+
+(scope 1 1
+    (multi_assignment 2 12 =
+        (const 2 1 const
+            (placeholder 2 7 _)
+            (identifier 2 10 x)
+        )
+        (array 2 14 [)
+    )
+    (multi_assignment 3 12 =
+        (const 3 1 const
+            (identifier 3 7 x)
+            (placeholder 3 10 _)
+        )
+        (array 3 14 [)
+    )
+)
+
+@------------------------------------------------------------------------------
 var x; # Missing assignment
 @ 10 1 6
 
@@ -614,6 +662,14 @@ var x += 1; # Incorrect operator
 
 @------------------------------------------------------------------------------
 const x += 2; # Incorrect operator
+@ 10 1 9
+
+@------------------------------------------------------------------------------
+var _ = 1; # Cannot assign to one placeholder
+@ 10 1 7
+
+@------------------------------------------------------------------------------
+const _ = 1; # Cannot assign to one placeholder
 @ 10 1 9
 
 @------------------------------------------------------------------------------
@@ -636,6 +692,23 @@ x,y,z = a + b + c;
             )
             (identifier 2 17 c)
         )
+    )
+)
+
+@------------------------------------------------------------------------------
+# Multiple assignment
+x,_,z = a
+
+@ 0
+
+(scope 1 1
+    (multi_assignment 2 7 =
+        (left_hand_side 2 2 ,
+            (identifier 2 1 x)
+            (placeholder 2 3 _)
+            (identifier 2 5 z)
+        )
+        (identifier 2 9 a)
     )
 )
 
