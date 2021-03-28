@@ -162,7 +162,7 @@ unsigned KOS_utf8_get_len(const char     *str,
     const uintptr_t single_byte_mask = one * 0x80U;
     const uintptr_t backslash_mask   = one * 0x23U;
 
-    assert (sizeof(uintptr_t) == 4 || sizeof(uintptr_t) == 8);
+    assert(sizeof(uintptr_t) == 4 || sizeof(uintptr_t) == 8);
 
     for ( ; length; ++count) {
         uint8_t  c;
@@ -209,7 +209,7 @@ unsigned KOS_utf8_get_len(const char     *str,
 
             unsigned code_len = kos_utf8_len[c >> 3];
 
-            if (code_len == 0 || code_len - 1 > length) {
+            if ((code_len == 0) || (code_len - 1 > length) || (c < 0xC2U)) {
                 count = ~0U;
                 break;
             }

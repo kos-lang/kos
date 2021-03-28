@@ -149,8 +149,6 @@ int main(void)
         const char src[] = {
             '\x00',                            /* u0000 */
             '\x7F',                            /* u007F */
-            '\xC0', '\x80',                    /* u0000 */
-            '\xC1', '\xBF',                    /* u007F */
             '\xE0', '\x80', '\x80',            /* u0000 */
             '\xE0', '\x81', '\xBF',            /* u007F */
             '\xF0', '\x80', '\x80', '\x80',    /* u0000 */
@@ -160,7 +158,7 @@ int main(void)
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
         TEST(kos_get_string_elem_size(OBJPTR(STRING, s)) == KOS_STRING_ELEM_MIN_8);
-        TEST(KOS_get_string_length(s) == 8);
+        TEST(KOS_get_string_length(s) == 6);
         TEST(OBJPTR(STRING, s)->header.hash == 0);
         TEST(KOS_string_get_char_code(ctx, s,  0) == 0x0000);
         TEST(KOS_string_get_char_code(ctx, s,  1) == 0x007F);
@@ -168,8 +166,6 @@ int main(void)
         TEST(KOS_string_get_char_code(ctx, s,  3) == 0x007F);
         TEST(KOS_string_get_char_code(ctx, s,  4) == 0x0000);
         TEST(KOS_string_get_char_code(ctx, s,  5) == 0x007F);
-        TEST(KOS_string_get_char_code(ctx, s,  6) == 0x0000);
-        TEST(KOS_string_get_char_code(ctx, s,  7) == 0x007F);
     }
 
     /************************************************************************/
@@ -177,8 +173,6 @@ int main(void)
         const char src[] = {
             '\x00',                          /* u0000 */
             '\x7F',                          /* u007F */
-            '\xC0', '\x80',                  /* u0000 */
-            '\xC1', '\xBF',                  /* u007F */
             '\xC2', '\x80',                  /* u0080 */
             '\xDF', '\xBF',                  /* u07FF */
             '\xE0', '\x80', '\x80',          /* u0000 */
@@ -195,23 +189,21 @@ int main(void)
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
         TEST(kos_get_string_elem_size(OBJPTR(STRING, s)) == KOS_STRING_ELEM_MIN_16);
-        TEST(KOS_get_string_length(s) == 15);
+        TEST(KOS_get_string_length(s) == 13);
         TEST(OBJPTR(STRING, s)->header.hash == 0);
         TEST(KOS_string_get_char_code(ctx, s,  0) == 0x0000);
         TEST(KOS_string_get_char_code(ctx, s,  1) == 0x007F);
-        TEST(KOS_string_get_char_code(ctx, s,  2) == 0x0000);
-        TEST(KOS_string_get_char_code(ctx, s,  3) == 0x007F);
-        TEST(KOS_string_get_char_code(ctx, s,  4) == 0x0080);
-        TEST(KOS_string_get_char_code(ctx, s,  5) == 0x07FF);
-        TEST(KOS_string_get_char_code(ctx, s,  6) == 0x0000);
-        TEST(KOS_string_get_char_code(ctx, s,  7) == 0x007F);
-        TEST(KOS_string_get_char_code(ctx, s,  8) == 0x0080);
-        TEST(KOS_string_get_char_code(ctx, s,  9) == 0x07FF);
-        TEST(KOS_string_get_char_code(ctx, s, 10) == 0x0800);
-        TEST(KOS_string_get_char_code(ctx, s, 11) == 0xFFFF);
-        TEST(KOS_string_get_char_code(ctx, s, 12) == 0x0000);
-        TEST(KOS_string_get_char_code(ctx, s, 13) == 0x007F);
-        TEST(KOS_string_get_char_code(ctx, s, 14) == 0xFFFF);
+        TEST(KOS_string_get_char_code(ctx, s,  2) == 0x0080);
+        TEST(KOS_string_get_char_code(ctx, s,  3) == 0x07FF);
+        TEST(KOS_string_get_char_code(ctx, s,  4) == 0x0000);
+        TEST(KOS_string_get_char_code(ctx, s,  5) == 0x007F);
+        TEST(KOS_string_get_char_code(ctx, s,  6) == 0x0080);
+        TEST(KOS_string_get_char_code(ctx, s,  7) == 0x07FF);
+        TEST(KOS_string_get_char_code(ctx, s,  8) == 0x0800);
+        TEST(KOS_string_get_char_code(ctx, s,  9) == 0xFFFF);
+        TEST(KOS_string_get_char_code(ctx, s, 10) == 0x0000);
+        TEST(KOS_string_get_char_code(ctx, s, 11) == 0x007F);
+        TEST(KOS_string_get_char_code(ctx, s, 12) == 0xFFFF);
     }
 
     /************************************************************************/
@@ -219,8 +211,6 @@ int main(void)
         const char src[] = {
             '\x00',                          /* u000000 */
             '\x7F',                          /* u00007F */
-            '\xC0', '\x80',                  /* u000000 */
-            '\xC1', '\xBF',                  /* u00007F */
             '\xC2', '\x80',                  /* u000080 */
             '\xDF', '\xBF',                  /* u0007FF */
             '\xE0', '\x80', '\x80',          /* u000000 */
@@ -240,31 +230,29 @@ int main(void)
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
         TEST(kos_get_string_elem_size(OBJPTR(STRING, s)) == KOS_STRING_ELEM_32);
-        TEST(KOS_get_string_length(s) == 18);
+        TEST(KOS_get_string_length(s) == 16);
         TEST(OBJPTR(STRING, s)->header.hash == 0);
         TEST(KOS_string_get_char_code(ctx, s,  0) == 0x000000);
         TEST(KOS_string_get_char_code(ctx, s,  1) == 0x00007F);
-        TEST(KOS_string_get_char_code(ctx, s,  2) == 0x000000);
-        TEST(KOS_string_get_char_code(ctx, s,  3) == 0x00007F);
-        TEST(KOS_string_get_char_code(ctx, s,  4) == 0x000080);
-        TEST(KOS_string_get_char_code(ctx, s,  5) == 0x0007FF);
-        TEST(KOS_string_get_char_code(ctx, s,  6) == 0x000000);
-        TEST(KOS_string_get_char_code(ctx, s,  7) == 0x00007F);
-        TEST(KOS_string_get_char_code(ctx, s,  8) == 0x000080);
-        TEST(KOS_string_get_char_code(ctx, s,  9) == 0x0007FF);
-        TEST(KOS_string_get_char_code(ctx, s, 10) == 0x000800);
-        TEST(KOS_string_get_char_code(ctx, s, 11) == 0x00FFFF);
-        TEST(KOS_string_get_char_code(ctx, s, 12) == 0x000000);
-        TEST(KOS_string_get_char_code(ctx, s, 13) == 0x00007F);
-        TEST(KOS_string_get_char_code(ctx, s, 14) == 0x00FFFF);
-        TEST(KOS_string_get_char_code(ctx, s, 15) == 0x100000);
-        TEST(KOS_string_get_char_code(ctx, s, 16) == 0x03FFFF);
-        TEST(KOS_string_get_char_code(ctx, s, 17) == 0x1FFFFF);
+        TEST(KOS_string_get_char_code(ctx, s,  2) == 0x000080);
+        TEST(KOS_string_get_char_code(ctx, s,  3) == 0x0007FF);
+        TEST(KOS_string_get_char_code(ctx, s,  4) == 0x000000);
+        TEST(KOS_string_get_char_code(ctx, s,  5) == 0x00007F);
+        TEST(KOS_string_get_char_code(ctx, s,  6) == 0x000080);
+        TEST(KOS_string_get_char_code(ctx, s,  7) == 0x0007FF);
+        TEST(KOS_string_get_char_code(ctx, s,  8) == 0x000800);
+        TEST(KOS_string_get_char_code(ctx, s,  9) == 0x00FFFF);
+        TEST(KOS_string_get_char_code(ctx, s, 10) == 0x000000);
+        TEST(KOS_string_get_char_code(ctx, s, 11) == 0x00007F);
+        TEST(KOS_string_get_char_code(ctx, s, 12) == 0x00FFFF);
+        TEST(KOS_string_get_char_code(ctx, s, 13) == 0x100000);
+        TEST(KOS_string_get_char_code(ctx, s, 14) == 0x03FFFF);
+        TEST(KOS_string_get_char_code(ctx, s, 15) == 0x1FFFFF);
     }
 
     /************************************************************************/
     {
-        const char src[] = { '\xC0', '\x80', '\xC2', '\x80' };
+        const char src[] = { '\x00', '\xC2', '\x80' };
         char buf[4] = { '\xFF', '\xFF', '\xFF', '\xFF' };
 
         const KOS_OBJ_ID s = KOS_new_string(ctx, src, sizeof(src));
@@ -282,6 +270,22 @@ int main(void)
     {
         const char src[] = { '\x80' };
         TEST(IS_BAD_PTR(KOS_new_string(ctx, src, sizeof(src))));
+        TEST_EXCEPTION();
+    }
+
+    /************************************************************************/
+    {
+        const char src[] = { '\xC0', '\x80' };
+        const KOS_OBJ_ID s = KOS_new_string(ctx, src, sizeof(src));
+        TEST(IS_BAD_PTR(s));
+        TEST_EXCEPTION();
+    }
+
+    /************************************************************************/
+    {
+        const char src[] = { '\xC1', '\xBF' };
+        const KOS_OBJ_ID s = KOS_new_string(ctx, src, sizeof(src));
+        TEST(IS_BAD_PTR(s));
         TEST_EXCEPTION();
     }
 
