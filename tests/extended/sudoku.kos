@@ -7,8 +7,6 @@ import base.*
 import iter
 import random.random
 
-do { # Don't put anything in global scope
-
 # Flags from command line
 var f_debug      = false
 var f_seed       = void
@@ -23,8 +21,7 @@ do {
 
     for const arg in next_arg {
         switch arg {
-
-            case "-h":
+            case "-h" {
                 print("Usage: sudoku.kos [FLAGS]")
                 print()
                 print("Flags:")
@@ -33,26 +30,27 @@ do {
                 print("    -b BASE     - Block size (default=3)")
                 print("    -d          - Enable debug checks and prints")
                 return;
-
-            case "-d":
+            }
+            case "-d" {
                 f_debug = true
-
-            case "-s":
+            }
+            case "-s" {
                 f_seed = integer(next_arg())
-
-            case "-m":
+            }
+            case "-m" {
                 f_difficulty = integer(next_arg())
                 assert f_difficulty > 0
-
-            case "-b":
+            }
+            case "-b" {
                 f_base = integer(next_arg())
                 assert f_base > 1
                 assert f_base <= 4
-
-            default:
+            }
+            default {
                 print("Unrecognized argument: \(arg)")
                 print("Run with -h to get the list of valid options")
                 throw "bad argument" # TODO add a way to return non-zero exit code w/o exception
+            }
         }
     }
 }
@@ -67,7 +65,7 @@ if f_seed == void {
 print("Seed: \(f_seed)")
 
 # Setup RNG
-const random = random(f_seed)
+const r = random(f_seed)
 
 # Prints a message only if -d was specified
 fun dprint(args...)
@@ -169,7 +167,7 @@ fun generate_board()
                 }
             }
 
-            const v = poss_values[random.integer(0, poss_values.size - 1)]
+            const v = poss_values[r.integer(0, poss_values.size - 1)]
             const v_mask = 1 << v
             board.data[idx] = v
             board.rows[irow] |= v_mask
@@ -254,7 +252,7 @@ fun set_cell(board, irow, icol, idx, val)
 # Blank out cells in the board, as long as it's still solvable
 fun blank_out_cells(board, difficulty)
 {
-    const positions = [ iter.iproduct(f_size, f_size) -> random.shuffle ... ]
+    const positions = [ iter.iproduct(f_size, f_size) -> r.shuffle ... ]
 
     var ipos = 0
 
@@ -286,5 +284,3 @@ const orig_board = clone(board)
 blank_out_cells(board, f_difficulty)
 
 print_board(board)
-
-}

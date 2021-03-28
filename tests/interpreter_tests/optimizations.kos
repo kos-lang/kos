@@ -681,9 +681,9 @@ do {
     {
         switch x
         {
-            case 1:  return x + 1
-            case 2:  return x + 2
-            default: return x + 3
+            case 1  { return x + 1 }
+            case 2  { return x + 2 }
+            default { return x + 3 }
         }
     }
     assert optimize_switch(1) == 2

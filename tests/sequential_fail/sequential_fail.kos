@@ -58,9 +58,9 @@ do {
             assert key2 == key
 
             switch key {
-                case "a": assert value == line
-                case "b": assert value == line + 1
-                default:  throw "invalid " + "key"
+                case "a": { assert value == line     }
+                case "b": { assert value == line + 1 }
+                default:  { throw "invalid " + "key" }
             }
         }
         return line + 1

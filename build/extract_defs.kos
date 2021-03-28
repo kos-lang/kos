@@ -38,10 +38,10 @@ class create_defs {
         const lexer = kos.raw_lexer(f.read(), true)
         for const token in lexer {
             switch token.type {
-                case kos.token_eol:
+                case kos.token_eol {
                     new_line = true
-
-                case kos.token_separator:
+                }
+                case kos.token_separator {
                     if token.sep == kos.sep_semicolon
                        || token.sep == kos.sep_curly_open
                        || token.sep == kos.sep_curly_close {
@@ -62,18 +62,18 @@ class create_defs {
                         new_expr = false
                     }
                     new_line = false
-
-                case kos.token_identifier:
+                }
+                case kos.token_identifier {
                     if new_expr && token.token == "KOS_API" {
                         api_token = token
                     }
                     new_line = false
                     new_expr = false
-
+                }
                 # Ignore whitespace and comments.
                 # This also helps ignore KOS_API tokens inside preprocessor
                 # defines, because # is treated as beginning of a comment.
-                case kos.token_whitespace, kos.token_comment:
+                case kos.token_whitespace, kos.token_comment {
                     # When line continuation is encountered in a macro, ignore further lines
                     if token.token[0] == "#" && token.token[-1] == "\\" {
                         var need_eols = 2
@@ -91,10 +91,11 @@ class create_defs {
                         new_line = true
                     }
                     break
-
-                default:
+                }
+                default {
                     new_line = false
                     new_expr = false
+                }
             }
 
             prev_token = token

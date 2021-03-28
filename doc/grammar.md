@@ -789,9 +789,9 @@ A fallthrough statement is not allowed in the last case section.
     SwitchStatement ::= "switch" RHSExpression
                         "{" ( SwitchCase )* [ DefaultCase ] ( SwitchCase )* "}"
 
-    SwitchCase      ::= "case" CaseSpec ":" Statement ( Statement )*
+    SwitchCase      ::= "case" CaseSpec [ ":" ] "{" Statement ( Statement )* "}"
 
-    DefaultCase     ::= "default" ":" Statement ( Statement )*
+    DefaultCase     ::= "default" [ ":" ] "{" Statement ( Statement )* "}"
 
     CaseSpec        ::= RHSExpression ( "," RHSExpression )*
 

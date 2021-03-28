@@ -5,15 +5,15 @@ do {
     {
         switch a {
 
-            case void:  return 1 
+            case void:  { return 1 }
 
-            case true:  return 2; fallthrough
+            case true:  { return 2; fallthrough }
 
-            case false: return 3 
+            case false: { return 3 }
 
-            case "x":   return 4 
+            case "x":   { return 4 }
 
-            case 89:    return 5 
+            case 89:    { return 5 }
         }
         return void
     }
@@ -32,9 +32,8 @@ do {
     fun test(a, b)
     {
         switch a {
-
-            case b + 1: return 1
-            case b + 2: return 2
+            case b + 1: { return 1 }
+            case b + 2: { return 2 }
         }
     }
 
@@ -57,7 +56,7 @@ do {
     fun test(x)
     {
         switch x {
-            case 5: return true
+            case 5 { return true }
         }
         return false
     }
@@ -71,7 +70,7 @@ do {
     var a = 1
 
     switch 8 {
-        default: a = 2
+        default: { a = 2 }
     }
 
     assert a == 2
@@ -84,21 +83,22 @@ do {
 
         switch a + 1 {
 
-            case 1:
+            case 1: {
                 ret += "a"
-
-            case 2:
+            }
+            case 2: {
                 ret += "b"
                 fallthrough
-
-            case 3:
+            }
+            case 3: {
                 ret += "c"
-
-            default:
+            }
+            default: {
                 ret += "d"
-
-            case 4, 5, 6:
+            }
+            case 4, 5, 6: {
                 ret += "e"
+            }
         }
 
         return ret
@@ -119,12 +119,15 @@ do {
     const it = range(10)
     for const i in it {
         switch i {
-            case 2, 4, 5:
+            case 2, 4, 5: {
                 continue
-
-            default: sum = sum * 10 + i
-
-            case 8: it()
+            }
+            default: {
+                sum = sum * 10 + i
+            }
+            case 8: {
+                it()
+            }
         }
     }
 
@@ -137,8 +140,8 @@ do {
         const x = 1
         const y = 2
         switch (a) {
-            case x: return 7
-            case y: return 14
+            case x: { return 7  }
+            case y: { return 14 }
         }
         return 0
     }
@@ -153,8 +156,8 @@ do {
     fun select(a)
     {
         switch a + 1 {
-            case 0, 1, 2: return a
-            case x * 2:   return 10
+            case 0, 1, 2: { return a  }
+            case x * 2:   { return 10 }
         }
     }
 
@@ -172,13 +175,13 @@ do {
     {
         switch a {
 
-            case 1: break
+            case 1: { break     }
 
-            case 2: break
+            case 2: { break     }
 
-            case 3: return 10
+            case 3: { return 10 }
 
-            case 4: break
+            case 4: { break     }
         }
 
         return -a - 1
@@ -195,15 +198,16 @@ do {
     {
         switch a {
 
-            case 1:
+            case 1 {
                 var b = 1
                 b += a
                 return b
-
-            case 2:
+            }
+            case 2 {
                 var b = 10
                 b -= a
                 return b
+            }
         }
     }
 
@@ -227,7 +231,7 @@ do {
         const seq = pusher()
 
         switch a {
-            case "x", "y", "xy":
+            case "x", "y", "xy" {
                 defer {
                     seq.push(1)
                 }
@@ -236,8 +240,8 @@ do {
                     break
                 }
                 seq.push(4)
-
-            case "a", "b", "c":
+            }
+            case "a", "b", "c" {
                 if a == "a" {
                     seq.push(5)
                     fallthrough
@@ -260,9 +264,10 @@ do {
                     seq.push(0)
                 }
                 seq.push(9)
-
-            case "d":
+            }
+            case "d" {
                 seq.push(1)
+            }
         }
 
         return seq.value
@@ -307,7 +312,7 @@ do {
 
             switch a {
 
-                case "A":
+                case "A" {
                     seq.push("a")
                     if b == 1 {
                         seq.push("b")
@@ -340,9 +345,10 @@ do {
                         }
                     }
                     seq.push("j")
-
-                case "B":
+                }
+                case "B" {
                     seq.push("k")
+                }
             }
 
             seq.push("l")

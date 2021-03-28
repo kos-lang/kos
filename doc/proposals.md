@@ -1,8 +1,6 @@
 ﻿Enhancement proposals
 =====================
 
-* Add { } support for switch case instead of : and make : optional before {
-
 * Make "" strings single-line, allow raw strings to be multi-line
 
 * Add dsl (domain-specific language) literals; what keyword?:

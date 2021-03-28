@@ -2605,13 +2605,9 @@ static int switch_stmt(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
             TRY(push_node(parser, *ret, NT_DEFAULT, &case_node));
 
-            TRY(assume_separator(parser, ST_COLON));
-
             TRY(push_node(parser, case_node, NT_EMPTY, KOS_NULL));
         }
         else {
-
-            TRY(push_node(parser, *ret, NT_CASE, &case_node));
 
             if (parser->token.keyword != KW_CASE) {
                 if (has_default)
@@ -2621,6 +2617,8 @@ static int switch_stmt(KOS_PARSER *parser, KOS_AST_NODE **ret)
                 error = KOS_ERROR_PARSE_FAILED;
                 goto cleanup;
             }
+
+            TRY(push_node(parser, *ret, NT_CASE, &case_node));
 
             for (;;) {
 
@@ -2642,9 +2640,14 @@ static int switch_stmt(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
                 TRY(push_node(parser, *ret, NT_CASE, &case_node));
             }
-
-            TRY(assume_separator(parser, ST_COLON));
         }
+
+        TRY(next_token(parser));
+
+        if (parser->token.sep != ST_COLON)
+            parser->unget = 1;
+
+        TRY(assume_separator(parser, ST_CURLY_OPEN));
 
         parser->state.last_fallthrough = KOS_NULL;
 
@@ -2686,6 +2689,12 @@ static int switch_stmt(KOS_PARSER *parser, KOS_AST_NODE **ret)
             error = KOS_ERROR_PARSE_FAILED;
             goto cleanup;
         }
+
+        parser->unget = 1;
+
+        TRY(assume_separator(parser, ST_CURLY_CLOSE));
+
+        TRY(next_token(parser));
     }
 
     --parser->state.allow_break;

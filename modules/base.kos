@@ -1770,7 +1770,7 @@ public fun sort(key = void, args...)
 
     switch typeof key {
 
-        case "void", "function", "class":
+        case "void", "function", "class" {
             if args.size {
                 if args.size > 1 {
                     reverse  = args[0]
@@ -1787,19 +1787,19 @@ public fun sort(key = void, args...)
             else {
                 return sort
             }
-
-        case "boolean":
+        }
+        case "boolean" {
             reverse = key
             key     = void
             if ! args.size {
                 return sort
             }
             iterable = args[0]
-
-        default:
+        }
+        default {
             iterable = key
             key      = void
-
+        }
     }
 
     return sort(iterable)
