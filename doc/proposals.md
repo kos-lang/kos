@@ -1,8 +1,6 @@
 ﻿Enhancement proposals
 =====================
 
-* Make "" strings single-line, allow raw strings to be multi-line
-
 * Add dsl (domain-specific language) literals; what keyword?:
 
         const buf = dsl(buffer)(1234abc)

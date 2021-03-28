@@ -18,7 +18,8 @@ static const char str_err_eof_bin[]             = "unexpected end of file, binar
 static const char str_err_eof_cont[]            = "unexpected end of file, string continuation expected";
 static const char str_err_eof_esc[]             = "unexpected end of file, unfinished escape sequence";
 static const char str_err_eof_hex[]             = "unexpected end of file, hexadecimal digit expected";
-static const char str_err_eof_str[]             = "unexpected end of file, unfinished string literal";
+static const char str_err_eof_str[]             = "unexpected end of file, unfinished string literal, expected '\"'";
+static const char str_err_eol_str[]             = "unexpected end of line, unfinished string literal, expected '\"'";
 static const char str_err_hex[]                 = "hexadecimal digit expected";
 static const char str_err_invalid_char[]        = "invalid character";
 static const char str_err_invalid_dec[]         = "invalid decimal literal";
@@ -523,6 +524,11 @@ static int collect_string(KOS_LEXER *lexer)
             error = collect_escape(lexer, &format);
             if (error || format)
                 break;
+        }
+        else if (c == LT_EOL) {
+            lexer->error_str = str_err_eol_str;
+            error            = KOS_ERROR_SCANNING_FAILED;
+            break;
         }
 
         c = prefetch_next(lexer, &begin, &end);

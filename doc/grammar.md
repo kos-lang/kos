@@ -318,7 +318,7 @@ sequence.
 
     EscapedChar          ::= "\" EscapeSequence
 
-    UnescapedStringChar  ::= UTF8_CHARACTER except ( """ | "\" )
+    UnescapedStringChar  ::= UTF8_CHARACTER except ( """ | "\" | Eol )
 
     StringChar           ::= UnescapedStringChar | EscapedChar
 

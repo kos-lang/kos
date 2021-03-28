@@ -225,10 +225,6 @@ abcdefghijklmnopqrstuvwxyz_ABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789;
 "\x00 \x99 \xaa \xAA \xff \xFF";
 "\x{0} \x{aa} \x{012345} \x{abCDef}";
 
-"
-
-";
-
 
 
 
@@ -247,8 +243,6 @@ abcdefghijklmnopqrstuvwxyz_ABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789;
     (string 6 1 "\r \n \t \v \0 \' \" \\ // /*")
     (string 7 1 "\x00 \x99 \xaa \xAA \xff \xFF")
     (string 8 1 "\x{0} \x{aa} \x{012345} \x{abCDef}")
-
-    (string 10 1 "")
 )
 
 @------------------------------------------------------------------------------
@@ -259,6 +253,12 @@ abcdefghijklmnopqrstuvwxyz_ABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789;
 @------------------------------------------------------------------------------
 # Invalid string
 'x'
+@ 9 2 1
+
+@------------------------------------------------------------------------------
+# Invalid string
+"
+"
 @ 9 2 1
 
 @------------------------------------------------------------------------------
