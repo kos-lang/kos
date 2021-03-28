@@ -2288,7 +2288,7 @@ static int for_range(KOS_COMP_UNIT      *program,
     update_jump_offs(program, loop_jump_offs, loop_start_offs);
     finish_break_continue(program, next_jump_offs, old_break_offs);
 
-    if (lhs_type == NT_LEFT_HAND_SIDE)
+    if ((lhs_type == NT_LEFT_HAND_SIDE) && item_reg)
         TRY(gen_instr1(program, INSTR_LOAD_VOID, item_reg->reg));
 
     free_reg(program, reg);
