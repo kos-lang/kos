@@ -542,17 +542,20 @@ static KOS_OBJ_ID flush(KOS_CONTEXT ctx,
     KOS_init_local_with(ctx, &this_, this_obj);
 
     if (file) {
-        int stored_errno = 0;
+        int       stored_errno = 0;
+        const int seq_fail     = kos_seq_fail();
 
         KOS_suspend_context(ctx);
 
-        if (fflush(file))
+        if (fflush(file) || seq_fail)
             stored_errno = errno;
 
         KOS_resume_context(ctx);
 
-        if (stored_errno)
+        if (stored_errno || seq_fail) {
             KOS_raise_errno_value(ctx, "fflush", stored_errno);
+            error = KOS_ERROR_EXCEPTION;
+        }
     }
 
     this_.o = KOS_destroy_top_local(ctx, &this_);
