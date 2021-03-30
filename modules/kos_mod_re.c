@@ -12,6 +12,7 @@
 #include "../inc/kos_object.h"
 #include "../inc/kos_utf8.h"
 #include "../inc/kos_utils.h"
+#include "../core/kos_debug.h"
 #include "../core/kos_object_internal.h"
 #include "../core/kos_math.h"
 #include "../core/kos_try.h"
@@ -395,7 +396,11 @@ static int parse_number(struct RE_PARSE_CTX *re_ctx, uint32_t* number)
     uint32_t  code  = peek_next_char(&re_ctx->iter);
     const int pos   = re_ctx->idx;
 
-    assert(code != END_OF_STR);
+    if (code == END_OF_STR) {
+        KOS_raise_printf(re_ctx->ctx, "error parsing regular expression: "
+                         "expected a decimal digit at position %d", pos);
+        return KOS_ERROR_EXCEPTION;
+    }
 
     if (code < '0' || code > '9') {
         char str_code[6];
@@ -864,9 +869,11 @@ static int parse_single_match(struct RE_PARSE_CTX *re_ctx)
         default:
             consume_next_char(re_ctx);
             if (code < 0x10000U)
-                error = emit_instr1(re_ctx, INSTR_MATCH_ONE_CHAR, code);
+                error = emit_instr1(re_ctx, INSTR_MATCH_ONE_CHAR, (uint32_t)(int32_t)(int16_t)(uint16_t)code);
             else
-                error = emit_instr2(re_ctx, INSTR_MATCH_ONE_CHAR32, (uint16_t)(code >> 16), (uint16_t)code);
+                error = emit_instr2(re_ctx, INSTR_MATCH_ONE_CHAR32,
+                                    (uint32_t)((int32_t)code >> 16),
+                                    (uint32_t)(int32_t)(int16_t)(uint16_t)code);
             break;
     }
 
@@ -1469,7 +1476,7 @@ static int is_word_char(uint32_t code)
 }
 
 #define BEGIN_INSTRUCTION(instr) case INSTR_ ## instr
-#define NEXT_INSTRUCTION         break
+#define NEXT_INSTRUCTION         KOS_INSTR_FUZZ_LIMIT(); break
 
 static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
                                const struct RE_OBJ  *re,
