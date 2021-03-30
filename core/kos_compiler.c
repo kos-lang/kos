@@ -36,6 +36,7 @@ static const char str_err_too_many_args[]             = "too many arguments pass
 static const char str_err_too_many_registers[]        = "register capacity exceeded, try to refactor the program";
 static const char str_err_too_many_vars_for_range[]   = "too many variables specified for a range, only one variable is supported";
 static const char str_err_unexpected_super[]          = "'super' cannot be used in this context";
+static const char str_err_unexpected_underscore[]     = "'_' cannot be used in this context";
 
 enum KOS_BOOL_E {
     KOS_FALSE_VALUE,
@@ -5871,6 +5872,11 @@ static int visit_node(KOS_COMP_UNIT      *program,
             break;
         case NT_CLASS_LITERAL:
             error = class_literal(program, node, KOS_NULL, reg);
+            break;
+        case NT_PLACEHOLDER:
+            program->error_token = &node->token;
+            program->error_str   = str_err_unexpected_underscore;
+            error                = KOS_ERROR_COMPILE_FAILED;
             break;
         case NT_VOID_LITERAL:
             /* fall through */

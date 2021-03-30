@@ -2139,6 +2139,8 @@ static int visit_node(KOS_COMP_UNIT *program,
         case NT_BOOL_LITERAL:
             /* fall through */
         case NT_VOID_LITERAL:
+            /* fall through */
+        case NT_PLACEHOLDER:
             assert( ! node->children);
             /* fall through */
         case NT_PARAMETERS:

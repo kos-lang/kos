@@ -50,6 +50,7 @@ static const char str_err_expected_var_or_const[]     = "expected 'var' or 'cons
 static const char str_err_expected_var_assignment[]   = "expected '=' in variable declaration";
 static const char str_err_expected_while[]            = "expected 'while'";
 static const char str_err_fallthrough_in_last_case[]  = "unexpected 'fallthrough' statement in last switch case";
+static const char str_err_invalid_multi_assign[]      = "incorrect multiple assignment from literal which does not support iteration";
 static const char str_err_invalid_public[]            = "incorrect 'public' declaration, must be a constant, variable, function or class";
 static const char str_err_mixed_operators[]           = "mixed operators, consider using parentheses";
 static const char str_err_too_many_non_default[]      = "too many non-default arguments (more than 255) preceding an argument with default value";
@@ -1915,7 +1916,30 @@ static int expr_var_const(KOS_PARSER    *parser,
 
     TRY(right_hand_side_expr(parser, &node));
 
-    /* TODO error out when doing multi-assignment from unsupported types, like function */
+    if (node_type == NT_MULTI_ASSIGNMENT) {
+        switch (node->type) {
+            case NT_FUNCTION_LITERAL:
+                /* fall through */
+            case NT_CONSTRUCTOR_LITERAL:
+                /* fall through */
+            case NT_CLASS_LITERAL:
+                /* fall through */
+            case NT_NUMERIC_LITERAL:
+                /* fall through */
+            case NT_VOID_LITERAL:
+                /* fall through */
+            case NT_BOOL_LITERAL:
+                /* fall through */
+            case NT_LINE_LITERAL:
+                parser->error_str = str_err_invalid_multi_assign;
+                parser->token     = node->token;
+                error             = KOS_ERROR_PARSE_FAILED;
+                goto cleanup;
+
+            default:
+                break;
+        }
+    }
 
     if ((node->type == NT_FUNCTION_LITERAL    ||
          node->type == NT_CONSTRUCTOR_LITERAL ||

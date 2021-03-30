@@ -14,6 +14,7 @@
 #include "../inc/kos_string.h"
 #include "../inc/kos_utils.h"
 #include "kos_config.h"
+#include "kos_debug.h"
 #include "kos_math.h"
 #include "kos_misc.h"
 #include "kos_object_internal.h"
@@ -1399,36 +1400,25 @@ static void write_reg(KOS_STACK_FRAME *stack_frame,
     KOS_atomic_write_relaxed_ptr(stack_frame->regs[reg], value);
 }
 
-#ifdef CONFIG_FUZZ
-extern KOS_ATOMIC(uint32_t) kos_fuzz_instructions;
-#   define MAX_FUZZ_INSTR 1024U
-#   define FUZZ_LIMIT() do {                                                 \
-        if (KOS_atomic_add_u32(kos_fuzz_instructions, 1U) >= MAX_FUZZ_INSTR) \
-            RAISE_EXCEPTION_STR(str_err_invalid_instruction);                \
-    } while (0)
-#else
-#   define FUZZ_LIMIT() ((void)0)
-#endif
-
 #if KOS_DISPATCH_TABLE
 #   define BEGIN_INSTRUCTION(instr)     OP_##instr
 #   define BEGIN_BREAKPOINT_INSTRUCTION OP_BREAKPOINT
-#   define NEXT_INSTRUCTION                                         \
-        do {                                                        \
-            uint32_t jump_offs;                                     \
-                                                                    \
-            FUZZ_LIMIT();                                           \
-            KOS_PERF_CNT(instructions);                             \
-            instr     = (KOS_BYTECODE_INSTR)*bytecode;              \
-            jump_offs = (uint32_t)(instr - INSTR_BREAKPOINT);       \
+#   define NEXT_INSTRUCTION                                   \
+        do {                                                  \
+            uint32_t jump_offs;                               \
+                                                              \
+            KOS_INSTR_FUZZ_LIMIT();                           \
+            KOS_PERF_CNT(instructions);                       \
+            instr     = (KOS_BYTECODE_INSTR)*bytecode;        \
+            jump_offs = (uint32_t)(instr - INSTR_BREAKPOINT); \
             jump_offs = (jump_offs < (INSTR_LAST_OPCODE - INSTR_BREAKPOINT)) ? jump_offs : 0; \
-            goto *dispatch_table[jump_offs];                        \
+            goto *dispatch_table[jump_offs];                  \
         } while (0)
 
 #else
 #   define BEGIN_INSTRUCTION(instr)     case INSTR_##instr
 #   define BEGIN_BREAKPOINT_INSTRUCTION default
-#   define NEXT_INSTRUCTION             FUZZ_LIMIT(); break
+#   define NEXT_INSTRUCTION             KOS_INSTR_FUZZ_LIMIT(); break
 #endif
 
 #if defined(__cplusplus) && defined(TRACY_ENABLE)
