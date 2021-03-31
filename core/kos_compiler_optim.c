@@ -830,7 +830,6 @@ static int for_in_stmt(KOS_COMP_UNIT *program,
             lookup_var(program, node, 1, &var, &is_local);
 
             if ( ! var->num_reads_prev && (var->type != VAR_GLOBAL)) {
-                assert(lhs_type != NT_LEFT_HAND_SIDE);
                 collapse(node, NT_PLACEHOLDER, TT_KEYWORD, KW_UNDERSCORE, KOS_NULL, 0);
                 ++program->num_optimizations;
             }

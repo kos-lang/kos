@@ -6,6 +6,7 @@
 #include "../inc/kos_defs.h"
 #include "../inc/kos_error.h"
 #include "kos_debug.h"
+#include "kos_misc.h"
 #include "kos_utf8_internal.h"
 #include <assert.h>
 #include <stdlib.h>
@@ -794,12 +795,7 @@ static KOS_KEYWORD_TYPE find_keyword(const char *begin, const char *end)
 static void set_seq_fail(const char *begin, const char *end)
 {
     static const char str_seq[] = "seq";
-    long              value;
-    char             *found_end = KOS_NULL;
-
-    /* Must end with non-digit to avoid strtol going outside of the buffer */
-    if ((begin >= end) || ((end[-1] >= '0') && (end[-1] <= '9')))
-        return;
+    int64_t           value;
 
     while ((begin < end) && (*begin == ' '))
         ++begin;
@@ -809,10 +805,16 @@ static void set_seq_fail(const char *begin, const char *end)
 
     begin += sizeof(str_seq) - 1;
 
-    value = strtol(begin, &found_end, 10);
+    while ((begin < end) && ((uint8_t)end[-1] <= 0x20U))
+        --end;
 
-    if (found_end != begin)
-        kos_set_seq_point((int)value);
+    if (begin == end)
+        return;
+
+    if (kos_parse_int(begin, end, &value))
+        return;
+
+    kos_set_seq_point((int)value);
 }
 #else
 #   define set_seq_fail(begin, end) ((void)0)

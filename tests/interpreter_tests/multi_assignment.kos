@@ -213,12 +213,21 @@ do {
     assert get_second(range(1000, 2000)) == 1001
 }
 
-expect_fail(fun {
-    const a, b = () => 0
-    return a
-})
+do {
+    fun get_first(x)
+    {
+        const a, b = x
+        return a
+    }
 
-expect_fail(fun {
-    const a, b = () => 0
-    return b
-})
+    fun get_second(x)
+    {
+        const a, b = x
+        return b
+    }
+
+    const zero = () => 0
+
+    expect_fail(() => get_first(zero))
+    expect_fail(() => get_second(zero))
+}

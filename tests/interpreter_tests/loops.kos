@@ -384,6 +384,171 @@ do {
     assert status == 7002
 }
 
+# Use independent variable for looping
+do {
+    fun theloop
+    {
+        var elem = void
+
+        return fun(iterable)
+        {
+            var cnt = 0
+            for elem in iterable {
+                cnt += elem
+            }
+            return cnt
+        }
+    }
+
+    assert theloop()([1, 20, 300]) == 321
+}
+
+# Unused independent variable in for loop
+do {
+    fun theloop
+    {
+        var elem = void
+
+        return fun(iterable)
+        {
+            var cnt = 0
+            for elem in iterable {
+                cnt += 1
+            }
+            return cnt
+        }
+    }
+
+    assert theloop()([1, 20, 300]) == 3
+}
+
+# Use independent variable for looping (range)
+do {
+    fun theloop
+    {
+        var elem = void
+
+        return fun(begin, end)
+        {
+            var cnt = 0
+            for elem in range(begin, end) {
+                cnt += elem
+            }
+            return cnt
+        }
+    }
+
+    assert theloop()(3, 6) == 12
+}
+
+# Unused independent variable in for loop (range)
+do {
+    fun theloop
+    {
+        var elem = void
+
+        return fun(begin, end)
+        {
+            var cnt = 0
+            for elem in range(begin, end) {
+                cnt += 1
+            }
+            return cnt
+        }
+    }
+
+    assert theloop()(3, 6) == 3
+}
+
+# Use global variable for looping
+public var global_loop = 123
+do {
+    fun loopit(iterable)
+    {
+        var cnt = 0
+        for global_loop in iterable {
+            cnt += global_loop
+        }
+        return cnt
+    }
+
+    assert loopit([1, 20, 300]) == 321
+    assert global_loop == void
+}
+
+# Unused independent variable in for loop
+public var global_loop_unused = 123
+do {
+    fun loopit(iterable)
+    {
+        var cnt = 0
+        for global_loop_unused in iterable {
+            cnt += 1
+        }
+        return cnt
+    }
+
+    assert loopit([1, 20, 300]) == 3
+}
+
+# Use global variable for looping (range)
+do {
+    fun loopit(begin, end)
+    {
+        var cnt = 0
+        for global_loop in range(begin, end) {
+            cnt += global_loop
+        }
+        return cnt
+    }
+
+    assert loopit(3, 6) == 12
+    assert global_loop == void
+}
+
+# Unused independent variable in for loop (range)
+do {
+    fun loopit(begin, end)
+    {
+        var cnt = 0
+        for global_loop_unused in range(begin, end) {
+            cnt += 1
+        }
+        return cnt
+    }
+
+    assert loopit(3, 6) == 3
+}
+
+# Loop with multiple variables
+do {
+    fun theloop
+    {
+        var elem        = void
+        var elem_unused = void
+
+        return fun(iterable) {
+            var local = void
+            var sums  = []
+            for elem, elem_unused, _, global_loop, global_loop_unused, local in iterable {
+                var sum = 0
+                sum += elem
+                sum += global_loop
+                sum += local
+                sums.push(sum)
+            }
+            return sums
+        }
+    }
+
+    const out = theloop()([ [1, 20, 300, 4000, 50_000, 600_000],
+                            [70_000, 8_000, 900, 10, 2, 300_000] ])
+    assert out.size == 2
+    assert out[0] == 604_001
+    assert out[1] == 370_010
+    assert global_loop == void
+}
+
 do {
     var a = 0
     var b = 0

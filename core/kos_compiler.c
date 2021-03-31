@@ -1995,6 +1995,8 @@ static int for_in(KOS_COMP_UNIT      *program,
     KOS_REG            *reg            = KOS_NULL;
     KOS_REG            *iter_reg       = KOS_NULL;
     KOS_REG            *item_reg       = KOS_NULL;
+    KOS_REG            *item_cont_reg  = KOS_NULL;
+    KOS_VAR            *item_var       = KOS_NULL;
     KOS_BREAK_OFFS     *old_break_offs = program->cur_frame->break_offs;
     KOS_SCOPE          *prev_try_scope = push_try_scope(program);
 
@@ -2042,7 +2044,14 @@ static int for_in(KOS_COMP_UNIT      *program,
         if ( ! var_node->next) {
 
             TRY(lookup_local_var(program, var_node, &item_reg));
-            assert(item_reg);
+
+            if ( ! item_reg) {
+                TRY(lookup_var(program, var_node, &item_var, &item_cont_reg));
+
+                assert(item_var->type != VAR_LOCAL);
+                assert(item_var->type != VAR_ARGUMENT_IN_REG);
+                assert(item_var->type != VAR_MODULE);
+            }
         }
         else
             TRY(gen_reg(program, &item_reg));
@@ -2055,29 +2064,59 @@ static int for_in(KOS_COMP_UNIT      *program,
 
     if (var_node->next) {
 
+        const KOS_AST_NODE *cur_var_node = var_node;
+
         assert(item_reg->tmp);
+        assert( ! item_var);
+        assert( ! item_cont_reg);
 
         TRY(gen_instr2(program, INSTR_LOAD_ITER, item_reg->reg, item_reg->reg));
 
-        for ( ; var_node; var_node = var_node->next) {
+        for ( ; cur_var_node; cur_var_node = cur_var_node->next) {
 
-            KOS_REG *var_reg = KOS_NULL;
+            KOS_REG *dst_reg = KOS_NULL;
 
-            if (var_node->type == NT_IDENTIFIER) {
+            if (cur_var_node->type == NT_IDENTIFIER) {
 
-                TRY(lookup_local_var(program, var_node, &var_reg));
-                assert(var_reg);
+                TRY(lookup_local_var(program, cur_var_node, &dst_reg));
+
+                if ( ! dst_reg) {
+                    TRY(lookup_var(program, cur_var_node, &item_var, &item_cont_reg));
+
+                    assert(item_var->type != VAR_LOCAL);
+                    assert(item_var->type != VAR_ARGUMENT_IN_REG);
+                    assert(item_var->type != VAR_MODULE);
+                }
             }
             else {
-                assert(var_node->type == NT_PLACEHOLDER);
+                assert(cur_var_node->type == NT_PLACEHOLDER);
             }
 
-            TRY(gen_reg(program, &var_reg));
+            TRY(gen_reg(program, &dst_reg));
 
-            TRY(gen_instr2(program, INSTR_NEXT, var_reg->reg, item_reg->reg));
+            TRY(gen_instr2(program, INSTR_NEXT, dst_reg->reg, item_reg->reg));
 
-            free_reg(program, var_reg);
+            if (item_var) {
+                if (item_var->type == VAR_GLOBAL)
+                    TRY(gen_instr2(program, INSTR_SET_GLOBAL, item_var->array_idx, dst_reg->reg));
+                else
+                    TRY(gen_instr3(program, INSTR_SET_ELEM, item_cont_reg->reg, item_var->array_idx, dst_reg->reg));
+            }
+
+            free_reg(program, dst_reg);
+
+            item_var      = KOS_NULL;
+            item_cont_reg = KOS_NULL;
         }
+    }
+    else if (item_var) {
+        assert( ! item_reg);
+        TRY(gen_reg(program, &item_reg));
+
+        if (item_var->type == VAR_GLOBAL)
+            TRY(gen_instr2(program, INSTR_SET_GLOBAL, item_var->array_idx, item_reg->reg));
+        else
+            TRY(gen_instr3(program, INSTR_SET_ELEM, item_cont_reg->reg, item_var->array_idx, item_reg->reg));
     }
 
     node = assg_node->next;
@@ -2097,6 +2136,57 @@ static int for_in(KOS_COMP_UNIT      *program,
     update_jump_offs(program, initial_jump_offs, next_jump_offs);
     update_jump_offs(program, next_jump_offs, loop_start_offs);
     finish_break_continue(program, next_jump_offs, old_break_offs);
+
+    if (var_node->next) {
+
+        const KOS_AST_NODE *cur_var_node = var_node;
+
+        for ( ; cur_var_node; cur_var_node = cur_var_node->next) {
+
+            KOS_REG *dst_reg = KOS_NULL;
+
+            if (cur_var_node->type != NT_IDENTIFIER)
+                continue;
+
+            TRY(lookup_local_var(program, cur_var_node, &dst_reg));
+
+            if (dst_reg) {
+                free_reg(program, dst_reg);
+                continue;
+            }
+
+            assert( ! item_var);
+            assert( ! item_cont_reg);
+            TRY(lookup_var(program, cur_var_node, &item_var, &item_cont_reg));
+
+            assert(item_var->type != VAR_LOCAL);
+            assert(item_var->type != VAR_ARGUMENT_IN_REG);
+            assert(item_var->type != VAR_MODULE);
+
+            TRY(gen_reg(program, &dst_reg));
+
+            TRY(gen_instr1(program, INSTR_LOAD_VOID, dst_reg->reg));
+
+            if (item_var->type == VAR_GLOBAL)
+                TRY(gen_instr2(program, INSTR_SET_GLOBAL, item_var->array_idx, dst_reg->reg));
+            else
+                TRY(gen_instr3(program, INSTR_SET_ELEM, item_cont_reg->reg, item_var->array_idx, dst_reg->reg));
+
+            free_reg(program, dst_reg);
+
+            item_var      = KOS_NULL;
+            item_cont_reg = KOS_NULL;
+        }
+    }
+    else if (item_var) {
+        assert(item_reg);
+        TRY(gen_instr1(program, INSTR_LOAD_VOID, item_reg->reg));
+
+        if (item_var->type == VAR_GLOBAL)
+            TRY(gen_instr2(program, INSTR_SET_GLOBAL, item_var->array_idx, item_reg->reg));
+        else
+            TRY(gen_instr3(program, INSTR_SET_ELEM, item_cont_reg->reg, item_var->array_idx, item_reg->reg));
+    }
 
     free_reg(program, item_reg);
     item_reg = KOS_NULL;
@@ -2121,6 +2211,8 @@ static int for_range(KOS_COMP_UNIT      *program,
     KOS_REG            *iter_reg       = KOS_NULL;
     KOS_REG            *end_reg        = KOS_NULL;
     KOS_REG            *step_reg       = KOS_NULL;
+    KOS_REG            *item_cont_reg  = KOS_NULL;
+    KOS_VAR            *item_var       = KOS_NULL;
     KOS_BREAK_OFFS     *old_break_offs = program->cur_frame->break_offs;
     KOS_SCOPE          *prev_try_scope = push_try_scope(program);
     KOS_NODE_TYPE       lhs_type;
@@ -2170,7 +2262,16 @@ static int for_range(KOS_COMP_UNIT      *program,
         assert(var_node->u.var);
 
         TRY(lookup_local_var(program, var_node, &item_reg));
-        assert(item_reg);
+
+        if ( ! item_reg) {
+            assert( ! var_node->u.var->is_const);
+
+            TRY(lookup_var(program, var_node, &item_var, &item_cont_reg));
+
+            assert(item_var->type != VAR_LOCAL);
+            assert(item_var->type != VAR_ARGUMENT_IN_REG);
+            assert(item_var->type != VAR_MODULE);
+        }
 
         if (var_node->u.var->is_const)
             iter_reg = item_reg;
@@ -2277,6 +2378,12 @@ static int for_range(KOS_COMP_UNIT      *program,
 
     if ((iter_reg != item_reg) && item_reg)
         TRY(gen_instr2(program, INSTR_MOVE, item_reg->reg, iter_reg->reg));
+    else if (item_var) {
+        if (item_var->type == VAR_GLOBAL)
+            TRY(gen_instr2(program, INSTR_SET_GLOBAL, item_var->array_idx, iter_reg->reg));
+        else
+            TRY(gen_instr3(program, INSTR_SET_ELEM, item_cont_reg->reg, item_var->array_idx, iter_reg->reg));
+    }
 
     TRY(gen_reg(program, &reg));
     TRY(gen_instr3(program, INSTR_CMP_LT, reg->reg,
@@ -2291,6 +2398,15 @@ static int for_range(KOS_COMP_UNIT      *program,
 
     if ((lhs_type == NT_LEFT_HAND_SIDE) && item_reg)
         TRY(gen_instr1(program, INSTR_LOAD_VOID, item_reg->reg));
+    else if (item_var) {
+        assert(iter_reg);
+        assert(iter_reg->tmp);
+        TRY(gen_instr1(program, INSTR_LOAD_VOID, iter_reg->reg));
+        if (item_var->type == VAR_GLOBAL)
+            TRY(gen_instr2(program, INSTR_SET_GLOBAL, item_var->array_idx, iter_reg->reg));
+        else
+            TRY(gen_instr3(program, INSTR_SET_ELEM, item_cont_reg->reg, item_var->array_idx, iter_reg->reg));
+    }
 
     free_reg(program, reg);
     if (item_reg)
