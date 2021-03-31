@@ -287,7 +287,7 @@ static int emit_instr(struct RE_PARSE_CTX *re_ctx,
     for (i = 0; i < num_args; i++) {
         const uint32_t arg = (uint32_t)va_arg(args, uint32_t);
 
-        assert((arg <= 0x7FFFU) || (arg >= 0xFFFF8000U));
+        assert(arg <= 0xFFFFU);
 
         *(dest++) = (uint16_t)arg;
     }
@@ -869,11 +869,9 @@ static int parse_single_match(struct RE_PARSE_CTX *re_ctx)
         default:
             consume_next_char(re_ctx);
             if (code < 0x10000U)
-                error = emit_instr1(re_ctx, INSTR_MATCH_ONE_CHAR, (uint32_t)(int32_t)(int16_t)(uint16_t)code);
+                error = emit_instr1(re_ctx, INSTR_MATCH_ONE_CHAR, (uint16_t)code);
             else
-                error = emit_instr2(re_ctx, INSTR_MATCH_ONE_CHAR32,
-                                    (uint32_t)((int32_t)code >> 16),
-                                    (uint32_t)(int32_t)(int16_t)(uint16_t)code);
+                error = emit_instr2(re_ctx, INSTR_MATCH_ONE_CHAR32, (uint16_t)(code >> 16), (uint16_t)code);
             break;
     }
 
@@ -939,12 +937,12 @@ static int parse_optional_multiplicity(struct RE_PARSE_CTX *re_ctx, uint32_t beg
         switch (code) {
 
             case '*':
-                max_count = ~0U;
+                max_count = 0xFFFFU;
                 break;
 
             case '+':
                 min_count = 1U;
-                max_count = ~0U;
+                max_count = 0xFFFFU;
                 break;
 
             case '?':
@@ -964,7 +962,7 @@ static int parse_optional_multiplicity(struct RE_PARSE_CTX *re_ctx, uint32_t beg
                     consume_next_char(re_ctx);
 
                     if (peek_next_char(&re_ctx->iter) == '}')
-                        max_count = ~0U;
+                        max_count = 0xFFFFU;
                     else {
                         error = parse_number(re_ctx, &max_count);
                         if (error)
