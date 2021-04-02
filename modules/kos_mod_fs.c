@@ -283,16 +283,31 @@ static KOS_OBJ_ID get_next_dir_entry(KOS_CONTEXT ctx, KOS_OBJ_ID dir_walk_obj)
         return KOS_BADPTR;
     }
 
+    KOS_destroy_top_local(ctx, &dir_walk);
+
     return KOS_new_cstring(ctx, find_data.cFileName);
 }
 
-static KOS_OBJ_ID find_first_file(KOS_CONTEXT ctx, const char *path, KOS_OBJ_ID *first_file_obj)
+static KOS_OBJ_ID find_first_file(KOS_CONTEXT ctx, KOS_VECTOR *path_cstr_vec, KOS_OBJ_ID *first_file_obj)
 {
-    KOS_LOCAL obj;
+    KOS_LOCAL         obj;
+    const size_t      old_size    = path_cstr_vec->size;
+    static const char all_files[] = "\\*.*";
+    int               error;
 
     KOS_init_local(ctx, &obj);
 
-    obj.o = KOS_new_object_with_private(ctx, KOS_VOID, &dir_walk_class, dir_finalize);
+    assert(old_size > 0);
+    assert(path_cstr_vec->buffer[old_size - 1] == 0);
+    error = KOS_vector_resize(path_cstr_vec, old_size + sizeof(all_files) - 1);
+
+    if ( ! error) {
+        memcpy(&path_cstr_vec->buffer[old_size - 1], all_files, sizeof(all_files));
+
+        obj.o = KOS_new_object_with_private(ctx, KOS_VOID, &dir_walk_class, dir_finalize);
+    }
+    else
+        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
 
     if ( ! IS_BAD_PTR(obj.o)) {
         WIN32_FIND_DATA find_data;
@@ -303,7 +318,7 @@ static KOS_OBJ_ID find_first_file(KOS_CONTEXT ctx, const char *path, KOS_OBJ_ID 
 
         memset(&find_data, 0, sizeof(find_data));
 
-        h_find = FindFirstFile(path, &find_data);
+        h_find = FindFirstFile(path_cstr_vec->buffer, &find_data);
 
         saved_error = (h_find == INVALID_HANDLE_VALUE) ? GetLastError() : 0;
 
@@ -311,7 +326,7 @@ static KOS_OBJ_ID find_first_file(KOS_CONTEXT ctx, const char *path, KOS_OBJ_ID 
 
         if (h_find == INVALID_HANDLE_VALUE) {
             if (saved_error != ERROR_FILE_NOT_FOUND)
-                KOS_raise_last_error(ctx, path, (unsigned)saved_error);
+                KOS_raise_last_error(ctx, path_cstr_vec->buffer, (unsigned)saved_error);
 
             obj.o = KOS_BADPTR;
         }
@@ -380,7 +395,7 @@ static KOS_OBJ_ID get_next_dir_entry(KOS_CONTEXT ctx, KOS_OBJ_ID dir_walk_obj)
     return KOS_new_cstring(ctx, entry->d_name);
 }
 
-static KOS_OBJ_ID find_first_file(KOS_CONTEXT ctx, const char *path, KOS_OBJ_ID *first_file_obj)
+static KOS_OBJ_ID find_first_file(KOS_CONTEXT ctx, KOS_VECTOR *path_cstr_vec, KOS_OBJ_ID *first_file_obj)
 {
     KOS_LOCAL obj;
 
@@ -393,14 +408,14 @@ static KOS_OBJ_ID find_first_file(KOS_CONTEXT ctx, const char *path, KOS_OBJ_ID 
 
         KOS_suspend_context(ctx);
 
-        dir = opendir(path);
+        dir = opendir(path_cstr_vec->buffer);
 
         KOS_resume_context(ctx);
 
         if (dir)
             KOS_object_set_private_ptr(obj.o, dir);
         else {
-            KOS_raise_errno(ctx, path);
+            KOS_raise_errno(ctx, path_cstr_vec->buffer);
             obj.o = KOS_BADPTR;
         }
     }
@@ -460,8 +475,11 @@ static KOS_OBJ_ID listdir(KOS_CONTEXT ctx,
 
         if (error)
             dir_walk.o = KOS_BADPTR;
-        else
-            dir_walk.o = find_first_file(ctx, path_cstr.buffer, &ret);
+        else  {
+            fix_path_separators(&path_cstr);
+
+            dir_walk.o = find_first_file(ctx, &path_cstr, &ret);
+        }
 
         KOS_vector_destroy(&path_cstr);
 
