@@ -278,7 +278,7 @@ static KOS_OBJ_ID get_next_dir_entry(KOS_CONTEXT ctx, KOS_OBJ_ID dir_walk_obj)
             KOS_raise_last_error(ctx, "FindNextFile", saved_error);
 
         FindClose(h_find);
-        KOS_object_set_private_ptr(dir_walk.o, KOS_NULL);
+        KOS_object_set_private_ptr(dir_walk.o, (void *)KOS_NULL);
 
         KOS_destroy_top_local(ctx, &dir_walk);
         return KOS_BADPTR;
@@ -302,7 +302,7 @@ static KOS_OBJ_ID find_first_file(KOS_CONTEXT ctx, const char *path, KOS_OBJ_ID 
 
         KOS_suspend_context(ctx);
 
-        memset(find_data, 0, sizeof(find_data));
+        memset(&find_data, 0, sizeof(find_data));
 
         h_find = FindFirstFile(path, &find_data);
 
@@ -317,7 +317,7 @@ static KOS_OBJ_ID find_first_file(KOS_CONTEXT ctx, const char *path, KOS_OBJ_ID 
             obj.o = KOS_BADPTR;
         }
         else {
-            KOS_object_set_private_ptr(obj.o, dir);
+            KOS_object_set_private_ptr(obj.o, (void *)h_find);
 
             *first_file_obj = KOS_new_cstring(ctx, find_data.cFileName);
 
@@ -370,7 +370,7 @@ static KOS_OBJ_ID get_next_dir_entry(KOS_CONTEXT ctx, KOS_OBJ_ID dir_walk_obj)
             KOS_raise_errno_value(ctx, "readdir", saved_errno);
 
         closedir(dir);
-        KOS_object_set_private_ptr(dir_walk.o, KOS_NULL);
+        KOS_object_set_private_ptr(dir_walk.o, (void *)KOS_NULL);
 
         KOS_destroy_top_local(ctx, &dir_walk);
         return KOS_BADPTR;
