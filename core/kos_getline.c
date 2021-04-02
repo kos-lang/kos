@@ -173,6 +173,7 @@ static int init_terminal(TERM_INFO *old_info)
 {
     const HANDLE h_input  = GetStdHandle(STD_INPUT_HANDLE);
     const HANDLE h_output = GetStdHandle(STD_OUTPUT_HANDLE);
+    int          error    = KOS_SUCCESS;
 
     if ((h_input == INVALID_HANDLE_VALUE) || (h_output == INVALID_HANDLE_VALUE))
         return KOS_ERROR_LAST_ERROR;
@@ -183,17 +184,23 @@ static int init_terminal(TERM_INFO *old_info)
     if ( ! GetConsoleMode(h_output, &old_info->output_mode))
         return KOS_ERROR_LAST_ERROR;
 
-    if ( ! SetConsoleMode(h_input, ENABLE_WINDOW_INPUT | ENABLE_VIRTUAL_TERMINAL_INPUT))
-        return KOS_ERROR_NO_VIRTUAL_TERMINAL;
-
-    if ( ! SetConsoleMode(h_output, ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING)) {
+    if (SetConsoleMode(h_input, ENABLE_WINDOW_INPUT | ENABLE_VIRTUAL_TERMINAL_INPUT)) {
+        if ( ! SetConsoleMode(h_output, ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING)) {
+            const DWORD last_error = GetLastError();
+            SetConsoleMode(h_input,  old_info->input_mode);
+            SetConsoleMode(h_output, old_info->output_mode);
+            SetLastError(last_error);
+            return KOS_ERROR_LAST_ERROR;
+        }
+    }
+    else {
         SetConsoleMode(h_input, old_info->input_mode);
-        return KOS_ERROR_NO_VIRTUAL_TERMINAL;
+        error = KOS_ERROR_NO_VIRTUAL_TERMINAL;
     }
 
     SetConsoleCtrlHandler(ctrl_c_handler, TRUE);
 
-    return KOS_SUCCESS;
+    return error;
 }
 
 static void restore_terminal(TERM_INFO *old_info)
@@ -1410,9 +1417,9 @@ int kos_getline(KOS_GETLINE      *state,
         if (error == KOS_ERROR_NO_VIRTUAL_TERMINAL) {
             KOS_mempool_destroy(&edit.temp_allocator);
 
-            SetConsoleCtrlHandler(ctrl_c_handler, TRUE);
             error = legacy_get_line(state, edit.prompt, buf);
-            SetConsoleCtrlHandler(ctrl_c_handler, FALSE);
+
+            restore_terminal(&old_term_info);
             return error;
         }
 #endif
