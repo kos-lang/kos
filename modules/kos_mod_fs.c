@@ -273,8 +273,7 @@ static KOS_OBJ_ID get_next_dir_entry(KOS_CONTEXT ctx, KOS_OBJ_ID dir_walk_obj)
     KOS_resume_context(ctx);
 
     if ( ! found) {
-
-        if (saved_error != ERROR_FILE_NOT_FOUND)
+        if (saved_error != ERROR_NO_MORE_FILES)
             KOS_raise_last_error(ctx, "FindNextFile", saved_error);
 
         FindClose(h_find);
