@@ -23,3 +23,19 @@ do {
     assert fs.cwd() == saved_path
 }
 
+##############################################################################
+# fs.listdir()
+
+do {
+    const found_names = { }
+
+    for const filename in fs.listdir(".") {
+        assert typeof filename == "string"
+        assert filename.size > 0
+
+        found_names[filename] = void
+    }
+
+    assert "."  in found_names
+    assert ".." in found_names
+}

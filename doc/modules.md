@@ -125,6 +125,7 @@ Table of Contents
     * [chdir()](#chdir)
     * [cwd()](#cwd)
     * [is\_file()](#is_file)
+    * [listdir()](#listdir)
     * [remove()](#remove)
   * [gc](#gc)
     * [collect\_garbage()](#collect_garbage)
@@ -2998,6 +2999,18 @@ is_file()
 Determines whether a file exists.
 
 Returns `true` if `filename` exists and is a file, or `false` otherwise.
+
+listdir()
+---------
+
+    listdir(path)
+
+A generator which produces filenames of subsequent files in the directory
+specified by `path`.
+
+Example:
+
+    > const files = [ fs.listdir(".") ... ]
 
 remove()
 --------
