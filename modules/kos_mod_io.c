@@ -35,9 +35,6 @@
 #   include <sys/types.h>
 #   include <unistd.h>
 #endif
-#ifdef __linux__
-#   include <sys/sysmacros.h>
-#endif
 
 KOS_DECLARE_STATIC_CONST_STRING(str_err_bad_flags,                  "incorrect file open flags");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_file_not_open,              "file not open or not a file object");

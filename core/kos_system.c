@@ -38,6 +38,9 @@
 #ifdef __APPLE__
 #   include <mach-o/dyld.h>
 #endif
+#ifdef __linux__
+#   include <sys/sysmacros.h>
+#endif
 
 int kos_is_stdin_interactive(void)
 {
