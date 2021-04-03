@@ -1022,6 +1022,7 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
     KOS_init_locals(ctx, 2, &aux, &info);
 
     if ( ! error) {
+#ifdef _WIN32
 #define SET_INT_PROPERTY(name, value)                                           \
         do {                                                                    \
             KOS_DECLARE_STATIC_CONST_STRING(str_name, name);                    \
@@ -1032,7 +1033,6 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
             TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_name), obj_id)); \
         } while (0)
 
-#ifdef _WIN32
         HANDLE             handle;
         FILE_BASIC_INFO    basic_info   = { 0 };
         FILE_STANDARD_INFO std_info     = { 0 };
@@ -1096,16 +1096,6 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
         struct stat st;
         int         stored_errno = 0;
 
-        KOS_DECLARE_STATIC_CONST_STRING(str_type,         "type");
-        KOS_DECLARE_STATIC_CONST_STRING(str_type_file,    "file");
-        KOS_DECLARE_STATIC_CONST_STRING(str_type_dir,     "directory");
-        KOS_DECLARE_STATIC_CONST_STRING(str_type_char,    "char");
-        KOS_DECLARE_STATIC_CONST_STRING(str_type_device,  "device");
-        KOS_DECLARE_STATIC_CONST_STRING(str_type_fifo,    "fifo");
-        KOS_DECLARE_STATIC_CONST_STRING(str_type_link,    "symlink");
-        KOS_DECLARE_STATIC_CONST_STRING(str_type_socket,  "socket");
-        KOS_DECLARE_STATIC_CONST_STRING(str_type_unknown, "unknown");
-
         KOS_suspend_context(ctx);
 
         error = fstat(fileno(file), &st);
@@ -1120,48 +1110,7 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
 
-        info.o = KOS_new_object(ctx);
-        TRY_OBJID(info.o);
-
-        SET_INT_PROPERTY("flags",      st.st_mode);
-        SET_INT_PROPERTY("hard_links", st.st_nlink);
-        SET_INT_PROPERTY("inode",      st.st_ino);
-        SET_INT_PROPERTY("uid",        st.st_uid);
-        SET_INT_PROPERTY("gid",        st.st_gid);
-        SET_INT_PROPERTY("size",       st.st_size);
-        SET_INT_PROPERTY("blocks",     st.st_blocks);
-        SET_INT_PROPERTY("block_size", st.st_blksize);
-        SET_INT_PROPERTY("atime",      st.st_atime * (int64_t)1000000);
-        SET_INT_PROPERTY("mtime",      st.st_mtime * (int64_t)1000000);
-        SET_INT_PROPERTY("ctime",      st.st_ctime * (int64_t)1000000);
-
-#if !defined(__HAIKU__)
-        if (S_ISCHR(st.st_mode) || S_ISBLK(st.st_mode)) {
-            aux.o = KOS_new_array(ctx, 2);
-            TRY_OBJID(aux.o);
-
-            TRY(KOS_array_write(ctx, aux.o, 0, TO_SMALL_INT(major(st.st_rdev))));
-            TRY(KOS_array_write(ctx, aux.o, 1, TO_SMALL_INT(minor(st.st_rdev))));
-            TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_type_device), aux.o));
-        }
-#endif
-
-        if (S_ISREG(st.st_mode))
-            TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_file)));
-        else if (S_ISDIR(st.st_mode))
-            TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_dir)));
-        else if (S_ISCHR(st.st_mode))
-            TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_char)));
-        else if (S_ISBLK(st.st_mode))
-            TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_device)));
-        else if (S_ISFIFO(st.st_mode))
-            TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_fifo)));
-        else if (S_ISLNK(st.st_mode))
-            TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_link)));
-        else if (S_ISSOCK(st.st_mode))
-            TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_socket)));
-        else
-            TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_unknown)));
+        info.o = kos_stat(ctx, &st);
 #endif
     }
 

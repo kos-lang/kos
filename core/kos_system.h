@@ -26,6 +26,7 @@
 #   else
 #       define KOS_SHARED_LIB_EXT      ".so"
 #   endif
+#   include <sys/stat.h>
 #endif
 
 struct KOS_VECTOR_S;
@@ -78,5 +79,9 @@ void kos_unload_library(KOS_SHARED_LIB lib);
 typedef void (* LIB_FUNCTION)(void);
 
 LIB_FUNCTION kos_get_library_function(KOS_SHARED_LIB lib, const char *func_name, struct KOS_VECTOR_S *error_cstr);
+
+#ifndef _WIN32
+KOS_OBJ_ID kos_stat(KOS_CONTEXT ctx, struct stat *st);
+#endif
 
 #endif
