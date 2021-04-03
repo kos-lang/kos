@@ -507,7 +507,7 @@ int kos_create_mutex(KOS_MUTEX *mutex)
 
     }
     else
-        error = KOS_ERROR_EXCEPTION;
+        error = KOS_ERROR_OUT_OF_MEMORY;
 
     return error;
 }
@@ -549,7 +549,7 @@ int kos_create_cond_var(KOS_COND_VAR *cond_var)
     if (*cond_var)
         InitializeConditionVariable(&(*cond_var)->cond);
     else
-        error = KOS_ERROR_EXCEPTION;
+        error = KOS_ERROR_OUT_OF_MEMORY;
 
     return error;
 }
