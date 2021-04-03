@@ -184,7 +184,7 @@ static KOS_OBJ_ID info(KOS_CONTEXT ctx,
         KOS_resume_context(ctx);
 
         if (last_error) {
-            KOS_raise_last_error(ctx, filename_cstr, (unsigned)last_error);
+            KOS_raise_last_error(ctx, filename_cstr.buffer, (unsigned)last_error);
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
 
@@ -197,9 +197,9 @@ static KOS_OBJ_ID info(KOS_CONTEXT ctx,
         SET_INT_PROPERTY("mtime", get_epoch_time_us(&attr.ftLastWriteTime));
         SET_INT_PROPERTY("ctime", get_epoch_time_us(&attr.ftCreationTime));
 
-        if (basic_info.FileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+        if (attr.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
             TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_dir)));
-        else if (basic_info.FileAttributes & FILE_ATTRIBUTE_DEVICE)
+        else if (attr.dwFileAttributes & FILE_ATTRIBUTE_DEVICE)
             TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_dev)));
         else
             TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_file)));
