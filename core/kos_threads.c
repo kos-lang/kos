@@ -128,7 +128,7 @@ static KOS_THREAD *alloc_thread(KOS_CONTEXT ctx,
     thread->thread_id     = 0;
 #endif
 
-    kos_lock_mutex(&inst->threads.new_mutex);
+    kos_lock_mutex(inst->threads.new_mutex);
 
     can_create = inst->threads.can_create;
 
@@ -152,7 +152,7 @@ static KOS_THREAD *alloc_thread(KOS_CONTEXT ctx,
         }
     }
 
-    kos_unlock_mutex(&inst->threads.new_mutex);
+    kos_unlock_mutex(inst->threads.new_mutex);
 
     if (i >= max_threads) {
 
@@ -201,13 +201,13 @@ static void remove_thread(KOS_THREAD *thread)
 
     if (thread_idx != KOS_NO_THREAD_IDX) {
 
-        kos_lock_mutex(&inst->threads.new_mutex);
+        kos_lock_mutex(inst->threads.new_mutex);
 
         assert(KOS_atomic_read_relaxed_ptr(inst->threads.threads[thread_idx]) == thread);
 
         KOS_atomic_write_relaxed_ptr(inst->threads.threads[thread_idx], (KOS_THREAD *)KOS_NULL);
 
-        kos_unlock_mutex(&inst->threads.new_mutex);
+        kos_unlock_mutex(inst->threads.new_mutex);
 
         KOS_atomic_add_u32(inst->threads.num_threads, (uint32_t)-1);
     }
@@ -242,11 +242,11 @@ int kos_join_finished_threads(KOS_CONTEXT                      ctx,
     uint32_t       i            = 0;
 
     if (join_all) {
-        kos_lock_mutex(&inst->threads.new_mutex);
+        kos_lock_mutex(inst->threads.new_mutex);
 
         inst->threads.can_create = 0U;
 
-        kos_unlock_mutex(&inst->threads.new_mutex);
+        kos_unlock_mutex(inst->threads.new_mutex);
     }
 
     if ( ! KOS_atomic_read_relaxed_u32(inst->threads.num_threads))
@@ -264,7 +264,7 @@ int kos_join_finished_threads(KOS_CONTEXT                      ctx,
             num_finished = 0;
         }
 
-        kos_lock_mutex(&inst->threads.new_mutex);
+        kos_lock_mutex(inst->threads.new_mutex);
 
         thread = (KOS_THREAD *)KOS_atomic_read_relaxed_ptr(inst->threads.threads[i]);
 
@@ -285,7 +285,7 @@ int kos_join_finished_threads(KOS_CONTEXT                      ctx,
                     kos_thread_add_ref(thread);
                     assert(KOS_atomic_read_relaxed_u32(thread->ref_count) >= 2U);
 
-                    kos_unlock_mutex(&inst->threads.new_mutex);
+                    kos_unlock_mutex(inst->threads.new_mutex);
                     new_locked = 0;
 
                     retval = kos_thread_join(ctx, thread);
@@ -327,7 +327,7 @@ int kos_join_finished_threads(KOS_CONTEXT                      ctx,
         }
 
         if (new_locked)
-            kos_unlock_mutex(&inst->threads.new_mutex);
+            kos_unlock_mutex(inst->threads.new_mutex);
 
         i++;
 
@@ -519,20 +519,22 @@ void kos_destroy_mutex(KOS_MUTEX *mutex)
     DeleteCriticalSection(&(*mutex)->cs);
 
     KOS_free(*mutex);
+
+    *mutex = KOS_NULL;
 }
 
-void kos_lock_mutex(KOS_MUTEX *mutex)
+void kos_lock_mutex(KOS_MUTEX mutex)
 {
-    assert(mutex && *mutex);
+    assert(mutex);
 
-    EnterCriticalSection(&(*mutex)->cs);
+    EnterCriticalSection(&mutex->cs);
 }
 
-void kos_unlock_mutex(KOS_MUTEX *mutex)
+void kos_unlock_mutex(KOS_MUTEX mutex)
 {
-    assert(mutex && *mutex);
+    assert(mutex);
 
-    LeaveCriticalSection(&(*mutex)->cs);
+    LeaveCriticalSection(&mutex->cs);
 }
 
 struct KOS_COND_VAR_OBJECT_S {
@@ -559,35 +561,37 @@ void kos_destroy_cond_var(KOS_COND_VAR *cond_var)
     assert(cond_var && *cond_var);
 
     KOS_free(*cond_var);
+
+    *cond_var = KOS_NULL;
 }
 
-void kos_signal_cond_var(KOS_COND_VAR *cond_var)
+void kos_signal_cond_var(KOS_COND_VAR cond_var)
 {
-    assert(cond_var && *cond_var);
+    assert(cond_var);
 
-    WakeConditionVariable(&(*cond_var)->cond);
+    WakeConditionVariable(&cond_var->cond);
 }
 
-void kos_broadcast_cond_var(KOS_COND_VAR *cond_var)
+void kos_broadcast_cond_var(KOS_COND_VAR cond_var)
 {
-    assert(cond_var && *cond_var);
+    assert(cond_var);
 
-    WakeAllConditionVariable(&(*cond_var)->cond);
+    WakeAllConditionVariable(&cond_var->cond);
 }
 
-void kos_wait_cond_var(KOS_COND_VAR *cond_var, KOS_MUTEX *mutex)
+void kos_wait_cond_var(KOS_COND_VAR cond_var, KOS_MUTEX mutex)
 {
 #ifndef NDEBUG
     BOOL ok;
 #endif
 
-    assert(cond_var && *cond_var);
-    assert(mutex && *mutex);
+    assert(cond_var);
+    assert(mutex);
 
 #ifndef NDEBUG
     ok =
 #endif
-    SleepConditionVariableCS(&(*cond_var)->cond, &(*mutex)->cs, INFINITE);
+    SleepConditionVariableCS(&cond_var->cond, &mutex->cs, INFINITE);
 
     assert(ok);
 }
@@ -665,36 +669,38 @@ void kos_destroy_mutex(KOS_MUTEX *mutex)
     pthread_mutex_destroy(&(*mutex)->mutex);
 
     KOS_free(*mutex);
+
+    *mutex = KOS_NULL;
 }
 
-void kos_lock_mutex(KOS_MUTEX *mutex)
+void kos_lock_mutex(KOS_MUTEX mutex)
 {
 #ifndef NDEBUG
     int ret;
 #endif
 
-    assert(mutex && *mutex);
+    assert(mutex);
 
 #ifndef NDEBUG
     ret =
 #endif
-    pthread_mutex_lock(&(*mutex)->mutex);
+    pthread_mutex_lock(&mutex->mutex);
 
     assert(ret == 0);
 }
 
-void kos_unlock_mutex(KOS_MUTEX *mutex)
+void kos_unlock_mutex(KOS_MUTEX mutex)
 {
 #ifndef NDEBUG
     int ret;
 #endif
 
-    assert(mutex && *mutex);
+    assert(mutex);
 
 #ifndef NDEBUG
     ret =
 #endif
-    pthread_mutex_unlock(&(*mutex)->mutex);
+    pthread_mutex_unlock(&mutex->mutex);
 
     assert(ret == 0);
 }
@@ -739,53 +745,55 @@ void kos_destroy_cond_var(KOS_COND_VAR *cond_var)
     assert(ret == 0);
 
     KOS_free(*cond_var);
+
+    *cond_var = KOS_NULL;
 }
 
-void kos_signal_cond_var(KOS_COND_VAR *cond_var)
+void kos_signal_cond_var(KOS_COND_VAR cond_var)
 {
 #ifndef NDEBUG
     int ret;
 #endif
 
-    assert(cond_var && *cond_var);
+    assert(cond_var);
 
 #ifndef NDEBUG
     ret =
 #endif
-    pthread_cond_signal(&(*cond_var)->cond);
+    pthread_cond_signal(&cond_var->cond);
 
     assert(ret == 0);
 }
 
-void kos_broadcast_cond_var(KOS_COND_VAR *cond_var)
+void kos_broadcast_cond_var(KOS_COND_VAR cond_var)
 {
 #ifndef NDEBUG
     int ret;
 #endif
 
-    assert(cond_var && *cond_var);
+    assert(cond_var);
 
 #ifndef NDEBUG
     ret =
 #endif
-    pthread_cond_broadcast(&(*cond_var)->cond);
+    pthread_cond_broadcast(&cond_var->cond);
 
     assert(ret == 0);
 }
 
-void kos_wait_cond_var(KOS_COND_VAR *cond_var, KOS_MUTEX *mutex)
+void kos_wait_cond_var(KOS_COND_VAR cond_var, KOS_MUTEX mutex)
 {
 #ifndef NDEBUG
     int ret;
 #endif
 
-    assert(cond_var && *cond_var);
-    assert(mutex && *mutex);
+    assert(cond_var);
+    assert(mutex);
 
 #ifndef NDEBUG
     ret =
 #endif
-    pthread_cond_wait(&(*cond_var)->cond, &(*mutex)->mutex);
+    pthread_cond_wait(&cond_var->cond, &mutex->mutex);
 
     assert(ret == 0);
 }

@@ -143,7 +143,7 @@ static void unregister_thread(KOS_INSTANCE *inst,
 
     kos_tls_set(inst->threads.thread_key, KOS_NULL);
 
-    kos_lock_mutex(&inst->threads.ctx_mutex);
+    kos_lock_mutex(inst->threads.ctx_mutex);
 
     if (ctx->prev)
         ctx->prev->next = ctx->next;
@@ -151,7 +151,7 @@ static void unregister_thread(KOS_INSTANCE *inst,
     if (ctx->next)
         ctx->next->prev = ctx->prev;
 
-    kos_unlock_mutex(&inst->threads.ctx_mutex);
+    kos_unlock_mutex(inst->threads.ctx_mutex);
 }
 
 int KOS_instance_register_thread(KOS_INSTANCE *inst,
@@ -170,7 +170,7 @@ int KOS_instance_register_thread(KOS_INSTANCE *inst,
     error = KOS_ERROR_EXCEPTION;
 #else
 
-    kos_lock_mutex(&inst->threads.ctx_mutex);
+    kos_lock_mutex(inst->threads.ctx_mutex);
 
     ctx->prev                      = &inst->threads.main_thread;
     ctx->next                      = inst->threads.main_thread.next;
@@ -178,7 +178,7 @@ int KOS_instance_register_thread(KOS_INSTANCE *inst,
     if (ctx->next)
         ctx->next->prev            = ctx;
 
-    kos_unlock_mutex(&inst->threads.ctx_mutex);
+    kos_unlock_mutex(inst->threads.ctx_mutex);
 
     error = register_thread(inst, ctx);
 

@@ -183,12 +183,12 @@ static void push_mark_group(KOS_MARK_GROUP_STACK *stack,
         idx = (idx + 1U) & MARK_GROUP_MASK;
     } while (idx != end);
 
-    kos_lock_mutex(&stack->mutex);
+    kos_lock_mutex(stack->mutex);
 
     group->next  = stack->stack;
     stack->stack = group;
 
-    kos_unlock_mutex(&stack->mutex);
+    kos_unlock_mutex(stack->mutex);
 }
 
 static KOS_MARK_GROUP *pop_mark_group(KOS_MARK_GROUP_STACK *stack)
@@ -208,14 +208,14 @@ static KOS_MARK_GROUP *pop_mark_group(KOS_MARK_GROUP_STACK *stack)
         idx = (idx - 1U) & MARK_GROUP_MASK;
     } while (idx != end);
 
-    kos_lock_mutex(&stack->mutex);
+    kos_lock_mutex(stack->mutex);
 
     group = stack->stack;
 
     if (group)
         stack->stack = group->next;
 
-    kos_unlock_mutex(&stack->mutex);
+    kos_unlock_mutex(stack->mutex);
 
     return group;
 }
@@ -312,11 +312,11 @@ int kos_gc_active(KOS_CONTEXT ctx)
 
         KOS_HEAP *heap = get_heap(ctx);
 
-        kos_lock_mutex(&heap->mutex);
+        kos_lock_mutex(heap->mutex);
 
         ret = heap->gc_state >= GC_MARK;
 
-        kos_unlock_mutex(&heap->mutex);
+        kos_unlock_mutex(heap->mutex);
     }
 
     return ret;
@@ -543,7 +543,7 @@ static KOS_PAGE *get_next_page(KOS_HEAP *heap)
 
 static void release_helper_threads(KOS_HEAP *heap)
 {
-    kos_broadcast_cond_var(&heap->helper_cond);
+    kos_broadcast_cond_var(heap->helper_cond);
 }
 
 static void begin_walk(KOS_HEAP               *heap,
@@ -554,22 +554,22 @@ static void begin_walk(KOS_HEAP               *heap,
     if ( ! helper)
         release_helper_threads(heap);
 
-    kos_unlock_mutex(&heap->mutex);
+    kos_unlock_mutex(heap->mutex);
 }
 
 static void end_walk(KOS_HEAP               *heap,
                      enum WALK_THREAD_TYPE_E helper)
 {
-    kos_lock_mutex(&heap->mutex);
+    kos_lock_mutex(heap->mutex);
 
     assert(heap->walk_threads > 0);
 
     if (--heap->walk_threads == 0) {
         if (helper)
-            kos_signal_cond_var(&heap->walk_cond);
+            kos_signal_cond_var(heap->walk_cond);
     }
     else if ( ! helper) {
-        do kos_wait_cond_var(&heap->walk_cond, &heap->mutex);
+        do kos_wait_cond_var(heap->walk_cond, heap->mutex);
         while (heap->walk_threads);
     }
 }
@@ -722,12 +722,12 @@ static int collect_garbage_last_resort_locked(KOS_CONTEXT ctx, KOS_GC_STATS *sta
     if ( ! heap->used_pages.head && ! ctx->cur_page)
         return KOS_SUCCESS;
 
-    kos_unlock_mutex(&heap->mutex);
+    kos_unlock_mutex(heap->mutex);
 
     /* TODO add and use kos_collect_garbage_locked() */
     error = KOS_collect_garbage(ctx, stats);
 
-    kos_lock_mutex(&heap->mutex);
+    kos_lock_mutex(heap->mutex);
 
     return error;
 }
@@ -831,11 +831,11 @@ void kos_heap_release_thread_page(KOS_CONTEXT ctx)
 
         KOS_HEAP *const heap = get_heap(ctx);
 
-        kos_lock_mutex(&heap->mutex);
+        kos_lock_mutex(heap->mutex);
 
         release_current_page_locked(ctx);
 
-        kos_unlock_mutex(&heap->mutex);
+        kos_unlock_mutex(heap->mutex);
     }
 }
 
@@ -888,7 +888,7 @@ static void *alloc_object(KOS_CONTEXT ctx,
 
     heap = get_heap(ctx);
 
-    kos_lock_mutex(&heap->mutex);
+    kos_lock_mutex(heap->mutex);
 
     {
         const uint32_t gc_state = heap->gc_state;
@@ -983,7 +983,7 @@ static void *alloc_object(KOS_CONTEXT ctx,
 
         if (error && error != KOS_SUCCESS_RETURN) {
             KOS_clear_exception(ctx);
-            kos_unlock_mutex(&heap->mutex);
+            kos_unlock_mutex(heap->mutex);
             return KOS_NULL;
         }
 
@@ -1013,7 +1013,7 @@ static void *alloc_object(KOS_CONTEXT ctx,
     PROF_PLOT("heap",     (int64_t)heap->used_heap_size)
     PROF_PLOT("off-heap", (int64_t)heap->malloc_size)
 
-    kos_unlock_mutex(&heap->mutex);
+    kos_unlock_mutex(heap->mutex);
 
     return hdr;
 }
@@ -1047,7 +1047,7 @@ static void *alloc_huge_object(KOS_CONTEXT ctx,
 
     KOS_init_local_with(ctx, &tracker, OBJID(HUGE_TRACKER, new_tracker));
 
-    kos_lock_mutex(&heap->mutex);
+    kos_lock_mutex(heap->mutex);
 
     if (heap->malloc_size + size > heap->max_malloc_size) {
 
@@ -1090,7 +1090,7 @@ cleanup:
     PROF_PLOT("heap",     (int64_t)heap->used_heap_size)
     PROF_PLOT("off-heap", (int64_t)heap->malloc_size)
 
-    kos_unlock_mutex(&heap->mutex);
+    kos_unlock_mutex(heap->mutex);
 
     KOS_destroy_top_local(ctx, &tracker);
 
@@ -1188,11 +1188,11 @@ void kos_print_heap(KOS_CONTEXT ctx)
 {
     KOS_HEAP *const heap = get_heap(ctx);
 
-    kos_lock_mutex(&heap->mutex);
+    kos_lock_mutex(heap->mutex);
 
     print_heap_locked(heap, ctx->cur_page);
 
-    kos_unlock_mutex(&heap->mutex);
+    kos_unlock_mutex(heap->mutex);
 }
 
 static void stop_the_world(KOS_INSTANCE *inst)
@@ -1206,7 +1206,7 @@ static void stop_the_world(KOS_INSTANCE *inst)
         KOS_CONTEXT ctx         = &inst->threads.main_thread;
         uint32_t    num_to_stop = 0U;
 
-        kos_lock_mutex(&inst->threads.ctx_mutex);
+        kos_lock_mutex(inst->threads.ctx_mutex);
 
         while (ctx) {
 
@@ -1221,14 +1221,14 @@ static void stop_the_world(KOS_INSTANCE *inst)
             ctx = ctx->next;
         }
 
-        kos_unlock_mutex(&inst->threads.ctx_mutex);
+        kos_unlock_mutex(inst->threads.ctx_mutex);
 
         heap->threads_to_stop = num_to_stop;
 
         if ( ! num_to_stop)
             break;
 
-        kos_wait_cond_var(&heap->engagement_cond, &heap->mutex);
+        kos_wait_cond_var(heap->engagement_cond, heap->mutex);
     }
 }
 
@@ -1779,7 +1779,7 @@ static int mark_roots_in_threads(KOS_MARK_CONTEXT *mark_ctx, KOS_INSTANCE *inst)
     uint32_t       error       = KOS_SUCCESS;
     const uint32_t max_threads = inst->threads.max_threads;
 
-    kos_lock_mutex(&inst->threads.new_mutex);
+    kos_lock_mutex(inst->threads.new_mutex);
 
     for (i = 0; i < max_threads; i++) {
 
@@ -1796,7 +1796,7 @@ static int mark_roots_in_threads(KOS_MARK_CONTEXT *mark_ctx, KOS_INSTANCE *inst)
     }
 
 cleanup:
-    kos_unlock_mutex(&inst->threads.new_mutex);
+    kos_unlock_mutex(inst->threads.new_mutex);
 
     return error;
 }
@@ -1833,7 +1833,7 @@ static int mark_roots(KOS_CONTEXT ctx, KOS_MARK_CONTEXT *mark_ctx)
 
     TRY(mark_object_black(mark_ctx, inst->args));
 
-    kos_lock_mutex(&inst->threads.ctx_mutex);
+    kos_lock_mutex(inst->threads.ctx_mutex);
 
     ctx = &inst->threads.main_thread;
 
@@ -1843,7 +1843,7 @@ static int mark_roots(KOS_CONTEXT ctx, KOS_MARK_CONTEXT *mark_ctx)
             break;
     }
 
-    kos_unlock_mutex(&inst->threads.ctx_mutex);
+    kos_unlock_mutex(inst->threads.ctx_mutex);
 
 cleanup:
     return error;
@@ -2362,7 +2362,7 @@ static void update_threads_after_evacuation(KOS_INSTANCE *inst)
     if ( ! inst->threads.threads)
         return;
 
-    kos_lock_mutex(&inst->threads.new_mutex);
+    kos_lock_mutex(inst->threads.new_mutex);
 
     for (i = 0; i < max_threads; i++) {
 
@@ -2378,7 +2378,7 @@ static void update_threads_after_evacuation(KOS_INSTANCE *inst)
         update_child_ptr((KOS_OBJ_ID *)&thread->exception);
     }
 
-    kos_unlock_mutex(&inst->threads.new_mutex);
+    kos_unlock_mutex(inst->threads.new_mutex);
 }
 
 static void update_after_evacuation(KOS_CONTEXT ctx)
@@ -2399,7 +2399,7 @@ static void update_after_evacuation(KOS_CONTEXT ctx)
 
     /* Update object pointers in instance */
 
-    kos_lock_mutex(&inst->threads.ctx_mutex);
+    kos_lock_mutex(inst->threads.ctx_mutex);
 
     update_child_ptr(&inst->prototypes.object_proto);
     update_child_ptr(&inst->prototypes.number_proto);
@@ -2449,7 +2449,7 @@ static void update_after_evacuation(KOS_CONTEXT ctx)
         ctx = ctx->next;
     }
 
-    kos_unlock_mutex(&inst->threads.ctx_mutex);
+    kos_unlock_mutex(inst->threads.ctx_mutex);
 }
 
 static uint32_t get_num_slots_used(KOS_PAGE *page, uint32_t num_allocated)
@@ -2671,7 +2671,7 @@ static void engage_in_gc(KOS_CONTEXT ctx, enum GC_STATE_E new_state)
 
     if (heap->gc_state == GC_INIT) {
         if (--heap->threads_to_stop == 0)
-            kos_signal_cond_var(&heap->engagement_cond);
+            kos_signal_cond_var(heap->engagement_cond);
     }
     else {
         assert( ! heap->threads_to_stop);
@@ -2729,7 +2729,7 @@ static void help_gc(KOS_CONTEXT ctx)
 
         /* Wait for GC state to change or for more pages to be available for
          * processing by helper threads. */
-        kos_wait_cond_var(&heap->helper_cond, &heap->mutex);
+        kos_wait_cond_var(heap->helper_cond, heap->mutex);
 
         gc_state = (enum GC_STATE_E)heap->gc_state;
 
@@ -2744,12 +2744,12 @@ void KOS_help_gc(KOS_CONTEXT ctx)
 
     assert(KOS_atomic_read_relaxed_u32(ctx->gc_state) == GC_INACTIVE);
 
-    kos_lock_mutex(&heap->mutex);
+    kos_lock_mutex(heap->mutex);
 
     if (heap->gc_state >= GC_INIT)
         help_gc(ctx);
 
-    kos_unlock_mutex(&heap->mutex);
+    kos_unlock_mutex(heap->mutex);
 }
 
 #ifdef CONFIG_MAD_GC
@@ -2762,9 +2762,9 @@ int kos_trigger_mad_gc(KOS_CONTEXT ctx)
     if (KOS_atomic_read_relaxed_u32(ctx->gc_state) != GC_INACTIVE)
         return KOS_SUCCESS;
 
-    kos_lock_mutex(&heap->mutex);
+    kos_lock_mutex(heap->mutex);
     error = try_collect_garbage(ctx);
-    kos_unlock_mutex(&heap->mutex);
+    kos_unlock_mutex(heap->mutex);
 
     if (error == KOS_SUCCESS_RETURN)
         error = KOS_SUCCESS;
@@ -2779,13 +2779,13 @@ void KOS_suspend_context(KOS_CONTEXT ctx)
 
     assert(KOS_atomic_read_relaxed_u32(ctx->gc_state) == GC_INACTIVE);
 
-    kos_lock_mutex(&heap->mutex);
+    kos_lock_mutex(heap->mutex);
 
     release_current_page_locked(ctx);
 
     engage_in_gc(ctx, GC_SUSPENDED);
 
-    kos_unlock_mutex(&heap->mutex);
+    kos_unlock_mutex(heap->mutex);
 }
 
 int KOS_resume_context(KOS_CONTEXT ctx)
@@ -2796,7 +2796,7 @@ int KOS_resume_context(KOS_CONTEXT ctx)
 
     assert(KOS_atomic_read_relaxed_u32(ctx->gc_state) == GC_SUSPENDED);
 
-    kos_lock_mutex(&heap->mutex);
+    kos_lock_mutex(heap->mutex);
 
     KOS_atomic_write_relaxed_u32(ctx->gc_state, GC_INACTIVE);
 
@@ -2814,7 +2814,7 @@ int KOS_resume_context(KOS_CONTEXT ctx)
     else
         help_gc(ctx);
 
-    kos_unlock_mutex(&heap->mutex);
+    kos_unlock_mutex(heap->mutex);
 
     return error;
 }
@@ -2837,13 +2837,13 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
 
     time_0 = kos_get_time_us();
 
-    kos_lock_mutex(&heap->mutex);
+    kos_lock_mutex(heap->mutex);
 
     if (heap->gc_state != GC_INACTIVE) {
 
         help_gc(ctx);
 
-        kos_unlock_mutex(&heap->mutex);
+        kos_unlock_mutex(heap->mutex);
 
         if (out_stats)
             *out_stats = stats;
@@ -2911,11 +2911,11 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
             heap->gc_state = GC_EVACUATE;
 
             /* Evacuation performs heap allocations and will lock the mutex again */
-            kos_unlock_mutex(&heap->mutex);
+            kos_unlock_mutex(heap->mutex);
 
             error = evacuate(ctx, &free_pages, &stats, &incomplete);
 
-            kos_lock_mutex(&heap->mutex);
+            kos_lock_mutex(heap->mutex);
 
             time_1              = kos_get_time_us();
             stats.time_evac_us += (unsigned)(time_1 - time_0);
@@ -2979,7 +2979,7 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
     PROF_PLOT("heap",     (int64_t)heap->used_heap_size)
     PROF_PLOT("off-heap", (int64_t)heap->malloc_size)
 
-    kos_unlock_mutex(&heap->mutex);
+    kos_unlock_mutex(heap->mutex);
 
     if ( ! error && KOS_is_exception_pending(ctx))
         error = KOS_ERROR_EXCEPTION;

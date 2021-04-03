@@ -232,7 +232,7 @@ static KOS_OBJ_ID rand_integer(KOS_CONTEXT ctx,
             return KOS_new_int(ctx, min_value);
     }
 
-    kos_lock_mutex(&rng->mutex);
+    kos_lock_mutex(rng->mutex);
 
     if (min_id != KOS_VOID)
         value = min_value +
@@ -241,7 +241,7 @@ static KOS_OBJ_ID rand_integer(KOS_CONTEXT ctx,
     else
         value = (int64_t)kos_rng_random(&rng->rng);
 
-    kos_unlock_mutex(&rng->mutex);
+    kos_unlock_mutex(rng->mutex);
 
 cleanup:
     return error ? KOS_BADPTR : KOS_new_int(ctx, value);
@@ -275,11 +275,11 @@ static KOS_OBJ_ID rand_float(KOS_CONTEXT ctx,
 
     TRY(get_rng(ctx, this_obj, &rng));
 
-    kos_lock_mutex(&rng->mutex);
+    kos_lock_mutex(rng->mutex);
 
     value.i = (int64_t)kos_rng_random(&rng->rng);
 
-    kos_unlock_mutex(&rng->mutex);
+    kos_unlock_mutex(rng->mutex);
 
     /* Set sign bit to 0 and exponent field to 0x3FF, which corresponds to
      * exponent value 0, making this value uniformly distributed
