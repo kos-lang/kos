@@ -3,6 +3,9 @@
 
 import base
 import fs
+import io
+import datetime
+import test_tools.expect_fail
 
 ##############################################################################
 # fs.cwd(), fs.chdir()
@@ -38,4 +41,52 @@ do {
 
     assert "."  in found_names
     assert ".." in found_names
+}
+
+##############################################################################
+# fs.info()
+
+do {
+    const name = "./__fs_info"
+    fs.remove(name)
+    assert ! fs.is_file(name)
+
+    expect_fail(() => fs.info(name))
+
+    const time_before = datetime.now()
+
+    with const f = io.create(name) {
+        base.buffer(5001) -> f.write
+    }
+
+    const info = fs.info(name)
+
+    const time_after = datetime.now()
+
+    assert info.type == "file"
+    assert info.size == 5001
+    if "blocks" in info {
+        assert info.blocks * info.block_size >= info.size
+        assert info.block_size >= 1
+        assert info.hard_links == 1
+    }
+
+    # File times have limited precision
+    const wiggle = 2_000_000
+
+    assert info.atime + wiggle >= time_before
+    assert info.atime - wiggle <= time_after
+    assert time_after - info.atime < 10_000_000
+
+    assert info.mtime + wiggle >= time_before
+    assert info.mtime - wiggle <= time_after
+    assert time_after - info.mtime < 10_000_000
+
+    assert info.ctime + wiggle >= time_before
+    assert info.ctime - wiggle <= time_after
+    assert time_after - info.ctime < 10_000_000
+
+    assert fs.remove(name)
+    assert ! fs.is_file(name)
+    expect_fail(() => fs.info(name))
 }

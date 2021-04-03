@@ -984,7 +984,7 @@ static int64_t get_epoch_time_us(const LARGE_INTEGER *time)
  *
  * This property populates a new object on every read.
  *
- * The property is an object containing the following elements:
+ * The property is an object containing the following properties:
  *
  *  * type       - type of the object, one of the following strings:
  *                 `"file"`, `"directory"`, `"char"` (character device),
@@ -1005,9 +1005,9 @@ static int64_t get_epoch_time_us(const LARGE_INTEGER *time)
  * The precision of time properties is OS-dependent.  For example,
  * on POSIX-compatible OS-es these properties have 1 second precision.
  *
- * On Windows, the `inode`, `uid` and `gid` elements are not produced.
+ * On Windows, the `inode`, `uid` and `gid` properties are not produced.
  *
- * The `device` element is only produced for device objects on some
+ * The `device` property is only produced for device objects on some
  * OS-es, for example Linux, *BSD, or MacOSX.
  */
 static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
@@ -1037,6 +1037,7 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
         FILE_BASIC_INFO    basic_info   = { 0 };
         FILE_STANDARD_INFO std_info     = { 0 };
         FILE_STORAGE_INFO  storage_info = { 0 };
+        DWORD              last_error   = 0;
         BOOL               ok           = FALSE;
         BOOL               have_storage = FALSE;
 
@@ -1052,22 +1053,31 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
 
         ok = handle != INVALID_HANDLE_VALUE;
 
-        if (ok)
+        if (ok) {
             ok = GetFileInformationByHandleEx(handle, FileBasicInfo,
                                               &basic_info, sizeof(basic_info));
 
-        if (ok)
-            ok = GetFileInformationByHandleEx(handle, FileStandardInfo,
-                                              &std_info, sizeof(std_info));
+            if (ok)
+                ok = GetFileInformationByHandleEx(handle, FileStandardInfo,
+                                                  &std_info, sizeof(std_info));
 
-        if (ok)
-            have_storage = GetFileInformationByHandleEx(handle, FileStorageInfo,
-                                                        &storage_info, sizeof(storage_info));
+            if (ok)
+                have_storage = GetFileInformationByHandleEx(handle, FileStorageInfo,
+                                                            &storage_info, sizeof(storage_info));
+
+            if ( ! ok)
+                last_error = GetLastError();
+        }
 
         KOS_resume_context(ctx);
 
-        if ( ! ok)
-            RAISE_EXCEPTION_STR(str_err_file_stat);
+        if ( ! ok) {
+            if (last_error)
+                KOS_raise_last_error(ctx, KOS_NULL, last_error);
+            else
+                KOS_raise_exception(ctx, KOS_CONST_ID(str_err_file_stat));
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
 
         if ( ! have_storage)
             storage_info.LogicalBytesPerSector = 1;

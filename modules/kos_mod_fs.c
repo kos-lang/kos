@@ -72,6 +72,173 @@ cleanup:
     return ret;
 }
 
+#ifdef _WIN32
+static int64_t get_epoch_time_us(const FILETIME *time)
+{
+    const int64_t  epoch = (int64_t)116444736 * (int64_t)100000000;
+    int64_t        time_s;
+    ULARGE_INTEGER li;
+
+    li.u.LowPart  = time->dwLowDateTime;
+    li.u.HighPart = time->dwHighDateTime;
+
+    time_s = (int64_t)li.QuadPart;
+
+    /* Convert from 100s of ns to us */
+    time_s /= 10;
+
+    /* Convert from Windows time (1601) to Epoch time (1970) */
+    time_s -= epoch;
+
+    return time_s;
+}
+#endif
+
+/* @item fs info()
+ *
+ *     info(filename, follow = false)
+ *
+ * Returns object containing information about the object pointed by `filename`.
+ *
+ * The `follow` parameter specifies behavior for symbolic links.  If it is `false`
+ * (the default), the function returns information about a symbolic link pointed
+ * to by `filename`, otherwise it returns information about the actual object
+ * after resolving the symbolic link.
+ *
+ * The returned object contains the following properties:
+ *
+ *  * type       - type of the object, one of the following strings:
+ *                 `"file"`, `"directory"`, `"char"` (character device),
+ *                 `"device"` (block device), `"fifo"`, `"symlink"`, `"socket"`
+ *  * size       - size of the file object, in bytes
+ *  * blocks     - number of blocks allocated for the file object
+ *  * block_size - ideal block size for reading/writing
+ *  * flags      - bitflags representing OS-specific file attributes
+ *  * inode      - inode number
+ *  * hard_links - number of hard links
+ *  * uid        - id of the owner
+ *  * gid        - id of the owning group
+ *  * device     - array containing major and minor device numbers if the object is a device
+ *  * atime      - last access time, in microseconds since Epoch
+ *  * mtime      - last modification time, in microseconds since Epoch
+ *  * ctime      - creation time, in microseconds since Epoch
+ *
+ * The precision of time properties is OS-dependent.  For example,
+ * on POSIX-compatible OS-es these properties have 1 second precision.
+ *
+ * On Windows, the `inode`, `uid`, `gid`, `blocks`, `block_size` and `hard_links` propertoes are
+ * not produced.
+ *
+ * The `device` property is only produced for device objects on some
+ * OS-es, for example Linux, *BSD, or MacOSX.
+ */
+static KOS_OBJ_ID info(KOS_CONTEXT ctx,
+                       KOS_OBJ_ID  this_obj,
+                       KOS_OBJ_ID  args_obj)
+{
+    KOS_LOCAL  info;
+    KOS_OBJ_ID filename_obj = KOS_array_read(ctx, args_obj, 0);
+    KOS_OBJ_ID follow_obj;
+    KOS_VECTOR filename_cstr;
+    int        error;
+
+    KOS_init_local(ctx, &info);
+
+    KOS_vector_init(&filename_cstr);
+
+    TRY_OBJID(filename_obj);
+
+    follow_obj = KOS_array_read(ctx, args_obj, 1);
+    TRY_OBJID(follow_obj);
+
+    TRY(KOS_string_to_cstr_vec(ctx, filename_obj, &filename_cstr));
+
+    fix_path_separators(&filename_cstr);
+
+#ifdef _WIN32
+    {
+#define SET_INT_PROPERTY(name, value)                                           \
+        do {                                                                    \
+            KOS_DECLARE_STATIC_CONST_STRING(str_name, name);                    \
+                                                                                \
+            KOS_OBJ_ID obj_id = KOS_new_int(ctx, (int64_t)(value));             \
+            TRY_OBJID(obj_id);                                                  \
+                                                                                \
+            TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_name), obj_id)); \
+        } while (0)
+
+        DWORD                     last_error = 0;
+        WIN32_FILE_ATTRIBUTE_DATA attr;
+
+        KOS_DECLARE_STATIC_CONST_STRING(str_type,          "type");
+        KOS_DECLARE_STATIC_CONST_STRING(str_type_file,     "file");
+        KOS_DECLARE_STATIC_CONST_STRING(str_type_dir,      "directory");
+        KOS_DECLARE_STATIC_CONST_STRING(str_type_dev,      "device");
+        KOS_DECLARE_STATIC_CONST_STRING(str_err_file_stat, "unable to obtain information about file");
+
+        KOS_suspend_context(ctx);
+
+        if ( ! GetFileAttributesEx(filename_cstr.buffer, GetFileExInfoStandard, &attr))
+            last_error = GetLastError();
+
+        KOS_resume_context(ctx);
+
+        if (last_error) {
+            KOS_raise_last_error(ctx, filename_cstr, (unsigned)last_error);
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+
+        info.o = KOS_new_object(ctx);
+        TRY_OBJID(info.o);
+
+        SET_INT_PROPERTY("flags", attr.dwFileAttributes);
+        SET_INT_PROPERTY("size",  ((uint64_t)(uint32_t)attr.nFileSizeHigh << 32) | (uint32_t)attr.nFileSizeLow);
+        SET_INT_PROPERTY("atime", get_epoch_time_us(&attr.ftLastAccessTime));
+        SET_INT_PROPERTY("mtime", get_epoch_time_us(&attr.ftLastWriteTime));
+        SET_INT_PROPERTY("ctime", get_epoch_time_us(&attr.ftCreationTime));
+
+        if (basic_info.FileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+            TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_dir)));
+        else if (basic_info.FileAttributes & FILE_ATTRIBUTE_DEVICE)
+            TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_dev)));
+        else
+            TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_file)));
+    }
+#else
+    {
+        struct stat st;
+        int         ret;
+        int         saved_errno;
+
+        KOS_suspend_context(ctx);
+
+        if (KOS_get_bool(follow_obj))
+            ret = stat(filename_cstr.buffer, &st);
+        else
+            ret = lstat(filename_cstr.buffer, &st);
+
+        if (ret)
+            saved_errno = errno;
+
+        KOS_resume_context(ctx);
+
+        if (ret) {
+            KOS_raise_errno_value(ctx, filename_cstr.buffer, saved_errno);
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+
+        info.o = kos_stat(ctx, &st);
+    }
+#endif
+
+cleanup:
+    KOS_vector_destroy(&filename_cstr);
+
+    info.o = KOS_destroy_top_local(ctx, &info);
+
+    return error ? KOS_BADPTR : info.o;
+}
+
 /* @item fs remove()
  *
  *     remove(filename)
@@ -497,6 +664,7 @@ cleanup:
 }
 
 KOS_DECLARE_STATIC_CONST_STRING(str_filename, "filename");
+KOS_DECLARE_STATIC_CONST_STRING(str_follow,   "follow");
 KOS_DECLARE_STATIC_CONST_STRING(str_path,     "path");
 
 static const KOS_ARG_DESC filename_arg[2] = {
@@ -509,6 +677,12 @@ static const KOS_ARG_DESC path_arg[2] = {
     { KOS_BADPTR,             KOS_BADPTR }
 };
 
+static const KOS_ARG_DESC info_args[3] = {
+    { KOS_CONST_ID(str_filename), KOS_BADPTR },
+    { KOS_CONST_ID(str_follow),   KOS_FALSE  },
+    { KOS_BADPTR,                 KOS_BADPTR }
+};
+
 int kos_module_fs_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 {
     int       error = KOS_SUCCESS;
@@ -517,6 +691,7 @@ int kos_module_fs_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     KOS_init_local_with(ctx, &module, module_obj);
 
     TRY_ADD_FUNCTION(ctx,  module.o, "is_file", is_file,   filename_arg);
+    TRY_ADD_FUNCTION(ctx,  module.o, "info",    info,      info_args);
     TRY_ADD_FUNCTION(ctx,  module.o, "remove",  remove,    filename_arg);
     TRY_ADD_FUNCTION(ctx,  module.o, "cwd",     cwd,       KOS_NULL);
     TRY_ADD_FUNCTION(ctx,  module.o, "chdir",   kos_chdir, path_arg);

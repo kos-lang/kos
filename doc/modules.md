@@ -124,6 +124,7 @@ Table of Contents
   * [fs](#fs)
     * [chdir()](#chdir)
     * [cwd()](#cwd)
+    * [info()](#info)
     * [is\_file()](#is_file)
     * [listdir()](#listdir)
     * [remove()](#remove)
@@ -2991,6 +2992,45 @@ Example:
     > cwd()
     "/home/user"
 
+info()
+------
+
+    info(filename, follow = false)
+
+Returns object containing information about the object pointed by `filename`.
+
+The `follow` parameter specifies behavior for symbolic links.  If it is `false`
+(the default), the function returns information about a symbolic link pointed
+to by `filename`, otherwise it returns information about the actual object
+after resolving the symbolic link.
+
+The returned object contains the following properties:
+
+ * type       - type of the object, one of the following strings:
+                `"file"`, `"directory"`, `"char"` (character device),
+                `"device"` (block device), `"fifo"`, `"symlink"`, `"socket"`
+ * size       - size of the file object, in bytes
+ * blocks     - number of blocks allocated for the file object
+ * block_size - ideal block size for reading/writing
+ * flags      - bitflags representing OS-specific file attributes
+ * inode      - inode number
+ * hard_links - number of hard links
+ * uid        - id of the owner
+ * gid        - id of the owning group
+ * device     - array containing major and minor device numbers if the object is a device
+ * atime      - last access time, in microseconds since Epoch
+ * mtime      - last modification time, in microseconds since Epoch
+ * ctime      - creation time, in microseconds since Epoch
+
+The precision of time properties is OS-dependent.  For example,
+on POSIX-compatible OS-es these properties have 1 second precision.
+
+On Windows, the `inode`, `uid`, `gid`, `blocks`, `block_size` and `hard_links` propertoes are
+not produced.
+
+The `device` property is only produced for device objects on some
+OS-es, for example Linux, *BSD, or MacOSX.
+
 is_file()
 ---------
 
@@ -3172,7 +3212,7 @@ A read-only property which returns information about the file.
 
 This property populates a new object on every read.
 
-The property is an object containing the following elements:
+The property is an object containing the following properties:
 
  * type       - type of the object, one of the following strings:
                 `"file"`, `"directory"`, `"char"` (character device),
@@ -3193,9 +3233,9 @@ The property is an object containing the following elements:
 The precision of time properties is OS-dependent.  For example,
 on POSIX-compatible OS-es these properties have 1 second precision.
 
-On Windows, the `inode`, `uid` and `gid` elements are not produced.
+On Windows, the `inode`, `uid` and `gid` properties are not produced.
 
-The `device` element is only produced for device objects on some
+The `device` property is only produced for device objects on some
 OS-es, for example Linux, *BSD, or MacOSX.
 
 file.prototype.position
