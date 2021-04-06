@@ -8,8 +8,8 @@
 #include "../inc/kos_error.h"
 #include "../inc/kos_instance.h"
 #include "../inc/kos_memory.h"
+#include "../inc/kos_system.h"
 #include "../core/kos_config.h"
-#include "../core/kos_system.h"
 #include "../core/kos_try.h"
 
 int create_thread(KOS_CONTEXT          ctx,
@@ -55,7 +55,7 @@ int get_num_cpus(void)
 
     KOS_vector_init(&cstr);
 
-    if (kos_get_env("TEST_CPUS", &cstr) == KOS_SUCCESS) {
+    if (KOS_get_env("TEST_CPUS", &cstr) == KOS_SUCCESS) {
         num_cpus = (int)strtol(cstr.buffer, 0, 10);
         if (num_cpus < 1) {
             KOS_vector_destroy(&cstr);

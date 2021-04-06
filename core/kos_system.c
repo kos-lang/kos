@@ -2,7 +2,7 @@
  * Copyright (c) 2014-2021 Chris Dragan
  */
 
-#include "kos_system.h"
+#include "kos_system_internal.h"
 #include "../inc/kos_array.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_memory.h"
@@ -42,7 +42,7 @@
 #   include <sys/sysmacros.h>
 #endif
 
-int kos_is_stdin_interactive(void)
+int KOS_is_stdin_interactive(void)
 {
 #ifdef _WIN32
     const int fd = _fileno(stdin);
@@ -110,7 +110,7 @@ int kos_unix_open(const char *filename, int flags)
 #endif
 
 #if defined(_WIN32) || defined(__HAIKU__)
-void kos_filebuf_init(KOS_FILEBUF *file_buf)
+void KOS_filebuf_init(KOS_FILEBUF *file_buf)
 {
     assert(file_buf);
     file_buf->buffer = KOS_NULL;
@@ -118,7 +118,7 @@ void kos_filebuf_init(KOS_FILEBUF *file_buf)
 }
 
 /* TODO Consider using MapViewOfFile() on Windows */
-int kos_load_file(const char  *filename,
+int KOS_load_file(const char  *filename,
                   KOS_FILEBUF *file_buf)
 {
     int    error;
@@ -145,6 +145,7 @@ int kos_load_file(const char  *filename,
     if (0 != fseek(file, 0, SEEK_END) || kos_seq_fail())
         RAISE_ERROR(KOS_ERROR_ERRNO);
 
+    /* TODO get file size */
     lsize = ftell(file);
     if (lsize < 0)
         RAISE_ERROR(KOS_ERROR_ERRNO);
@@ -174,7 +175,7 @@ cleanup:
     return error;
 }
 
-void kos_unload_file(KOS_FILEBUF *file_buf)
+void KOS_unload_file(KOS_FILEBUF *file_buf)
 {
     assert(file_buf);
     if (file_buf->buffer) {
@@ -185,14 +186,14 @@ void kos_unload_file(KOS_FILEBUF *file_buf)
     }
 }
 #else
-void kos_filebuf_init(KOS_FILEBUF *file_buf)
+void KOS_filebuf_init(KOS_FILEBUF *file_buf)
 {
     assert(file_buf);
     file_buf->buffer = KOS_NULL;
     file_buf->size   = 0;
 }
 
-int kos_load_file(const char  *filename,
+int KOS_load_file(const char  *filename,
                   KOS_FILEBUF *file_buf)
 {
     int         error = KOS_SUCCESS;
@@ -229,7 +230,7 @@ cleanup:
     return error;
 }
 
-void kos_unload_file(KOS_FILEBUF *file_buf)
+void KOS_unload_file(KOS_FILEBUF *file_buf)
 {
     assert(file_buf);
     if (file_buf->buffer) {
@@ -240,12 +241,12 @@ void kos_unload_file(KOS_FILEBUF *file_buf)
 }
 #endif
 
-int kos_does_file_exist(const char *filename)
+int KOS_does_file_exist(const char *filename)
 {
     return is_file(filename) == KOS_SUCCESS;
 }
 
-int kos_get_absolute_path(KOS_VECTOR *path)
+int KOS_get_absolute_path(KOS_VECTOR *path)
 {
     int   error;
     char *resolved_path;
@@ -291,7 +292,7 @@ int kos_get_absolute_path(KOS_VECTOR *path)
     return error;
 }
 
-int kos_get_env(const char *name,
+int KOS_get_env(const char *name,
                 KOS_VECTOR *buf)
 {
     int         error;
@@ -425,7 +426,7 @@ int kos_mem_protect(void *ptr, unsigned size, enum KOS_PROTECT_E protect)
 #endif
 
 #ifdef _WIN32
-int64_t kos_get_time_us(void)
+int64_t KOS_get_time_us(void)
 {
     const int64_t epoch = (int64_t)116444736 * (int64_t)100000000;
     int64_t       time_us;
@@ -446,7 +447,7 @@ int64_t kos_get_time_us(void)
     return time_us;
 }
 #elif defined(_POSIX_TIMERS) && (_POSIX_TIMERS > 0)
-int64_t kos_get_time_us(void)
+int64_t KOS_get_time_us(void)
 {
     int64_t         time_us = 0;
     struct timespec ts;
@@ -461,7 +462,7 @@ int64_t kos_get_time_us(void)
     return time_us;
 }
 #else
-int64_t kos_get_time_us(void)
+int64_t KOS_get_time_us(void)
 {
     int64_t        time_us = 0;
     struct timeval tv;
@@ -481,13 +482,31 @@ int64_t kos_get_time_us(void)
 static void get_lib_error(KOS_VECTOR *error_cstr)
 {
     const DWORD error = GetLastError();
+    char       *msg   = KOS_NULL;
+    DWORD       msg_size;
 
-    if (KOS_vector_resize(error_cstr, 11) == KOS_SUCCESS)
-        snprintf(error_cstr->buffer, error_cstr->size, "0x%08x", (unsigned)error);
+    msg_size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+                             KOS_NULL,
+                             error,
+                             LANG_USER_DEFAULT,
+                             (LPTSTR)&msg,
+                             1024,
+                             KOS_NULL);
+
+    while (msg_size && ((uint8_t)msg[msg_size - 1] <= 0x20U))
+        --msg_size;
+
+    if (KOS_vector_resize(error_cstr, msg_size + 1) == KOS_SUCCESS) {
+        memcpy(error_cstr.buffer, msg, msg_size);
+        error_cstr.buffer[msg_size] = 0;
+    }
     else {
         error_cstr->size      = 1;
         error_cstr->buffer[0] = 0;
     }
+
+    if (msg)
+        LocalFree(msg);
 }
 #else
 static void get_lib_error(KOS_VECTOR *error_cstr)
@@ -505,7 +524,7 @@ static void get_lib_error(KOS_VECTOR *error_cstr)
 #endif
 
 #ifdef _WIN32
-KOS_SHARED_LIB kos_load_library(const char *filename, KOS_VECTOR *error_cstr)
+KOS_SHARED_LIB KOS_load_library(const char *filename, KOS_VECTOR *error_cstr)
 {
     const KOS_SHARED_LIB lib = (KOS_SHARED_LIB)LoadLibrary(filename);
     if ( ! lib)
@@ -513,7 +532,7 @@ KOS_SHARED_LIB kos_load_library(const char *filename, KOS_VECTOR *error_cstr)
     return lib;
 }
 #else
-KOS_SHARED_LIB kos_load_library(const char *filename, KOS_VECTOR *error_cstr)
+KOS_SHARED_LIB KOS_load_library(const char *filename, KOS_VECTOR *error_cstr)
 {
     const KOS_SHARED_LIB lib = (KOS_SHARED_LIB)dlopen(filename, RTLD_LAZY | RTLD_LOCAL);
     if ( ! lib)
@@ -523,13 +542,13 @@ KOS_SHARED_LIB kos_load_library(const char *filename, KOS_VECTOR *error_cstr)
 #endif
 
 #ifdef _WIN32
-void kos_unload_library(KOS_SHARED_LIB lib)
+void KOS_unload_library(KOS_SHARED_LIB lib)
 {
     assert(lib);
     FreeLibrary((HMODULE)lib);
 }
 #else
-void kos_unload_library(KOS_SHARED_LIB lib)
+void KOS_unload_library(KOS_SHARED_LIB lib)
 {
     assert(lib);
     dlclose(lib);
@@ -537,7 +556,7 @@ void kos_unload_library(KOS_SHARED_LIB lib)
 #endif
 
 #ifdef _WIN32
-LIB_FUNCTION kos_get_library_function(KOS_SHARED_LIB lib, const char *func_name, KOS_VECTOR *error_cstr)
+LIB_FUNCTION KOS_get_library_function(KOS_SHARED_LIB lib, const char *func_name, KOS_VECTOR *error_cstr)
 {
     LIB_FUNCTION func;
 
@@ -549,7 +568,7 @@ LIB_FUNCTION kos_get_library_function(KOS_SHARED_LIB lib, const char *func_name,
     return func;
 }
 #else
-LIB_FUNCTION kos_get_library_function(KOS_SHARED_LIB lib, const char *func_name, KOS_VECTOR *error_cstr)
+LIB_FUNCTION KOS_get_library_function(KOS_SHARED_LIB lib, const char *func_name, KOS_VECTOR *error_cstr)
 {
     union {
         void        *void_ptr;

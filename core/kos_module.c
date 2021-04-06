@@ -10,6 +10,7 @@
 #include "../inc/kos_object.h"
 #include "../inc/kos_malloc.h"
 #include "../inc/kos_string.h"
+#include "../inc/kos_system.h"
 #include "../inc/kos_utils.h"
 #include "kos_compiler.h"
 #include "kos_config.h"
@@ -20,7 +21,6 @@
 #include "kos_object_internal.h"
 #include "kos_parser.h"
 #include "kos_perf.h"
-#include "kos_system.h"
 #include "kos_try.h"
 #include "kos_utf8_internal.h"
 #include <assert.h>
@@ -105,7 +105,7 @@ static int load_native(KOS_CONTEXT ctx, KOS_OBJ_ID module_name, KOS_VECTOR *cpat
         cpath->buffer[1] = KOS_PATH_SEPARATOR;
     }
 
-    if ( ! kos_does_file_exist(cpath->buffer))
+    if ( ! KOS_does_file_exist(cpath->buffer))
         return KOS_SUCCESS;
 
     if (ctx->inst->flags & KOS_INST_VERBOSE)
@@ -120,14 +120,14 @@ static int load_native(KOS_CONTEXT ctx, KOS_OBJ_ID module_name, KOS_VECTOR *cpat
 
         KOS_suspend_context(ctx);
 
-        lib = kos_seq_fail() ? KOS_NULL : kos_load_library(cpath->buffer, &error_cstr);
+        lib = kos_seq_fail() ? KOS_NULL : KOS_load_library(cpath->buffer, &error_cstr);
 
         if (lib)
-            init = kos_seq_fail() ? KOS_NULL : (KOS_BUILTIN_INIT)kos_get_library_function(lib, "init_kos_module", &error_cstr);
+            init = kos_seq_fail() ? KOS_NULL : (KOS_BUILTIN_INIT)KOS_get_library_function(lib, "init_kos_module", &error_cstr);
 
         if (init) {
             const KOS_GET_FLAGS flags_fn =
-                (KOS_GET_FLAGS)kos_get_library_function(lib, "get_kos_module_flags", &error_cstr);
+                (KOS_GET_FLAGS)KOS_get_library_function(lib, "get_kos_module_flags", &error_cstr);
             if (flags_fn)
                 flags = flags_fn();
         }
@@ -139,7 +139,7 @@ static int load_native(KOS_CONTEXT ctx, KOS_OBJ_ID module_name, KOS_VECTOR *cpat
 
     if ( ! lib || ! init) {
         if (lib) {
-            kos_unload_library(lib);
+            KOS_unload_library(lib);
 
             KOS_raise_printf(ctx, "failed to get init_kos_module function from %s: %s\n",
                              cpath->buffer, error_cstr.buffer);
@@ -206,8 +206,8 @@ static int find_module(KOS_CONTEXT            ctx,
         memcpy(cpath.buffer, maybe_path, length);
         cpath.buffer[length] = 0;
 
-        if (kos_get_absolute_path(&cpath) ||
-            ! kos_does_file_exist(cpath.buffer)) {
+        if (KOS_get_absolute_path(&cpath) ||
+            ! KOS_does_file_exist(cpath.buffer)) {
 
             /* Path was specified, but module source code on that path does not
              * exist.  Check if we can load module written in native code
@@ -264,7 +264,7 @@ static int find_module(KOS_CONTEXT            ctx,
 
             TRY(KOS_string_to_cstr_vec(ctx, path.o, &cpath));
 
-            have_src = kos_does_file_exist(cpath.buffer);
+            have_src = KOS_does_file_exist(cpath.buffer);
 
             dir.o = components[0].o;
 
@@ -412,13 +412,13 @@ static int load_file(KOS_CONTEXT  ctx,
     KOS_vector_init(&cpath);
     TRY(KOS_string_to_cstr_vec(ctx, path_obj, &cpath));
 
-    if ( ! kos_does_file_exist(cpath.buffer) && ! (flags & KOS_MODULE_NEEDS_KOS_SOURCE)) {
+    if ( ! KOS_does_file_exist(cpath.buffer) && ! (flags & KOS_MODULE_NEEDS_KOS_SOURCE)) {
         file_buf->buffer = KOS_NULL;
         file_buf->size   = 0;
         goto cleanup;
     }
 
-    error = kos_load_file(cpath.buffer, file_buf);
+    error = KOS_load_file(cpath.buffer, file_buf);
 
     switch (error) {
 
@@ -1203,7 +1203,7 @@ static int compile_module(KOS_CONTEXT           ctx,
     const uint32_t      old_bytecode_size = OBJPTR(MODULE, module_obj)->bytecode_size;
     unsigned            num_opt_passes    = 0;
 
-    time_0 = kos_get_time_us();
+    time_0 = KOS_get_time_us();
 
     KOS_init_local_with(ctx, &module, module_obj);
 
@@ -1247,7 +1247,7 @@ static int compile_module(KOS_CONTEXT           ctx,
         }
     }
 
-    time_1 = kos_get_time_us();
+    time_1 = KOS_get_time_us();
 
     /* Save base module index */
     if (module_idx == KOS_BASE_MODULE_IDX)
@@ -1280,7 +1280,7 @@ static int compile_module(KOS_CONTEXT           ctx,
     }
     TRY(error);
 
-    time_2 = kos_get_time_us();
+    time_2 = KOS_get_time_us();
 
     /* Print number of optimization passes */
     if (inst->flags & KOS_INST_DEBUG) {
@@ -1620,7 +1620,7 @@ static KOS_OBJ_ID import_module(KOS_CONTEXT ctx,
     KOS_MODULE_LOAD_CHAIN loading            = { KOS_NULL, KOS_NULL, 0 };
     KOS_FILEBUF           file_buf;
 
-    kos_filebuf_init(&file_buf);
+    KOS_filebuf_init(&file_buf);
 
     get_module_name(module_name, name_size, &loading);
     PROF_ZONE_NAME(loading.module_name, loading.length)
@@ -1769,7 +1769,7 @@ static KOS_OBJ_ID import_module(KOS_CONTEXT ctx,
     TRY(compile_module(ctx, module.o, (uint16_t)module_idx, data, data_size, KOS_RUN_ONCE_NO_BASE));
 
     /* Free file buffer */
-    kos_unload_file(&file_buf);
+    KOS_unload_file(&file_buf);
 
     /* Put module on the list */
     TRY(KOS_array_write(ctx, inst->modules.modules, (uint16_t)module_idx, module.o));
@@ -1781,7 +1781,7 @@ cleanup:
 
     module.o = KOS_destroy_top_locals(ctx, &actual_module_name, &module);
 
-    kos_unload_file(&file_buf);
+    KOS_unload_file(&file_buf);
 
     if (error) {
         handle_interpreter_error(ctx, error);

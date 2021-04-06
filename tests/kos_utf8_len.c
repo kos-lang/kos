@@ -3,7 +3,7 @@
  */
 
 #include "../inc/kos_utf8.h"
-#include "../core/kos_system.h"
+#include "../inc/kos_system.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -22,7 +22,7 @@ static const struct TEST_STRING strings[] = {
 
 int main(int argc, char *argv[])
 {
-    const int64_t start_time = kos_get_time_us();
+    const int64_t start_time = KOS_get_time_us();
     int           i;
     int           num_loops = argc > 1 ? 10000000 : 1;
 
@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
     }
 
     if (argc > 1) {
-        const int64_t duration = kos_get_time_us() - start_time;
+        const int64_t duration = KOS_get_time_us() - start_time;
         printf("%u us\n", (unsigned)duration);
     }
     return EXIT_SUCCESS;

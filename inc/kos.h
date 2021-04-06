@@ -15,6 +15,7 @@
 #include "kos_modules_init.h"
 #include "kos_object.h"
 #include "kos_string.h"
+#include "kos_system.h"
 #include "kos_utils.h"
 #include "kos_version.h"
 

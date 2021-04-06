@@ -3,10 +3,10 @@
  */
 
 #include "kos_misc.h"
-#include "kos_math.h"
-#include "kos_try.h"
-#include "kos_system.h"
 #include "../inc/kos_error.h"
+#include "kos_math.h"
+#include "kos_system_internal.h"
+#include "kos_try.h"
 #include <assert.h>
 #include <stdint.h>
 #include <limits.h>

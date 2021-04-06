@@ -6,7 +6,7 @@
 #include "../inc/kos_instance.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_string.h"
-#include "../core/kos_system.h"
+#include "../inc/kos_system.h"
 #include "../core/kos_try.h"
 
 static const char str_err_cannot_get_time[] = "failed to get system time";
@@ -23,7 +23,7 @@ static KOS_OBJ_ID now(KOS_CONTEXT ctx,
                       KOS_OBJ_ID  args_obj)
 {
     KOS_OBJ_ID    ret     = KOS_BADPTR;
-    const int64_t time_us = kos_get_time_us();
+    const int64_t time_us = KOS_get_time_us();
 
     if (time_us)
         ret = KOS_new_int(ctx, time_us);

@@ -11,7 +11,7 @@
 #include "../inc/kos_object.h"
 #include "../inc/kos_string.h"
 #include "../inc/kos_utils.h"
-#include "../core/kos_system.h"
+#include "../core/kos_system_internal.h"
 #include "../core/kos_try.h"
 #ifdef _WIN32
 #   define WIN32_LEAN_AND_MEAN
@@ -24,6 +24,7 @@
 #   include <dirent.h>
 #   include <sys/dir.h>
 #   include <sys/types.h>
+#   include <sys/stat.h>
 #   include <unistd.h>
 #endif
 
@@ -64,7 +65,7 @@ static KOS_OBJ_ID is_file(KOS_CONTEXT ctx,
 
     fix_path_separators(&filename_cstr);
 
-    ret = KOS_BOOL(kos_does_file_exist(filename_cstr.buffer));
+    ret = KOS_BOOL(KOS_does_file_exist(filename_cstr.buffer));
 
 cleanup:
     KOS_vector_destroy(&filename_cstr);

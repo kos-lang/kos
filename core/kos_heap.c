@@ -15,7 +15,7 @@
 #include "kos_math.h"
 #include "kos_object_internal.h"
 #include "kos_perf.h"
-#include "kos_system.h"
+#include "kos_system_internal.h"
 #include "kos_threads_internal.h"
 #include "kos_try.h"
 #include <stdio.h>
@@ -2835,7 +2835,7 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
     /***********************************************************************/
     /* Initialize GC */
 
-    time_0 = kos_get_time_us();
+    time_0 = KOS_get_time_us();
 
     kos_lock_mutex(heap->mutex);
 
@@ -2874,7 +2874,7 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
 
     stop_the_world(ctx->inst); /* Remaining threads enter help_gc() */
 
-    time_1             = kos_get_time_us();
+    time_1             = KOS_get_time_us();
     stats.time_stop_us = (unsigned)(time_1 - time_0);
     time_0             = time_1;
 
@@ -2899,7 +2899,7 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
     /***********************************************************************/
     /* Phase 3: Evacuate and reclaim free pages */
 
-    time_1             = kos_get_time_us();
+    time_1             = KOS_get_time_us();
     stats.time_mark_us = (unsigned)(time_1 - time_0);
     time_0             = time_1;
 
@@ -2917,7 +2917,7 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
 
             kos_lock_mutex(heap->mutex);
 
-            time_1              = kos_get_time_us();
+            time_1              = KOS_get_time_us();
             stats.time_evac_us += (unsigned)(time_1 - time_0);
             time_0              = time_1;
 
@@ -2933,7 +2933,7 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
 
             reclaim_free_pages(heap, &free_pages, &stats);
 
-            time_1                = kos_get_time_us();
+            time_1                = KOS_get_time_us();
             stats.time_update_us += (unsigned)(time_1 - time_0);
             time_0                = time_1;
 
@@ -2984,7 +2984,7 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
     if ( ! error && KOS_is_exception_pending(ctx))
         error = KOS_ERROR_EXCEPTION;
 
-    time_1 = kos_get_time_us();
+    time_1 = KOS_get_time_us();
 
     stats.time_finish_us = (unsigned)(time_1 - time_0);
     stats.time_total_us = (unsigned)(stats.time_stop_us +

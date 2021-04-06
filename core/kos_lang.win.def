@@ -25,20 +25,26 @@ EXPORTS
     KOS_destroy_top_local
     KOS_destroy_top_locals
     KOS_destroy_ulocal
+    KOS_does_file_exist
     KOS_empty_array DATA
     KOS_false DATA
+    KOS_filebuf_init
     KOS_fix_index
     KOS_format_exception
     KOS_free
     KOS_free_aligned
+    KOS_get_absolute_path
+    KOS_get_env
     KOS_get_file_name
     KOS_get_index_arg
     KOS_get_integer
+    KOS_get_library_function
     KOS_get_module
     KOS_get_named_arg
     KOS_get_numeric_arg
     KOS_get_property_with_depth
     KOS_get_prototype
+    KOS_get_time_us
     KOS_get_type_name
     KOS_has_prototype
     KOS_help_gc
@@ -56,7 +62,10 @@ EXPORTS
     KOS_instance_unregister_thread
     KOS_io_get_file
     KOS_is_generator
+    KOS_is_stdin_interactive
     KOS_iterator_next
+    KOS_load_file
+    KOS_load_library
     KOS_load_module
     KOS_load_module_from_memory
     KOS_lock_object
@@ -145,6 +154,8 @@ EXPORTS
     KOS_string_uppercase
     KOS_suspend_context
     KOS_true DATA
+    KOS_unload_file
+    KOS_unload_library
     KOS_utf8_calc_buf_size_16
     KOS_utf8_calc_buf_size_32
     KOS_utf8_calc_buf_size_8

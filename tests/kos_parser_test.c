@@ -2,17 +2,17 @@
  * Copyright (c) 2014-2021 Chris Dragan
  */
 
+#include "../inc/kos_error.h"
+#include "../inc/kos_memory.h"
+#include "../inc/kos_system.h"
+#include "../core/kos_ast.h"
+#include "../core/kos_misc.h"
+#include "../core/kos_parser.h"
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include "../inc/kos_error.h"
-#include "../inc/kos_memory.h"
-#include "../core/kos_ast.h"
-#include "../core/kos_system.h"
-#include "../core/kos_misc.h"
-#include "../core/kos_parser.h"
 
 #ifdef _MSC_VER
 #   pragma warning( disable : 4996 ) /* strerror: This function or variable may be unsafe */
@@ -351,7 +351,7 @@ int main(int argc, char *argv[])
     int                  print = 0;
     const char          *usage = "Usage: kos_parser_test [-verbose] [-notest] <testfile>\n";
 
-    kos_filebuf_init(&file_buf);
+    KOS_filebuf_init(&file_buf);
 
     KOS_mempool_init(&allocator);
 
@@ -374,7 +374,7 @@ int main(int argc, char *argv[])
             }
         }
 
-        error = kos_load_file(argv[iarg], &file_buf);
+        error = KOS_load_file(argv[iarg], &file_buf);
 
         switch (error) {
 
@@ -489,7 +489,7 @@ int main(int argc, char *argv[])
 
     KOS_mempool_destroy(&allocator);
 
-    kos_unload_file(&file_buf);
+    KOS_unload_file(&file_buf);
 
     if (error) {
 

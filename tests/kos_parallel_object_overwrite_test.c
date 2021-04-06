@@ -8,10 +8,10 @@
 #include "../inc/kos_memory.h"
 #include "../inc/kos_object.h"
 #include "../inc/kos_string.h"
+#include "../inc/kos_system.h"
 #include "../inc/kos_threads.h"
 #include "../core/kos_misc.h"
 #include "../core/kos_object_internal.h"
-#include "../core/kos_system.h"
 #include "kos_test_tools.h"
 
 /* These strings cause lots of collisions in the hash table */

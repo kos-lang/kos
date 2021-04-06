@@ -15,7 +15,7 @@
 #include "../inc/kos_utils.h"
 #include "../core/kos_debug.h"
 #include "../core/kos_object_internal.h"
-#include "../core/kos_system.h"
+#include "../core/kos_system_internal.h"
 #include "../core/kos_try.h"
 #include <errno.h>
 #include <fcntl.h>

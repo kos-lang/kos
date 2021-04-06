@@ -8,6 +8,7 @@
 #include "../inc/kos_memory.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_modules_init.h"
+#include "../inc/kos_system.h"
 #include "../inc/kos_utils.h"
 #include "../inc/kos_version.h"
 #include "../core/kos_getline.h"
@@ -15,7 +16,6 @@
 #include "../core/kos_misc.h"
 #include "../core/kos_parser.h"
 #include "../core/kos_perf.h"
-#include "../core/kos_system.h"
 #include "../core/kos_try.h"
 #include <assert.h>
 #include <errno.h>
@@ -155,13 +155,13 @@ int main(int argc, char *argv[])
     }
 
     /* KOSDISASM=1 turns on disassembly */
-    if (!kos_get_env("KOSDISASM", &buf) &&
+    if (!KOS_get_env("KOSDISASM", &buf) &&
             buf.size == 2 && buf.buffer[0] == '1' && buf.buffer[1] == 0)
         flags |= KOS_INST_DISASM;
 
     /* KOSINTERACTIVE=1 forces interactive prompt       */
     /* KOSINTERACTIVE=0 forces treating stdin as a file */
-    if (!kos_get_env("KOSINTERACTIVE", &buf) &&
+    if (!KOS_get_env("KOSINTERACTIVE", &buf) &&
             buf.size == 2 && buf.buffer[1] == 0) {
 
         if (buf.buffer[0] == '0')
@@ -186,7 +186,7 @@ int main(int argc, char *argv[])
 
     /* Use executable path from OS to find modules */
     /* KOSNODEFAULTPATH=1 disables default paths */
-    if (kos_get_env("KOSNODEFAULTPATH", &buf) || buf.size != 2 ||
+    if (KOS_get_env("KOSNODEFAULTPATH", &buf) || buf.size != 2 ||
                 buf.buffer[0] != '1' || buf.buffer[1] != 0)
         error = KOS_instance_add_default_path(ctx, KOS_NULL);
 
@@ -254,7 +254,7 @@ int main(int argc, char *argv[])
     else {
 
         if (interactive < 0)
-            interactive = kos_is_stdin_interactive();
+            interactive = KOS_is_stdin_interactive();
 
         /* Load subsequent pieces of script from interactive prompt */
         if (interactive)

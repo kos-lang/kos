@@ -6,9 +6,9 @@
 #include "../inc/kos_error.h"
 #include "../inc/kos_malloc.h"
 #include "../inc/kos_memory.h"
+#include "../inc/kos_system.h"
 #include "kos_config.h"
 #include "kos_debug.h"
-#include "kos_system.h"
 #include "kos_math.h"
 #include "kos_misc.h"
 #include "kos_utf8_internal.h"
@@ -1406,7 +1406,7 @@ int kos_getline(KOS_GETLINE      *state,
     KOS_mempool_init(&edit.temp_allocator);
     error = init_history(&edit, state->head);
 
-    if ( ! error && kos_is_stdin_interactive() && is_term_set()) {
+    if ( ! error && KOS_is_stdin_interactive() && is_term_set()) {
 
         edit.interactive = 1;
 

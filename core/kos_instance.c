@@ -20,7 +20,7 @@
 #include "kos_misc.h"
 #include "kos_object_internal.h"
 #include "kos_perf.h"
-#include "kos_system.h"
+#include "kos_system_internal.h"
 #include "kos_threads_internal.h"
 #include "kos_try.h"
 #include <assert.h>
@@ -71,7 +71,7 @@ int kos_seq_fail(void)
 
         KOS_vector_init(&cstr);
 
-        if (kos_get_env("KOSSEQFAIL", &cstr) == KOS_SUCCESS
+        if (KOS_get_env("KOSSEQFAIL", &cstr) == KOS_SUCCESS
                 && cstr.size > 0
                 && kos_parse_int(cstr.buffer, cstr.buffer + cstr.size - 1, &value) == KOS_SUCCESS)
             kos_seq_threshold = (uint32_t)value;
@@ -229,7 +229,7 @@ static int init_search_paths(KOS_CONTEXT ctx)
 
     KOS_vector_init(&cpaths);
 
-    if (kos_get_env("KOSPATH", &cpaths) == KOS_SUCCESS)
+    if (KOS_get_env("KOSPATH", &cpaths) == KOS_SUCCESS)
         error = add_multiple_paths(ctx, &cpaths);
 
     KOS_vector_destroy(&cpaths);
@@ -499,7 +499,7 @@ void KOS_instance_destroy(KOS_INSTANCE *inst)
             const KOS_SHARED_LIB lib = libs->libs[--idx];
 
             assert(lib);
-            kos_unload_library(lib);
+            KOS_unload_library(lib);
         }
 
         KOS_free((void *)libs);
@@ -604,7 +604,7 @@ int KOS_instance_add_default_path(KOS_CONTEXT ctx, const char *argv0)
         /* Absolute or relative path */
         if (strchr(argv0, KOS_PATH_SEPARATOR)) {
 
-            if ( ! kos_does_file_exist(argv0))
+            if ( ! KOS_does_file_exist(argv0))
                 RAISE_ERROR(KOS_ERROR_NOT_FOUND);
 
             len += 1;
@@ -617,7 +617,7 @@ int KOS_instance_add_default_path(KOS_CONTEXT ctx, const char *argv0)
 
             char *buf;
 
-            TRY(kos_get_env("PATH", &cpath));
+            TRY(KOS_get_env("PATH", &cpath));
 
             buf = cpath.buffer;
 
@@ -642,7 +642,7 @@ int KOS_instance_add_default_path(KOS_CONTEXT ctx, const char *argv0)
                 memcpy(&cstr.buffer[base_len + 1], argv0, len);
                 cstr.buffer[base_len + 1 + len] = 0;
 
-                if (kos_does_file_exist(cstr.buffer))
+                if (KOS_does_file_exist(cstr.buffer))
                     break;
 
                 cstr.size = 0;
@@ -661,7 +661,7 @@ int KOS_instance_add_default_path(KOS_CONTEXT ctx, const char *argv0)
         TRY(kos_executable_path(&cstr));
     }
 
-    TRY(kos_get_absolute_path(&cstr));
+    TRY(KOS_get_absolute_path(&cstr));
 
     assert(cstr.size > 0);
 
@@ -802,7 +802,7 @@ KOS_OBJ_ID kos_register_module_init(KOS_CONTEXT      ctx,
 
 cleanup:
     if (IS_BAD_PTR(mod_init.o) && lib)
-        kos_unload_library(lib);
+        KOS_unload_library(lib);
 
     return KOS_destroy_top_locals(ctx, &module_name, &mod_init);
 }

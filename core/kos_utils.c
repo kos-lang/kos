@@ -1674,7 +1674,7 @@ void KOS_raise_last_error(KOS_CONTEXT ctx, const char *prefix, unsigned error_va
                              1024,
                              KOS_NULL);
 
-    while (msg_size && (msg[msg_size - 1] == '\r' || msg[msg_size - 1] == '\n'))
+    while (msg_size && ((uint8_t)msg[msg_size - 1] <= 0x20U))
         --msg_size;
 
     if (msg_size) {
@@ -1683,7 +1683,6 @@ void KOS_raise_last_error(KOS_CONTEXT ctx, const char *prefix, unsigned error_va
         KOS_init_locals(ctx, 3, &str[0], &str[1], &str[2]);
 
         str[2].o = KOS_new_string(ctx, msg, msg_size);
-        LocalFree(msg);
 
         if ( ! IS_BAD_PTR(str[2].o) && prefix) {
             str[0].o = KOS_new_cstring(ctx, prefix);
@@ -1705,6 +1704,9 @@ void KOS_raise_last_error(KOS_CONTEXT ctx, const char *prefix, unsigned error_va
     }
     else
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_last_error));
+
+    if (msg)
+        LocalFree(msg);
 }
 #endif
 
