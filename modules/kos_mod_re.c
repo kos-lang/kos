@@ -722,6 +722,8 @@ static int parse_escape_seq(struct RE_PARSE_CTX *re_ctx)
         case '[':
             /* fall through */
         case ']':
+            /* fall through */
+        case '"':
             error = emit_instr1(re_ctx, INSTR_MATCH_ONE_CHAR, code);
             break;
 
