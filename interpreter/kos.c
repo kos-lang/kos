@@ -385,11 +385,13 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
     int         genline_init = 0;
     int         stored_errno = 0;
 
+    KOS_init_local(ctx, &print_args);
+
     KOS_vector_init(&tmp_buf);
 
     printf(KOS_VERSION_STRING " interactive interpreter\n");
 
-    KOS_init_local_with(ctx, &print_args, KOS_new_array(ctx, 1));
+    print_args.o = KOS_new_array(ctx, 1);
     TRY_OBJID(print_args.o);
 
     /* Initialize module */
@@ -525,6 +527,8 @@ cleanup:
         kos_getline_destroy(&state);
 
     KOS_vector_destroy(&tmp_buf);
+
+    KOS_destroy_top_local(ctx, &print_args);
 
     return error;
 }
