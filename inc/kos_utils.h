@@ -40,6 +40,26 @@ enum KOS_VOID_INDEX_E {
     KOS_VOID_INDEX_IS_END
 };
 
+enum KOS_CONVERT_TYPE_E {
+    KOS_NATIVE_INVALID,
+    KOS_NATIVE_UINT8,
+    KOS_NATIVE_UINT16,
+    KOS_NATIVE_UINT32,
+    KOS_NATIVE_UINT64,
+    KOS_NATIVE_INT8,
+    KOS_NATIVE_INT16,
+    KOS_NATIVE_INT32,
+    KOS_NATIVE_INT64,
+    KOS_NATIVE_ENUM,
+    KOS_NATIVE_FLOAT,
+    KOS_NATIVE_DOUBLE,
+    KOS_NATIVE_STRING,
+    KOS_NATIVE_STRING_PTR,
+    KOS_NATIVE_BUFFER
+};
+
+struct KOS_MEMPOOL_S;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -66,6 +86,42 @@ int KOS_get_index_arg(KOS_CONTEXT           ctx,
                       int                   end_pos,
                       enum KOS_VOID_INDEX_E void_index,
                       int                  *found_pos);
+
+KOS_API
+int KOS_extract_native_value(KOS_CONTEXT           ctx,
+                             KOS_OBJ_ID            value_id,
+                             const KOS_CONVERT    *convert,
+                             struct KOS_MEMPOOL_S *alloc,
+                             void                 *value_ptr);
+
+KOS_API
+int KOS_extract_native_from_array(KOS_CONTEXT           ctx,
+                                  KOS_OBJ_ID            array_id,
+                                  const char           *element_name,
+                                  const KOS_CONVERT    *convert,
+                                  struct KOS_MEMPOOL_S *alloc,
+                                  ...);
+
+KOS_API
+int KOS_extract_native_from_iterable(KOS_CONTEXT           ctx,
+                                     KOS_OBJ_ID            iterable_id,
+                                     const KOS_CONVERT    *convert,
+                                     struct KOS_MEMPOOL_S *alloc,
+                                     ...);
+
+KOS_API
+int KOS_extract_native_from_object(KOS_CONTEXT           ctx,
+                                   KOS_OBJ_ID            object_id,
+                                   const KOS_CONVERT    *convert,
+                                   struct KOS_MEMPOOL_S *alloc,
+                                   ...);
+
+KOS_API
+int KOS_extract_native_struct_from_object(KOS_CONTEXT           ctx,
+                                          KOS_OBJ_ID            array_id,
+                                          const KOS_CONVERT    *convert,
+                                          struct KOS_MEMPOOL_S *alloc,
+                                          void                 *struct_ptr);
 
 enum KOS_PRINT_WHERE_E {
     KOS_STDOUT,

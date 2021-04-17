@@ -26,6 +26,11 @@ _KOS_destroy_top_locals
 _KOS_destroy_ulocal
 _KOS_does_file_exist
 _KOS_empty_array
+_KOS_extract_native_from_array
+_KOS_extract_native_from_iterable
+_KOS_extract_native_from_object
+_KOS_extract_native_struct_from_object
+_KOS_extract_native_value
 _KOS_false
 _KOS_filebuf_init
 _KOS_fix_index

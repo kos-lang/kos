@@ -34,27 +34,25 @@
 #   pragma warning( disable : 4996 ) /* strerror: This function or variable may be unsafe */
 #endif
 
-static const char str_array_close[]             = "]";
-static const char str_array_comma[]             = ", ";
-static const char str_array_open[]              = "[";
-static const char str_buffer_close[]            = ">";
-static const char str_buffer_open[]             = "<";
-static const char str_class_open[]              = "<class ";
-static const char str_empty_array[]             = "[]";
-static const char str_empty_buffer[]            = "<>";
-static const char str_err_cannot_expand[]       = "cannot expand object";
-static const char str_err_invalid_string[]      = "invalid string";
-static const char str_err_not_array[]           = "object is not an array";
-static const char str_err_not_number[]          = "object is not a number";
-static const char str_err_number_out_of_range[] = "number out of range";
-static const char str_err_unsup_operand_types[] = "unsupported operand types";
-static const char str_function_open[]           = "<function ";
-static const char str_object_close[]            = "}";
-static const char str_object_colon[]            = ": ";
-static const char str_object_open[]             = "{";
-static const char str_object_sep[]              = ", ";
-static const char str_recursive_array[]         = "[...]";
-static const char str_recursive_object[]        = "{...}";
+static const char str_array_close[]        = "]";
+static const char str_array_comma[]        = ", ";
+static const char str_array_open[]         = "[";
+static const char str_buffer_close[]       = ">";
+static const char str_buffer_open[]        = "<";
+static const char str_class_open[]         = "<class ";
+static const char str_empty_array[]        = "[]";
+static const char str_empty_buffer[]       = "<>";
+static const char str_err_cannot_expand[]  = "cannot expand object";
+static const char str_err_invalid_string[] = "invalid string";
+static const char str_err_not_number[]     = "object is not a number";
+static const char str_function_open[]      = "<function ";
+static const char str_object_close[]       = "}";
+static const char str_object_colon[]       = ": ";
+static const char str_object_open[]        = "{";
+static const char str_object_sep[]         = ", ";
+static const char str_recursive_array[]    = "[...]";
+static const char str_recursive_object[]   = "{...}";
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_array,     "object is not an array");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_generator, "function is not a generator");
 
 static const int8_t extra_len_map[256] = {
@@ -165,7 +163,7 @@ int KOS_get_integer(KOS_CONTEXT ctx,
         case OBJ_FLOAT: {
             const double number = OBJPTR(FLOAT, obj_id)->value;
             if (number <= -9223372036854775808.0 || number >= 9223372036854775808.0) {
-                KOS_raise_exception_cstring(ctx, str_err_number_out_of_range);
+                KOS_raise_printf(ctx, "number %f is out of range for conversion to integer", number);
                 error = KOS_ERROR_EXCEPTION;
             }
             else
@@ -175,7 +173,7 @@ int KOS_get_integer(KOS_CONTEXT ctx,
         }
 
         default:
-            KOS_raise_exception_cstring(ctx, str_err_unsup_operand_types);
+            KOS_raise_printf(ctx, "unable to convert %s to integer", KOS_get_type_name(READ_OBJ_TYPE(obj_id)));
             error = KOS_ERROR_EXCEPTION;
             break;
     }
@@ -1223,7 +1221,7 @@ int KOS_print_to_cstr_vec(KOS_CONTEXT   ctx,
     assert(GET_OBJ_TYPE(array) == OBJ_ARRAY);
 
     if (GET_OBJ_TYPE(array) != OBJ_ARRAY)
-        RAISE_EXCEPTION(str_err_not_array);
+        RAISE_EXCEPTION_STR(str_err_not_array);
 
     first_sep_i = cstr_vec->size ? 0U : 1U;
 
@@ -1287,7 +1285,7 @@ int KOS_array_push_expand(KOS_CONTEXT ctx,
     value.o = value_obj;
 
     if (GET_OBJ_TYPE(array.o) != OBJ_ARRAY)
-        RAISE_EXCEPTION(str_err_not_array);
+        RAISE_EXCEPTION_STR(str_err_not_array);
 
     cur_size = KOS_get_array_size(array.o);
 
@@ -1940,4 +1938,445 @@ int KOS_iterator_next(KOS_CONTEXT ctx,
     KOS_atomic_write_release_ptr(OBJPTR(ITERATOR, iter_id)->last_value, KOS_BADPTR);
 
     return KOS_ERROR_NOT_FOUND;
+}
+
+struct KOS_NATIVE_TYPE_S {
+    KOS_TYPE type;
+    unsigned size;
+};
+
+enum KOS_FORCE_ENUM_E {
+    ENUM_MIN = 0,
+    ENUM_MAX = 0x7FFFFFFF
+};
+
+static const struct KOS_NATIVE_TYPE_S native_to_kos[15] = {
+    { OBJ_VOID,    0                             },
+    { OBJ_INTEGER, sizeof(uint8_t)               },
+    { OBJ_INTEGER, sizeof(uint16_t)              },
+    { OBJ_INTEGER, sizeof(uint32_t)              },
+    { OBJ_INTEGER, sizeof(uint64_t)              },
+    { OBJ_INTEGER, sizeof(int8_t)                },
+    { OBJ_INTEGER, sizeof(int16_t)               },
+    { OBJ_INTEGER, sizeof(int32_t)               },
+    { OBJ_INTEGER, sizeof(int64_t)               },
+    { OBJ_INTEGER, sizeof(enum KOS_FORCE_ENUM_E) },
+    { OBJ_FLOAT,   sizeof(float)                 },
+    { OBJ_FLOAT,   sizeof(double)                },
+    { OBJ_STRING,  0                             },
+    { OBJ_STRING,  0                             },
+    { OBJ_BUFFER,  0                             }
+};
+
+struct KOS_INT_LIMITS_S {
+    int64_t min_value;
+    int64_t max_value;
+};
+
+#define KOS_MIN_INT32 ((int32_t)((uint32_t)1U << 31))
+#define KOS_MIN_INT64 ((int64_t)((uint64_t)1U << 63))
+#define KOS_MAX_INT64 ((int64_t)~((uint64_t)1U << 63))
+
+static const struct KOS_INT_LIMITS_S int_limits[10] = {
+    { 0,             0                    },
+    { 0,             0xFF                 },
+    { 0,             0xFFFF               },
+    { 0,             (int64_t)0xFFFFFFFFU },
+    { KOS_MIN_INT64, KOS_MAX_INT64        },
+    { -0x80,         0x7F                 },
+    { -0x8000,       0x7FFF               },
+    { KOS_MIN_INT32, 0x7FFFFFFF           },
+    { KOS_MIN_INT64, KOS_MAX_INT64        },
+    { 0,             0x7FFFFFFF           }
+};
+
+int KOS_extract_native_value(KOS_CONTEXT           ctx,
+                             KOS_OBJ_ID            value_id,
+                             const KOS_CONVERT    *convert,
+                             struct KOS_MEMPOOL_S *alloc,
+                             void                 *value_ptr)
+{
+    KOS_VECTOR                     name_cstr;
+    KOS_LOCAL                      value;
+    const struct KOS_NATIVE_TYPE_S conv      = native_to_kos[convert->type];
+    const unsigned                 num_elems = (conv.size && convert->size) ? (convert->size / conv.size) : 1;
+    unsigned                       i;
+    int                            error     = KOS_SUCCESS;
+
+    KOS_init_local_with(ctx, &value, value_id);
+
+    KOS_vector_init(&name_cstr);
+
+    assert(convert->type != KOS_NATIVE_INVALID);
+
+    if (num_elems > 1) {
+        const KOS_TYPE type = GET_OBJ_TYPE(value.o);
+
+        if (type != OBJ_ARRAY) {
+            TRY(KOS_string_to_cstr_vec(ctx, convert->name, &name_cstr));
+
+            KOS_raise_printf(ctx, "'%s' is %s but expected array",
+                             name_cstr.buffer, KOS_get_type_name(type));
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+        else if (KOS_get_array_size(value.o) < num_elems) {
+            TRY(KOS_string_to_cstr_vec(ctx, convert->name, &name_cstr));
+
+            KOS_raise_printf(ctx, "'%s' requires %u elements, but only %u provided",
+                             name_cstr.buffer, num_elems, KOS_get_array_size(value.o));
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+    }
+
+    for (i = 0; i < num_elems; i++) {
+
+        KOS_OBJ_ID elem_id;
+        KOS_TYPE   type;
+
+        if (num_elems > 1) {
+            elem_id = KOS_array_read(ctx, value.o, i);
+            TRY_OBJID(elem_id);
+        }
+        else
+            elem_id = value.o;
+
+        type = GET_OBJ_TYPE(elem_id);
+        if (((conv.type <= OBJ_FLOAT) && (type > OBJ_FLOAT)) ||
+            ((conv.type > OBJ_FLOAT) && (conv.type != type))) {
+
+            TRY(KOS_string_to_cstr_vec(ctx, convert->name, &name_cstr));
+
+            KOS_raise_printf(ctx, "'%s' is %s but expected %s",
+                             name_cstr.buffer, KOS_get_type_name(type), KOS_get_type_name(conv.type));
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+
+        switch (convert->type) {
+            case KOS_NATIVE_UINT8:
+                /* fall through */
+            case KOS_NATIVE_UINT16:
+                /* fall through */
+            case KOS_NATIVE_UINT32:
+                /* fall through */
+            case KOS_NATIVE_UINT64:
+                /* fall through */
+            case KOS_NATIVE_INT8:
+                /* fall through */
+            case KOS_NATIVE_INT16:
+                /* fall through */
+            case KOS_NATIVE_INT32:
+                /* fall through */
+            case KOS_NATIVE_INT64:
+                /* fall through */
+            case KOS_NATIVE_ENUM: {
+                int64_t int_value;
+
+                assert(GET_OBJ_TYPE(elem_id) <= OBJ_FLOAT);
+
+                TRY(KOS_get_integer(ctx, elem_id, &int_value));
+
+                if (int_value < int_limits[convert->type].min_value) {
+
+                    TRY(KOS_string_to_cstr_vec(ctx, convert->name, &name_cstr));
+
+                    KOS_raise_printf(ctx, "'%s' value %" PRId64 " exceeds minimum %" PRId64,
+                                     name_cstr.buffer, int_value, int_limits[convert->type].min_value);
+                    RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                }
+                if (int_value > int_limits[convert->type].max_value) {
+
+                    TRY(KOS_string_to_cstr_vec(ctx, convert->name, &name_cstr));
+
+                    KOS_raise_printf(ctx, "'%s' value %" PRId64 " exceeds maximum %" PRId64,
+                                     name_cstr.buffer, int_value, int_limits[convert->type].max_value);
+                    RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                }
+
+                switch (convert->type) {
+                    case KOS_NATIVE_UINT8:
+                        *(uint8_t *)value_ptr = (uint8_t)int_value;
+                        break;
+
+                    case KOS_NATIVE_UINT16:
+                        *(uint16_t *)value_ptr = (uint16_t)int_value;
+                        break;
+
+                    case KOS_NATIVE_UINT32:
+                        *(uint32_t *)value_ptr = (uint32_t)int_value;
+                        break;
+
+                    case KOS_NATIVE_UINT64:
+                        *(uint64_t *)value_ptr = (uint64_t)int_value;
+                        break;
+
+                    case KOS_NATIVE_INT8:
+                        *(int8_t *)value_ptr = (int8_t)int_value;
+                        break;
+
+                    case KOS_NATIVE_INT16:
+                        *(int16_t *)value_ptr = (int16_t)int_value;
+                        break;
+
+                    case KOS_NATIVE_INT32:
+                        *(int32_t *)value_ptr = (int32_t)int_value;
+                        break;
+
+                    case KOS_NATIVE_INT64:
+                        *(int64_t *)value_ptr = (int64_t)int_value;
+                        break;
+
+                    default:
+                        assert(convert->type == KOS_NATIVE_ENUM);
+                        *(enum KOS_FORCE_ENUM_E *)value_ptr = (enum KOS_FORCE_ENUM_E)int_value;
+                        break;
+                }
+                break;
+            }
+
+            case KOS_NATIVE_FLOAT:
+                /* fall through */
+            case KOS_NATIVE_DOUBLE: {
+                double f_value;
+
+                assert(GET_OBJ_TYPE(elem_id) <= OBJ_FLOAT);
+
+                if (IS_SMALL_INT(elem_id))
+                    f_value = (double)GET_SMALL_INT(elem_id);
+                else switch (READ_OBJ_TYPE(elem_id)) {
+                    case OBJ_INTEGER:
+                        f_value = (double)OBJPTR(INTEGER, elem_id)->value;
+                        break;
+                    default:
+                        assert(READ_OBJ_TYPE(elem_id) == OBJ_FLOAT);
+                        f_value = OBJPTR(FLOAT, elem_id)->value;
+                        break;
+                }
+
+                if (convert->type == KOS_NATIVE_FLOAT)
+                    *(float *)value_ptr = (float)f_value;
+                else
+                    *(double *)value_ptr = f_value;
+                break;
+            }
+
+            case KOS_NATIVE_STRING:
+                assert(GET_OBJ_TYPE(elem_id) == OBJ_STRING);
+                TRY(KOS_string_to_cstr_vec(ctx, elem_id, &name_cstr));
+
+                if (name_cstr.size > convert->size) {
+                    TRY(KOS_string_to_cstr_vec(ctx, convert->name, &name_cstr));
+
+                    KOS_raise_printf(ctx, "'%s' string size %u exceeds maximum size %u",
+                                     name_cstr.buffer, (unsigned)name_cstr.size, convert->size);
+                    RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                }
+
+                memcpy(value_ptr, name_cstr.buffer, name_cstr.size);
+                break;
+
+            case KOS_NATIVE_STRING_PTR:  {
+                char    *buf;
+                unsigned str_len = 0;
+
+                assert(GET_OBJ_TYPE(elem_id) == OBJ_STRING);
+
+                if (KOS_get_string_length(elem_id) > 0) {
+                    str_len = KOS_string_to_utf8(elem_id, KOS_NULL, 0);
+                    assert(str_len > 0);
+
+                    if (str_len == ~0U) {
+                        TRY(KOS_string_to_cstr_vec(ctx, convert->name, &name_cstr));
+
+                        KOS_raise_printf(ctx, "'%s' contains invalid string", name_cstr.buffer);
+                        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                    }
+                }
+
+                assert(alloc);
+                buf = (char *)KOS_mempool_alloc(alloc, str_len + 1);
+                if ( ! buf) {
+                    KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+                    RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                }
+
+                if (str_len)
+                    KOS_string_to_utf8(elem_id, buf, str_len);
+
+                buf[str_len] = 0;
+
+                *(char **)value_ptr = buf;
+                break;
+            }
+
+            default: {
+                uint8_t *data;
+                assert(convert->type == KOS_NATIVE_BUFFER);
+                assert(GET_OBJ_TYPE(elem_id) == OBJ_BUFFER);
+
+                if (KOS_get_buffer_size(elem_id) < convert->size) {
+                    TRY(KOS_string_to_cstr_vec(ctx, convert->name, &name_cstr));
+
+                    KOS_raise_printf(ctx, "'%s' buffer size %u too short, need at least %u bytes",
+                                     name_cstr.buffer, KOS_get_buffer_size(elem_id), convert->size);
+                    RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                }
+
+                data  = KOS_buffer_data(ctx, elem_id);
+                error = data ? KOS_SUCCESS : KOS_ERROR_EXCEPTION;
+                if (data)
+                    memcpy(value_ptr, data, convert->size);
+                break;
+            }
+        }
+
+        value_ptr = (void *)((uintptr_t)value_ptr + conv.size);
+    }
+
+cleanup:
+    KOS_vector_destroy(&name_cstr);
+
+    KOS_destroy_top_local(ctx, &value);
+
+    return error;
+}
+
+int KOS_extract_native_from_array(KOS_CONTEXT           ctx,
+                                  KOS_OBJ_ID            array_id,
+                                  const char           *element_name,
+                                  const KOS_CONVERT    *convert,
+                                  struct KOS_MEMPOOL_S *alloc,
+                                  ...)
+{
+    KOS_LOCAL array;
+    uint32_t  size;
+    uint32_t  i     = 0;
+    int       error = KOS_SUCCESS;
+
+    KOS_init_local_with(ctx, &array, array_id);
+
+    assert( ! IS_BAD_PTR(array_id));
+    if (GET_OBJ_TYPE(array_id) != OBJ_ARRAY)
+        RAISE_EXCEPTION_STR(str_err_not_array);
+    size = KOS_get_array_size(array_id);
+
+    va_list args;
+    va_start(args, alloc);
+
+    while ( ! IS_BAD_PTR(convert->name)) {
+
+        KOS_OBJ_ID value_id;
+        void      *value_ptr = va_arg(args, void *);
+
+        if (i < size) {
+            value_id = KOS_array_read(ctx, array.o, i);
+            TRY_OBJID(value_id);
+        }
+        else if (IS_BAD_PTR(convert->default_value)) {
+            KOS_VECTOR name_cstr;
+
+            KOS_vector_init(&name_cstr);
+
+            if ( ! KOS_string_to_cstr_vec(ctx, convert->name, &name_cstr))
+                KOS_raise_printf(ctx, "missing %s %u '%s'", element_name, i, name_cstr.buffer);
+
+            KOS_vector_destroy(&name_cstr);
+
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+        else
+            value_id = convert->default_value;
+
+        TRY(KOS_extract_native_value(ctx, value_id, convert, alloc, value_ptr));
+
+        ++convert;
+        ++i;
+    }
+
+    va_end(args);
+
+cleanup:
+    KOS_destroy_top_local(ctx, &array);
+
+    return error;
+}
+
+int KOS_extract_native_from_iterable(KOS_CONTEXT           ctx,
+                                     KOS_OBJ_ID            iterable_id,
+                                     const KOS_CONVERT    *convert,
+                                     struct KOS_MEMPOOL_S *alloc,
+                                     ...)
+{
+    KOS_LOCAL iterable;
+    uint32_t  i     = 0;
+    int       done  = 0;
+    int       error = KOS_SUCCESS;
+
+    KOS_init_local_with(ctx, &iterable, iterable_id);
+
+    iterable.o = KOS_new_iterator(ctx, iterable.o, KOS_CONTENTS);
+    TRY_OBJID(iterable.o);
+
+    va_list args;
+    va_start(args, alloc);
+
+    while ( ! IS_BAD_PTR(convert->name)) {
+
+        KOS_OBJ_ID value_id;
+        void      *value_ptr = va_arg(args, void *);
+
+        if ( ! done) {
+            error = KOS_iterator_next(ctx, iterable.o);
+            if (error == KOS_ERROR_EXCEPTION)
+                goto cleanup;
+            else if (error == KOS_ERROR_NOT_FOUND)
+                done = 1;
+        }
+
+        if ( ! done)
+            value_id = KOS_get_walk_value(iterable.o);
+        else if (IS_BAD_PTR(convert->default_value)) {
+            KOS_VECTOR name_cstr;
+
+            KOS_vector_init(&name_cstr);
+
+            if ( ! KOS_string_to_cstr_vec(ctx, convert->name, &name_cstr))
+                KOS_raise_printf(ctx, "missing element %u '%s'", i, name_cstr.buffer);
+
+            KOS_vector_destroy(&name_cstr);
+
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+        else
+            value_id = convert->default_value;
+
+        TRY(KOS_extract_native_value(ctx, value_id, convert, alloc, value_ptr));
+
+        ++convert;
+        ++i;
+    }
+
+    va_end(args);
+
+cleanup:
+    KOS_destroy_top_local(ctx, &iterable);
+
+    return error;
+}
+
+int KOS_extract_native_from_object(KOS_CONTEXT           ctx,
+                                   KOS_OBJ_ID            object_id,
+                                   const KOS_CONVERT    *convert,
+                                   struct KOS_MEMPOOL_S *alloc,
+                                   ...)
+{
+    return KOS_ERROR_INTERNAL;
+}
+
+int KOS_extract_native_struct_from_object(KOS_CONTEXT           ctx,
+                                          KOS_OBJ_ID            array_id,
+                                          const KOS_CONVERT    *convert,
+                                          struct KOS_MEMPOOL_S *alloc,
+                                          void                 *struct_ptr)
+{
+    return KOS_ERROR_INTERNAL;
 }

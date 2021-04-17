@@ -27,6 +27,11 @@ EXPORTS
     KOS_destroy_ulocal
     KOS_does_file_exist
     KOS_empty_array DATA
+    KOS_extract_native_from_array
+    KOS_extract_native_from_iterable
+    KOS_extract_native_from_object
+    KOS_extract_native_struct_from_object
+    KOS_extract_native_value
     KOS_false DATA
     KOS_filebuf_init
     KOS_fix_index
