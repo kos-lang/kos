@@ -668,20 +668,20 @@ KOS_DECLARE_STATIC_CONST_STRING(str_filename, "filename");
 KOS_DECLARE_STATIC_CONST_STRING(str_follow,   "follow");
 KOS_DECLARE_STATIC_CONST_STRING(str_path,     "path");
 
-static const KOS_ARG_DESC filename_arg[2] = {
-    { KOS_CONST_ID(str_filename), KOS_BADPTR },
-    { KOS_BADPTR,                 KOS_BADPTR }
+static const KOS_CONVERT filename_arg[2] = {
+    KOS_DEFINE_MANDATORY_ARG(str_filename),
+    KOS_DEFINE_TAIL_ARG()
 };
 
-static const KOS_ARG_DESC path_arg[2] = {
-    { KOS_CONST_ID(str_path), KOS_BADPTR },
-    { KOS_BADPTR,             KOS_BADPTR }
+static const KOS_CONVERT path_arg[2] = {
+    KOS_DEFINE_MANDATORY_ARG(str_path),
+    KOS_DEFINE_TAIL_ARG()
 };
 
-static const KOS_ARG_DESC info_args[3] = {
-    { KOS_CONST_ID(str_filename), KOS_BADPTR },
-    { KOS_CONST_ID(str_follow),   KOS_FALSE  },
-    { KOS_BADPTR,                 KOS_BADPTR }
+static const KOS_CONVERT info_args[3] = {
+    KOS_DEFINE_MANDATORY_ARG(str_filename         ),
+    KOS_DEFINE_OPTIONAL_ARG( str_follow, KOS_FALSE),
+    KOS_DEFINE_TAIL_ARG()
 };
 
 int kos_module_fs_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)

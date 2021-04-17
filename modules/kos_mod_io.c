@@ -132,10 +132,10 @@ KOS_DECLARE_STATIC_CONST_STRING(str_filename, "filename");
 KOS_DECLARE_STATIC_CONST_STRING(str_flags,    "flags");
 KOS_DECLARE_STATIC_CONST_STRING(str_rw,       "r+b");
 
-static const KOS_ARG_DESC open_args[3] = {
-    { KOS_CONST_ID(str_filename), KOS_BADPTR           },
-    { KOS_CONST_ID(str_flags),    KOS_CONST_ID(str_rw) },
-    { KOS_BADPTR,                 KOS_BADPTR           }
+static const KOS_CONVERT open_args[3] = {
+    KOS_DEFINE_MANDATORY_ARG(str_filename                   ),
+    KOS_DEFINE_OPTIONAL_ARG( str_flags, KOS_CONST_ID(str_rw)),
+    KOS_DEFINE_TAIL_ARG()
 };
 
 static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
@@ -586,9 +586,9 @@ static int is_eol(char c)
  */
 KOS_DECLARE_STATIC_CONST_STRING(str_reserved_size, "reserved_size");
 
-static const KOS_ARG_DESC read_line_args[2] = {
-    { KOS_CONST_ID(str_reserved_size), TO_SMALL_INT(4096) },
-    { KOS_BADPTR,                      KOS_BADPTR         }
+static const KOS_CONVERT read_line_args[2] = {
+    KOS_DEFINE_OPTIONAL_ARG(str_reserved_size, TO_SMALL_INT(4096)),
+    KOS_DEFINE_TAIL_ARG()
 };
 
 static KOS_OBJ_ID read_line(KOS_CONTEXT ctx,
@@ -683,10 +683,10 @@ cleanup:
 KOS_DECLARE_STATIC_CONST_STRING(str_size,   "size");
 KOS_DECLARE_STATIC_CONST_STRING(str_buffer, "buffer");
 
-static const KOS_ARG_DESC read_some_args[3] = {
-    { KOS_CONST_ID(str_size),   TO_SMALL_INT(4096) },
-    { KOS_CONST_ID(str_buffer), KOS_VOID           },
-    { KOS_BADPTR,               KOS_BADPTR         }
+static const KOS_CONVERT read_some_args[3] = {
+    KOS_DEFINE_OPTIONAL_ARG(str_size,   TO_SMALL_INT(4096)),
+    KOS_DEFINE_OPTIONAL_ARG(str_buffer, KOS_VOID          ),
+    KOS_DEFINE_TAIL_ARG()
 };
 
 static KOS_OBJ_ID read_some(KOS_CONTEXT ctx,
@@ -1256,9 +1256,9 @@ cleanup:
  */
 KOS_DECLARE_STATIC_CONST_STRING(str_pos, "pos");
 
-static const KOS_ARG_DESC set_file_pos_args[2] = {
-    { KOS_CONST_ID(str_pos), KOS_BADPTR },
-    { KOS_BADPTR,            KOS_BADPTR }
+static const KOS_CONVERT set_file_pos_args[2] = {
+    KOS_DEFINE_MANDATORY_ARG(str_pos),
+    KOS_DEFINE_TAIL_ARG()
 };
 
 static KOS_OBJ_ID set_file_pos(KOS_CONTEXT ctx,

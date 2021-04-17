@@ -75,9 +75,9 @@ KOS_DECLARE_PRIVATE_CLASS(random_priv_class);
  */
 KOS_DECLARE_STATIC_CONST_STRING(str_seed, "seed");
 
-static const KOS_ARG_DESC random_args[2] = {
-    { KOS_CONST_ID(str_seed), KOS_VOID   },
-    { KOS_BADPTR,             KOS_BADPTR }
+static const KOS_CONVERT random_args[2] = {
+    KOS_DEFINE_OPTIONAL_ARG(str_seed, KOS_VOID),
+    KOS_DEFINE_TAIL_ARG()
 };
 
 static KOS_OBJ_ID kos_random(KOS_CONTEXT ctx,
@@ -186,10 +186,10 @@ cleanup:
 KOS_DECLARE_STATIC_CONST_STRING(str_min, "min");
 KOS_DECLARE_STATIC_CONST_STRING(str_max, "max");
 
-static const KOS_ARG_DESC rand_integer_args[3] = {
-    { KOS_CONST_ID(str_min), KOS_VOID   },
-    { KOS_CONST_ID(str_max), KOS_VOID   },
-    { KOS_BADPTR,            KOS_BADPTR }
+static const KOS_CONVERT rand_integer_args[3] = {
+    KOS_DEFINE_OPTIONAL_ARG(str_min, KOS_VOID),
+    KOS_DEFINE_OPTIONAL_ARG(str_max, KOS_VOID),
+    KOS_DEFINE_TAIL_ARG()
 };
 
 static KOS_OBJ_ID rand_integer(KOS_CONTEXT ctx,

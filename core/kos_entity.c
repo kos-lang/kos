@@ -236,7 +236,7 @@ KOS_OBJ_ID KOS_new_class(KOS_CONTEXT ctx, KOS_OBJ_ID proto_obj)
     return KOS_destroy_top_locals(ctx, &proto, &func);
 }
 
-static unsigned count_args(const KOS_ARG_DESC *args)
+static unsigned count_args(const KOS_CONVERT *args)
 {
     unsigned num = 0;
 
@@ -254,7 +254,7 @@ static int init_builtin_function(KOS_CONTEXT          ctx,
                                  KOS_OBJ_ID           func_obj,
                                  KOS_OBJ_ID           name_obj,
                                  KOS_FUNCTION_HANDLER handler,
-                                 const KOS_ARG_DESC  *args)
+                                 const KOS_CONVERT   *args)
 {
     KOS_LOCAL func;
     KOS_LOCAL arg_map;
@@ -317,7 +317,7 @@ cleanup:
 KOS_OBJ_ID KOS_new_builtin_function(KOS_CONTEXT          ctx,
                                     KOS_OBJ_ID           name_obj,
                                     KOS_FUNCTION_HANDLER handler,
-                                    const KOS_ARG_DESC  *args)
+                                    const KOS_CONVERT   *args)
 {
     KOS_LOCAL func;
     KOS_LOCAL name;
@@ -338,7 +338,7 @@ KOS_OBJ_ID KOS_new_builtin_function(KOS_CONTEXT          ctx,
 KOS_OBJ_ID KOS_new_builtin_class(KOS_CONTEXT          ctx,
                                  KOS_OBJ_ID           name_obj,
                                  KOS_FUNCTION_HANDLER handler,
-                                 const KOS_ARG_DESC  *args)
+                                 const KOS_CONVERT   *args)
 {
     KOS_OBJ_ID proto_obj;
     KOS_LOCAL  func;

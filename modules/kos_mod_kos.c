@@ -60,9 +60,9 @@ KOS_DECLARE_PRIVATE_CLASS(lexer_priv_class);
 
 KOS_DECLARE_STATIC_CONST_STRING(str_input, "input");
 
-static const KOS_ARG_DESC raw_lexer_args[2] = {
-    { KOS_CONST_ID(str_input), KOS_BADPTR },
-    { KOS_BADPTR,              KOS_BADPTR }
+static const KOS_CONVERT raw_lexer_args[2] = {
+    KOS_DEFINE_MANDATORY_ARG(str_input),
+    KOS_DEFINE_TAIL_ARG()
 };
 
 static KOS_OBJ_ID raw_lexer(KOS_CONTEXT ctx,

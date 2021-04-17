@@ -1828,9 +1828,9 @@ cleanup:
  *
  *     > re("...")
  */
-static const KOS_ARG_DESC re_uncached_args[2] = {
-    { KOS_CONST_ID(str_regex), KOS_BADPTR },
-    { KOS_BADPTR,              KOS_BADPTR }
+static const KOS_CONVERT re_uncached_args[2] = {
+    KOS_DEFINE_MANDATORY_ARG(str_regex),
+    KOS_DEFINE_TAIL_ARG()
 };
 
 static KOS_OBJ_ID re_ctor(KOS_CONTEXT ctx,
@@ -1943,11 +1943,11 @@ KOS_INIT_MODULE(re, KOS_MODULE_NEEDS_KOS_SOURCE)(KOS_CONTEXT ctx, KOS_OBJ_ID mod
     KOS_LOCAL module;
     KOS_LOCAL proto;
 
-    const KOS_ARG_DESC find_args[4] = {
-        { KOS_CONST_ID(str_string), KOS_BADPTR      },
-        { KOS_CONST_ID(str_begin),  TO_SMALL_INT(0) },
-        { KOS_CONST_ID(str_end),    KOS_VOID        },
-        { KOS_BADPTR,               KOS_BADPTR      }
+    const KOS_CONVERT find_args[4] = {
+        KOS_DEFINE_MANDATORY_ARG(str_string                  ),
+        KOS_DEFINE_OPTIONAL_ARG( str_begin,  TO_SMALL_INT(0) ),
+        KOS_DEFINE_OPTIONAL_ARG( str_end,    KOS_VOID        ),
+        KOS_DEFINE_TAIL_ARG()
     };
 
     KOS_init_debug_output();

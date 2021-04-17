@@ -241,9 +241,9 @@ static KOS_OBJ_ID shallow(KOS_CONTEXT ctx,
  *      ["count", <function>], ["reduce", <function>], ["iterator", <function>],
  *      ["map", <function>], ["y", 1], ["x", 0]]
  */
-static const KOS_ARG_DESC deep_args[2] = {
-    { KOS_CONST_ID(str_obj), KOS_BADPTR },
-    { KOS_BADPTR,            KOS_BADPTR }
+static const KOS_CONVERT deep_args[2] = {
+    KOS_DEFINE_MANDATORY_ARG(str_obj),
+    KOS_DEFINE_TAIL_ARG()
 };
 
 static KOS_OBJ_ID deep(KOS_CONTEXT ctx,
@@ -257,7 +257,7 @@ static int create_class(KOS_CONTEXT          ctx,
                         KOS_OBJ_ID           module_obj,
                         KOS_OBJ_ID           str_name,
                         KOS_FUNCTION_HANDLER constructor,
-                        const KOS_ARG_DESC  *args,
+                        const KOS_CONVERT   *args,
                         KOS_OBJ_ID           prototype)
 {
     int        error    = KOS_SUCCESS;
@@ -899,10 +899,10 @@ cleanup:
  *     > object(["a", "b", "c"], [1, 2, 3])
  *     {"a": 1, "b": 2, "c": 3}
  */
-static const KOS_ARG_DESC object_args[3] = {
-    { KOS_CONST_ID(str_keys),   KOS_VOID   },
-    { KOS_CONST_ID(str_values), KOS_VOID   },
-    { KOS_BADPTR,               KOS_BADPTR }
+static const KOS_CONVERT object_args[3] = {
+    KOS_DEFINE_OPTIONAL_ARG(str_keys,   KOS_VOID),
+    KOS_DEFINE_OPTIONAL_ARG(str_values, KOS_VOID),
+    KOS_DEFINE_TAIL_ARG()
 };
 
 static KOS_OBJ_ID object_constructor(KOS_CONTEXT ctx,
@@ -1826,10 +1826,10 @@ static KOS_OBJ_ID thread_constructor(KOS_CONTEXT ctx,
  *     > f.apply(1, [2])
  *     3
  */
-static const KOS_ARG_DESC apply_args[3] = {
-    { KOS_CONST_ID(str_obj),  KOS_BADPTR },
-    { KOS_CONST_ID(str_args), KOS_BADPTR },
-    { KOS_BADPTR,             KOS_BADPTR }
+static const KOS_CONVERT apply_args[3] = {
+    KOS_DEFINE_MANDATORY_ARG(str_obj ),
+    KOS_DEFINE_MANDATORY_ARG(str_args),
+    KOS_DEFINE_TAIL_ARG()
 };
 
 static KOS_OBJ_ID apply(KOS_CONTEXT ctx,
@@ -2085,10 +2085,10 @@ static KOS_OBJ_ID wait(KOS_CONTEXT ctx,
  *     > buffer([1, 2, 3, 4, 5, 6, 7, 8]).slice(-5, -1)
  *     <4, 5, 6, 7>
  */
-static const KOS_ARG_DESC slice_args[3] = {
-    { KOS_CONST_ID(str_begin), KOS_BADPTR },
-    { KOS_CONST_ID(str_end),   KOS_BADPTR },
-    { KOS_BADPTR,              KOS_BADPTR }
+static const KOS_CONVERT slice_args[3] = {
+    KOS_DEFINE_MANDATORY_ARG(str_begin),
+    KOS_DEFINE_MANDATORY_ARG(str_end  ),
+    KOS_DEFINE_TAIL_ARG()
 };
 
 static KOS_OBJ_ID slice(KOS_CONTEXT ctx,
@@ -2351,10 +2351,10 @@ static void copy_sort_results(KOS_CONTEXT ctx,
  *     > [8, 5, 6, 0, 10, 2].sort()
  *     [0, 2, 5, 6, 8, 10]
  */
-static const KOS_ARG_DESC sort_args[3] = {
-    { KOS_CONST_ID(str_key),     KOS_VOID   },
-    { KOS_CONST_ID(str_reverse), KOS_FALSE  },
-    { KOS_BADPTR,                KOS_BADPTR }
+static const KOS_CONVERT sort_args[3] = {
+    KOS_DEFINE_OPTIONAL_ARG(str_key,     KOS_VOID ),
+    KOS_DEFINE_OPTIONAL_ARG(str_reverse, KOS_FALSE),
+    KOS_DEFINE_TAIL_ARG()
 };
 
 static KOS_OBJ_ID sort(KOS_CONTEXT ctx,
@@ -2493,10 +2493,10 @@ static KOS_OBJ_ID get_buffer_size(KOS_CONTEXT ctx,
  *     > a.resize(5)
  *     [void, void, void, void, void]
  */
-static const KOS_ARG_DESC resize_array_args[3] = {
-    { KOS_CONST_ID(str_size),  KOS_BADPTR },
-    { KOS_CONST_ID(str_value), KOS_VOID   },
-    { KOS_BADPTR,              KOS_BADPTR }
+static const KOS_CONVERT resize_array_args[3] = {
+    KOS_DEFINE_MANDATORY_ARG(str_size           ),
+    KOS_DEFINE_OPTIONAL_ARG( str_value, KOS_VOID),
+    KOS_DEFINE_TAIL_ARG()
 };
 
 /* @item base buffer.prototype.resize()
@@ -2518,10 +2518,10 @@ static const KOS_ARG_DESC resize_array_args[3] = {
  *     > b.resize(5)
  *     <00 00 00 00 00>
  */
-static const KOS_ARG_DESC resize_buffer_args[3] = {
-    { KOS_CONST_ID(str_size),  KOS_BADPTR      },
-    { KOS_CONST_ID(str_value), TO_SMALL_INT(0) },
-    { KOS_BADPTR,              KOS_BADPTR      }
+static const KOS_CONVERT resize_buffer_args[3] = {
+    KOS_DEFINE_MANDATORY_ARG(str_size                  ),
+    KOS_DEFINE_OPTIONAL_ARG( str_value, TO_SMALL_INT(0)),
+    KOS_DEFINE_TAIL_ARG()
 };
 
 static KOS_OBJ_ID resize(KOS_CONTEXT ctx,
@@ -2652,11 +2652,11 @@ cleanup:
  *     > b.fill(0x20)
  *     <20 20 20 20 20>
  */
-static const KOS_ARG_DESC fill_args[4] = {
-    { KOS_CONST_ID(str_value), KOS_BADPTR      },
-    { KOS_CONST_ID(str_begin), TO_SMALL_INT(0) },
-    { KOS_CONST_ID(str_end),   KOS_VOID        },
-    { KOS_BADPTR,              KOS_BADPTR      }
+static const KOS_CONVERT fill_args[4] = {
+    KOS_DEFINE_MANDATORY_ARG(str_value                 ),
+    KOS_DEFINE_OPTIONAL_ARG( str_begin, TO_SMALL_INT(0)),
+    KOS_DEFINE_OPTIONAL_ARG( str_end,   KOS_VOID       ),
+    KOS_DEFINE_TAIL_ARG()
 };
 
 static KOS_OBJ_ID fill(KOS_CONTEXT ctx,
@@ -3477,9 +3477,9 @@ cleanup:
  *     > buffer().pack("> 3 u2", 0x100F, 0x200F, 0x300F)
  *     <10 0F 20 0F 30 0F>
  */
-static const KOS_ARG_DESC pack_args[2] = {
-    { KOS_CONST_ID(str_format), KOS_BADPTR },
-    { KOS_BADPTR,               KOS_BADPTR }
+static const KOS_CONVERT pack_args[2] = {
+    KOS_DEFINE_MANDATORY_ARG(str_format),
+    KOS_DEFINE_TAIL_ARG()
 };
 
 static KOS_OBJ_ID pack(KOS_CONTEXT ctx,
@@ -3547,10 +3547,10 @@ static KOS_OBJ_ID pack(KOS_CONTEXT ctx,
  *     > buffer([1,2, 0x3f,0x80,0,0, 0x41,0x42,0x43]).unpack("u2 >f4 s")
  *     [513, 1.0, "ABC"]
  */
-static const KOS_ARG_DESC unpack_args[3] = {
-    { KOS_CONST_ID(str_format), KOS_BADPTR      },
-    { KOS_CONST_ID(str_pos),    TO_SMALL_INT(0) },
-    { KOS_BADPTR,               KOS_BADPTR      }
+static const KOS_CONVERT unpack_args[3] = {
+    KOS_DEFINE_MANDATORY_ARG(str_format              ),
+    KOS_DEFINE_OPTIONAL_ARG( str_pos, TO_SMALL_INT(0)),
+    KOS_DEFINE_TAIL_ARG()
 };
 
 static KOS_OBJ_ID unpack(KOS_CONTEXT ctx,
@@ -3634,12 +3634,12 @@ cleanup:
  *     > dst.copy_buffer(2, src)
  *     <01 01 02 02 02>
  */
-static const KOS_ARG_DESC copy_buffer_args[5] = {
-    { KOS_CONST_ID(str_pos),    KOS_BADPTR      },
-    { KOS_CONST_ID(str_source), KOS_BADPTR      },
-    { KOS_CONST_ID(str_begin),  TO_SMALL_INT(0) },
-    { KOS_CONST_ID(str_end),    KOS_VOID        },
-    { KOS_BADPTR,               KOS_BADPTR      }
+static const KOS_CONVERT copy_buffer_args[5] = {
+    KOS_DEFINE_MANDATORY_ARG(str_pos                    ),
+    KOS_DEFINE_MANDATORY_ARG(str_source                 ),
+    KOS_DEFINE_OPTIONAL_ARG( str_begin,  TO_SMALL_INT(0)),
+    KOS_DEFINE_OPTIONAL_ARG( str_end,    KOS_VOID       ),
+    KOS_DEFINE_TAIL_ARG()
 };
 
 static KOS_OBJ_ID copy_buffer(KOS_CONTEXT ctx,
@@ -3777,9 +3777,9 @@ cleanup:
  *
  * Returns the buffer object itself (`this`).
  */
-static const KOS_ARG_DESC reserve_args[2] = {
-    { KOS_CONST_ID(str_size), KOS_BADPTR },
-    { KOS_BADPTR,             KOS_BADPTR }
+static const KOS_CONVERT reserve_args[2] = {
+    KOS_DEFINE_MANDATORY_ARG(str_size),
+    KOS_DEFINE_TAIL_ARG()
 };
 
 static KOS_OBJ_ID reserve(KOS_CONTEXT ctx,
@@ -3836,11 +3836,11 @@ cleanup:
  *
  * Returns the element stored in the array at index `pos`.
  */
-static const KOS_ARG_DESC array_cas_args[4] = {
-    { KOS_CONST_ID(str_pos),       KOS_BADPTR },
-    { KOS_CONST_ID(str_old_value), KOS_BADPTR },
-    { KOS_CONST_ID(str_new_value), KOS_BADPTR },
-    { KOS_BADPTR,                  KOS_BADPTR }
+static const KOS_CONVERT array_cas_args[4] = {
+    KOS_DEFINE_MANDATORY_ARG(str_pos      ),
+    KOS_DEFINE_MANDATORY_ARG(str_old_value),
+    KOS_DEFINE_MANDATORY_ARG(str_new_value),
+    KOS_DEFINE_TAIL_ARG()
 };
 
 static KOS_OBJ_ID array_cas(KOS_CONTEXT ctx,
@@ -3889,11 +3889,11 @@ cleanup:
  * `array.prototype.insert_array()` requires the iterable argument to be
  * an array.
  */
-static const KOS_ARG_DESC insert_array_args[4] = {
-    { KOS_CONST_ID(str_begin), KOS_BADPTR },
-    { KOS_CONST_ID(str_end),   KOS_BADPTR },
-    { KOS_CONST_ID(str_array), KOS_BADPTR },
-    { KOS_BADPTR,              KOS_BADPTR }
+static const KOS_CONVERT insert_array_args[4] = {
+    KOS_DEFINE_MANDATORY_ARG(str_begin),
+    KOS_DEFINE_MANDATORY_ARG(str_end  ),
+    KOS_DEFINE_MANDATORY_ARG(str_array),
+    KOS_DEFINE_TAIL_ARG()
 };
 
 static KOS_OBJ_ID insert_array(KOS_CONTEXT ctx,
@@ -3975,9 +3975,9 @@ cleanup:
  */
 KOS_DECLARE_STATIC_CONST_STRING(str_num_elements, "num_elements");
 
-static const KOS_ARG_DESC pop_args[2] = {
-    { KOS_CONST_ID(str_num_elements), TO_SMALL_INT(1) },
-    { KOS_BADPTR,                     KOS_BADPTR      }
+static const KOS_CONVERT pop_args[2] = {
+    KOS_DEFINE_OPTIONAL_ARG(str_num_elements, TO_SMALL_INT(1)),
+    KOS_DEFINE_TAIL_ARG()
 };
 
 static KOS_OBJ_ID pop(KOS_CONTEXT ctx,
@@ -4105,9 +4105,9 @@ cleanup:
  *     > "foobar".ends_with("foo")
  *     false
  */
-static const KOS_ARG_DESC ends_with_args[2] = {
-    { KOS_CONST_ID(str_str), KOS_BADPTR },
-    { KOS_BADPTR,            KOS_BADPTR }
+static const KOS_CONVERT ends_with_args[2] = {
+    KOS_DEFINE_MANDATORY_ARG(str_str),
+    KOS_DEFINE_TAIL_ARG()
 };
 
 static KOS_OBJ_ID ends_with(KOS_CONTEXT ctx,
@@ -4160,9 +4160,9 @@ cleanup:
  *     > "foo".repeat(5)
  *     "foofoofoofoofoo"
  */
-static const KOS_ARG_DESC repeat_args[2] = {
-    { KOS_CONST_ID(str_count), KOS_BADPTR },
-    { KOS_BADPTR,              KOS_BADPTR }
+static const KOS_CONVERT repeat_args[2] = {
+    KOS_DEFINE_MANDATORY_ARG(str_count),
+    KOS_DEFINE_TAIL_ARG()
 };
 
 static KOS_OBJ_ID repeat(KOS_CONTEXT ctx,
@@ -4218,10 +4218,10 @@ cleanup:
  *     > "language".find("g", -3)
  *     6
  */
-static const KOS_ARG_DESC find_args[3] = {
-    { KOS_CONST_ID(str_substr), KOS_BADPTR      },
-    { KOS_CONST_ID(str_pos),    TO_SMALL_INT(0) },
-    { KOS_BADPTR,               KOS_BADPTR      }
+static const KOS_CONVERT find_args[3] = {
+    KOS_DEFINE_MANDATORY_ARG(str_substr              ),
+    KOS_DEFINE_OPTIONAL_ARG( str_pos, TO_SMALL_INT(0)),
+    KOS_DEFINE_TAIL_ARG()
 };
 
 static KOS_OBJ_ID find_dir(KOS_CONTEXT         ctx,
@@ -4291,10 +4291,10 @@ static KOS_OBJ_ID find(KOS_CONTEXT ctx,
  *     > "language".find("a", 4)
  *     1
  */
-static const KOS_ARG_DESC rfind_args[3] = {
-    { KOS_CONST_ID(str_substr), KOS_BADPTR },
-    { KOS_CONST_ID(str_pos),    KOS_VOID   },
-    { KOS_BADPTR,               KOS_BADPTR }
+static const KOS_CONVERT rfind_args[3] = {
+    KOS_DEFINE_MANDATORY_ARG(str_substr       ),
+    KOS_DEFINE_OPTIONAL_ARG( str_pos, KOS_VOID),
+    KOS_DEFINE_TAIL_ARG()
 };
 
 static KOS_OBJ_ID rfind(KOS_CONTEXT ctx,
@@ -4334,11 +4334,11 @@ static KOS_OBJ_ID rfind(KOS_CONTEXT ctx,
  *     > "language".scan("uga", -5, false)
  *     7
  */
-static const KOS_ARG_DESC scan_args[4] = {
-    { KOS_CONST_ID(str_chars),     KOS_BADPTR      },
-    { KOS_CONST_ID(str_pos),       TO_SMALL_INT(0) },
-    { KOS_CONST_ID(str_inclusive), KOS_TRUE        },
-    { KOS_BADPTR,                  KOS_BADPTR      }
+static const KOS_CONVERT scan_args[4] = {
+    KOS_DEFINE_MANDATORY_ARG(str_chars                     ),
+    KOS_DEFINE_OPTIONAL_ARG( str_pos,       TO_SMALL_INT(0)),
+    KOS_DEFINE_OPTIONAL_ARG( str_inclusive, KOS_TRUE       ),
+    KOS_DEFINE_TAIL_ARG()
 };
 
 static KOS_OBJ_ID scan_dir(KOS_CONTEXT         ctx,
@@ -4425,11 +4425,11 @@ static KOS_OBJ_ID scan(KOS_CONTEXT ctx,
  *     > "language".rscan("uga", -2, false)
  *     2
  */
-static const KOS_ARG_DESC rscan_args[4] = {
-    { KOS_CONST_ID(str_chars),     KOS_BADPTR },
-    { KOS_CONST_ID(str_pos),       KOS_VOID   },
-    { KOS_CONST_ID(str_inclusive), KOS_TRUE   },
-    { KOS_BADPTR,                  KOS_BADPTR }
+static const KOS_CONVERT rscan_args[4] = {
+    KOS_DEFINE_MANDATORY_ARG(str_chars              ),
+    KOS_DEFINE_OPTIONAL_ARG( str_pos,       KOS_VOID),
+    KOS_DEFINE_OPTIONAL_ARG( str_inclusive, KOS_TRUE),
+    KOS_DEFINE_TAIL_ARG()
 };
 
 static KOS_OBJ_ID rscan(KOS_CONTEXT ctx,
@@ -4459,9 +4459,9 @@ static KOS_OBJ_ID rscan(KOS_CONTEXT ctx,
  *     > "language".code(-2)
  *     103
  */
-static const KOS_ARG_DESC code_args[2] = {
-    { KOS_CONST_ID(str_pos), TO_SMALL_INT(0) },
-    { KOS_BADPTR,            KOS_BADPTR      }
+static const KOS_CONVERT code_args[2] = {
+    KOS_DEFINE_OPTIONAL_ARG(str_pos, TO_SMALL_INT(0)),
+    KOS_DEFINE_TAIL_ARG()
 };
 
 static KOS_OBJ_ID code(KOS_CONTEXT ctx,

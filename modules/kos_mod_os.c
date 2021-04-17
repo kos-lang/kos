@@ -1565,22 +1565,22 @@ KOS_INIT_MODULE(os, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     KOS_LOCAL wait_proto;
     KOS_LOCAL wait_func;
 
-    const KOS_ARG_DESC spawn_args[11] = {
-        { KOS_CONST_ID(str_program),     KOS_BADPTR      },
-        { KOS_CONST_ID(str_args),        KOS_EMPTY_ARRAY },
-        { KOS_CONST_ID(str_env),         KOS_VOID        },
-        { KOS_CONST_ID(str_cwd),         KOS_STR_EMPTY   },
-        { KOS_CONST_ID(str_inherit_env), KOS_TRUE        },
-        { KOS_CONST_ID(str_stdin),       KOS_VOID        },
-        { KOS_CONST_ID(str_stdout),      KOS_VOID        },
-        { KOS_CONST_ID(str_stderr),      KOS_VOID        },
-        { KOS_BADPTR,                    KOS_BADPTR      }
+    const KOS_CONVERT spawn_args[11] = {
+        KOS_DEFINE_MANDATORY_ARG(str_program                      ),
+        KOS_DEFINE_OPTIONAL_ARG( str_args,        KOS_EMPTY_ARRAY ),
+        KOS_DEFINE_OPTIONAL_ARG( str_env,         KOS_VOID        ),
+        KOS_DEFINE_OPTIONAL_ARG( str_cwd,         KOS_STR_EMPTY   ),
+        KOS_DEFINE_OPTIONAL_ARG( str_inherit_env, KOS_TRUE        ),
+        KOS_DEFINE_OPTIONAL_ARG( str_stdin,       KOS_VOID        ),
+        KOS_DEFINE_OPTIONAL_ARG( str_stdout,      KOS_VOID        ),
+        KOS_DEFINE_OPTIONAL_ARG( str_stderr,      KOS_VOID        ),
+        KOS_DEFINE_TAIL_ARG()
     };
 
-    const KOS_ARG_DESC getenv_args[3] = {
-        { KOS_CONST_ID(str_key),           KOS_BADPTR },
-        { KOS_CONST_ID(str_default_value), KOS_VOID   },
-        { KOS_BADPTR,                      KOS_BADPTR }
+    const KOS_CONVERT getenv_args[3] = {
+        KOS_DEFINE_MANDATORY_ARG(str_key                    ),
+        KOS_DEFINE_OPTIONAL_ARG( str_default_value, KOS_VOID),
+        KOS_DEFINE_TAIL_ARG()
     };
 
     KOS_init_debug_output();

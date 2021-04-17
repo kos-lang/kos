@@ -485,10 +485,21 @@ typedef struct KOS_ITERATOR_S {
     KOS_ATOMIC(KOS_OBJ_ID) last_value;
 } KOS_ITERATOR;
 
-typedef struct KOS_ARG_DESC_S {
-    KOS_OBJ_ID name;
-    KOS_OBJ_ID default_value;
-} KOS_ARG_DESC;
+/* Used for converting data between Kos internal objects and native values.
+ * Often used to describe function arguments, but it can also be used to extract
+ * Kos values into native data or the other way around.
+ */
+typedef struct KOS_CONVERT_S {
+    KOS_OBJ_ID name;            /* Name of the value.  E.g. argument or property name.  Used when printing errors.      */
+    KOS_OBJ_ID default_value;   /* Default value if the value does not exist.  This is KOS_BADPTR if value is required. */
+    uint16_t   offset;          /* Field offset, if used with native structures.                                        */
+    uint16_t   size;            /* Field size in bytes.  This can be a multiple of type size for fixed-size arrays.     */
+    uint8_t    type;            /* KOS_CONV_TYPE, type of the corresponding native storage for conversion.              */
+} KOS_CONVERT;
+
+#define KOS_DEFINE_OPTIONAL_ARG(name, default_value) { KOS_CONST_ID(name), (default_value), 0, 0, 0 }
+#define KOS_DEFINE_MANDATORY_ARG(name)               { KOS_CONST_ID(name), KOS_BADPTR,      0, 0, 0 }
+#define KOS_DEFINE_TAIL_ARG()                        { KOS_BADPTR,         KOS_BADPTR,      0, 0, 0 }
 
 #ifdef __cplusplus
 extern "C" {
@@ -513,13 +524,13 @@ KOS_API
 KOS_OBJ_ID KOS_new_builtin_function(KOS_CONTEXT          ctx,
                                     KOS_OBJ_ID           name_obj,
                                     KOS_FUNCTION_HANDLER handler,
-                                    const KOS_ARG_DESC  *args);
+                                    const KOS_CONVERT   *args);
 
 KOS_API
 KOS_OBJ_ID KOS_new_builtin_class(KOS_CONTEXT          ctx,
                                  KOS_OBJ_ID           name_obj,
                                  KOS_FUNCTION_HANDLER handler,
-                                 const KOS_ARG_DESC  *args);
+                                 const KOS_CONVERT   *args);
 
 KOS_API
 KOS_OBJ_ID KOS_new_dynamic_prop(KOS_CONTEXT ctx);

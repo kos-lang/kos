@@ -796,17 +796,17 @@ cleanup:
 
 KOS_DECLARE_STATIC_CONST_STRING(str_number, "number");
 
-static const KOS_ARG_DESC number_arg[2] = {
-    { KOS_CONST_ID(str_number), KOS_BADPTR },
-    { KOS_BADPTR,               KOS_BADPTR }
+static const KOS_CONVERT number_arg[2] = {
+    KOS_DEFINE_MANDATORY_ARG(str_number),
+    KOS_DEFINE_TAIL_ARG()
 };
 
 KOS_DECLARE_STATIC_CONST_STRING(str_power, "power");
 
-static const KOS_ARG_DESC pow_args[3] = {
-    { KOS_CONST_ID(str_number), KOS_BADPTR },
-    { KOS_CONST_ID(str_power),  KOS_BADPTR },
-    { KOS_BADPTR,               KOS_BADPTR }
+static const KOS_CONVERT pow_args[3] = {
+    KOS_DEFINE_MANDATORY_ARG(str_number),
+    KOS_DEFINE_MANDATORY_ARG(str_power ),
+    KOS_DEFINE_TAIL_ARG()
 };
 
 KOS_INIT_MODULE(math, KOS_MODULE_NEEDS_KOS_SOURCE)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)

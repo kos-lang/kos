@@ -67,7 +67,7 @@ int KOS_module_add_function(KOS_CONTEXT          ctx,
                             KOS_OBJ_ID           module_obj,
                             KOS_OBJ_ID           str_name,
                             KOS_FUNCTION_HANDLER handler,
-                            const KOS_ARG_DESC  *args,
+                            const KOS_CONVERT   *args,
                             KOS_FUNCTION_STATE   gen_state);
 
 KOS_API
@@ -75,7 +75,7 @@ int KOS_module_add_constructor(KOS_CONTEXT          ctx,
                                KOS_OBJ_ID           module_obj,
                                KOS_OBJ_ID           str_name,
                                KOS_FUNCTION_HANDLER handler,
-                               const KOS_ARG_DESC  *args,
+                               const KOS_CONVERT   *args,
                                KOS_OBJ_ID          *ret_proto);
 
 KOS_API
@@ -84,7 +84,7 @@ int KOS_module_add_member_function(KOS_CONTEXT          ctx,
                                    KOS_OBJ_ID           proto_obj,
                                    KOS_OBJ_ID           str_name,
                                    KOS_FUNCTION_HANDLER handler,
-                                   const KOS_ARG_DESC  *args,
+                                   const KOS_CONVERT   *args,
                                    KOS_FUNCTION_STATE   gen_state);
 
 KOS_API
