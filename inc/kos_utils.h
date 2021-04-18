@@ -126,6 +126,11 @@ int KOS_extract_native_struct_from_object(KOS_CONTEXT           ctx,
                                           struct KOS_MEMPOOL_S *alloc,
                                           void                 *struct_ptr);
 
+KOS_API
+KOS_OBJ_ID KOS_new_from_native(KOS_CONTEXT        ctx,
+                               const KOS_CONVERT *convert,
+                               const void        *value_ptr);
+
 enum KOS_PRINT_WHERE_E {
     KOS_STDOUT,
     KOS_STDERR

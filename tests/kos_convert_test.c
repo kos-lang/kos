@@ -697,6 +697,273 @@ int main(void)
         TEST(test_struct.field_u8_4[3] == 50);
     }
 
+    /************************************************************************/
+    {
+        static const KOS_CONVERT conv = { KOS_CONST_ID(str_name), KOS_BADPTR, 0, 0, KOS_NATIVE_UINT8 };
+        KOS_OBJ_ID               obj;
+        const uint8_t            a    = 10;
+
+        obj = KOS_new_from_native(ctx, &conv, &a);
+        TEST( ! IS_BAD_PTR(obj));
+        TEST_NO_EXCEPTION();
+
+        TEST(obj == TO_SMALL_INT(10));
+    }
+
+    /************************************************************************/
+    {
+        static const KOS_CONVERT conv = { KOS_CONST_ID(str_name), KOS_BADPTR, 0, 3, KOS_NATIVE_UINT8 };
+        KOS_OBJ_ID               obj;
+        const uint8_t            a[3] = { 10, 11, 12 };
+
+        obj = KOS_new_from_native(ctx, &conv, &a);
+        TEST( ! IS_BAD_PTR(obj));
+        TEST_NO_EXCEPTION();
+
+        TEST(GET_OBJ_TYPE(obj) == OBJ_ARRAY);
+        TEST(KOS_get_array_size(obj) == 3);
+        TEST(KOS_array_read(ctx, obj, 0) == TO_SMALL_INT(10));
+        TEST(KOS_array_read(ctx, obj, 1) == TO_SMALL_INT(11));
+        TEST(KOS_array_read(ctx, obj, 2) == TO_SMALL_INT(12));
+    }
+
+    /************************************************************************/
+    {
+        static const KOS_CONVERT conv = { KOS_CONST_ID(str_name), KOS_BADPTR, 0, 0, KOS_NATIVE_UINT16 };
+        KOS_OBJ_ID               obj;
+        const uint16_t           a    = 10;
+
+        obj = KOS_new_from_native(ctx, &conv, &a);
+        TEST( ! IS_BAD_PTR(obj));
+        TEST_NO_EXCEPTION();
+
+        TEST(obj == TO_SMALL_INT(10));
+    }
+
+    /************************************************************************/
+    {
+        static const KOS_CONVERT conv = { KOS_CONST_ID(str_name), KOS_BADPTR, 0, 0, KOS_NATIVE_UINT32 };
+        KOS_OBJ_ID               obj;
+        const uint32_t           a    = 10;
+
+        obj = KOS_new_from_native(ctx, &conv, &a);
+        TEST( ! IS_BAD_PTR(obj));
+        TEST_NO_EXCEPTION();
+
+        TEST(obj == TO_SMALL_INT(10));
+    }
+
+    /************************************************************************/
+    {
+        static const KOS_CONVERT conv = { KOS_CONST_ID(str_name), KOS_BADPTR, 0, 0, KOS_NATIVE_UINT64 };
+        KOS_OBJ_ID               obj;
+        const uint64_t           a    = 10;
+
+        obj = KOS_new_from_native(ctx, &conv, &a);
+        TEST( ! IS_BAD_PTR(obj));
+        TEST_NO_EXCEPTION();
+
+        TEST(obj == TO_SMALL_INT(10));
+    }
+
+    /************************************************************************/
+    {
+        static const KOS_CONVERT conv = { KOS_CONST_ID(str_name), KOS_BADPTR, 0, 0, KOS_NATIVE_INT8 };
+        KOS_OBJ_ID               obj;
+        const int8_t             a    = -10;
+
+        obj = KOS_new_from_native(ctx, &conv, &a);
+        TEST( ! IS_BAD_PTR(obj));
+        TEST_NO_EXCEPTION();
+
+        TEST(obj == TO_SMALL_INT(-10));
+    }
+
+    /************************************************************************/
+    {
+        static const KOS_CONVERT conv = { KOS_CONST_ID(str_name), KOS_BADPTR, 0, 0, KOS_NATIVE_INT16 };
+        KOS_OBJ_ID               obj;
+        const int16_t            a    = -10;
+
+        obj = KOS_new_from_native(ctx, &conv, &a);
+        TEST( ! IS_BAD_PTR(obj));
+        TEST_NO_EXCEPTION();
+
+        TEST(obj == TO_SMALL_INT(-10));
+    }
+
+    /************************************************************************/
+    {
+        static const KOS_CONVERT conv = { KOS_CONST_ID(str_name), KOS_BADPTR, 0, 0, KOS_NATIVE_INT32 };
+        KOS_OBJ_ID               obj;
+        const int32_t            a    = -10;
+
+        obj = KOS_new_from_native(ctx, &conv, &a);
+        TEST( ! IS_BAD_PTR(obj));
+        TEST_NO_EXCEPTION();
+
+        TEST(obj == TO_SMALL_INT(-10));
+    }
+
+    /************************************************************************/
+    {
+        static const KOS_CONVERT conv = { KOS_CONST_ID(str_name), KOS_BADPTR, 0, 0, KOS_NATIVE_INT64 };
+        KOS_OBJ_ID               obj;
+        const int64_t            a    = -10;
+
+        obj = KOS_new_from_native(ctx, &conv, &a);
+        TEST( ! IS_BAD_PTR(obj));
+        TEST_NO_EXCEPTION();
+
+        TEST(obj == TO_SMALL_INT(-10));
+    }
+
+    /************************************************************************/
+    {
+        static const KOS_CONVERT conv = { KOS_CONST_ID(str_name), KOS_BADPTR, 0, 0, KOS_NATIVE_ENUM };
+        KOS_OBJ_ID               obj;
+        const uint32_t           a    = 10;
+
+        obj = KOS_new_from_native(ctx, &conv, &a);
+        TEST( ! IS_BAD_PTR(obj));
+        TEST_NO_EXCEPTION();
+
+        TEST(obj == TO_SMALL_INT(10));
+    }
+
+    /************************************************************************/
+    {
+        static const KOS_CONVERT conv = { KOS_CONST_ID(str_name), KOS_BADPTR, 0, 0, KOS_NATIVE_BOOL8 };
+        KOS_OBJ_ID               obj;
+        const uint8_t            a    = 10;
+
+        obj = KOS_new_from_native(ctx, &conv, &a);
+        TEST( ! IS_BAD_PTR(obj));
+        TEST_NO_EXCEPTION();
+
+        TEST(GET_OBJ_TYPE(obj) == OBJ_BOOLEAN);
+        TEST(obj == KOS_TRUE);
+    }
+
+    /************************************************************************/
+    {
+        static const KOS_CONVERT conv = { KOS_CONST_ID(str_name), KOS_BADPTR, 0, 0, KOS_NATIVE_BOOL8 };
+        KOS_OBJ_ID               obj;
+        const uint8_t            a[3] = { 2, 0, 3 };
+
+        obj = KOS_new_from_native(ctx, &conv, &a[1]);
+        TEST( ! IS_BAD_PTR(obj));
+        TEST_NO_EXCEPTION();
+
+        TEST(GET_OBJ_TYPE(obj) == OBJ_BOOLEAN);
+        TEST(obj == KOS_FALSE);
+    }
+
+    /************************************************************************/
+    {
+        static const KOS_CONVERT conv = { KOS_CONST_ID(str_name), KOS_BADPTR, 0, 0, KOS_NATIVE_BOOL32 };
+        KOS_OBJ_ID               obj;
+        const uint32_t           a    = 10;
+
+        obj = KOS_new_from_native(ctx, &conv, &a);
+        TEST( ! IS_BAD_PTR(obj));
+        TEST_NO_EXCEPTION();
+
+        TEST(GET_OBJ_TYPE(obj) == OBJ_BOOLEAN);
+        TEST(obj == KOS_TRUE);
+    }
+
+    /************************************************************************/
+    {
+        static const KOS_CONVERT conv = { KOS_CONST_ID(str_name), KOS_BADPTR, 0, 0, KOS_NATIVE_BOOL32 };
+        KOS_OBJ_ID               obj;
+        const uint32_t           a[3] = { 0xBEECAFE, 0, 0xBEECAFE };
+
+        obj = KOS_new_from_native(ctx, &conv, &a[1]);
+        TEST( ! IS_BAD_PTR(obj));
+        TEST_NO_EXCEPTION();
+
+        TEST(GET_OBJ_TYPE(obj) == OBJ_BOOLEAN);
+        TEST(obj == KOS_FALSE);
+    }
+
+    /************************************************************************/
+    {
+        static const KOS_CONVERT conv = { KOS_CONST_ID(str_name), KOS_BADPTR, 0, 0, KOS_NATIVE_FLOAT };
+        KOS_OBJ_ID               obj;
+        const float              a    = 8.5f;
+
+        obj = KOS_new_from_native(ctx, &conv, &a);
+        TEST( ! IS_BAD_PTR(obj));
+        TEST_NO_EXCEPTION();
+
+        TEST(GET_OBJ_TYPE(obj) == OBJ_FLOAT);
+        TEST(OBJPTR(FLOAT, obj)->value == 8.5);
+    }
+
+    /************************************************************************/
+    {
+        static const KOS_CONVERT conv = { KOS_CONST_ID(str_name), KOS_BADPTR, 0, 0, KOS_NATIVE_DOUBLE };
+        KOS_OBJ_ID               obj;
+        const double             a    = 8.5;
+
+        obj = KOS_new_from_native(ctx, &conv, &a);
+        TEST( ! IS_BAD_PTR(obj));
+        TEST_NO_EXCEPTION();
+
+        TEST(GET_OBJ_TYPE(obj) == OBJ_FLOAT);
+        TEST(OBJPTR(FLOAT, obj)->value == 8.5);
+    }
+
+    /************************************************************************/
+    {
+        KOS_DECLARE_STATIC_CONST_STRING(str_abc, "abc");
+
+        const char               abc[6] = { 'a', 'b', 'c', 0, 0, 0 };
+        static const KOS_CONVERT conv = { KOS_CONST_ID(str_name), KOS_BADPTR, 0, sizeof(abc), KOS_NATIVE_STRING };
+        KOS_OBJ_ID               obj;
+
+        obj = KOS_new_from_native(ctx, &conv, abc);
+        TEST( ! IS_BAD_PTR(obj));
+        TEST_NO_EXCEPTION();
+
+        TEST(GET_OBJ_TYPE(obj) == OBJ_STRING);
+        TEST(KOS_get_string_length(obj) == 3);
+        TEST(KOS_string_compare(obj, KOS_CONST_ID(str_abc)) == 0);
+    }
+
+    /************************************************************************/
+    {
+        KOS_DECLARE_STATIC_CONST_STRING(str_xyz, "xyz");
+
+        static const KOS_CONVERT conv = { KOS_CONST_ID(str_name), KOS_BADPTR, 0, 0, KOS_NATIVE_STRING_PTR };
+        KOS_OBJ_ID               obj;
+        const char        *const xyz = "xyz";
+
+        obj = KOS_new_from_native(ctx, &conv, &xyz);
+        TEST( ! IS_BAD_PTR(obj));
+        TEST_NO_EXCEPTION();
+
+        TEST(GET_OBJ_TYPE(obj) == OBJ_STRING);
+        TEST(KOS_get_string_length(obj) == 3);
+        TEST(KOS_string_compare(obj, KOS_CONST_ID(str_xyz)) == 0);
+    }
+
+    /************************************************************************/
+    {
+        static const KOS_CONVERT conv = { KOS_CONST_ID(str_name), KOS_BADPTR, 0, 10, KOS_NATIVE_BUFFER };
+        KOS_OBJ_ID               obj;
+        const uint8_t            buf[10] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+
+        obj = KOS_new_from_native(ctx, &conv, buf);
+        TEST( ! IS_BAD_PTR(obj));
+        TEST_NO_EXCEPTION();
+
+        TEST(GET_OBJ_TYPE(obj) == OBJ_BUFFER);
+        TEST(KOS_get_buffer_size(obj) == 10);
+        TEST(memcmp(KOS_buffer_data_volatile(ctx, obj), buf, 10) == 0);
+    }
+
     KOS_instance_destroy(&inst);
 
     KOS_mempool_destroy(&alloc);

@@ -2188,7 +2188,7 @@ int KOS_extract_native_value(KOS_CONTEXT           ctx,
                 memcpy(value_ptr, name_cstr.buffer, name_cstr.size);
                 break;
 
-            case KOS_NATIVE_STRING_PTR:  {
+            case KOS_NATIVE_STRING_PTR: {
                 char    *buf;
                 unsigned str_len = 0;
 
@@ -2235,7 +2235,7 @@ int KOS_extract_native_value(KOS_CONTEXT           ctx,
                     RAISE_ERROR(KOS_ERROR_EXCEPTION);
                 }
 
-                data  = KOS_buffer_data(ctx, elem_id);
+                data  = KOS_buffer_data_volatile(ctx, elem_id);
                 error = data ? KOS_SUCCESS : KOS_ERROR_EXCEPTION;
                 if (data)
                     memcpy(value_ptr, data, convert->size);
@@ -2470,4 +2470,118 @@ cleanup:
     KOS_destroy_top_local(ctx, &object);
 
     return error;
+}
+
+KOS_OBJ_ID KOS_new_from_native(KOS_CONTEXT        ctx,
+                               const KOS_CONVERT *convert,
+                               const void        *value_ptr)
+{
+    KOS_VECTOR                     name_cstr;
+    KOS_LOCAL                      value;
+    const struct KOS_NATIVE_TYPE_S conv      = native_to_kos[convert->type];
+    const unsigned                 num_elems = (conv.size && convert->size) ? (convert->size / conv.size) : 1;
+    unsigned                       i;
+    int                            error     = KOS_SUCCESS;
+
+    KOS_init_local(ctx, &value);
+
+    KOS_vector_init(&name_cstr);
+
+    assert((convert->type != KOS_NATIVE_INVALID) && (convert->type != KOS_NATIVE_SKIP));
+
+    if (num_elems > 1) {
+        value.o = KOS_new_array(ctx, num_elems);
+        TRY_OBJID(value.o);
+    }
+
+    for (i = 0; i < num_elems; i++) {
+
+        KOS_OBJ_ID elem_id;
+
+        switch (convert->type) {
+
+            case KOS_NATIVE_UINT8:
+                elem_id = KOS_new_int(ctx, (int64_t)*(const uint8_t *)value_ptr);
+                break;
+
+            case KOS_NATIVE_UINT16:
+                elem_id = KOS_new_int(ctx, (int64_t)*(const uint16_t *)value_ptr);
+                break;
+
+            case KOS_NATIVE_UINT32:
+                elem_id = KOS_new_int(ctx, (int64_t)*(const uint32_t *)value_ptr);
+                break;
+
+            case KOS_NATIVE_UINT64:
+                elem_id = KOS_new_int(ctx, (int64_t)*(const uint64_t *)value_ptr);
+                break;
+
+            case KOS_NATIVE_INT8:
+                elem_id = KOS_new_int(ctx, *(const int8_t *)value_ptr);
+                break;
+
+            case KOS_NATIVE_INT16:
+                elem_id = KOS_new_int(ctx, *(const int16_t *)value_ptr);
+                break;
+
+            case KOS_NATIVE_INT32:
+                elem_id = KOS_new_int(ctx, *(const int32_t *)value_ptr);
+                break;
+
+            case KOS_NATIVE_INT64:
+                elem_id = KOS_new_int(ctx, *(const int64_t *)value_ptr);
+                break;
+
+            case KOS_NATIVE_ENUM:
+                elem_id = KOS_new_int(ctx, (int64_t)*(const enum KOS_FORCE_ENUM_E *)value_ptr);
+                break;
+
+            case KOS_NATIVE_BOOL8:
+                elem_id = KOS_BOOL(*(const uint8_t *)value_ptr);
+                break;
+
+            case KOS_NATIVE_BOOL32:
+                elem_id = KOS_BOOL(*(const uint32_t *)value_ptr);
+                break;
+
+            case KOS_NATIVE_FLOAT:
+                elem_id = KOS_new_float(ctx, (double)*(const float *)value_ptr);
+                break;
+
+            case KOS_NATIVE_DOUBLE:
+                elem_id = KOS_new_float(ctx, *(const double *)value_ptr);
+                break;
+
+            case KOS_NATIVE_STRING:
+                elem_id = KOS_new_string(ctx, (const char *)value_ptr, strnlen((const char *)value_ptr, convert->size));
+                break;
+
+            case KOS_NATIVE_STRING_PTR:
+                elem_id = KOS_new_cstring(ctx, *(const char *const *)value_ptr);
+                break;
+
+            default:
+                assert(convert->type == KOS_NATIVE_BUFFER);
+                elem_id = KOS_new_buffer(ctx, convert->size);
+                if ( ! IS_BAD_PTR(elem_id))
+                    memcpy(KOS_buffer_data_volatile(ctx, elem_id), value_ptr, convert->size);
+                break;
+        }
+
+        TRY_OBJID(elem_id);
+
+        if (num_elems > 1)
+            TRY(KOS_array_write(ctx, value.o, i, elem_id));
+        else
+            value.o = elem_id;
+
+        value_ptr = (const void *)((uintptr_t)value_ptr + conv.size);
+    }
+
+cleanup:
+    KOS_vector_destroy(&name_cstr);
+
+    value.o = KOS_destroy_top_local(ctx, &value);
+
+    return error ? KOS_BADPTR : value.o;
 }

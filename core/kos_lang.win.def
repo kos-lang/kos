@@ -100,6 +100,7 @@ EXPORTS
     KOS_new_cstring
     KOS_new_dynamic_prop
     KOS_new_float
+    KOS_new_from_native
     KOS_new_function
     KOS_new_int
     KOS_new_iterator
