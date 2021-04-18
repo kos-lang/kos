@@ -1950,7 +1950,8 @@ enum KOS_FORCE_ENUM_E {
     ENUM_MAX = 0x7FFFFFFF
 };
 
-static const struct KOS_NATIVE_TYPE_S native_to_kos[17] = {
+static const struct KOS_NATIVE_TYPE_S native_to_kos[18] = {
+    { OBJ_VOID,    0                             },
     { OBJ_VOID,    0                             },
     { OBJ_INTEGER, sizeof(uint8_t)               },
     { OBJ_INTEGER, sizeof(uint16_t)              },
@@ -1979,7 +1980,8 @@ struct KOS_INT_LIMITS_S {
 #define KOS_MIN_INT64 ((int64_t)((uint64_t)1U << 63))
 #define KOS_MAX_INT64 ((int64_t)~((uint64_t)1U << 63))
 
-static const struct KOS_INT_LIMITS_S int_limits[10] = {
+static const struct KOS_INT_LIMITS_S int_limits[11] = {
+    { 0,             0                    },
     { 0,             0                    },
     { 0,             0xFF                 },
     { 0,             0xFFFF               },
@@ -2009,7 +2011,7 @@ int KOS_extract_native_value(KOS_CONTEXT           ctx,
 
     KOS_vector_init(&name_cstr);
 
-    assert(convert->type != KOS_NATIVE_INVALID);
+    assert((convert->type != KOS_NATIVE_INVALID) && (convert->type != KOS_NATIVE_SKIP));
 
     if (num_elems > 1) {
         const KOS_TYPE type = GET_OBJ_TYPE(value.o);
@@ -2276,29 +2278,32 @@ int KOS_extract_native_from_array(KOS_CONTEXT           ctx,
 
     while ( ! IS_BAD_PTR(convert->name)) {
 
-        KOS_OBJ_ID value_id;
-        void      *value_ptr = va_arg(args, void *);
+        if (convert->type != KOS_NATIVE_SKIP) {
 
-        if (i < size) {
-            value_id = KOS_array_read(ctx, array.o, i);
-            TRY_OBJID(value_id);
+            KOS_OBJ_ID value_id;
+            void      *value_ptr = va_arg(args, void *);
+
+            if (i < size) {
+                value_id = KOS_array_read(ctx, array.o, i);
+                TRY_OBJID(value_id);
+            }
+            else if (IS_BAD_PTR(convert->default_value)) {
+                KOS_VECTOR name_cstr;
+
+                KOS_vector_init(&name_cstr);
+
+                if ( ! KOS_string_to_cstr_vec(ctx, convert->name, &name_cstr))
+                    KOS_raise_printf(ctx, "missing %s %u '%s'", element_name, i, name_cstr.buffer);
+
+                KOS_vector_destroy(&name_cstr);
+
+                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+            }
+            else
+                value_id = convert->default_value;
+
+            TRY(KOS_extract_native_value(ctx, value_id, convert, alloc, value_ptr));
         }
-        else if (IS_BAD_PTR(convert->default_value)) {
-            KOS_VECTOR name_cstr;
-
-            KOS_vector_init(&name_cstr);
-
-            if ( ! KOS_string_to_cstr_vec(ctx, convert->name, &name_cstr))
-                KOS_raise_printf(ctx, "missing %s %u '%s'", element_name, i, name_cstr.buffer);
-
-            KOS_vector_destroy(&name_cstr);
-
-            RAISE_ERROR(KOS_ERROR_EXCEPTION);
-        }
-        else
-            value_id = convert->default_value;
-
-        TRY(KOS_extract_native_value(ctx, value_id, convert, alloc, value_ptr));
 
         ++convert;
         ++i;
@@ -2333,9 +2338,6 @@ int KOS_extract_native_from_iterable(KOS_CONTEXT           ctx,
 
     while ( ! IS_BAD_PTR(convert->name)) {
 
-        KOS_OBJ_ID value_id;
-        void      *value_ptr = va_arg(args, void *);
-
         if ( ! done) {
             error = KOS_iterator_next(ctx, iterable.o);
             if (error == KOS_ERROR_EXCEPTION)
@@ -2344,24 +2346,30 @@ int KOS_extract_native_from_iterable(KOS_CONTEXT           ctx,
                 done = 1;
         }
 
-        if ( ! done)
-            value_id = KOS_get_walk_value(iterable.o);
-        else if (IS_BAD_PTR(convert->default_value)) {
-            KOS_VECTOR name_cstr;
+        if (convert->type != KOS_NATIVE_SKIP) {
 
-            KOS_vector_init(&name_cstr);
+            KOS_OBJ_ID value_id;
+            void      *value_ptr = va_arg(args, void *);
 
-            if ( ! KOS_string_to_cstr_vec(ctx, convert->name, &name_cstr))
-                KOS_raise_printf(ctx, "missing element %u '%s'", i, name_cstr.buffer);
+            if ( ! done)
+                value_id = KOS_get_walk_value(iterable.o);
+            else if (IS_BAD_PTR(convert->default_value)) {
+                KOS_VECTOR name_cstr;
 
-            KOS_vector_destroy(&name_cstr);
+                KOS_vector_init(&name_cstr);
 
-            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                if ( ! KOS_string_to_cstr_vec(ctx, convert->name, &name_cstr))
+                    KOS_raise_printf(ctx, "missing element %u '%s'", i, name_cstr.buffer);
+
+                KOS_vector_destroy(&name_cstr);
+
+                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+            }
+            else
+                value_id = convert->default_value;
+
+            TRY(KOS_extract_native_value(ctx, value_id, convert, alloc, value_ptr));
         }
-        else
-            value_id = convert->default_value;
-
-        TRY(KOS_extract_native_value(ctx, value_id, convert, alloc, value_ptr));
 
         ++convert;
         ++i;
@@ -2391,22 +2399,25 @@ int KOS_extract_native_from_object(KOS_CONTEXT           ctx,
 
     while ( ! IS_BAD_PTR(convert->name)) {
 
-        KOS_OBJ_ID value_id;
-        void      *value_ptr = va_arg(args, void *);
+        if (convert->type != KOS_NATIVE_SKIP) {
 
-        value_id = KOS_get_property(ctx, object.o, convert->name);
+            KOS_OBJ_ID value_id;
+            void      *value_ptr = va_arg(args, void *);
 
-        if (IS_BAD_PTR(value_id)) {
+            value_id = KOS_get_property(ctx, object.o, convert->name);
 
-            value_id = convert->default_value;
+            if (IS_BAD_PTR(value_id)) {
 
-            if (IS_BAD_PTR(value_id))
-                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                value_id = convert->default_value;
 
-            KOS_clear_exception(ctx);
+                if (IS_BAD_PTR(value_id))
+                    RAISE_ERROR(KOS_ERROR_EXCEPTION);
+
+                KOS_clear_exception(ctx);
+            }
+
+            TRY(KOS_extract_native_value(ctx, value_id, convert, alloc, value_ptr));
         }
-
-        TRY(KOS_extract_native_value(ctx, value_id, convert, alloc, value_ptr));
 
         ++convert;
     }
@@ -2432,22 +2443,25 @@ int KOS_extract_native_struct_from_object(KOS_CONTEXT           ctx,
 
     while ( ! IS_BAD_PTR(convert->name)) {
 
-        KOS_OBJ_ID value_id;
-        void      *value_ptr = (void *)((uintptr_t)struct_ptr + convert->offset);
+        if (convert->type != KOS_NATIVE_SKIP) {
 
-        value_id = KOS_get_property(ctx, object.o, convert->name);
+            KOS_OBJ_ID value_id;
+            void      *value_ptr = (void *)((uintptr_t)struct_ptr + convert->offset);
 
-        if (IS_BAD_PTR(value_id)) {
+            value_id = KOS_get_property(ctx, object.o, convert->name);
 
-            value_id = convert->default_value;
+            if (IS_BAD_PTR(value_id)) {
 
-            if (IS_BAD_PTR(value_id))
-                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                value_id = convert->default_value;
 
-            KOS_clear_exception(ctx);
+                if (IS_BAD_PTR(value_id))
+                    RAISE_ERROR(KOS_ERROR_EXCEPTION);
+
+                KOS_clear_exception(ctx);
+            }
+
+            TRY(KOS_extract_native_value(ctx, value_id, convert, alloc, value_ptr));
         }
-
-        TRY(KOS_extract_native_value(ctx, value_id, convert, alloc, value_ptr));
 
         ++convert;
     }
