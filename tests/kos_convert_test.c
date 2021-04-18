@@ -964,6 +964,32 @@ int main(void)
         TEST(memcmp(KOS_buffer_data_volatile(ctx, obj), buf, 10) == 0);
     }
 
+    /************************************************************************/
+    {
+        static const KOS_CONVERT conv[3] = {
+            { KOS_CONST_ID(str_name), KOS_BADPTR, offsetof(TEST_STRUCT, field_u32), sizeof(uint32_t), KOS_NATIVE_UINT32 },
+            { KOS_CONST_ID(str_name), KOS_BADPTR, offsetof(TEST_STRUCT, field_i16), sizeof(int16_t),  KOS_NATIVE_SKIP   },
+            KOS_DEFINE_TAIL_ARG()
+        };
+
+        TEST_STRUCT test_struct = { 1, 2, { 3, 4, 5, 6 } };
+        KOS_OBJ_ID  obj;
+
+        TEST(KOS_set_properties_from_native(ctx, KOS_VOID, conv, &test_struct) == KOS_ERROR_EXCEPTION);
+        TEST_EXCEPTION();
+
+        obj = KOS_new_object(ctx);
+        TEST( ! IS_BAD_PTR(obj));
+
+        TEST(KOS_set_properties_from_native(ctx, obj, conv, &test_struct) == KOS_SUCCESS);
+        TEST_NO_EXCEPTION();
+
+        obj = KOS_get_property(ctx, obj, KOS_CONST_ID(str_name));
+        TEST( ! IS_BAD_PTR(obj));
+
+        TEST(obj == TO_SMALL_INT(2));
+    }
+
     KOS_instance_destroy(&inst);
 
     KOS_mempool_destroy(&alloc);

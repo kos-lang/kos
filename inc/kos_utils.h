@@ -131,6 +131,12 @@ KOS_OBJ_ID KOS_new_from_native(KOS_CONTEXT        ctx,
                                const KOS_CONVERT *convert,
                                const void        *value_ptr);
 
+KOS_API
+int KOS_set_properties_from_native(KOS_CONTEXT        ctx,
+                                   KOS_OBJ_ID         object_id,
+                                   const KOS_CONVERT *convert,
+                                   const void        *struct_ptr);
+
 enum KOS_PRINT_WHERE_E {
     KOS_STDOUT,
     KOS_STDERR

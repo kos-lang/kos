@@ -130,6 +130,7 @@ EXPORTS
     KOS_resume_context
     KOS_run_module
     KOS_set_builtin_dynamic_property
+    KOS_set_properties_from_native
     KOS_set_property
     KOS_str_backtrace DATA
     KOS_str_empty DATA

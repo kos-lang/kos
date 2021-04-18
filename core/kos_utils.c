@@ -2585,3 +2585,34 @@ cleanup:
 
     return error ? KOS_BADPTR : value.o;
 }
+
+int KOS_set_properties_from_native(KOS_CONTEXT        ctx,
+                                   KOS_OBJ_ID         object_id,
+                                   const KOS_CONVERT *convert,
+                                   const void        *struct_ptr)
+{
+    KOS_LOCAL object;
+    int       error = KOS_SUCCESS;
+
+    KOS_init_local_with(ctx, &object, object_id);
+
+    while ( ! IS_BAD_PTR(convert->name)) {
+
+        if (convert->type != KOS_NATIVE_SKIP) {
+
+            const void *const value_ptr = (const void *)((uintptr_t)struct_ptr + convert->offset);
+            KOS_OBJ_ID        value_id  = KOS_new_from_native(ctx, convert, value_ptr);
+
+            TRY_OBJID(value_ptr);
+
+            TRY(KOS_set_property(ctx, object.o, convert->name, value_id));
+        }
+
+        ++convert;
+    }
+
+cleanup:
+    KOS_destroy_top_local(ctx, &object);
+
+    return error;
+}
