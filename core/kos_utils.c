@@ -1950,7 +1950,7 @@ enum KOS_FORCE_ENUM_E {
     ENUM_MAX = 0x7FFFFFFF
 };
 
-static const struct KOS_NATIVE_TYPE_S native_to_kos[15] = {
+static const struct KOS_NATIVE_TYPE_S native_to_kos[17] = {
     { OBJ_VOID,    0                             },
     { OBJ_INTEGER, sizeof(uint8_t)               },
     { OBJ_INTEGER, sizeof(uint16_t)              },
@@ -1961,6 +1961,8 @@ static const struct KOS_NATIVE_TYPE_S native_to_kos[15] = {
     { OBJ_INTEGER, sizeof(int32_t)               },
     { OBJ_INTEGER, sizeof(int64_t)               },
     { OBJ_INTEGER, sizeof(enum KOS_FORCE_ENUM_E) },
+    { OBJ_BOOLEAN, sizeof(uint8_t)               },
+    { OBJ_BOOLEAN, sizeof(uint32_t)              },
     { OBJ_FLOAT,   sizeof(float)                 },
     { OBJ_FLOAT,   sizeof(double)                },
     { OBJ_STRING,  0                             },
@@ -2132,6 +2134,16 @@ int KOS_extract_native_value(KOS_CONTEXT           ctx,
                 }
                 break;
             }
+
+            case KOS_NATIVE_BOOL8:
+                assert(GET_OBJ_TYPE(elem_id) == OBJ_BOOLEAN);
+                *(uint8_t *)value_ptr = KOS_get_bool(elem_id) ? 1 : 0;
+                break;
+
+            case KOS_NATIVE_BOOL32:
+                assert(GET_OBJ_TYPE(elem_id) == OBJ_BOOLEAN);
+                *(uint32_t *)value_ptr = KOS_get_bool(elem_id) ? 1 : 0;
+                break;
 
             case KOS_NATIVE_FLOAT:
                 /* fall through */
@@ -2369,14 +2381,79 @@ int KOS_extract_native_from_object(KOS_CONTEXT           ctx,
                                    struct KOS_MEMPOOL_S *alloc,
                                    ...)
 {
-    return KOS_ERROR_INTERNAL;
+    KOS_LOCAL object;
+    int       error = KOS_SUCCESS;
+
+    KOS_init_local_with(ctx, &object, object_id);
+
+    va_list args;
+    va_start(args, alloc);
+
+    while ( ! IS_BAD_PTR(convert->name)) {
+
+        KOS_OBJ_ID value_id;
+        void      *value_ptr = va_arg(args, void *);
+
+        value_id = KOS_get_property(ctx, object.o, convert->name);
+
+        if (IS_BAD_PTR(value_id)) {
+
+            value_id = convert->default_value;
+
+            if (IS_BAD_PTR(value_id))
+                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+
+            KOS_clear_exception(ctx);
+        }
+
+        TRY(KOS_extract_native_value(ctx, value_id, convert, alloc, value_ptr));
+
+        ++convert;
+    }
+
+    va_end(args);
+
+cleanup:
+    KOS_destroy_top_local(ctx, &object);
+
+    return error;
 }
 
 int KOS_extract_native_struct_from_object(KOS_CONTEXT           ctx,
-                                          KOS_OBJ_ID            array_id,
+                                          KOS_OBJ_ID            object_id,
                                           const KOS_CONVERT    *convert,
                                           struct KOS_MEMPOOL_S *alloc,
                                           void                 *struct_ptr)
 {
-    return KOS_ERROR_INTERNAL;
+    KOS_LOCAL object;
+    int       error = KOS_SUCCESS;
+
+    KOS_init_local_with(ctx, &object, object_id);
+
+    while ( ! IS_BAD_PTR(convert->name)) {
+
+        KOS_OBJ_ID value_id;
+        void      *value_ptr = (void *)((uintptr_t)struct_ptr + convert->offset);
+
+        value_id = KOS_get_property(ctx, object.o, convert->name);
+
+        if (IS_BAD_PTR(value_id)) {
+
+            value_id = convert->default_value;
+
+            if (IS_BAD_PTR(value_id))
+                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+
+            KOS_clear_exception(ctx);
+        }
+
+        TRY(KOS_extract_native_value(ctx, value_id, convert, alloc, value_ptr));
+
+        ++convert;
+    }
+
+cleanup:
+    KOS_destroy_top_local(ctx, &object);
+
+    return error;
 }

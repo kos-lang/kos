@@ -51,6 +51,8 @@ enum KOS_CONVERT_TYPE_E {
     KOS_NATIVE_INT32,
     KOS_NATIVE_INT64,
     KOS_NATIVE_ENUM,
+    KOS_NATIVE_BOOL8,
+    KOS_NATIVE_BOOL32,
     KOS_NATIVE_FLOAT,
     KOS_NATIVE_DOUBLE,
     KOS_NATIVE_STRING,
@@ -118,7 +120,7 @@ int KOS_extract_native_from_object(KOS_CONTEXT           ctx,
 
 KOS_API
 int KOS_extract_native_struct_from_object(KOS_CONTEXT           ctx,
-                                          KOS_OBJ_ID            array_id,
+                                          KOS_OBJ_ID            object_id,
                                           const KOS_CONVERT    *convert,
                                           struct KOS_MEMPOOL_S *alloc,
                                           void                 *struct_ptr);
