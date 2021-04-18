@@ -79,7 +79,7 @@ KOS_API
 LIB_FUNCTION KOS_get_library_function(KOS_SHARED_LIB lib, const char *func_name, struct KOS_VECTOR_S *error_cstr);
 
 #ifdef __cplusplus
-};
+}
 #endif
 
 #endif

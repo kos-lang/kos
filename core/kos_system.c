@@ -497,8 +497,8 @@ static void get_lib_error(KOS_VECTOR *error_cstr)
         --msg_size;
 
     if (KOS_vector_resize(error_cstr, msg_size + 1) == KOS_SUCCESS) {
-        memcpy(error_cstr.buffer, msg, msg_size);
-        error_cstr.buffer[msg_size] = 0;
+        memcpy(error_cstr->buffer, msg, msg_size);
+        error_cstr->buffer[msg_size] = 0;
     }
     else {
         error_cstr->size      = 1;
