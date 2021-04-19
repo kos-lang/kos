@@ -1950,7 +1950,7 @@ enum KOS_FORCE_ENUM_E {
     ENUM_MAX = 0x7FFFFFFF
 };
 
-static const struct KOS_NATIVE_TYPE_S native_to_kos[18] = {
+static const struct KOS_NATIVE_TYPE_S native_to_kos[19] = {
     { OBJ_VOID,    0                             },
     { OBJ_VOID,    0                             },
     { OBJ_INTEGER, sizeof(uint8_t)               },
@@ -1961,6 +1961,7 @@ static const struct KOS_NATIVE_TYPE_S native_to_kos[18] = {
     { OBJ_INTEGER, sizeof(int16_t)               },
     { OBJ_INTEGER, sizeof(int32_t)               },
     { OBJ_INTEGER, sizeof(int64_t)               },
+    { OBJ_INTEGER, sizeof(size_t)                },
     { OBJ_INTEGER, sizeof(enum KOS_FORCE_ENUM_E) },
     { OBJ_BOOLEAN, sizeof(uint8_t)               },
     { OBJ_BOOLEAN, sizeof(uint32_t)              },
@@ -1979,8 +1980,9 @@ struct KOS_INT_LIMITS_S {
 #define KOS_MIN_INT32 ((int32_t)((uint32_t)1U << 31))
 #define KOS_MIN_INT64 ((int64_t)((uint64_t)1U << 63))
 #define KOS_MAX_INT64 ((int64_t)~((uint64_t)1U << 63))
+#define KOS_MAX_SIZE  ((int64_t)~(size_t)0U)
 
-static const struct KOS_INT_LIMITS_S int_limits[11] = {
+static const struct KOS_INT_LIMITS_S int_limits[12] = {
     { 0,             0                    },
     { 0,             0                    },
     { 0,             0xFF                 },
@@ -1991,6 +1993,7 @@ static const struct KOS_INT_LIMITS_S int_limits[11] = {
     { -0x8000,       0x7FFF               },
     { KOS_MIN_INT32, 0x7FFFFFFF           },
     { KOS_MIN_INT64, KOS_MAX_INT64        },
+    { 0,             KOS_MAX_SIZE         },
     { 0,             0x7FFFFFFF           }
 };
 
@@ -2072,6 +2075,8 @@ int KOS_extract_native_value(KOS_CONTEXT           ctx,
                 /* fall through */
             case KOS_NATIVE_INT64:
                 /* fall through */
+            case KOS_NATIVE_SIZE:
+                /* fall through */
             case KOS_NATIVE_ENUM: {
                 int64_t int_value;
 
@@ -2127,6 +2132,10 @@ int KOS_extract_native_value(KOS_CONTEXT           ctx,
 
                     case KOS_NATIVE_INT64:
                         *(int64_t *)value_ptr = (int64_t)int_value;
+                        break;
+
+                    case KOS_NATIVE_SIZE:
+                        *(size_t *)value_ptr = (size_t)int_value;
                         break;
 
                     default:
@@ -2530,6 +2539,10 @@ KOS_OBJ_ID KOS_new_from_native(KOS_CONTEXT        ctx,
 
             case KOS_NATIVE_INT64:
                 elem_id = KOS_new_int(ctx, *(const int64_t *)value_ptr);
+                break;
+
+            case KOS_NATIVE_SIZE:
+                elem_id = KOS_new_int(ctx, (int64_t)*(const size_t *)value_ptr);
                 break;
 
             case KOS_NATIVE_ENUM:
