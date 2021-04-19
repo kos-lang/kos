@@ -2566,7 +2566,7 @@ KOS_OBJ_ID KOS_new_from_native(KOS_CONTEXT        ctx,
                 break;
 
             case KOS_NATIVE_STRING:
-                elem_id = KOS_new_string(ctx, (const char *)value_ptr, strnlen((const char *)value_ptr, convert->size));
+                elem_id = KOS_new_string(ctx, (const char *)value_ptr, (unsigned)strnlen((const char *)value_ptr, convert->size));
                 break;
 
             case KOS_NATIVE_STRING_PTR:
@@ -2616,7 +2616,7 @@ int KOS_set_properties_from_native(KOS_CONTEXT        ctx,
             const void *const value_ptr = (const void *)((uintptr_t)struct_ptr + convert->offset);
             KOS_OBJ_ID        value_id  = KOS_new_from_native(ctx, convert, value_ptr);
 
-            TRY_OBJID(value_ptr);
+            TRY_OBJID(value_id);
 
             TRY(KOS_set_property(ctx, object.o, convert->name, value_id));
         }
