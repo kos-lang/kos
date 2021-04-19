@@ -1293,6 +1293,67 @@ do {
     assert o.c == -13
 }
 
+# throw from generator used to initialize object
+do {
+    fun create(num)
+    {
+        if num { yield ["\(num)", num]; num -= 1 }
+        if num { throw num }
+    }
+
+    do {
+        const it = create(1)
+        assert it() == ["1",1]
+        expect_fail(() => it())
+    }
+
+    do {
+        const it = create(2)
+        assert it() == ["2",2]
+        expect_fail(() => it())
+    }
+
+    do {
+        for const x in create(1) {
+            assert x == ["1",1]
+        }
+
+        const found = []
+        var exc = void
+        try {
+            for const y in create(2) {
+                found.push(y)
+            }
+        }
+        catch const e {
+            exc = e.value
+        }
+
+        assert found.size == 1
+        assert found[0] == ["2",2]
+        assert exc == 1
+    }
+
+    do {
+        const obj = base.object(create(1))
+        assert "1" in obj
+        assert obj["1"] == 1
+    }
+
+    do {
+        var obj = void
+        var exc = void
+        try {
+            obj = base.object(create(2)) # throws
+        }
+        catch const e {
+            exc = e.value
+        }
+        assert ! obj
+        assert exc == 1
+    }
+}
+
 do {
     class constr {
         constructor {

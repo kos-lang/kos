@@ -988,6 +988,9 @@ static KOS_OBJ_ID object_constructor(KOS_CONTEXT ctx,
                 TRY(KOS_set_property(ctx, obj.o, key.o, elem.o));
             }
         }
+
+        if (KOS_is_exception_pending(ctx))
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
     else {
 
@@ -1024,6 +1027,9 @@ static KOS_OBJ_ID object_constructor(KOS_CONTEXT ctx,
 
             TRY(KOS_set_property(ctx, obj.o, key.o, elem.o));
         }
+
+        if (KOS_is_exception_pending(ctx))
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
 cleanup:
@@ -1263,6 +1269,9 @@ static KOS_OBJ_ID array_constructor(KOS_CONTEXT ctx,
 
                     ++cur_size;
                 }
+
+                if (KOS_is_exception_pending(ctx))
+                    RAISE_ERROR(KOS_ERROR_EXCEPTION);
                 break;
             }
 

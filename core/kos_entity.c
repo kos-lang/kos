@@ -472,7 +472,8 @@ KOS_OBJ_ID KOS_get_named_arg(KOS_CONTEXT ctx,
         }
     }
 
-    KOS_raise_printf(ctx, "invalid argument index %u\n", i);
+    if ( ! KOS_is_exception_pending(ctx))
+        KOS_raise_printf(ctx, "invalid argument index %u\n", i);
     error = KOS_ERROR_EXCEPTION;
 
 cleanup:

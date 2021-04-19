@@ -469,7 +469,8 @@ static int get_env_array(KOS_CONTEXT           ctx,
 
             ++est_num_env;
         }
-        assert( ! KOS_is_exception_pending(ctx));
+        if (KOS_is_exception_pending(ctx))
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
     /* If not inheriting, just use the values passed to the call */
     else {
@@ -480,6 +481,8 @@ static int get_env_array(KOS_CONTEXT           ctx,
 
         while ( ! KOS_iterator_next(ctx, in_obj.o))
             ++est_num_env;
+        if (KOS_is_exception_pending(ctx))
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
     /* Now convert the joined values to an array of strings */
@@ -556,6 +559,9 @@ static int get_env_array(KOS_CONTEXT           ctx,
 
         --est_num_env;
     }
+
+    if (KOS_is_exception_pending(ctx))
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
 
 #ifdef _WIN32
     if ( ! env_buf.size) {

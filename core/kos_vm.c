@@ -876,6 +876,9 @@ static KOS_OBJ_ID get_named_args(KOS_CONTEXT ctx,
         }
     }
 
+    if (KOS_is_exception_pending(ctx))
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+
     for (i = 0; i < min_args; i++) {
 
         KOS_OBJ_ID value = KOS_array_read(ctx, args.o, i);
