@@ -875,13 +875,13 @@ int kos_comp_resolve_global(void                          *vframe,
                             KOS_COMP_WALK_GLOBALS_CALLBACK callback,
                             void                          *cookie)
 {
-    int           error = KOS_SUCCESS;
+    KOS_DECLARE_CONST_STRING_WITH_LENGTH(str, 0, KOS_NULL);
+
     KOS_CONTEXT   ctx   = (KOS_CONTEXT)vframe;
     KOS_INSTANCE *inst  = ctx->inst;
     KOS_OBJ_ID    module_obj;
     KOS_OBJ_ID    glob_idx_obj;
-
-    KOS_DECLARE_CONST_STRING_WITH_LENGTH(str, 0, KOS_NULL);
+    int           error = KOS_SUCCESS;
 
     assert(module_idx >= 0);
 
