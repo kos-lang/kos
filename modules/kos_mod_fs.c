@@ -137,13 +137,13 @@ static KOS_OBJ_ID info(KOS_CONTEXT ctx,
                        KOS_OBJ_ID  this_obj,
                        KOS_OBJ_ID  args_obj)
 {
-    KOS_LOCAL  info;
+    KOS_LOCAL  data;
     KOS_OBJ_ID filename_obj = KOS_array_read(ctx, args_obj, 0);
     KOS_OBJ_ID follow_obj;
     KOS_VECTOR filename_cstr;
     int        error;
 
-    KOS_init_local(ctx, &info);
+    KOS_init_local(ctx, &data);
 
     KOS_vector_init(&filename_cstr);
 
@@ -165,7 +165,7 @@ static KOS_OBJ_ID info(KOS_CONTEXT ctx,
             KOS_OBJ_ID obj_id = KOS_new_int(ctx, (int64_t)(value));             \
             TRY_OBJID(obj_id);                                                  \
                                                                                 \
-            TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_name), obj_id)); \
+            TRY(KOS_set_property(ctx, data.o, KOS_CONST_ID(str_name), obj_id)); \
         } while (0)
 
         DWORD                     last_error = 0;
@@ -189,8 +189,8 @@ static KOS_OBJ_ID info(KOS_CONTEXT ctx,
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
 
-        info.o = KOS_new_object(ctx);
-        TRY_OBJID(info.o);
+        data.o = KOS_new_object(ctx);
+        TRY_OBJID(data.o);
 
         SET_INT_PROPERTY("flags", attr.dwFileAttributes);
         SET_INT_PROPERTY("size",  ((uint64_t)(uint32_t)attr.nFileSizeHigh << 32) | (uint32_t)attr.nFileSizeLow);
@@ -199,11 +199,11 @@ static KOS_OBJ_ID info(KOS_CONTEXT ctx,
         SET_INT_PROPERTY("ctime", get_epoch_time_us(&attr.ftCreationTime));
 
         if (attr.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-            TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_dir)));
+            TRY(KOS_set_property(ctx, data.o, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_dir)));
         else if (attr.dwFileAttributes & FILE_ATTRIBUTE_DEVICE)
-            TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_dev)));
+            TRY(KOS_set_property(ctx, data.o, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_dev)));
         else
-            TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_file)));
+            TRY(KOS_set_property(ctx, data.o, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_file)));
     }
 #else
     {
@@ -228,16 +228,16 @@ static KOS_OBJ_ID info(KOS_CONTEXT ctx,
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
 
-        info.o = kos_stat(ctx, &st);
+        data.o = kos_stat(ctx, &st);
     }
 #endif
 
 cleanup:
     KOS_vector_destroy(&filename_cstr);
 
-    info.o = KOS_destroy_top_local(ctx, &info);
+    data.o = KOS_destroy_top_local(ctx, &data);
 
-    return error ? KOS_BADPTR : info.o;
+    return error ? KOS_BADPTR : data.o;
 }
 
 /* @item fs remove()

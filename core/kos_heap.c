@@ -201,7 +201,7 @@ static KOS_MARK_GROUP *pop_mark_group(KOS_MARK_GROUP_STACK *stack)
         group = (KOS_MARK_GROUP *)KOS_atomic_read_relaxed_ptr(stack->slots[idx]);
 
         if (group && KOS_atomic_cas_weak_ptr(stack->slots[idx], group, (KOS_MARK_GROUP *)KOS_NULL)) {
-            (void)KOS_atomic_cas_weak_u32(stack->slot_idx, (end + 1U) & MARK_GROUP_MASK, idx);
+            (void)KOS_atomic_cas_weak_u32(stack->slot_idx, ((end + 1U) & MARK_GROUP_MASK), idx);
             return group;
         }
 

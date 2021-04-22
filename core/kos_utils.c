@@ -2270,6 +2270,7 @@ int KOS_extract_native_from_array(KOS_CONTEXT           ctx,
                                   struct KOS_MEMPOOL_S *alloc,
                                   ...)
 {
+    va_list   args;
     KOS_LOCAL array;
     uint32_t  size;
     uint32_t  i     = 0;
@@ -2282,7 +2283,6 @@ int KOS_extract_native_from_array(KOS_CONTEXT           ctx,
         RAISE_EXCEPTION_STR(str_err_not_array);
     size = KOS_get_array_size(array_id);
 
-    va_list args;
     va_start(args, alloc);
 
     while ( ! IS_BAD_PTR(convert->name)) {
@@ -2332,6 +2332,7 @@ int KOS_extract_native_from_iterable(KOS_CONTEXT           ctx,
                                      struct KOS_MEMPOOL_S *alloc,
                                      ...)
 {
+    va_list   args;
     KOS_LOCAL iterable;
     uint32_t  i     = 0;
     int       done  = 0;
@@ -2342,7 +2343,6 @@ int KOS_extract_native_from_iterable(KOS_CONTEXT           ctx,
     iterable.o = KOS_new_iterator(ctx, iterable.o, KOS_CONTENTS);
     TRY_OBJID(iterable.o);
 
-    va_list args;
     va_start(args, alloc);
 
     while ( ! IS_BAD_PTR(convert->name)) {
@@ -2398,12 +2398,12 @@ int KOS_extract_native_from_object(KOS_CONTEXT           ctx,
                                    struct KOS_MEMPOOL_S *alloc,
                                    ...)
 {
+    va_list   args;
     KOS_LOCAL object;
     int       error = KOS_SUCCESS;
 
     KOS_init_local_with(ctx, &object, object_id);
 
-    va_list args;
     va_start(args, alloc);
 
     while ( ! IS_BAD_PTR(convert->name)) {
@@ -2565,9 +2565,11 @@ KOS_OBJ_ID KOS_new_from_native(KOS_CONTEXT        ctx,
                 elem_id = KOS_new_float(ctx, *(const double *)value_ptr);
                 break;
 
-            case KOS_NATIVE_STRING:
-                elem_id = KOS_new_string(ctx, (const char *)value_ptr, (unsigned)strnlen((const char *)value_ptr, convert->size));
+            case KOS_NATIVE_STRING: {
+                void *zero = memchr(value_ptr, 0, convert->size);
+                elem_id = KOS_new_string(ctx, (const char *)value_ptr, zero ? (unsigned)((uintptr_t)zero - (uintptr_t)value_ptr) : convert->size);
                 break;
+            }
 
             case KOS_NATIVE_STRING_PTR:
                 elem_id = KOS_new_cstring(ctx, *(const char *const *)value_ptr);
