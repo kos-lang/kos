@@ -1299,7 +1299,7 @@ class private_class {
 };
 
 template<typename T>
-const struct KOS_PRIVATE_CLASS_S private_class<T>::priv_class = { };
+const struct KOS_PRIVATE_CLASS_S private_class<T>::priv_class = { 0 };
 
 template<typename T>
 object context::new_object(T* priv)

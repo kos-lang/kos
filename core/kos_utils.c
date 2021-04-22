@@ -2566,7 +2566,7 @@ KOS_OBJ_ID KOS_new_from_native(KOS_CONTEXT        ctx,
                 break;
 
             case KOS_NATIVE_STRING: {
-                void *zero = memchr(value_ptr, 0, convert->size);
+                const void *const zero = memchr(value_ptr, 0, convert->size);
                 elem_id = KOS_new_string(ctx, (const char *)value_ptr, zero ? (unsigned)((uintptr_t)zero - (uintptr_t)value_ptr) : convert->size);
                 break;
             }
