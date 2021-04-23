@@ -341,7 +341,7 @@ int main(void)
         TEST(KOS_extract_native_value(ctx, TO_SMALL_INT(2), &conv, KOS_NULL, &a) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
 
-        TEST(a == 2.0f);
+        TEST((double)a == 2.0);
     }
 
     /************************************************************************/
@@ -621,9 +621,9 @@ int main(void)
         TEST(KOS_extract_native_from_object(ctx, obj, conv, KOS_NULL, &val_u32, &val_f, &val_i16) == KOS_SUCCESS);
         TEST_NO_EXCEPTION();
 
-        TEST(val_u32 == 200);
-        TEST(val_f   == -10.0f);
-        TEST(val_i16 == -11);
+        TEST(val_u32       == 200);
+        TEST((double)val_f == -10.0);
+        TEST(val_i16       == -11);
     }
 
     /************************************************************************/
