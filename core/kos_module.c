@@ -868,6 +868,32 @@ cleanup:
     return ret;
 }
 
+typedef struct KOS_CONST_STRING_STORAGE_S {
+    uint8_t buffer[sizeof(struct KOS_CONST_STRING_S) + 32];
+} KOS_CONST_STRING_STORAGE;
+
+static KOS_OBJ_ID init_const_string(KOS_CONST_STRING_STORAGE *storage,
+                                    const char               *str,
+                                    uint16_t                  length)
+{
+    const uintptr_t            storage_ptr = (uintptr_t)&storage->buffer[0];
+    const uintptr_t            aligned_ptr = KOS_align_up(storage_ptr, (uintptr_t)32U);
+    struct KOS_CONST_STRING_S *dest_ptr    = (struct KOS_CONST_STRING_S *)aligned_ptr;
+    KOS_OBJ_ID                 str_obj;
+
+    memset(dest_ptr, 0, sizeof(*dest_ptr));
+    dest_ptr->object.size_and_type = OBJ_STRING;
+    dest_ptr->object.flags         = KOS_STRING_ELEM_8 | KOS_STRING_PTR;
+    dest_ptr->object.data_ptr      = str;
+    dest_ptr->object.length        = length;
+
+    str_obj = KOS_CONST_ID(*dest_ptr);
+
+    assert( ! kos_is_heap_object(str_obj));
+
+    return str_obj;
+}
+
 int kos_comp_resolve_global(void                          *vframe,
                             int                            module_idx,
                             const char                    *name,
@@ -875,28 +901,24 @@ int kos_comp_resolve_global(void                          *vframe,
                             KOS_COMP_WALK_GLOBALS_CALLBACK callback,
                             void                          *cookie)
 {
-    KOS_DECLARE_CONST_STRING_WITH_LENGTH(str, 0, KOS_NULL);
-
-    KOS_CONTEXT   ctx   = (KOS_CONTEXT)vframe;
-    KOS_INSTANCE *inst  = ctx->inst;
-    KOS_OBJ_ID    module_obj;
-    KOS_OBJ_ID    glob_idx_obj;
-    int           error = KOS_SUCCESS;
+    KOS_CONST_STRING_STORAGE str_storage;
+    KOS_CONTEXT              ctx   = (KOS_CONTEXT)vframe;
+    KOS_INSTANCE            *inst  = ctx->inst;
+    KOS_OBJ_ID               module_obj;
+    KOS_OBJ_ID               glob_idx_obj;
+    int                      error = KOS_SUCCESS;
 
     assert(module_idx >= 0);
 
     TRY(kos_seq_fail());
-
-    assert(!kos_is_heap_object(KOS_CONST_ID(str)));
-    str.object.data_ptr = name;
-    str.object.length   = length;
 
     module_obj = KOS_array_read(ctx, inst->modules.modules, module_idx);
     TRY_OBJID(module_obj);
 
     assert(GET_OBJ_TYPE(module_obj) == OBJ_MODULE);
 
-    glob_idx_obj = KOS_get_property_shallow(ctx, OBJPTR(MODULE, module_obj)->global_names, KOS_CONST_ID(str));
+    glob_idx_obj = KOS_get_property_shallow(ctx, OBJPTR(MODULE, module_obj)->global_names,
+                                            init_const_string(&str_storage, name, length));
     TRY_OBJID(glob_idx_obj);
 
     assert(IS_SMALL_INT(glob_idx_obj));
