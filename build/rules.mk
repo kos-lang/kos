@@ -42,6 +42,11 @@ endif
 ##############################################################################
 # Determine language version for source files
 
+ifdef tracy
+    CPPLANG_VER ?= c++11
+    CLANG_VER   ?= $(CPPLANG_VER)
+endif
+
 CLANG_VER   ?=
 CPPLANG_VER ?=
 
@@ -196,6 +201,9 @@ else
     #STRICTFLAGS += -Wconversion
     STRICTFLAGS += -Wno-format-nonliteral # for vsnprintf
 
+    ifdef tracy
+        fastdispatch ?= 0
+    endif
     fastdispatch ?= 1
     ifeq ($(fastdispatch), 1)
         CFLAGS += -DCONFIG_FAST_DISPATCH
@@ -244,6 +252,9 @@ ifeq ($(UNAME), Darwin)
     LDFLAGS += $(APPLE_FLAGS)
 endif
 
+ifdef tracy
+    deepstack ?= 1
+endif
 deepstack ?= 0
 ifeq ($(deepstack), 1)
     CFLAGS += -DCONFIG_DEEP_STACK

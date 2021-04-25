@@ -2690,6 +2690,8 @@ static void help_gc(KOS_CONTEXT ctx)
     if (gc_state == GC_INACTIVE)
         return;
 
+    PROF_ZONE(GC)
+
     if (ctx->cur_page) {
         assert(gc_state == GC_INIT);
     }
