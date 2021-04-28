@@ -32,10 +32,29 @@
 #else
 #   include <signal.h>
 #endif
+#if defined(__cplusplus) && defined(TRACY_ENABLE) && defined(__APPLE__)
+#   include <time.h>
+#endif
 
 #define TO_STR_INTERNAL(x) #x
 #define TO_STR(x) TO_STR_INTERNAL(x)
 #define KOS_VERSION_STRING "Kos " TO_STR(KOS_VERSION_MAJOR) "." TO_STR(KOS_VERSION_MINOR) "." TO_STR(KOS_VERSION_REVISION)
+
+#if defined(__cplusplus) && defined(TRACY_ENABLE) && defined(__APPLE__)
+struct kos_shutdown_tracy {
+    ~kos_shutdown_tracy()
+    {
+        tracy::GetProfiler().RequestShutdown();
+        while ( ! tracy::GetProfiler().HasShutdownFinished()) {
+            timespec ts;
+            ts.tv_sec  = 0;
+            ts.tv_nsec = 10000000;
+            nanosleep(&ts, KOS_NULL);
+        }
+    }
+};
+static kos_shutdown_tracy shutdown_profiler;
+#endif
 
 static const char str_cmdline[] = "<commandline>";
 static const char str_stdin[]   = "<stdin>";
