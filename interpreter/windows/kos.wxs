@@ -62,6 +62,8 @@
 
         <!-- Installer UI -->
         <Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR" />
+        <WixVariable Id="WixUIBannerBmp" Value="kos_installer_top_banner.bmp" />
+        <WixVariable Id="WixUIDialogBmp" Value="kos_installer_dialog.bmp" />
         <UIRef Id="WixUI_InstallDir" />
         <!-- TODO Try to remove WixUI_ErrorProgressText -->
         <UIRef Id="WixUI_ErrorProgressText" />

@@ -167,6 +167,8 @@ elif [ "$UNAME" = "Windows" ]; then
 
     sed "s/0\.1/$VERSION/" < interpreter/windows/kos.wxs > "$PKGDIR"/"$PKGNAME.wxs"
     cp interpreter/artwork/kos.ico "$PKGDIR"/
+    cp interpreter/artwork/kos_installer_top_banner.bmp "$PKGDIR"/
+    cp interpreter/artwork/kos_installer_dialog.bmp "$PKGDIR"/
 
     cd "$PKGDIR"
     MODDEFS=""
