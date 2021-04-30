@@ -61,6 +61,71 @@ do {
 }
 
 do {
+    var v = 123
+    for v in [] { }
+    assert v == void
+}
+
+do {
+    var v = 123
+    for v in ["a", "b", "c"] { }
+    assert v == void
+}
+
+do {
+    var v = 123
+    for v in ["a", "b", "c"] {
+        assert v == "a"
+        break
+    }
+    assert v == "a"
+}
+
+const myrange = range(0) ? range : void
+
+do {
+    var v = 123
+    for v in myrange(3) { }
+    assert v == void
+}
+
+do {
+    var v = 123
+    for v in myrange(3) { }
+    assert v == void
+}
+
+do {
+    var v = 123
+    for v in myrange(3) {
+        assert v == 0
+        break
+    }
+    assert v == 0
+}
+
+do {
+    var v = 123
+    for v in range(3) { }
+    assert v == void
+}
+
+do {
+    var v = 123
+    for v in range(3) { }
+    assert v == void
+}
+
+do {
+    var v = 123
+    for v in range(3) {
+        assert v == 0
+        break
+    }
+    assert v == 0
+}
+
+do {
     var c = 10
     var d = 20
     var sum = 0

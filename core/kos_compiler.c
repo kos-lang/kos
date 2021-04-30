@@ -2394,7 +2394,6 @@ static int for_range(KOS_COMP_UNIT      *program,
     TRY(gen_instr2(program, INSTR_JUMP_COND, 0, reg->reg));
 
     update_jump_offs(program, loop_jump_offs, loop_start_offs);
-    finish_break_continue(program, next_jump_offs, old_break_offs);
 
     if ((lhs_type == NT_LEFT_HAND_SIDE) && item_reg)
         TRY(gen_instr1(program, INSTR_LOAD_VOID, item_reg->reg));
@@ -2407,6 +2406,8 @@ static int for_range(KOS_COMP_UNIT      *program,
         else
             TRY(gen_instr3(program, INSTR_SET_ELEM, item_cont_reg->reg, item_var->array_idx, iter_reg->reg));
     }
+
+    finish_break_continue(program, next_jump_offs, old_break_offs);
 
     free_reg(program, reg);
     if (item_reg)

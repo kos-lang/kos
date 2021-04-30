@@ -49,14 +49,13 @@ fun mandelbrot_int(cx, cy)
     cx = integer(cx * (1 << int_precision))
     cy = integer(cy * (1 << int_precision))
 
-    var depth = void
+    var depth = 0
 
-    for const d in range(iterations) {
+    for depth in range(iterations) {
         const sq_zx = (zx * zx) >> int_precision
         const sq_zy = (zy * zy) >> int_precision
 
         if sq_zx + sq_zy > (4 << int_precision) {
-            depth = d
             break
         }
 
@@ -65,7 +64,7 @@ fun mandelbrot_int(cx, cy)
         zx = new_zx
     }
 
-    return depth
+    return depth || iterations
 }
 
 fun mandelbrot_float(cx, cy)
@@ -73,14 +72,13 @@ fun mandelbrot_float(cx, cy)
     var zx = 0
     var zy = 0
 
-    var depth = void
+    var depth = 0
 
-    for const d in range(iterations) {
+    for depth in range(iterations) {
         const sq_zx = zx * zx
         const sq_zy = zy * zy
 
         if sq_zx + sq_zy > 4 {
-            depth = d
             break
         }
 
@@ -89,7 +87,7 @@ fun mandelbrot_float(cx, cy)
         zx = new_zx
     }
 
-    return depth
+    return depth || iterations
 }
 
 fun generate_mandelbrot_range(job, mandel_func)
