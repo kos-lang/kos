@@ -228,7 +228,6 @@ int kos_heap_init(KOS_INSTANCE *inst)
     KOS_HEAP *heap = &inst->heap;
     int       error;
 
-    heap->gc_state        = GC_INACTIVE;
     heap->heap_size       = 0;
     heap->used_heap_size  = 0;
     heap->malloc_size     = 0;
@@ -243,6 +242,7 @@ int kos_heap_init(KOS_INSTANCE *inst)
     heap->threads_to_stop = 0U;
     heap->gc_cycles       = 0U;
 
+    KOS_atomic_write_relaxed_u32(heap->gc_state,   GC_INACTIVE);
     KOS_atomic_write_relaxed_ptr(heap->walk_pages, (KOS_PAGE *)KOS_NULL);
 
 #ifdef CONFIG_MAD_GC
@@ -310,13 +310,9 @@ int kos_gc_active(KOS_CONTEXT ctx)
         ret = 1;
     else {
 
-        KOS_HEAP *heap = get_heap(ctx);
+        KOS_HEAP *const heap = get_heap(ctx);
 
-        kos_lock_mutex(heap->mutex);
-
-        ret = heap->gc_state >= GC_MARK;
-
-        kos_unlock_mutex(heap->mutex);
+        ret = KOS_atomic_read_relaxed_u32(heap->gc_state) >= GC_MARK;
     }
 
     return ret;
@@ -813,9 +809,9 @@ static void release_current_page_locked(KOS_CONTEXT ctx)
 
         KOS_HEAP *heap = get_heap(ctx);
 
-        assert(heap->gc_state == GC_INACTIVE ||
-               heap->gc_state == GC_INIT     ||
-               KOS_atomic_read_relaxed_u32(ctx->gc_state) == GC_ENGAGED);
+        assert(KOS_atomic_read_relaxed_u32(heap->gc_state) == GC_INACTIVE ||
+               KOS_atomic_read_relaxed_u32(heap->gc_state) == GC_INIT     ||
+               KOS_atomic_read_relaxed_u32(ctx->gc_state)  == GC_ENGAGED);
 
         gc_trace(("release cur page %p ctx=%p\n", (void *)page, (void *)ctx));
 
@@ -891,7 +887,7 @@ static void *alloc_object(KOS_CONTEXT ctx,
     kos_lock_mutex(heap->mutex);
 
     {
-        const uint32_t gc_state = heap->gc_state;
+        const uint32_t gc_state = KOS_atomic_read_relaxed_u32(heap->gc_state);
 
         if (gc_state != GC_INACTIVE && KOS_atomic_read_relaxed_u32(ctx->gc_state) == GC_INACTIVE) {
 
@@ -2669,7 +2665,7 @@ static void engage_in_gc(KOS_CONTEXT ctx, enum GC_STATE_E new_state)
 
     KOS_atomic_write_relaxed_u32(ctx->gc_state, new_state);
 
-    if (heap->gc_state == GC_INIT) {
+    if (KOS_atomic_read_relaxed_u32(heap->gc_state) == GC_INIT) {
         if (--heap->threads_to_stop == 0)
             kos_signal_cond_var(heap->engagement_cond);
     }
@@ -2685,7 +2681,7 @@ static void help_gc(KOS_CONTEXT ctx)
 
     assert(KOS_atomic_read_relaxed_u32(ctx->gc_state) == GC_INACTIVE);
 
-    gc_state = (enum GC_STATE_E)heap->gc_state;
+    gc_state = (enum GC_STATE_E)KOS_atomic_read_relaxed_u32(heap->gc_state);
 
     if (gc_state == GC_INACTIVE)
         return;
@@ -2733,7 +2729,7 @@ static void help_gc(KOS_CONTEXT ctx)
          * processing by helper threads. */
         kos_wait_cond_var(heap->helper_cond, heap->mutex);
 
-        gc_state = (enum GC_STATE_E)heap->gc_state;
+        gc_state = (enum GC_STATE_E)KOS_atomic_read_relaxed_u32(heap->gc_state);
 
     } while (gc_state != GC_INACTIVE);
 
@@ -2746,12 +2742,14 @@ void KOS_help_gc(KOS_CONTEXT ctx)
 
     assert(KOS_atomic_read_relaxed_u32(ctx->gc_state) == GC_INACTIVE);
 
-    kos_lock_mutex(heap->mutex);
+    if (KOS_atomic_read_relaxed_u32(heap->gc_state) >= GC_INIT) {
 
-    if (heap->gc_state >= GC_INIT)
+        kos_lock_mutex(heap->mutex);
+
         help_gc(ctx);
 
-    kos_unlock_mutex(heap->mutex);
+        kos_unlock_mutex(heap->mutex);
+    }
 }
 
 #ifdef CONFIG_MAD_GC
@@ -2800,13 +2798,14 @@ int KOS_resume_context(KOS_CONTEXT ctx)
 
     kos_lock_mutex(heap->mutex);
 
-    KOS_atomic_write_relaxed_u32(ctx->gc_state, GC_INACTIVE);
+    KOS_atomic_write_release_u32(ctx->gc_state, GC_INACTIVE);
 
-    gc_state = (enum GC_STATE_E)heap->gc_state;
+    gc_state = (enum GC_STATE_E)KOS_atomic_read_relaxed_u32(heap->gc_state);
 
     if (gc_state == GC_INACTIVE) {
 
 #ifdef CONFIG_MAD_GC
+
         error = try_collect_garbage(ctx);
 
         if (error == KOS_SUCCESS_RETURN)
@@ -2841,7 +2840,7 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
 
     kos_lock_mutex(heap->mutex);
 
-    if (heap->gc_state != GC_INACTIVE) {
+    if (KOS_atomic_read_relaxed_u32(heap->gc_state) != GC_INACTIVE) {
 
         help_gc(ctx);
 
@@ -2853,7 +2852,7 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
         return KOS_SUCCESS;
     }
 
-    heap->gc_state = GC_INIT;
+    KOS_atomic_write_release_u32(heap->gc_state, GC_INIT);
 
     stats.initial_heap_size   = heap->heap_size;
     stats.initial_malloc_size = heap->malloc_size;
@@ -2891,7 +2890,7 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
     /* Phase 2: Perform marking */
 
     if ( ! error) {
-        heap->gc_state = GC_MARK;
+        KOS_atomic_write_relaxed_u32(heap->gc_state, GC_MARK);
 
         error = gray_to_black(&mark_ctx, heap);
     }
@@ -2910,7 +2909,7 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
             uint32_t                prev_num_freed;
             struct KOS_INCOMPLETE_S incomplete = { KOS_NULL, 0 };
 
-            heap->gc_state = GC_EVACUATE;
+            KOS_atomic_write_relaxed_u32(heap->gc_state, GC_EVACUATE);
 
             /* Evacuation performs heap allocations and will lock the mutex again */
             kos_unlock_mutex(heap->mutex);
@@ -2923,7 +2922,7 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
             stats.time_evac_us += (unsigned)(time_1 - time_0);
             time_0              = time_1;
 
-            heap->gc_state = GC_UPDATE;
+            KOS_atomic_write_relaxed_u32(heap->gc_state, GC_UPDATE);
 
             assert( ! incomplete.page || error);
 
@@ -2971,9 +2970,8 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
 
     gc_trace(("GC ctx=%p end cycle\n", (void *)ctx));
 
-    KOS_atomic_write_relaxed_u32(ctx->gc_state, GC_INACTIVE);
-
-    heap->gc_state = GC_INACTIVE;
+    KOS_atomic_write_relaxed_u32(ctx->gc_state,  GC_INACTIVE);
+    KOS_atomic_write_relaxed_u32(heap->gc_state, GC_INACTIVE);
 
     release_helper_threads(heap);
 

@@ -45,7 +45,7 @@ typedef struct KOS_MARK_GROUP_STACK_S {
 
 typedef struct KOS_HEAP_S {
     KOS_MUTEX              mutex;
-    uint32_t               gc_state;        /* Says what the GC is doing                      */
+    KOS_ATOMIC(uint32_t)   gc_state;        /* Says what the GC is doing                      */
     uint32_t               heap_size;       /* Total num bytes allocated for the heap         */
     uint32_t               used_heap_size;  /* Num bytes allocated for objects on heap        */
     uint32_t               malloc_size;     /* Num bytes allocated for objs with malloc       */
