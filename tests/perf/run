@@ -103,6 +103,12 @@ runtest 10 tests/perf/primes.kos
 runtest 10 tests/perf/primes.py
 runtest 10 tests/perf/primes.js
 
+runtest 10 tests/perf/mandel_int.kos
+runtest 10 tests/perf/mandel_int.py
+
+runtest 10 tests/perf/mandel_float.kos
+runtest 10 tests/perf/mandel_float.py
+
 runtest 10 tests/perf/array_for_in.kos
 runtest 10 tests/perf/array_for_in.py
 runtest 10 tests/perf/array_for_in.js

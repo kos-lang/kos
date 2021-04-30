@@ -1,0 +1,138 @@
+import base.*
+import datetime.now
+
+var jobs = 1
+
+if args.size > 2 {
+    print("Error: Too many parameters")
+    return 1
+}
+
+if args.size == 2 {
+    var error = void
+    try {
+        jobs = integer(args[1])
+    }
+    catch const e {
+        error = e.value
+    }
+
+    if error {
+        print("Error: Failed to convert parameter '\(args[1])' to number")
+        return 1
+    }
+
+    if jobs < 1 || jobs > 1024 {
+        print("Error: Jobs parameter value \(jobs) is out of range")
+        return 1
+    }
+}
+
+const mid_x = -0.5
+const mid_y = 0.0
+const render_width  = 2.5
+const render_height = 2.5
+const iterations    = 256
+
+const width  = 50
+const height = 25
+
+const output = [0].repeat(width * height)
+
+fun mandelbrot_int(cx, cy)
+{
+    const int_precision = 28
+
+    var zx = 0
+    var zy = 0
+
+    cx = integer(cx * (1 << int_precision))
+    cy = integer(cy * (1 << int_precision))
+
+    var depth = void
+
+    for const d in range(iterations) {
+        const sq_zx = (zx * zx) >> int_precision
+        const sq_zy = (zy * zy) >> int_precision
+
+        if sq_zx + sq_zy > (4 << int_precision) {
+            depth = d
+            break
+        }
+
+        const new_zx = sq_zx - sq_zy + cx
+        zy = ((2 * zx * zy) >> int_precision) + cy
+        zx = new_zx
+    }
+
+    return depth
+}
+
+fun mandelbrot_float(cx, cy)
+{
+    var zx = 0
+    var zy = 0
+
+    var depth = void
+
+    for const d in range(iterations) {
+        const sq_zx = zx * zx
+        const sq_zy = zy * zy
+
+        if sq_zx + sq_zy > 4 {
+            depth = d
+            break
+        }
+
+        const new_zx = sq_zx - sq_zy + cx
+        zy = (2 * zx * zy) + cy
+        zx = new_zx
+    }
+
+    return depth
+}
+
+fun generate_mandelbrot_range(job, mandel_func)
+{
+    for const iy in range(job, height, jobs) {
+        for const ix in range(0, width) {
+            const i = iy * width + ix
+
+            const cx = (ix - (width  / 2)) * (render_width  / width)  + mid_x
+            const cy = (iy - (height / 2)) * (render_height / height) + mid_y
+
+            const depth = mandel_func(cx, cy)
+
+            output[i] = string([depth < 32 ? 32 : depth > 126 ? 126 : depth])
+        }
+    }
+}
+
+public fun main(use_float = false)
+{
+    const mandel_func = use_float ? mandelbrot_float : mandelbrot_int
+
+    const start_time = now()
+
+    if jobs > 1 {
+        const threads = []
+
+        for const job in range(jobs) {
+            threads.push(async generate_mandelbrot_range(job, mandel_func))
+        }
+
+        for const thread in threads {
+            thread.wait()
+        }
+    }
+    else {
+        generate_mandelbrot_range(0, mandel_func)
+    }
+
+    print("Took \((now() - start_time) / 1000) ms to generate")
+
+    for const y in range(height) {
+        const start = y * width
+        print("".join(output[start : start + width]))
+    }
+}

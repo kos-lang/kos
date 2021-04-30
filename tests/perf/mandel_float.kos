@@ -1,0 +1,4 @@
+#!/usr/bin/env kos
+
+import mandel
+mandel.main(use_float = true)
