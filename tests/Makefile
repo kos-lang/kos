@@ -174,8 +174,10 @@ print_heap_test:
 	@./$@ $(out_dir)/kos_print_heap_test$(exe_suffix) $(out_dir)
 
 pseudotty_scripts =  interactive
-#pseudotty_scripts += sigwinch
+ifneq ($(shell uname -m),s390x) # signal tests hang on IBM Z in Travis
+pseudotty_scripts += sigwinch
 pseudotty_scripts += sigstop
+endif
 
 pseudotty = $(out_dir)/pseudotty/pseudotty
 $(pseudotty)::
