@@ -174,8 +174,10 @@ print_heap_test:
 	@./$@ $(out_dir)/kos_print_heap_test$(exe_suffix) $(out_dir)
 
 pseudotty_scripts =  interactive
+ifneq ($(shell uname -m),s390x) # signal tests hang on IBM Z in Travis
 pseudotty_scripts += sigwinch
 pseudotty_scripts += sigstop
+endif
 
 pseudotty = $(out_dir)/pseudotty/pseudotty
 $(pseudotty)::
@@ -194,12 +196,8 @@ $(foreach test, $(pseudotty_scripts), $(eval $(call PSEUDOTTY_RULE,$(test))))
 ifeq (,$(filter Linux Darwin %BSD, $(UNAME)))
     pseudotty_test_list =
 else
-    ifneq (,$(filter s390x ppc64le,$(shell uname -m))) # pseudotty tests hang on PPC64LE and IBM Z in Travis
-        pseudotty_test_list =
-    else
-        pseudotty_test_list = $(addprefix pseudotty_, $(pseudotty_scripts))
-        default: $(pseudotty)
-    endif
+    pseudotty_test_list = $(addprefix pseudotty_, $(pseudotty_scripts))
+    default: $(pseudotty)
 endif
 
 all_tests = $(standalone_tests) $(parser_test_list) $(interactive_scripts) module_paths print_heap_test $(pseudotty_test_list) $(interpreter_test_list) $(interpreter_fail_test_list)

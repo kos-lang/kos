@@ -207,6 +207,12 @@ fi
 
 unset debug
 if [ "$RUN_RELEASE" = "1" ]; then
+    # Kill release build after 2 minutes in Travis
+    ARCH=$(uname -m)
+    if [ "$ARCH" = "ppc64le" -o "$ARCH" = "s390x" ]; then
+        sleep 120 && pkill kos &
+    fi
+
     export builtin_modules=0
     runtests c11 c++11
     unset builtin_modules
