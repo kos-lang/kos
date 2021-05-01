@@ -11,7 +11,9 @@
 
 typedef struct KOS_BUFFER_STORAGE_S {
     KOS_OBJ_HEADER       header;
+    uint8_t             *ptr;
     KOS_ATOMIC(uint32_t) capacity;
+    uint32_t             flags;
     uint8_t              buf[1];
 } KOS_BUFFER_STORAGE;
 
@@ -29,13 +31,13 @@ static inline const uint8_t *KOS_buffer_data_const(KOS_OBJ_ID obj_id)
     const KOS_OBJ_ID buf_obj = KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, obj_id)->data);
     assert( ! IS_BAD_PTR(buf_obj));
     KOS_BUFFER_STORAGE *data = OBJPTR(BUFFER_STORAGE, buf_obj);
-    return &data->buf[0];
+    return data->ptr;
 }
 
 #else
 
 #define KOS_get_buffer_size(obj_id) (KOS_atomic_read_relaxed_u32(OBJPTR(BUFFER, (obj_id))->size))
-#define KOS_buffer_data_const(obj_id) ((const uint8_t *)(&OBJPTR(BUFFER_STORAGE, KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, (obj_id))->data))->buf[0]))
+#define KOS_buffer_data_const(obj_id) ((const uint8_t *)(OBJPTR(BUFFER_STORAGE, KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, (obj_id))->data))->ptr))
 
 #endif
 
@@ -46,6 +48,11 @@ extern "C" {
 KOS_API
 KOS_OBJ_ID KOS_new_buffer(KOS_CONTEXT ctx,
                           unsigned    size);
+
+KOS_API
+KOS_OBJ_ID KOS_new_external_buffer(KOS_CONTEXT ctx,
+                                   void       *ptr,
+                                   unsigned    size);
 
 KOS_API
 int KOS_buffer_reserve(KOS_CONTEXT ctx,

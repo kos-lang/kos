@@ -99,6 +99,7 @@
     KOS_new_const_string;
     KOS_new_cstring;
     KOS_new_dynamic_prop;
+    KOS_new_external_buffer;
     KOS_new_float;
     KOS_new_from_native;
     KOS_new_function;

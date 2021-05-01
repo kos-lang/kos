@@ -11,10 +11,11 @@
 #include "kos_object_internal.h"
 #include <string.h>
 
-KOS_DECLARE_STATIC_CONST_STRING(str_err_empty,          "cannot modify empty buffer");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_make_room_size, "buffer size limit exceeded");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_not_buffer,     "object is not a buffer");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_read_only,      "buffer is read-only");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_empty,            "cannot modify empty buffer");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_external_storage, "buffer with external storage has fixed capacity");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_make_room_size,   "buffer size limit exceeded");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_buffer,       "object is not a buffer");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_read_only,        "buffer is read-only");
 
 #define KOS_buffer_alloc_size(cap) (sizeof(KOS_BUFFER_STORAGE) + ((cap) - 1U))
 
@@ -32,7 +33,7 @@ static KOS_BUFFER_STORAGE *alloc_buffer(KOS_CONTEXT ctx, unsigned capacity)
      * Therefore in debug builds, we fill it with random data to trigger
      * any bugs more easily.
      */
-    if (data) {
+    if (data && capacity) {
         static struct KOS_RNG rng;
         static int            init = 0;
         uint64_t             *buf = (uint64_t *)&data->buf[0];
@@ -61,8 +62,11 @@ static KOS_BUFFER_STORAGE *alloc_buffer(KOS_CONTEXT ctx, unsigned capacity)
     }
 #endif
 
-    if (data)
+    if (data) {
+        data->ptr   = &data->buf[0];
+        data->flags = 0;
         KOS_atomic_write_release_u32(data->capacity, capacity);
+    }
 
     return data;
 }
@@ -101,6 +105,42 @@ KOS_OBJ_ID KOS_new_buffer(KOS_CONTEXT ctx,
     return KOS_destroy_top_local(ctx, &obj);
 }
 
+KOS_OBJ_ID KOS_new_external_buffer(KOS_CONTEXT ctx,
+                                   void       *ptr,
+                                   unsigned    size)
+{
+    KOS_LOCAL obj;
+
+    KOS_init_local(ctx, &obj);
+
+    obj.o = OBJID(BUFFER, (KOS_BUFFER *)kos_alloc_object(ctx,
+                                                         KOS_ALLOC_MOVABLE,
+                                                         OBJ_BUFFER,
+                                                         sizeof(KOS_BUFFER)));
+    if ( ! IS_BAD_PTR(obj.o)) {
+
+        KOS_BUFFER_STORAGE *data;
+
+        OBJPTR(BUFFER, obj.o)->size  = size;
+        OBJPTR(BUFFER, obj.o)->flags = KOS_EXTERNAL_STORAGE;
+        OBJPTR(BUFFER, obj.o)->data  = KOS_BADPTR;
+
+        data = alloc_buffer(ctx, 0);
+
+        if (data) {
+            KOS_atomic_write_release_ptr(OBJPTR(BUFFER, obj.o)->data,
+                                         OBJID(BUFFER_STORAGE, data));
+            data->ptr      = (uint8_t *)ptr;
+            data->flags    = KOS_EXTERNAL_STORAGE;
+            data->capacity = size;
+        }
+        else
+            obj.o = KOS_BADPTR;
+    }
+
+    return KOS_destroy_top_local(ctx, &obj);
+}
+
 static KOS_BUFFER_STORAGE *get_data(KOS_OBJ_ID obj_id)
 {
     const KOS_OBJ_ID buf_obj = KOS_atomic_read_acquire_obj(OBJPTR(BUFFER, obj_id)->data);
@@ -132,6 +172,8 @@ int KOS_buffer_reserve(KOS_CONTEXT ctx,
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_buffer));
     else if (KOS_atomic_read_relaxed_u32(OBJPTR(BUFFER, obj.o)->flags) & KOS_READ_ONLY)
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_read_only));
+    else if (KOS_atomic_read_relaxed_u32(OBJPTR(BUFFER, obj.o)->flags) & KOS_EXTERNAL_STORAGE)
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_external_storage));
     else {
         for (;;) {
             uint32_t capacity;
@@ -153,7 +195,7 @@ int KOS_buffer_reserve(KOS_CONTEXT ctx,
                     continue;
 
                 if (size)
-                    memcpy(&buf->buf[0], &OBJPTR(BUFFER_STORAGE, old_buf.o)->buf[0], size);
+                    memcpy(buf->ptr, OBJPTR(BUFFER_STORAGE, old_buf.o)->ptr, size);
 
                 (void)KOS_atomic_cas_strong_ptr(OBJPTR(BUFFER, obj.o)->data,
                                                 old_buf.o,
@@ -245,7 +287,7 @@ uint8_t *KOS_buffer_data(KOS_CONTEXT ctx,
 
         assert(kos_is_tracked_object(buf_id) && ! kos_is_heap_object(buf_id));
 
-        ret = &OBJPTR(BUFFER_STORAGE, buf_id)->buf[0];
+        ret = OBJPTR(BUFFER_STORAGE, buf_id)->ptr;
     }
 
 cleanup:
@@ -271,7 +313,7 @@ uint8_t *KOS_buffer_data_volatile(KOS_CONTEXT ctx,
         else {
             KOS_BUFFER_STORAGE *data = OBJPTR(BUFFER_STORAGE, buf_obj);
 
-            ret = &data->buf[0];
+            ret = data->ptr;
         }
     }
 
@@ -355,7 +397,7 @@ int KOS_buffer_fill(KOS_CONTEXT ctx,
         end   = KOS_fix_index(end,   size);
 
         if (begin < end)
-            memset(&data->buf[begin], (int)value, (size_t)(end - begin));
+            memset(&data->ptr[begin], (int)value, (size_t)(end - begin));
 
         error = KOS_SUCCESS;
     }
@@ -394,8 +436,8 @@ int KOS_buffer_copy(KOS_CONTEXT ctx,
 
         if (src_begin < src_end && dest_begin < dest_size) {
             const size_t size = (size_t)KOS_min(src_end - src_begin, dest_size - dest_begin);
-            uint8_t     *dest = &dest_data->buf[dest_begin];
-            uint8_t     *src  = &src_data->buf[src_begin];
+            uint8_t     *dest = &dest_data->ptr[dest_begin];
+            uint8_t     *src  = &src_data->ptr[src_begin];
 
             if (src >= dest + size || src + size <= dest)
                 memcpy(dest, src, size);
@@ -445,7 +487,7 @@ KOS_OBJ_ID KOS_buffer_slice(KOS_CONTEXT ctx,
 
             if (new_size && ! IS_BAD_PTR(ret)) {
                 KOS_BUFFER_STORAGE *const dst_data = get_data(ret);
-                memcpy(dst_data->buf, &get_data(obj.o)->buf[begin], new_size);
+                memcpy(dst_data->ptr, &get_data(obj.o)->ptr[begin], new_size);
             }
         }
         else

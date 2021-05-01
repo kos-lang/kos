@@ -432,9 +432,12 @@ int KOS_lock_object(KOS_CONTEXT ctx,
             KOS_atomic_write_relaxed_u32(OBJPTR(ARRAY, obj_id)->flags, KOS_READ_ONLY);
             return KOS_SUCCESS;
 
-        case OBJ_BUFFER:
-            KOS_atomic_write_relaxed_u32(OBJPTR(BUFFER, obj_id)->flags, KOS_READ_ONLY);
+        case OBJ_BUFFER: {
+            uint32_t old_flags;
+            do old_flags = KOS_atomic_read_relaxed_u32(OBJPTR(BUFFER, obj_id)->flags);
+            while ( ! KOS_atomic_cas_weak_u32(OBJPTR(BUFFER, obj_id)->flags, old_flags, old_flags | KOS_READ_ONLY));
             return KOS_SUCCESS;
+        }
 
         default:
             break;

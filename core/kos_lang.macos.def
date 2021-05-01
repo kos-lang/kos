@@ -98,6 +98,7 @@ _KOS_new_const_ascii_string
 _KOS_new_const_string
 _KOS_new_cstring
 _KOS_new_dynamic_prop
+_KOS_new_external_buffer
 _KOS_new_float
 _KOS_new_from_native
 _KOS_new_function

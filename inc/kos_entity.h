@@ -344,7 +344,8 @@ typedef struct KOS_OBJECT_WITH_PRIVATE_S {
 } KOS_OBJECT_WITH_PRIVATE;
 
 enum KOS_BUF_FLAGS_E {
-    KOS_READ_ONLY = 1
+    KOS_READ_ONLY        = 1,   /* Buffer or array is read-only                          */
+    KOS_EXTERNAL_STORAGE = 2    /* Buffer storage is not managed by Kos (e.g. from mmap) */
 };
 
 typedef struct KOS_BUFFER_S {
@@ -354,7 +355,12 @@ typedef struct KOS_BUFFER_S {
     KOS_ATOMIC(KOS_OBJ_ID) data;
 } KOS_BUFFER;
 
-typedef struct KOS_BUFFER_S KOS_ARRAY;
+typedef struct KOS_ARRAY_S {
+    KOS_OBJ_HEADER         header;
+    KOS_ATOMIC(uint32_t)   size;
+    KOS_ATOMIC(uint32_t)   flags;
+    KOS_ATOMIC(KOS_OBJ_ID) data;
+} KOS_ARRAY;
 
 typedef KOS_OBJ_ID (*KOS_FUNCTION_HANDLER)(KOS_CONTEXT ctx,
                                            KOS_OBJ_ID  this_obj,

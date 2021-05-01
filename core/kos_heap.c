@@ -4,6 +4,7 @@
 
 #include "kos_heap.h"
 #include "../inc/kos_atomic.h"
+#include "../inc/kos_buffer.h"
 #include "../inc/kos_constants.h"
 #include "../inc/kos_instance.h"
 #include "../inc/kos_error.h"
@@ -2144,8 +2145,6 @@ static void update_child_ptrs(KOS_OBJ_HEADER *hdr)
         case OBJ_FLOAT:
             /* fall through */
         case OBJ_OPAQUE:
-            /* fall through */
-        case OBJ_BUFFER_STORAGE:
             break;
 
         case OBJ_STRING:
@@ -2214,6 +2213,11 @@ static void update_child_ptrs(KOS_OBJ_HEADER *hdr)
                 for ( ; item < end; ++item)
                     update_child_ptr((KOS_OBJ_ID *)item);
             }
+            break;
+
+        case OBJ_BUFFER_STORAGE:
+            if ( ! (((KOS_BUFFER_STORAGE *)hdr)->flags & KOS_EXTERNAL_STORAGE))
+                ((KOS_BUFFER_STORAGE *)hdr)->ptr = &((KOS_BUFFER_STORAGE *)hdr)->buf[0];
             break;
 
         case OBJ_FUNCTION:
