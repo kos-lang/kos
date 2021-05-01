@@ -97,18 +97,13 @@ void kos_set_seq_point(int seq_point)
 
 static void init_context(KOS_CONTEXT ctx, KOS_INSTANCE *inst)
 {
-    ctx->next        = KOS_NULL;
-    ctx->prev        = KOS_NULL;
-    ctx->gc_state    = GC_SUSPENDED;
-    ctx->inst        = inst;
-    ctx->cur_page    = KOS_NULL;
-    ctx->thread_obj  = KOS_BADPTR;
-    ctx->exception   = KOS_BADPTR;
-    ctx->stack       = KOS_BADPTR;
-    ctx->regs_idx    = 0;
-    ctx->stack_depth = 0;
-    ctx->local_list  = KOS_NULL;
-    ctx->ulocal_list = KOS_NULL;
+    memset(ctx, 0, sizeof(*ctx));
+
+    ctx->gc_state   = GC_SUSPENDED;
+    ctx->inst       = inst;
+    ctx->thread_obj = KOS_BADPTR;
+    ctx->exception  = KOS_BADPTR;
+    ctx->stack      = KOS_BADPTR;
 }
 
 static int register_thread(KOS_INSTANCE *inst,

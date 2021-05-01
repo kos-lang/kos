@@ -2278,12 +2278,12 @@ int KOS_extract_native_from_array(KOS_CONTEXT           ctx,
 
     KOS_init_local_with(ctx, &array, array_id);
 
+    va_start(args, alloc);
+
     assert( ! IS_BAD_PTR(array_id));
     if (GET_OBJ_TYPE(array_id) != OBJ_ARRAY)
         RAISE_EXCEPTION_STR(str_err_not_array);
     size = KOS_get_array_size(array_id);
-
-    va_start(args, alloc);
 
     while ( ! IS_BAD_PTR(convert->name)) {
 
@@ -2318,9 +2318,9 @@ int KOS_extract_native_from_array(KOS_CONTEXT           ctx,
         ++i;
     }
 
+cleanup:
     va_end(args);
 
-cleanup:
     KOS_destroy_top_local(ctx, &array);
 
     return error;
@@ -2340,10 +2340,10 @@ int KOS_extract_native_from_iterable(KOS_CONTEXT           ctx,
 
     KOS_init_local_with(ctx, &iterable, iterable_id);
 
+    va_start(args, alloc);
+
     iterable.o = KOS_new_iterator(ctx, iterable.o, KOS_CONTENTS);
     TRY_OBJID(iterable.o);
-
-    va_start(args, alloc);
 
     while ( ! IS_BAD_PTR(convert->name)) {
 
@@ -2384,9 +2384,9 @@ int KOS_extract_native_from_iterable(KOS_CONTEXT           ctx,
         ++i;
     }
 
+cleanup:
     va_end(args);
 
-cleanup:
     KOS_destroy_top_local(ctx, &iterable);
 
     return error;
@@ -2431,9 +2431,9 @@ int KOS_extract_native_from_object(KOS_CONTEXT           ctx,
         ++convert;
     }
 
+cleanup:
     va_end(args);
 
-cleanup:
     KOS_destroy_top_local(ctx, &object);
 
     return error;
@@ -2578,8 +2578,11 @@ KOS_OBJ_ID KOS_new_from_native(KOS_CONTEXT        ctx,
             default:
                 assert(convert->type == KOS_NATIVE_BUFFER);
                 elem_id = KOS_new_buffer(ctx, convert->size);
-                if ( ! IS_BAD_PTR(elem_id))
-                    memcpy(KOS_buffer_data_volatile(ctx, elem_id), value_ptr, convert->size);
+                if ( ! IS_BAD_PTR(elem_id)) {
+                    uint8_t *const dest = KOS_buffer_data_volatile(ctx, elem_id);
+                    if (dest)
+                        memcpy(dest, value_ptr, convert->size);
+                }
                 break;
         }
 
