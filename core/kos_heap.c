@@ -347,6 +347,25 @@ static void finalize_object(KOS_CONTEXT     ctx,
             break;
         }
 
+        case OBJ_BUFFER_STORAGE: {
+
+            KOS_BUFFER_EXTERNAL_STORAGE *obj = (KOS_BUFFER_EXTERNAL_STORAGE *)hdr;
+
+            if ((obj->flags & KOS_EXTERNAL_STORAGE) && obj->priv && obj->finalize) {
+
+                obj->finalize(ctx, obj->priv);
+
+                assert( ! KOS_is_exception_pending(ctx));
+
+                obj->finalize = KOS_NULL;
+                obj->priv     = KOS_NULL;
+                obj->ptr      = KOS_NULL;
+
+                ++stats->num_objs_finalized;
+            }
+            break;
+        }
+
         case OBJ_HUGE_TRACKER: {
 
             KOS_HUGE_TRACKER *obj = (KOS_HUGE_TRACKER *)hdr;

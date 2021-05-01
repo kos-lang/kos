@@ -472,6 +472,61 @@ static KOS_OBJ_ID alloc_buffer(KOS_CONTEXT  ctx,
     return obj_id[0];
 }
 
+static uint8_t ext_buffer[11];
+
+static void finalize_ext_buffer(KOS_CONTEXT ctx, void *ptr)
+{
+    ++*(uint8_t *)ptr;
+}
+
+static int verify_ext_buffer(KOS_OBJ_ID obj)
+{
+    TEST(GET_OBJ_TYPE(obj) == OBJ_BUFFER);
+    TEST(OBJPTR(BUFFER, obj)->size == sizeof(ext_buffer));
+
+    obj = OBJPTR(BUFFER, obj)->data;
+    TEST( ! IS_BAD_PTR(obj));
+    TEST(GET_OBJ_TYPE(obj) == OBJ_BUFFER_STORAGE);
+    TEST(((KOS_BUFFER_EXTERNAL_STORAGE *)OBJPTR(BUFFER_STORAGE, obj))->flags & KOS_EXTERNAL_STORAGE);
+    TEST(((KOS_BUFFER_EXTERNAL_STORAGE *)OBJPTR(BUFFER_STORAGE, obj))->ptr == &ext_buffer[0]);
+
+    TEST(ext_buffer[0] == 0);
+    return 0;
+}
+
+static KOS_OBJ_ID alloc_ext_buffer(KOS_CONTEXT  ctx,
+                                   uint32_t    *num_objs,
+                                   uint32_t    *total_size,
+                                   VERIFY_FUNC *verify)
+{
+    KOS_OBJ_ID  obj_id[2];
+    OBJECT_DESC desc[2] = {
+        { OBJ_BUFFER,         (uint32_t)sizeof(KOS_BUFFER) },
+        { OBJ_BUFFER_STORAGE, (uint32_t)sizeof(KOS_BUFFER_EXTERNAL_STORAGE) }
+    };
+
+    if (alloc_page_with_objects(ctx, obj_id, desc, NELEMS(obj_id)))
+        return KOS_BADPTR;
+
+    KOS_atomic_write_relaxed_u32(OBJPTR(BUFFER, obj_id[0])->size,  (uint32_t)sizeof(ext_buffer));
+    KOS_atomic_write_relaxed_ptr(OBJPTR(BUFFER, obj_id[0])->data,  obj_id[1]);
+    KOS_atomic_write_relaxed_u32(OBJPTR(BUFFER, obj_id[0])->flags, KOS_EXTERNAL_STORAGE);
+
+    KOS_atomic_write_relaxed_u32(OBJPTR(BUFFER_STORAGE, obj_id[1])->capacity, (uint32_t)sizeof(ext_buffer));
+    ((KOS_BUFFER_EXTERNAL_STORAGE *)OBJPTR(BUFFER_STORAGE, obj_id[1]))->ptr      = &ext_buffer[0];
+    ((KOS_BUFFER_EXTERNAL_STORAGE *)OBJPTR(BUFFER_STORAGE, obj_id[1]))->priv     = &ext_buffer[0];
+    ((KOS_BUFFER_EXTERNAL_STORAGE *)OBJPTR(BUFFER_STORAGE, obj_id[1]))->flags    = KOS_EXTERNAL_STORAGE;
+    ((KOS_BUFFER_EXTERNAL_STORAGE *)OBJPTR(BUFFER_STORAGE, obj_id[1]))->finalize = finalize_ext_buffer;
+
+    memset(ext_buffer, 0, sizeof(ext_buffer));
+
+    *num_objs   = NELEMS(obj_id);
+    *total_size = get_obj_sizes(obj_id, NELEMS(obj_id));
+    *verify     = &verify_ext_buffer;
+
+    return obj_id[0];
+}
+
 static int verify_empty_object(KOS_OBJ_ID obj_id)
 {
     TEST(GET_OBJ_TYPE(obj_id) == OBJ_OBJECT);
@@ -1168,6 +1223,7 @@ static int test_object(ALLOC_FUNC    alloc_object_func,
     VERIFY_FUNC  verify;
     int64_t      size;
     uint32_t     f47    = 0;
+    uint32_t     fext   = 0;
     uint32_t     num_objs;
     uint32_t     total_size;
 
@@ -1188,7 +1244,12 @@ static int test_object(ALLOC_FUNC    alloc_object_func,
         (((KOS_OBJECT_WITH_PRIVATE *)OBJPTR(OBJECT, obj.o))->finalize == finalize_47))
         f47 = 1;
 
+    if (GET_OBJ_TYPE(obj.o) == OBJ_BUFFER &&
+        (KOS_atomic_read_relaxed_u32(OBJPTR(BUFFER, obj.o)->flags) & KOS_EXTERNAL_STORAGE))
+        fext = 1;
+
     TEST(!f47 || private_test == 1);
+    TEST(!fext || ext_buffer[0] == 0);
 
     KOS_init_local_with(ctx, &obj, obj.o);
 
@@ -1200,6 +1261,7 @@ static int test_object(ALLOC_FUNC    alloc_object_func,
     TEST(verify(obj.o) == KOS_SUCCESS);
 
     TEST(!f47 || private_test == 1);
+    TEST(!fext || ext_buffer[0] == 0);
 
 #ifndef CONFIG_MAD_GC
     TEST(stats.num_objs_evacuated == num_objs);
@@ -1230,7 +1292,7 @@ static int test_object(ALLOC_FUNC    alloc_object_func,
 #ifndef CONFIG_MAD_GC
     TEST(stats.num_objs_evacuated == 0);
     TEST(stats.num_objs_freed     == num_objs + 1);
-    TEST(stats.num_objs_finalized == f47);
+    TEST(stats.num_objs_finalized == f47 + fext);
     TEST(stats.num_pages_kept     == 1);
     TEST(stats.num_pages_freed    == 1);
     TEST(stats.size_evacuated     == 0);
@@ -1241,6 +1303,8 @@ static int test_object(ALLOC_FUNC    alloc_object_func,
 
     TEST(!f47 || private_test == 47);
     private_test = 1;
+    TEST(!fext || ext_buffer[0] == 1);
+    ext_buffer[0] = 0;
 
     KOS_instance_destroy(&inst);
 
@@ -1517,6 +1581,7 @@ int main(void)
         TEST(test_object(alloc_array,        inst_flags, &base_stats) == KOS_SUCCESS);
         TEST(test_object(alloc_empty_buffer, inst_flags, &base_stats) == KOS_SUCCESS);
         TEST(test_object(alloc_buffer,       inst_flags, &base_stats) == KOS_SUCCESS);
+        TEST(test_object(alloc_ext_buffer,   inst_flags, &base_stats) == KOS_SUCCESS);
         TEST(test_object(alloc_empty_object, inst_flags, &base_stats) == KOS_SUCCESS);
         TEST(test_object(alloc_object,       inst_flags, &base_stats) == KOS_SUCCESS);
         TEST(test_object(alloc_finalize,     inst_flags, &base_stats) == KOS_SUCCESS);

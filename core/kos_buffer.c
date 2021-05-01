@@ -105,9 +105,11 @@ KOS_OBJ_ID KOS_new_buffer(KOS_CONTEXT ctx,
     return KOS_destroy_top_local(ctx, &obj);
 }
 
-KOS_OBJ_ID KOS_new_external_buffer(KOS_CONTEXT ctx,
-                                   void       *ptr,
-                                   unsigned    size)
+KOS_OBJ_ID KOS_new_external_buffer(KOS_CONTEXT  ctx,
+                                   void        *ptr,
+                                   unsigned     size,
+                                   void        *priv,
+                                   KOS_FINALIZE finalize)
 {
     KOS_LOCAL obj;
 
@@ -119,20 +121,23 @@ KOS_OBJ_ID KOS_new_external_buffer(KOS_CONTEXT ctx,
                                                          sizeof(KOS_BUFFER)));
     if ( ! IS_BAD_PTR(obj.o)) {
 
-        KOS_BUFFER_STORAGE *data;
+        KOS_BUFFER_EXTERNAL_STORAGE *data;
 
         OBJPTR(BUFFER, obj.o)->size  = size;
         OBJPTR(BUFFER, obj.o)->flags = KOS_EXTERNAL_STORAGE;
         OBJPTR(BUFFER, obj.o)->data  = KOS_BADPTR;
 
-        data = alloc_buffer(ctx, 0);
+        data = (KOS_BUFFER_EXTERNAL_STORAGE *)alloc_buffer(ctx,
+                (unsigned)(sizeof(KOS_BUFFER_EXTERNAL_STORAGE) - sizeof(KOS_BUFFER_STORAGE)));
 
         if (data) {
             KOS_atomic_write_release_ptr(OBJPTR(BUFFER, obj.o)->data,
-                                         OBJID(BUFFER_STORAGE, data));
+                                         OBJID(BUFFER_STORAGE, (KOS_BUFFER_STORAGE *)data));
             data->ptr      = (uint8_t *)ptr;
             data->flags    = KOS_EXTERNAL_STORAGE;
             data->capacity = size;
+            data->priv     = priv;
+            data->finalize = finalize;
         }
         else
             obj.o = KOS_BADPTR;
