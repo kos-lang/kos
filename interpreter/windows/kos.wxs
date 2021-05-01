@@ -62,6 +62,7 @@
 
         <!-- Installer UI -->
         <Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR" />
+        <WixVariable Id="WixUILicenseRtf" Value="license.rtf" />
         <WixVariable Id="WixUIBannerBmp" Value="kos_installer_top_banner.bmp" />
         <WixVariable Id="WixUIDialogBmp" Value="kos_installer_dialog.bmp" />
         <UIRef Id="WixUI_InstallDir" />

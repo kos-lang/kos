@@ -118,8 +118,11 @@ pkg_sources()
     cd - > /dev/null
 }
 
+# Create MacOS package
 if [ "$UNAME" = "Darwin" ]; then
     create_pkg_dir
+
+    cp interpreter/macos/uninstall.sh "$PKGDIR"/share/kos
 
     PKGNAME_AMD64="$PKGNAME-macos-x86_64"
     productbuild --root "$PKGDIR" /usr/local --product interpreter/macos/kos-x86_64.plist "$BUILDDIR"/"$PKGNAME_AMD64.pkg"
@@ -127,6 +130,7 @@ if [ "$UNAME" = "Darwin" ]; then
     shasum -a 256 "$PKGNAME_AMD64.pkg" | tee "$PKGNAME_AMD64.pkg.sha"
     cd - >/dev/null
 
+# Create Linux package
 elif [ "$UNAME" = "Linux" ]; then
     create_pkg_dir
 
@@ -161,6 +165,8 @@ elif [ "$UNAME" = "Linux" ]; then
 
     cd "$BUILDDIR"
     shasum -a 256 "$PKGNAME.deb" | tee "$PKGNAME.deb.sha"
+
+# Create Windows package
 elif [ "$UNAME" = "Windows" ]; then
     create_pkg_dir
     PKGNAME="$PKGNAME-windows-x86"
@@ -169,6 +175,7 @@ elif [ "$UNAME" = "Windows" ]; then
     cp interpreter/artwork/kos.ico "$PKGDIR"/
     cp interpreter/artwork/kos_installer_top_banner.bmp "$PKGDIR"/
     cp interpreter/artwork/kos_installer_dialog.bmp "$PKGDIR"/
+    cp interpreter/windows/license.rtf "$PKGDIR"/
 
     cd "$PKGDIR"
     MODDEFS=""
