@@ -838,7 +838,7 @@ void kos_lexer_init(KOS_LEXER  *lexer,
     lexer->old_pos.column  = 0;
 
     /* Ignore UTF-8 byte order mark at the beginning of a file */
-    if (begin + 3 <= end   &&
+    if ((uintptr_t)begin + 3U <= (uintptr_t)end &&
         begin[0] == '\xEF' &&
         begin[1] == '\xBB' &&
         begin[2] == '\xBF') {

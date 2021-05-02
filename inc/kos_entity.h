@@ -100,7 +100,7 @@ static inline intptr_t GET_SMALL_INT(KOS_OBJ_ID obj_id) {
     return reinterpret_cast<intptr_t>(obj_id) / 2;
 }
 static inline KOS_OBJ_ID TO_SMALL_INT(intptr_t value) {
-    return reinterpret_cast<KOS_OBJ_ID>(value << 1);
+    return reinterpret_cast<KOS_OBJ_ID>(static_cast<uintptr_t>(value) << 1);
 }
 static inline bool IS_BAD_PTR(KOS_OBJ_ID obj_id) {
     return reinterpret_cast<intptr_t>(obj_id) == 1;
