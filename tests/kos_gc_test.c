@@ -417,8 +417,9 @@ static KOS_OBJ_ID alloc_empty_buffer(KOS_CONTEXT  ctx,
     if (IS_BAD_PTR(obj_id))
         return KOS_BADPTR;
 
-    KOS_atomic_write_relaxed_u32(OBJPTR(BUFFER, obj_id)->size, 0U);
-    KOS_atomic_write_relaxed_ptr(OBJPTR(BUFFER, obj_id)->data, KOS_BADPTR);
+    KOS_atomic_write_relaxed_u32(OBJPTR(BUFFER, obj_id)->size,  0U);
+    KOS_atomic_write_relaxed_u32(OBJPTR(BUFFER, obj_id)->flags, 0U);
+    KOS_atomic_write_relaxed_ptr(OBJPTR(BUFFER, obj_id)->data,  KOS_BADPTR);
 
     *num_objs   = 1;
     *total_size = get_obj_size(obj_id);
@@ -459,10 +460,12 @@ static KOS_OBJ_ID alloc_buffer(KOS_CONTEXT  ctx,
     if (alloc_page_with_objects(ctx, obj_id, desc, NELEMS(obj_id)))
         return KOS_BADPTR;
 
-    KOS_atomic_write_relaxed_u32(OBJPTR(BUFFER, obj_id[0])->size, (uint32_t)sizeof(buffer_test));
-    KOS_atomic_write_relaxed_ptr(OBJPTR(BUFFER, obj_id[0])->data, obj_id[1]);
+    KOS_atomic_write_relaxed_u32(OBJPTR(BUFFER, obj_id[0])->size,  (uint32_t)sizeof(buffer_test));
+    KOS_atomic_write_relaxed_u32(OBJPTR(BUFFER, obj_id[0])->flags, 0U);
+    KOS_atomic_write_relaxed_ptr(OBJPTR(BUFFER, obj_id[0])->data,  obj_id[1]);
 
     KOS_atomic_write_relaxed_u32(OBJPTR(BUFFER_STORAGE, obj_id[1])->capacity, (uint32_t)sizeof(buffer_test));
+    OBJPTR(BUFFER_STORAGE, obj_id[1])->flags = 0;
     memcpy(&OBJPTR(BUFFER_STORAGE, obj_id[1])->buf[0], buffer_test, sizeof(buffer_test));
 
     *num_objs   = NELEMS(obj_id);
@@ -1872,6 +1875,29 @@ int main(void)
         KOS_instance_destroy(&inst);
 
         TEST(finalized == 47);
+    }
+
+    /************************************************************************/
+    /* Test external buffer finalization when destroying instance */
+    {
+        KOS_LOCAL obj;
+
+        TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
+
+        KOS_init_local(ctx, &obj);
+
+        memset(ext_buffer, 0, sizeof(ext_buffer));
+
+        obj.o = KOS_new_external_buffer(ctx, &ext_buffer, sizeof(ext_buffer), &ext_buffer, finalize_ext_buffer);
+        TEST( ! IS_BAD_PTR(obj.o));
+
+        TEST(KOS_collect_garbage(ctx, 0) == KOS_SUCCESS);
+
+        TEST(ext_buffer[0] == 0);
+
+        KOS_instance_destroy(&inst);
+
+        TEST(ext_buffer[0] == 1);
     }
 
 #define SMALL_HEAP_PAGES (1U << (KOS_POOL_BITS - KOS_PAGE_BITS))
