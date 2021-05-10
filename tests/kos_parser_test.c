@@ -343,7 +343,7 @@ int main(int argc, char *argv[])
 {
     KOS_PARSER           parser;
     struct KOS_FILEBUF_S file_buf;
-    struct KOS_MEMPOOL_S allocator;
+    KOS_MEMPOOL          allocator;
     const char          *file_end;
     const char          *buf;
     int                  error;

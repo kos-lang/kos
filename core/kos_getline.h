@@ -9,7 +9,7 @@
 
 typedef struct KOS_GETLINE_S {
     struct KOS_GETLINE_HISTORY_NODE_S *head;
-    struct KOS_MEMPOOL_S               allocator;
+    KOS_MEMPOOL                        allocator;
 } KOS_GETLINE;
 
 enum KOS_PROMPT_E {

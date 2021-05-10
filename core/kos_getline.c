@@ -378,27 +378,27 @@ struct TERM_POS {
 
 struct TERM_EDIT {
     /* Line of text being edited, actual bytes */
-    KOS_VECTOR          *line;
+    KOS_VECTOR     *line;
     /* Prompt string (ASCII) */
-    const char          *prompt;
+    const char     *prompt;
     /* Number of logical characters in line (for UTF-8 this is less than bytes in line) */
-    unsigned             line_size;
+    unsigned        line_size;
     /* Number of visible (logical) columns, i.e. terminal width */
-    unsigned             num_columns;
+    unsigned        num_columns;
     /* Number of logical characters in prompt (same as number of bytes) */
-    unsigned             prompt_size;
+    unsigned        prompt_size;
     /* Maximum index of a visible column */
-    unsigned             last_visible_column;
+    unsigned        last_visible_column;
     /* First character drawn (0-based) */
-    struct TERM_POS      scroll_pos;
+    struct TERM_POS scroll_pos;
     /* First char shown (0-based, from the beginning of actual line) */
-    struct TERM_POS      cursor_pos;
+    struct TERM_POS cursor_pos;
     /* Indicates whether the terminal is interactive */
-    int                  interactive;
+    int             interactive;
     /* Allocator for temporary history nodes */
-    struct KOS_MEMPOOL_S temp_allocator;
+    KOS_MEMPOOL     temp_allocator;
     /* Currently selected history node */
-    HIST_NODE           *cur_hist_node;
+    HIST_NODE      *cur_hist_node;
 };
 
 enum KEY_CODE_E {
@@ -771,7 +771,7 @@ struct KOS_GETLINE_HISTORY_NODE_S {
 
 int kos_getline_init(KOS_GETLINE *state)
 {
-    KOS_mempool_init(&state->allocator);
+    KOS_mempool_init_small(&state->allocator, 0x1000U);
 
     state->head = KOS_NULL;
 
@@ -785,10 +785,10 @@ void kos_getline_destroy(KOS_GETLINE *state)
     state->head = KOS_NULL;
 }
 
-static HIST_NODE *alloc_history_node(struct KOS_MEMPOOL_S *allocator,
-                                     const char           *str,
-                                     size_t                size,
-                                     size_t                num_chars)
+static HIST_NODE *alloc_history_node(KOS_MEMPOOL *allocator,
+                                     const char  *str,
+                                     size_t       size,
+                                     size_t       num_chars)
 {
     const size_t capacity   = KOS_align_up(size, (size_t)16);
     const size_t alloc_size = sizeof(HIST_NODE) - 1 + capacity;
@@ -1403,7 +1403,7 @@ int kos_getline(KOS_GETLINE      *state,
         edit.prompt_size = sizeof(str_prompt) - 1;
     }
 
-    KOS_mempool_init(&edit.temp_allocator);
+    KOS_mempool_init_small(&edit.temp_allocator, 0x1000U);
     error = init_history(&edit, state->head);
 
     if ( ! error && KOS_is_stdin_interactive() && is_term_set()) {

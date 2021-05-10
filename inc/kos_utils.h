@@ -62,7 +62,7 @@ enum KOS_CONVERT_TYPE_E {
     KOS_NATIVE_BUFFER
 };
 
-struct KOS_MEMPOOL_S;
+typedef struct KOS_MEMPOOL_S KOS_MEMPOOL;
 
 #ifdef __cplusplus
 extern "C" {
@@ -92,40 +92,40 @@ int KOS_get_index_arg(KOS_CONTEXT           ctx,
                       int                  *found_pos);
 
 KOS_API
-int KOS_extract_native_value(KOS_CONTEXT           ctx,
-                             KOS_OBJ_ID            value_id,
-                             const KOS_CONVERT    *convert,
-                             struct KOS_MEMPOOL_S *alloc,
-                             void                 *value_ptr);
+int KOS_extract_native_value(KOS_CONTEXT        ctx,
+                             KOS_OBJ_ID         value_id,
+                             const KOS_CONVERT *convert,
+                             KOS_MEMPOOL       *alloc,
+                             void              *value_ptr);
 
 KOS_API
-int KOS_extract_native_from_array(KOS_CONTEXT           ctx,
-                                  KOS_OBJ_ID            array_id,
-                                  const char           *element_name,
-                                  const KOS_CONVERT    *convert,
-                                  struct KOS_MEMPOOL_S *alloc,
+int KOS_extract_native_from_array(KOS_CONTEXT        ctx,
+                                  KOS_OBJ_ID         array_id,
+                                  const char        *element_name,
+                                  const KOS_CONVERT *convert,
+                                  KOS_MEMPOOL       *alloc,
                                   ...);
 
 KOS_API
-int KOS_extract_native_from_iterable(KOS_CONTEXT           ctx,
-                                     KOS_OBJ_ID            iterable_id,
-                                     const KOS_CONVERT    *convert,
-                                     struct KOS_MEMPOOL_S *alloc,
+int KOS_extract_native_from_iterable(KOS_CONTEXT        ctx,
+                                     KOS_OBJ_ID         iterable_id,
+                                     const KOS_CONVERT *convert,
+                                     KOS_MEMPOOL       *alloc,
                                      ...);
 
 KOS_API
-int KOS_extract_native_from_object(KOS_CONTEXT           ctx,
-                                   KOS_OBJ_ID            object_id,
-                                   const KOS_CONVERT    *convert,
-                                   struct KOS_MEMPOOL_S *alloc,
+int KOS_extract_native_from_object(KOS_CONTEXT        ctx,
+                                   KOS_OBJ_ID         object_id,
+                                   const KOS_CONVERT *convert,
+                                   KOS_MEMPOOL       *alloc,
                                    ...);
 
 KOS_API
-int KOS_extract_native_struct_from_object(KOS_CONTEXT           ctx,
-                                          KOS_OBJ_ID            object_id,
-                                          const KOS_CONVERT    *convert,
-                                          struct KOS_MEMPOOL_S *alloc,
-                                          void                 *struct_ptr);
+int KOS_extract_native_struct_from_object(KOS_CONTEXT        ctx,
+                                          KOS_OBJ_ID         object_id,
+                                          const KOS_CONVERT *convert,
+                                          KOS_MEMPOOL       *alloc,
+                                          void              *struct_ptr);
 
 KOS_API
 KOS_OBJ_ID KOS_new_from_native(KOS_CONTEXT        ctx,

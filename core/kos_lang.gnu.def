@@ -79,6 +79,7 @@
     KOS_mempool_alloc;
     KOS_mempool_destroy;
     KOS_mempool_init;
+    KOS_mempool_init_small;
     KOS_module_add_constructor;
     KOS_module_add_function;
     KOS_module_add_global;

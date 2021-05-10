@@ -34,9 +34,9 @@ typedef struct TEST_STRUCT_S {
 
 int main(void)
 {
-    KOS_INSTANCE         inst;
-    KOS_CONTEXT          ctx;
-    struct KOS_MEMPOOL_S alloc;
+    KOS_INSTANCE inst;
+    KOS_CONTEXT  ctx;
+    KOS_MEMPOOL  alloc;
 
     KOS_mempool_init(&alloc);
 

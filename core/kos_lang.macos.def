@@ -78,6 +78,7 @@ _KOS_malloc_aligned
 _KOS_mempool_alloc
 _KOS_mempool_destroy
 _KOS_mempool_init
+_KOS_mempool_init_small
 _KOS_module_add_constructor
 _KOS_module_add_function
 _KOS_module_add_global

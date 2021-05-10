@@ -16,12 +16,16 @@ extern "C" {
 
 struct KOS_MEMPOOL_S {
     size_t free_size;
+    void  *next_free;
     void  *buffers;
 };
 
-KOS_API void  KOS_mempool_init(struct KOS_MEMPOOL_S *mempool);
-KOS_API void  KOS_mempool_destroy(struct KOS_MEMPOOL_S *mempool);
-KOS_API void *KOS_mempool_alloc(struct KOS_MEMPOOL_S *mempool, size_t size);
+typedef struct KOS_MEMPOOL_S KOS_MEMPOOL;
+
+KOS_API void  KOS_mempool_init(KOS_MEMPOOL *mempool);
+KOS_API void  KOS_mempool_init_small(KOS_MEMPOOL *mempool, size_t initial_size);
+KOS_API void  KOS_mempool_destroy(KOS_MEMPOOL *mempool);
+KOS_API void *KOS_mempool_alloc(KOS_MEMPOOL *mempool, size_t size);
 
 /* Dynamic array of bytes */
 

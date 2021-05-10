@@ -347,7 +347,7 @@ static int is_input_complete(KOS_VECTOR *buf,
     PROF_ZONE(MODULE)
 
     KOS_PARSER             parser;
-    struct KOS_MEMPOOL_S   mempool;
+    KOS_MEMPOOL            mempool;
     int                    error;
     struct KOS_AST_NODE_S *out;
 

@@ -262,7 +262,7 @@ typedef struct KOS_COMP_UNIT_S {
     KOS_COMP_CONST      *last_constant;
     int                  num_constants;
 
-    struct KOS_MEMPOOL_S allocator;
+    KOS_MEMPOOL          allocator;
 
     KOS_VECTOR           code_buf;
     KOS_VECTOR           code_gen_buf;

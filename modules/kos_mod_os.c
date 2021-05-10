@@ -111,10 +111,10 @@ static int check_arg_type(KOS_CONTEXT ctx,
     return KOS_SUCCESS;
 }
 
-static int get_string(KOS_CONTEXT           ctx,
-                      KOS_OBJ_ID            obj_id,
-                      struct KOS_MEMPOOL_S *alloc,
-                      char                **out_cstr)
+static int get_string(KOS_CONTEXT  ctx,
+                      KOS_OBJ_ID   obj_id,
+                      KOS_MEMPOOL *alloc,
+                      char       **out_cstr)
 {
     unsigned str_len = 0;
     char    *buf;
@@ -159,7 +159,7 @@ struct CONSTRUCT_ARRAY
 };
 
 static int make_room(KOS_CONTEXT             ctx,
-                     struct KOS_MEMPOOL_S   *alloc,
+                     KOS_MEMPOOL            *alloc,
                      struct CONSTRUCT_ARRAY *array,
                      size_t                  size)
 {
@@ -194,7 +194,7 @@ static void append_str(struct CONSTRUCT_ARRAY *array,
 }
 
 static int append_arg(KOS_CONTEXT             ctx,
-                      struct KOS_MEMPOOL_S   *alloc,
+                      KOS_MEMPOOL            *alloc,
                       const char             *elem_cstr,
                       struct CONSTRUCT_ARRAY *args)
 {
@@ -222,7 +222,7 @@ static int append_arg(KOS_CONTEXT             ctx,
 }
 
 static int append_env_var(KOS_CONTEXT             ctx,
-                          struct KOS_MEMPOOL_S   *alloc,
+                          KOS_MEMPOOL            *alloc,
                           struct CONSTRUCT_ARRAY *env,
                           KOS_OBJ_ID              iter,
                           unsigned                key_len,
@@ -246,11 +246,11 @@ static int append_env_var(KOS_CONTEXT             ctx,
     return KOS_SUCCESS;
 }
 
-static int get_args_array(KOS_CONTEXT           ctx,
-                          KOS_OBJ_ID            obj_id,
-                          struct KOS_MEMPOOL_S *alloc,
-                          char                 *program_cstr,
-                          PROCESS_ARRAY        *out_array)
+static int get_args_array(KOS_CONTEXT    ctx,
+                          KOS_OBJ_ID     obj_id,
+                          KOS_MEMPOOL   *alloc,
+                          char          *program_cstr,
+                          PROCESS_ARRAY *out_array)
 {
     struct CONSTRUCT_ARRAY args      = { KOS_NULL, 0U, 0U };
     const uint32_t         num_elems = KOS_get_array_size(obj_id);
@@ -312,11 +312,11 @@ static void advance_env_ptr(ENV_PTR *env)
 
 typedef char **PROCESS_ARRAY;
 
-static int get_args_array(KOS_CONTEXT           ctx,
-                          KOS_OBJ_ID            obj_id,
-                          struct KOS_MEMPOOL_S *alloc,
-                          char                 *program_cstr,
-                          PROCESS_ARRAY        *out_array)
+static int get_args_array(KOS_CONTEXT    ctx,
+                          KOS_OBJ_ID     obj_id,
+                          KOS_MEMPOOL   *alloc,
+                          char          *program_cstr,
+                          PROCESS_ARRAY *out_array)
 {
     int            error     = KOS_SUCCESS;
     const uint32_t num_elems = KOS_get_array_size(obj_id);
@@ -385,11 +385,11 @@ static void advance_env_ptr(ENV_PTR *env)
 }
 #endif
 
-static int get_env_array(KOS_CONTEXT           ctx,
-                         KOS_OBJ_ID            obj_id,
-                         int                   inherit_env,
-                         struct KOS_MEMPOOL_S *alloc,
-                         PROCESS_ARRAY        *out_array)
+static int get_env_array(KOS_CONTEXT    ctx,
+                         KOS_OBJ_ID     obj_id,
+                         int            inherit_env,
+                         KOS_MEMPOOL   *alloc,
+                         PROCESS_ARRAY *out_array)
 {
     KOS_LOCAL obj;
     KOS_LOCAL in_obj;
@@ -861,10 +861,10 @@ static int get_wait_info(KOS_CONTEXT         ctx,
 }
 
 #ifdef _WIN32
-static int find_program(KOS_CONTEXT           ctx,
-                        struct KOS_MEMPOOL_S *alloc,
-                        const char           *cwd,
-                        char                **program_cstr)
+static int find_program(KOS_CONTEXT  ctx,
+                        KOS_MEMPOOL *alloc,
+                        const char  *cwd,
+                        char       **program_cstr)
 {
     /* On Windows, CreateProcess() already looks for the program using various techniques, including PATH */
     return KOS_SUCCESS;
@@ -900,11 +900,11 @@ static int does_file_exist(const char *path)
 
 struct CONCAT_BUF_MGR
 {
-    struct KOS_MEMPOOL_S *alloc;
-    char                 *buf;
-    size_t                buf_size;
-    const char           *orig_prog_name;
-    size_t                orig_prog_name_len;
+    KOS_MEMPOOL *alloc;
+    char        *buf;
+    size_t       buf_size;
+    const char  *orig_prog_name;
+    size_t       orig_prog_name_len;
 };
 
 static int concat_path(struct CONCAT_BUF_MGR *buf_mgr,
@@ -935,10 +935,10 @@ static int concat_path(struct CONCAT_BUF_MGR *buf_mgr,
     return KOS_SUCCESS;
 }
 
-static int find_program(KOS_CONTEXT           ctx,
-                        struct KOS_MEMPOOL_S *alloc,
-                        const char           *cwd,
-                        char                **program_cstr)
+static int find_program(KOS_CONTEXT  ctx,
+                        KOS_MEMPOOL *alloc,
+                        const char  *cwd,
+                        char       **program_cstr)
 {
     struct CONCAT_BUF_MGR buf_mgr;
 
@@ -1079,33 +1079,33 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
                         KOS_OBJ_ID  this_obj,
                         KOS_OBJ_ID  args_obj)
 {
-    KOS_LOCAL            process;
-    KOS_LOCAL            args;
-    KOS_LOCAL            desc;
-    struct KOS_MEMPOOL_S alloc;
-    KOS_OBJ_ID           value_obj;
-    KOS_OBJ_ID           inherit_env;
-    KOS_OBJ_ID           file_obj;
-    struct KOS_WAIT_S   *wait_info;
-    char                *program_cstr      = KOS_NULL;
-    char                *cwd               = KOS_NULL;
-    PROCESS_ARRAY        args_array        = KOS_NULL;
-    PROCESS_ARRAY        env_array         = KOS_NULL;
+    KOS_LOCAL          process;
+    KOS_LOCAL          args;
+    KOS_LOCAL          desc;
+    KOS_MEMPOOL        alloc;
+    KOS_OBJ_ID         value_obj;
+    KOS_OBJ_ID         inherit_env;
+    KOS_OBJ_ID         file_obj;
+    struct KOS_WAIT_S *wait_info;
+    char              *program_cstr      = KOS_NULL;
+    char              *cwd               = KOS_NULL;
+    PROCESS_ARRAY      args_array        = KOS_NULL;
+    PROCESS_ARRAY      env_array         = KOS_NULL;
 #ifdef _WIN32
-    HANDLE               stdin_file        = INVALID_HANDLE_VALUE;
-    HANDLE               stdout_file       = INVALID_HANDLE_VALUE;
-    HANDLE               stderr_file       = INVALID_HANDLE_VALUE;
+    HANDLE             stdin_file        = INVALID_HANDLE_VALUE;
+    HANDLE             stdout_file       = INVALID_HANDLE_VALUE;
+    HANDLE             stderr_file       = INVALID_HANDLE_VALUE;
 #else
-    FILE                *stdin_file        = KOS_NULL;
-    FILE                *stdout_file       = KOS_NULL;
-    FILE                *stderr_file       = KOS_NULL;
-    int                  exec_status_fd[2] = { -1, -1 };
+    FILE              *stdin_file        = KOS_NULL;
+    FILE              *stdout_file       = KOS_NULL;
+    FILE              *stderr_file       = KOS_NULL;
+    int                exec_status_fd[2] = { -1, -1 };
 #endif
-    int                  error             = KOS_SUCCESS;
+    int                error             = KOS_SUCCESS;
 
     assert(KOS_get_array_size(args_obj) >= 8);
 
-    KOS_mempool_init(&alloc);
+    KOS_mempool_init_small(&alloc, 0x1000U);
     KOS_init_local(     ctx, &process);
     KOS_init_local_with(ctx, &args, args_obj);
     KOS_init_local_with(ctx, &desc, KOS_array_read(ctx, args_obj, 0));

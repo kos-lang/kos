@@ -17,13 +17,38 @@ struct MEMPOOL_BUF {
     uint8_t             buf[8];
 };
 
-void KOS_mempool_init(struct KOS_MEMPOOL_S *mempool)
+void KOS_mempool_init(KOS_MEMPOOL *mempool)
 {
     mempool->free_size = 0;
+    mempool->next_free = KOS_NULL;
     mempool->buffers   = KOS_NULL;
 }
 
-void KOS_mempool_destroy(struct KOS_MEMPOOL_S *mempool)
+void KOS_mempool_init_small(KOS_MEMPOOL *mempool, size_t initial_size)
+{
+    struct MEMPOOL_BUF *buf = KOS_NULL;
+
+    mempool->free_size = 0;
+    mempool->next_free = KOS_NULL;
+    mempool->buffers   = KOS_NULL;
+
+    initial_size = (initial_size + 1023U) & ~1023U;
+
+    buf = (struct MEMPOOL_BUF *)KOS_malloc(initial_size);
+
+    if (buf) {
+        buf->next          = KOS_NULL;
+        mempool->buffers   = buf;
+        mempool->next_free = &buf->buf[0];
+        mempool->free_size = initial_size - sizeof(struct MEMPOOL_BUF) + 8U;
+    }
+
+    /* We ignore memory allocation failure here.  In such case there will be an actual
+     * error in KOS_mempool_alloc() which will be propagated to the caller.
+     */
+}
+
+void KOS_mempool_destroy(KOS_MEMPOOL *mempool)
 {
     struct MEMPOOL_BUF *buf = (struct MEMPOOL_BUF *)(mempool->buffers);
 
@@ -36,7 +61,7 @@ void KOS_mempool_destroy(struct KOS_MEMPOOL_S *mempool)
     }
 }
 
-static void *alloc_large(struct KOS_MEMPOOL_S *mempool, size_t size)
+static void *alloc_large(KOS_MEMPOOL *mempool, size_t size)
 {
     const size_t alloc_size = size + sizeof(struct MEMPOOL_BUF);
 
@@ -66,7 +91,7 @@ static void *alloc_large(struct KOS_MEMPOOL_S *mempool, size_t size)
     return obj;
 }
 
-void *KOS_mempool_alloc(struct KOS_MEMPOOL_S *mempool, size_t size)
+void *KOS_mempool_alloc(KOS_MEMPOOL *mempool, size_t size)
 {
     uint8_t            *obj = KOS_NULL;
     struct MEMPOOL_BUF *buf = KOS_NULL;
@@ -84,7 +109,8 @@ void *KOS_mempool_alloc(struct KOS_MEMPOOL_S *mempool, size_t size)
         if (buf) {
             buf->next          = (struct MEMPOOL_BUF *)(mempool->buffers);
             mempool->buffers   = buf;
-            mempool->free_size = KOS_BUF_ALLOC_SIZE - sizeof(struct MEMPOOL_BUF);
+            mempool->next_free = &buf->buf[0];
+            mempool->free_size = KOS_BUF_ALLOC_SIZE - sizeof(struct MEMPOOL_BUF) + 8U;
         }
     }
     else if ( ! kos_seq_fail())
@@ -93,8 +119,9 @@ void *KOS_mempool_alloc(struct KOS_MEMPOOL_S *mempool, size_t size)
     if (buf) {
         assert(size <= mempool->free_size);
 
-        obj = ((uint8_t *)buf) + KOS_BUF_ALLOC_SIZE - mempool->free_size;
+        obj = (uint8_t *)mempool->next_free;
 
+        mempool->next_free =  obj + size;
         mempool->free_size -= size;
     }
 
