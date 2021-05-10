@@ -183,7 +183,7 @@ The following reserved keywords are defined:
 * `in`
 * `instanceof`
 * `loop`
-* `match`
+* `match` (reserved)
 * `propertyof`
 * `public`
 * `repeat`
