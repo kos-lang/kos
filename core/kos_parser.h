@@ -9,7 +9,7 @@
 
 struct KOS_AST_NODE_S;
 
-typedef struct KOS_MEMPOOL_S KOS_MEMPOOL;
+struct KOS_MEMPOOL_S;
 
 typedef struct KOS_PARSER_STATE_S {
     struct KOS_AST_NODE_S *last_fallthrough;
@@ -23,21 +23,21 @@ typedef struct KOS_PARSER_STATE_S {
 } KOS_PARSER_STATE;
 
 typedef struct KOS_PARSER_S {
-    KOS_MEMPOOL     *ast_buf;
-    const char      *error_str;
-    KOS_LEXER        lexer;
-    KOS_TOKEN        token;
-    KOS_PARSER_STATE state;
-    char             unget;
-    char             had_eol;
-    int              ast_depth;   /* For limiting statement/expression depth */
+    struct KOS_MEMPOOL_S *ast_buf;
+    const char           *error_str;
+    KOS_LEXER             lexer;
+    KOS_TOKEN             token;
+    KOS_PARSER_STATE      state;
+    char                  unget;
+    char                  had_eol;
+    int                   ast_depth;   /* For limiting statement/expression depth */
 } KOS_PARSER;
 
-void kos_parser_init(KOS_PARSER  *parser,
-                     KOS_MEMPOOL *mempool,
-                     uint16_t     file_id,
-                     const char  *begin,
-                     const char  *end);
+void kos_parser_init(KOS_PARSER           *parser,
+                     struct KOS_MEMPOOL_S *mempool,
+                     uint16_t              file_id,
+                     const char           *begin,
+                     const char           *end);
 
 int  kos_parser_parse(KOS_PARSER             *parser,
                       struct KOS_AST_NODE_S **ret);

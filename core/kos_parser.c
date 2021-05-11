@@ -3279,11 +3279,11 @@ static int handle_imports(KOS_PARSER *parser, KOS_AST_NODE *root)
     return error;
 }
 
-void kos_parser_init(KOS_PARSER  *parser,
-                     KOS_MEMPOOL *mempool,
-                     uint16_t     file_id,
-                     const char  *begin,
-                     const char  *end)
+void kos_parser_init(KOS_PARSER           *parser,
+                     struct KOS_MEMPOOL_S *mempool,
+                     uint16_t              file_id,
+                     const char           *begin,
+                     const char           *end)
 {
     kos_lexer_init(&parser->lexer, file_id, begin, end);
 
