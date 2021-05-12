@@ -13,6 +13,7 @@
 #include "../inc/kos_utils.h"
 #include "../core/kos_system_internal.h"
 #include "../core/kos_try.h"
+#include <string.h>
 #ifdef _WIN32
 #   define WIN32_LEAN_AND_MEAN
 #   pragma warning( push )
@@ -28,16 +29,45 @@
 #   include <unistd.h>
 #endif
 
-static void fix_path_separators(KOS_VECTOR *buf)
-{
-    char       *ptr = buf->buffer;
-    char *const end = ptr + buf->size;
+KOS_DECLARE_STATIC_CONST_STRING(str_deep,     "deep");
+KOS_DECLARE_STATIC_CONST_STRING(str_filename, "filename");
+KOS_DECLARE_STATIC_CONST_STRING(str_follow,   "follow");
+KOS_DECLARE_STATIC_CONST_STRING(str_path,     "path");
 
+static const KOS_CONVERT filename_arg[2] = {
+    KOS_DEFINE_MANDATORY_ARG(str_filename),
+    KOS_DEFINE_TAIL_ARG()
+};
+
+static const KOS_CONVERT path_arg[2] = {
+    KOS_DEFINE_MANDATORY_ARG(str_path),
+    KOS_DEFINE_TAIL_ARG()
+};
+
+static const KOS_CONVERT info_args[3] = {
+    KOS_DEFINE_MANDATORY_ARG(str_filename         ),
+    KOS_DEFINE_OPTIONAL_ARG( str_follow, KOS_FALSE),
+    KOS_DEFINE_TAIL_ARG()
+};
+
+static const KOS_CONVERT mkdir_args[3] = {
+    { KOS_CONST_ID(str_path), KOS_BADPTR, 0, 0, KOS_NATIVE_STRING_PTR },
+    { KOS_CONST_ID(str_deep), KOS_FALSE,  0, 0, KOS_NATIVE_BOOL8      },
+    KOS_DEFINE_TAIL_ARG()
+};
+
+static void fix_path_separators_buf(char *ptr, char *end)
+{
     for ( ; ptr < end; ptr++) {
         const char c = *ptr;
         if (c == '/' || c == '\\')
             *ptr = KOS_PATH_SEPARATOR;
     }
+}
+
+static void fix_path_separators_vec(KOS_VECTOR *buf)
+{
+    fix_path_separators_buf(buf->buffer, buf->buffer + buf->size);
 }
 
 /* @item fs is_file()
@@ -63,7 +93,7 @@ static KOS_OBJ_ID is_file(KOS_CONTEXT ctx,
 
     TRY(KOS_string_to_cstr_vec(ctx, filename_obj, &filename_cstr));
 
-    fix_path_separators(&filename_cstr);
+    fix_path_separators_vec(&filename_cstr);
 
     ret = KOS_BOOL(KOS_does_file_exist(filename_cstr.buffer));
 
@@ -127,7 +157,7 @@ static int64_t get_epoch_time_us(const FILETIME *time)
  * The precision of time properties is OS-dependent.  For example,
  * on POSIX-compatible OS-es these properties have 1 second precision.
  *
- * On Windows, the `inode`, `uid`, `gid`, `blocks`, `block_size` and `hard_links` propertoes are
+ * On Windows, the `inode`, `uid`, `gid`, `blocks`, `block_size` and `hard_links` properties are
  * not produced.
  *
  * The `device` property is only produced for device objects on some
@@ -154,7 +184,7 @@ static KOS_OBJ_ID info(KOS_CONTEXT ctx,
 
     TRY(KOS_string_to_cstr_vec(ctx, filename_obj, &filename_cstr));
 
-    fix_path_separators(&filename_cstr);
+    fix_path_separators_vec(&filename_cstr);
 
 #ifdef _WIN32
     {
@@ -265,7 +295,7 @@ static KOS_OBJ_ID remove(KOS_CONTEXT ctx,
 
     TRY(KOS_string_to_cstr_vec(ctx, filename_obj, &filename_cstr));
 
-    fix_path_separators(&filename_cstr);
+    fix_path_separators_vec(&filename_cstr);
 
 #ifdef _WIN32
     ret = KOS_BOOL(DeleteFile(filename_cstr.buffer));
@@ -384,7 +414,7 @@ static KOS_OBJ_ID kos_chdir(KOS_CONTEXT ctx,
 
     TRY(KOS_string_to_cstr_vec(ctx, path_obj, &path_cstr));
 
-    fix_path_separators(&path_cstr);
+    fix_path_separators_vec(&path_cstr);
 
 #ifdef _WIN32
     if ( ! SetCurrentDirectory(path_cstr.buffer)) {
@@ -402,6 +432,193 @@ cleanup:
     KOS_vector_destroy(&path_cstr);
 
     return error ? KOS_BADPTR : path_obj;
+}
+
+#ifdef _WIN32
+static int make_directory(KOS_CONTEXT ctx,
+                          const char *path_cstr,
+                          int         fail_if_exists)
+{
+    DWORD attr;
+
+    KOS_suspend_context(ctx);
+
+    attr = GetFileAttributes(path_cstr):
+
+    if (fail_if_exists || (attr == INVALID_FILE_ATTRIBUTES) || ((attr & FILE_ATTRIBUTE_DIRECTORY) == 0)) {
+        if ( ! CreateDirectory(path_cstr, KOS_NULL)) {
+            const unsigned saved_last_error = (unsigned)GetLastError();
+
+            KOS_resume_context(ctx);
+
+            KOS_raise_last_error(ctx, "CreateDirectory", saved_last_error);
+            return KOS_ERROR_EXCEPTION;
+        }
+    }
+
+    KOS_resume_context(ctx);
+
+    return KOS_SUCCESS;
+}
+#else
+static int make_directory(KOS_CONTEXT ctx,
+                          const char *path_cstr,
+                          int         fail_if_exists)
+{
+    struct stat statbuf;
+
+    KOS_suspend_context(ctx);
+
+    if (fail_if_exists || (stat(path_cstr, &statbuf) != 0) || ! S_ISDIR(statbuf.st_mode)) {
+        if (mkdir(path_cstr, 0777)) {
+            const int saved_errno = errno;
+
+            KOS_resume_context(ctx);
+
+            KOS_raise_errno_value(ctx, "mkdir", saved_errno);
+            return KOS_ERROR_EXCEPTION;
+        }
+    }
+
+    KOS_resume_context(ctx);
+
+    return KOS_SUCCESS;
+}
+#endif
+
+/* @item fs mkdir()
+ *
+ *     mkdir(path, deep = false)
+ *
+ * Creates a new directory specified by `path`.
+ *
+ * `path` can be absolute or relative to current working directory.
+ *
+ * `deep` specifies whether parent directories are also to be created.
+ * If `deep` is true, missing parent directories will be created.
+ * if `deep` is false, the parent directory must exist.  If `deep` is false
+ * and the directory already exists, this function will fail.
+ *
+ * Throws an exception if the operation fails.
+ *
+ * Returns the `path` argument.
+ *
+ * Example:
+ *
+ *     > mkdir("/tmp/test")
+ *     "/tmp/test"
+ */
+static KOS_OBJ_ID kos_mkdir(KOS_CONTEXT ctx,
+                            KOS_OBJ_ID  this_obj,
+                            KOS_OBJ_ID  args_obj)
+{
+    KOS_LOCAL            path;
+    struct KOS_MEMPOOL_S alloc;
+    char                *path_cstr = KOS_NULL;
+    size_t               path_len;
+    int                  error;
+    uint8_t              deep      = 0;
+
+    KOS_mempool_init_small(&alloc, 512U);
+
+    KOS_init_local(ctx, &path);
+
+    path.o = KOS_array_read(ctx, args_obj, 0);
+    TRY_OBJID(path.o);
+
+    TRY(KOS_extract_native_from_array(ctx, args_obj, "argument", mkdir_args, &alloc, &path_cstr, &deep));
+
+    path_len = strlen(path_cstr);
+
+    fix_path_separators_buf(path_cstr, path_cstr + path_len);
+
+    if (deep && (path_len > 2)) {
+        size_t pos = 1;
+
+        for (;;) {
+            char *const sep = strchr(path_cstr + pos, KOS_PATH_SEPARATOR);
+
+            if ( ! sep)
+                break;
+
+            *sep = 0;
+
+            TRY(make_directory(ctx, path_cstr, 0));
+
+            *sep = KOS_PATH_SEPARATOR;
+
+            pos = (size_t)(sep - path_cstr) + 1;
+        }
+    }
+
+    TRY(make_directory(ctx, path_cstr, !deep));
+
+cleanup:
+    path.o = KOS_destroy_top_local(ctx, &path);
+
+    KOS_mempool_destroy(&alloc);
+
+    return error ? KOS_BADPTR : path.o;
+}
+
+/* @item fs rmdir()
+ *
+ *     rmdir(path)
+ *
+ * Removes an existing directory specified by `path`.
+ *
+ * `path` can be absolute or relative to current working directory.
+ *
+ * The directory to remove must be empty.
+ *
+ * If directory specified by `path` does not exist, the function succeeds (it does not fail).
+ *
+ * Throws an exception if the operation fails, e.g. if the directory cannot be removed, if it's
+ * not empty or if it's a file.
+ *
+ * Returns `void`.
+ *
+ * Example:
+ *
+ *     > rmdir("/tmp/test")
+ */
+static KOS_OBJ_ID kos_rmdir(KOS_CONTEXT ctx,
+                            KOS_OBJ_ID  this_obj,
+                            KOS_OBJ_ID  args_obj)
+{
+    KOS_OBJ_ID path_obj = KOS_array_read(ctx, args_obj, 0);
+    KOS_VECTOR path_cstr;
+    int        error;
+
+    KOS_vector_init(&path_cstr);
+
+    TRY_OBJID(path_obj);
+
+    TRY(KOS_string_to_cstr_vec(ctx, path_obj, &path_cstr));
+
+    fix_path_separators_vec(&path_cstr);
+
+#ifdef _WIN32
+    if ( ! RemoveDirectory(path_cstr.buffer)) {
+        const unsigned last_error = (unsigned)GetLastError();
+        if (last_error != ERROR_FILE_NOT_FOUND) {
+            KOS_raise_last_error(ctx, "RemoveDirectory", (unsigned)GetLastError());
+            error = KOS_ERROR_EXCEPTION;
+        }
+    }
+#else
+    if (rmdir(path_cstr.buffer)) {
+        if (errno != ENOENT) {
+            KOS_raise_errno(ctx, "rmdir");
+            error = KOS_ERROR_EXCEPTION;
+        }
+    }
+#endif
+
+cleanup:
+    KOS_vector_destroy(&path_cstr);
+
+    return error ? KOS_BADPTR : KOS_VOID;
 }
 
 KOS_DECLARE_PRIVATE_CLASS(dir_walk_class);
@@ -644,7 +861,7 @@ static KOS_OBJ_ID listdir(KOS_CONTEXT ctx,
         if (error)
             dir_walk.o = KOS_BADPTR;
         else  {
-            fix_path_separators(&path_cstr);
+            fix_path_separators_vec(&path_cstr);
 
             dir_walk.o = find_first_file(ctx, &path_cstr, &ret);
         }
@@ -664,26 +881,6 @@ cleanup:
     return ret;
 }
 
-KOS_DECLARE_STATIC_CONST_STRING(str_filename, "filename");
-KOS_DECLARE_STATIC_CONST_STRING(str_follow,   "follow");
-KOS_DECLARE_STATIC_CONST_STRING(str_path,     "path");
-
-static const KOS_CONVERT filename_arg[2] = {
-    KOS_DEFINE_MANDATORY_ARG(str_filename),
-    KOS_DEFINE_TAIL_ARG()
-};
-
-static const KOS_CONVERT path_arg[2] = {
-    KOS_DEFINE_MANDATORY_ARG(str_path),
-    KOS_DEFINE_TAIL_ARG()
-};
-
-static const KOS_CONVERT info_args[3] = {
-    KOS_DEFINE_MANDATORY_ARG(str_filename         ),
-    KOS_DEFINE_OPTIONAL_ARG( str_follow, KOS_FALSE),
-    KOS_DEFINE_TAIL_ARG()
-};
-
 int kos_module_fs_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 {
     int       error = KOS_SUCCESS;
@@ -697,6 +894,21 @@ int kos_module_fs_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_FUNCTION(ctx,  module.o, "cwd",     cwd,       KOS_NULL);
     TRY_ADD_FUNCTION(ctx,  module.o, "chdir",   kos_chdir, path_arg);
     TRY_ADD_GENERATOR(ctx, module.o, "listdir", listdir,   path_arg);
+    TRY_ADD_FUNCTION(ctx,  module.o, "mkdir",   kos_mkdir, mkdir_args);
+    TRY_ADD_FUNCTION(ctx,  module.o, "rmdir",   kos_rmdir, path_arg);
+
+    /* @item fs path_separator
+     *
+     *     path_separator
+     *
+     * Constant string representing OS-specific path separator character.
+     *
+     * Example:
+     *
+     *     > path_separator
+     *     "/"
+     */
+    TRY_ADD_STRING_CONSTANT(ctx, module.o, "path_separator", KOS_PATH_SEPARATOR_STR);
 
 cleanup:
     KOS_destroy_top_local(ctx, &module);

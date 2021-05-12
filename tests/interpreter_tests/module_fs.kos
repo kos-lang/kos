@@ -90,3 +90,55 @@ do {
     assert ! fs.is_file(name)
     expect_fail(() => fs.info(name))
 }
+
+##############################################################################
+# fs.path_separator
+
+do {
+    assert fs.path_separator == "/" || fs.path_separator == "\\"
+}
+
+##############################################################################
+# fs.mkdir(), fs.rmdir()
+
+do {
+    const dir_outer = "./test_dir_outer"
+    const dir_inner = "./test_dir_outer/inner"
+    const file_inner = "./test_dir_outer/inner/testfile"
+
+    fs.remove(file_inner)
+    fs.rmdir(dir_inner)
+    fs.rmdir(dir_outer)
+    expect_fail(() => fs.info(dir_outer))
+
+    expect_fail(() => fs.mkdir(dir_inner))
+    expect_fail(() => fs.mkdir(dir_inner, false))
+
+    const actual_path = fs.mkdir(dir_inner, true)
+    assert typeof actual_path == "string"
+    assert actual_path.size == dir_inner.size
+    for const i in base.range(actual_path.size) {
+        const expected = (dir_inner[i] == "/") ? fs.path_separator : dir_inner[i]
+        assert actual_path[i] == expected
+    }
+
+    assert fs.info(dir_outer).type == "directory"
+    assert fs.info(dir_inner).type == "directory"
+
+    with const f = io.create(file_inner) {
+        f.print("Hello, Kos!")
+    }
+
+    assert fs.info(file_inner).type == "file"
+
+    expect_fail(() => fs.rmdir(dir_outer))
+    expect_fail(() => fs.rmdir(dir_inner))
+    expect_fail(() => fs.rmdir(file_inner))
+    #expect_fail(() => fs.remove(dir_outer)) # TODO fix
+
+    fs.remove(file_inner)
+    fs.rmdir(dir_inner)
+    fs.rmdir(dir_outer)
+
+    expect_fail(() => fs.info(dir_outer))
+}

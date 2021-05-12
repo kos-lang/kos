@@ -127,7 +127,10 @@ Table of Contents
     * [info()](#info)
     * [is\_file()](#is_file)
     * [listdir()](#listdir)
+    * [mkdir()](#mkdir)
+    * [path\_separator](#path_separator)
     * [remove()](#remove)
+    * [rmdir()](#rmdir)
   * [gc](#gc)
     * [collect\_garbage()](#collect_garbage)
   * [io](#io)
@@ -3025,7 +3028,7 @@ The returned object contains the following properties:
 The precision of time properties is OS-dependent.  For example,
 on POSIX-compatible OS-es these properties have 1 second precision.
 
-On Windows, the `inode`, `uid`, `gid`, `blocks`, `block_size` and `hard_links` propertoes are
+On Windows, the `inode`, `uid`, `gid`, `blocks`, `block_size` and `hard_links` properties are
 not produced.
 
 The `device` property is only produced for device objects on some
@@ -3052,6 +3055,41 @@ Example:
 
     > const files = [ fs.listdir(".") ... ]
 
+mkdir()
+-------
+
+    mkdir(path, deep = false)
+
+Creates a new directory specified by `path`.
+
+`path` can be absolute or relative to current working directory.
+
+`deep` specifies whether parent directories are also to be created.
+If `deep` is true, missing parent directories will be created.
+if `deep` is false, the parent directory must exist.  If `deep` is false
+and the directory already exists, this function will fail.
+
+Throws an exception if the operation fails.
+
+Returns the `path` argument.
+
+Example:
+
+    > mkdir("/tmp/test")
+    "/tmp/test"
+
+path_separator
+--------------
+
+    path_separator
+
+Constant string representing OS-specific path separator character.
+
+Example:
+
+    > path_separator
+    "/"
+
 remove()
 --------
 
@@ -3062,6 +3100,28 @@ Deletes a file `filename`.
 Returns `true` if the file was successfuly deleted or `false` if
 the file could not be deleted or if it did not exist in the first
 place.
+
+rmdir()
+-------
+
+    rmdir(path)
+
+Removes an existing directory specified by `path`.
+
+`path` can be absolute or relative to current working directory.
+
+The directory to remove must be empty.
+
+If directory specified by `path` does not exist, the function succeeds (it does not fail).
+
+Throws an exception if the operation fails, e.g. if the directory cannot be removed, if it's
+not empty or if it's a file.
+
+Returns `void`.
+
+Example:
+
+    > rmdir("/tmp/test")
 
 gc
 ==
