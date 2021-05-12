@@ -1675,33 +1675,10 @@ void KOS_raise_last_error(KOS_CONTEXT ctx, const char *prefix, unsigned error_va
     while (msg_size && ((uint8_t)msg[msg_size - 1] <= 0x20U))
         --msg_size;
 
-    if (msg_size) {
-        KOS_LOCAL str[3];
-
-        KOS_init_locals(ctx, 3, &str[0], &str[1], &str[2]);
-
-        str[2].o = KOS_new_string(ctx, msg, msg_size);
-
-        if ( ! IS_BAD_PTR(str[2].o) && prefix) {
-            str[0].o = KOS_new_cstring(ctx, prefix);
-
-            if (IS_BAD_PTR(str[0].o))
-                str[2].o = KOS_BADPTR;
-            else {
-                str[1].o = KOS_CONST_ID(str_err_colon);
-                str[2].o = KOS_string_add_n(ctx, str, 3);
-            }
-        }
-
-        if (IS_BAD_PTR(str[2].o))
-            KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
-        else
-            KOS_raise_exception(ctx, str[2].o);
-
-        KOS_destroy_top_locals(ctx, &str[0], &str[2]);
-    }
+    if (prefix)
+        KOS_raise_printf(ctx, "%s: 0x%08x - %.*s", prefix, error_value, (int)msg_size, msg);
     else
-        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_last_error));
+        KOS_raise_printf(ctx, "0x%08x - %.*s", error_value, (int)msg_size, msg);
 
     if (msg)
         LocalFree(msg);
