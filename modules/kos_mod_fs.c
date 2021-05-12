@@ -443,7 +443,7 @@ static int make_directory(KOS_CONTEXT ctx,
 
     KOS_suspend_context(ctx);
 
-    attr = GetFileAttributes(path_cstr):
+    attr = GetFileAttributes(path_cstr);
 
     if (fail_if_exists || (attr == INVALID_FILE_ATTRIBUTES) || ((attr & FILE_ATTRIBUTE_DIRECTORY) == 0)) {
         if ( ! CreateDirectory(path_cstr, KOS_NULL)) {
