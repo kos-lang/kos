@@ -276,9 +276,9 @@ cleanup:
  *
  * Deletes a file `filename`.
  *
- * Returns `true` if the file was successfuly deleted or `false` if
- * the file could not be deleted or if it did not exist in the first
- * place.
+ * If the file does not exist, returns `false`, otherwise returns `true`.
+ *
+ * If the file cannot be deleted, throws an error.
  */
 static KOS_OBJ_ID remove(KOS_CONTEXT ctx,
                          KOS_OBJ_ID  this_obj,
@@ -297,11 +297,39 @@ static KOS_OBJ_ID remove(KOS_CONTEXT ctx,
 
     fix_path_separators_vec(&filename_cstr);
 
+    KOS_suspend_context(ctx);
+
 #ifdef _WIN32
-    ret = KOS_BOOL(DeleteFile(filename_cstr.buffer));
+    if (DeleteFile(filename_cstr.buffer))
+        ret = KOS_TRUE;
+    else {
+        const unsigned last_error = (unsigned)GetLastError();
+
+        if (last_error == ERROR_FILE_NOT_FOUND)
+            ret = KOS_FALSE;
+        else {
+            KOS_resume_context(ctx);
+
+            KOS_raise_last_error(ctx, "DeleteFile", last_error);
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+    }
 #else
-    ret = KOS_BOOL(unlink(filename_cstr.buffer) == 0);
+    if ( ! unlink(filename_cstr.buffer))
+        ret = KOS_TRUE;
+    else if (errno == ENOENT)
+        ret = KOS_FALSE;
+    else {
+        const int saved_errno = errno;
+
+        KOS_resume_context(ctx);
+
+        KOS_raise_errno_value(ctx, "unlink", saved_errno);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
 #endif
+
+    KOS_resume_context(ctx);
 
 cleanup:
     KOS_vector_destroy(&filename_cstr);
@@ -571,12 +599,11 @@ cleanup:
  *
  * The directory to remove must be empty.
  *
- * If directory specified by `path` does not exist, the function succeeds (it does not fail).
+ * If directory specified by `path` does not exist, the function returns `false`.  Otherwise
+ * the function returns `true`.
  *
  * Throws an exception if the operation fails, e.g. if the directory cannot be removed, if it's
  * not empty or if it's a file.
- *
- * Returns `void`.
  *
  * Example:
  *
@@ -587,6 +614,7 @@ static KOS_OBJ_ID kos_rmdir(KOS_CONTEXT ctx,
                             KOS_OBJ_ID  args_obj)
 {
     KOS_OBJ_ID path_obj = KOS_array_read(ctx, args_obj, 0);
+    KOS_OBJ_ID ret      = KOS_BADPTR;
     KOS_VECTOR path_cstr;
     int        error;
 
@@ -598,27 +626,44 @@ static KOS_OBJ_ID kos_rmdir(KOS_CONTEXT ctx,
 
     fix_path_separators_vec(&path_cstr);
 
+    KOS_suspend_context(ctx);
+
 #ifdef _WIN32
-    if ( ! RemoveDirectory(path_cstr.buffer)) {
+    if (RemoveDirectory(path_cstr.buffer))
+        ret = KOS_TRUE;
+    else {
         const unsigned last_error = (unsigned)GetLastError();
-        if (last_error != ERROR_FILE_NOT_FOUND) {
-            KOS_raise_last_error(ctx, "RemoveDirectory", (unsigned)GetLastError());
-            error = KOS_ERROR_EXCEPTION;
+
+        if (last_error == ERROR_PATH_NOT_FOUND)
+            ret = KOS_FALSE;
+        else {
+            KOS_resume_context(ctx);
+
+            KOS_raise_last_error(ctx, "RemoveDirectory", last_error);
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
     }
 #else
-    if (rmdir(path_cstr.buffer)) {
-        if (errno != ENOENT) {
-            KOS_raise_errno(ctx, "rmdir");
-            error = KOS_ERROR_EXCEPTION;
-        }
+    if ( ! rmdir(path_cstr.buffer))
+        ret = KOS_TRUE;
+    else if (errno == ENOENT)
+        ret = KOS_FALSE;
+    else {
+        const int saved_errno = errno;
+
+        KOS_resume_context(ctx);
+
+        KOS_raise_errno_value(ctx, "rmdir", saved_errno);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 #endif
+
+    KOS_resume_context(ctx);
 
 cleanup:
     KOS_vector_destroy(&path_cstr);
 
-    return error ? KOS_BADPTR : KOS_VOID;
+    return ret;
 }
 
 KOS_DECLARE_PRIVATE_CLASS(dir_walk_class);

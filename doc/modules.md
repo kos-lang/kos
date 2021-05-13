@@ -3097,9 +3097,9 @@ remove()
 
 Deletes a file `filename`.
 
-Returns `true` if the file was successfuly deleted or `false` if
-the file could not be deleted or if it did not exist in the first
-place.
+If the file does not exist, returns `false`, otherwise returns `true`.
+
+If the file cannot be deleted, throws an error.
 
 rmdir()
 -------
@@ -3112,12 +3112,11 @@ Removes an existing directory specified by `path`.
 
 The directory to remove must be empty.
 
-If directory specified by `path` does not exist, the function succeeds (it does not fail).
+If directory specified by `path` does not exist, the function returns `false`.  Otherwise
+the function returns `true`.
 
 Throws an exception if the operation fails, e.g. if the directory cannot be removed, if it's
 not empty or if it's a file.
-
-Returns `void`.
 
 Example:
 

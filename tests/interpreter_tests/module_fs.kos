@@ -134,11 +134,15 @@ do {
     expect_fail(() => fs.rmdir(dir_outer))
     expect_fail(() => fs.rmdir(dir_inner))
     expect_fail(() => fs.rmdir(file_inner))
-    #expect_fail(() => fs.remove(dir_outer)) # TODO fix
+    expect_fail(() => fs.remove(dir_outer))
 
-    fs.remove(file_inner)
-    fs.rmdir(dir_inner)
-    fs.rmdir(dir_outer)
+    assert fs.remove(file_inner) == true
+    assert fs.remove(file_inner) == false
+    expect_fail(() => fs.remove(dir_inner))
+    assert fs.rmdir(dir_inner) == true
+    assert fs.rmdir(dir_inner) == false
+    assert fs.rmdir(dir_outer) == true
+    assert fs.rmdir(dir_outer) == false
 
     expect_fail(() => fs.info(dir_outer))
 }
