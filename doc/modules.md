@@ -145,6 +145,7 @@ Table of Contents
       * [file.prototype.fd](#fileprototypefd)
       * [file.prototype.flush()](#fileprototypeflush)
       * [file.prototype.info](#fileprototypeinfo)
+      * [file.prototype.lock()](#fileprototypelock)
       * [file.prototype.position](#fileprototypeposition)
       * [file.prototype.print()](#fileprototypeprint)
       * [file.prototype.print\_lines()](#fileprototypeprint_lines)
@@ -155,6 +156,8 @@ Table of Contents
       * [file.prototype.seek()](#fileprototypeseek)
       * [file.prototype.size](#fileprototypesize)
       * [file.prototype.write()](#fileprototypewrite)
+    * [file\_lock()](#file_lock)
+      * [file\_lock.prototype.release()](#file_lockprototyperelease)
     * [open()](#open)
     * [pipe()](#pipe)
     * [read\_lines()](#read_lines)
@@ -3297,6 +3300,24 @@ On Windows, the `inode`, `uid` and `gid` properties are not produced.
 The `device` property is only produced for device objects on some
 OS-es, for example Linux, *BSD, or MacOSX.
 
+file.prototype.lock()
+---------------------
+
+    file.prototype.lock()
+
+Acquires exclusive lock to the file.
+
+This can be used across different processes to coordinate access to resources.
+
+Returns an object of `file_lock` class, which has a `release()` function.
+This can be used in conjunction with a `with` statement.
+
+Throws an exception if the lock fails.
+
+Example:
+
+    > with f.lock() { f.print("Hello") }
+
 file.prototype.position
 -----------------------
 
@@ -3454,6 +3475,38 @@ before being written.
 
 Invoking this function without any arguments doesn't write anything
 to the file but ensures that the file object is correct.
+
+file_lock()
+-----------
+
+    file_lock()
+
+File lock class.
+
+This class is not directly callable, but objects of this class are returned
+from `file.prototype.lock()` function.
+
+When called directly, this class throws an exception.
+
+file_lock.prototype.release()
+-----------------------------
+
+    file_lock.prototype.release()
+
+Releases file lock.
+
+If the lock has already been released, this function does nothing.
+
+This function is typically used implicitly and automatically from
+a `with` statement.
+
+Throws an exception if the unlock fails.
+
+Example:
+
+    > const l = f.lock()
+    > l.print("Hello")
+    > l.release()
 
 open()
 ------

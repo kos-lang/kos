@@ -38,6 +38,7 @@
 
 KOS_DECLARE_STATIC_CONST_STRING(str_err_bad_flags,                  "incorrect file open flags");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_file_not_open,              "file not open or not a file object");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_lock_ctor,                  "call file.prototype.lock() to obtain file lock");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_buffer_size,        "buffer size out of range");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_io_module_priv_data_failed, "failed to get private data from module io");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_buffer,                 "argument to file.read_some is not a buffer");
@@ -1304,6 +1305,77 @@ cleanup:
     return error ? KOS_BADPTR : this_obj;
 }
 
+/* @item io file_lock()
+ *
+ *     file_lock()
+ *
+ * File lock class.
+ *
+ * This class is not directly callable, but objects of this class are returned
+ * from `file.prototype.lock()` function.
+ *
+ * When called directly, this class throws an exception.
+ */
+static KOS_OBJ_ID kos_lock_ctor(KOS_CONTEXT ctx,
+                                KOS_OBJ_ID  this_obj,
+                                KOS_OBJ_ID  args_obj)
+{
+    KOS_raise_exception(ctx, KOS_CONST_ID(str_err_lock_ctor));
+    return KOS_BADPTR;
+}
+
+/* @item io file.prototype.lock()
+ *
+ *     file.prototype.lock()
+ *
+ * Acquires exclusive lock to the file.
+ *
+ * This can be used across different processes to coordinate access to resources.
+ *
+ * Returns an object of `file_lock` class, which has a `release()` function.
+ * This can be used in conjunction with a `with` statement.
+ *
+ * Throws an exception if the lock fails.
+ *
+ * Example:
+ *
+ *     > with f.lock() { f.print("Hello") }
+ */
+static KOS_OBJ_ID kos_lock(KOS_CONTEXT ctx,
+                           KOS_OBJ_ID  this_obj,
+                           KOS_OBJ_ID  args_obj)
+{
+    /* TODO */
+    return KOS_VOID;
+}
+
+/* @item io file_lock.prototype.release()
+ *
+ *     file_lock.prototype.release()
+ *
+ * Releases file lock.
+ *
+ * If the lock has already been released, this function does nothing.
+ *
+ * This function is typically used implicitly and automatically from
+ * a `with` statement.
+ *
+ * Throws an exception if the unlock fails.
+ *
+ * Example:
+ *
+ *     > const l = f.lock()
+ *     > l.print("Hello")
+ *     > l.release()
+ */
+static KOS_OBJ_ID kos_unlock(KOS_CONTEXT ctx,
+                             KOS_OBJ_ID  this_obj,
+                             KOS_OBJ_ID  args_obj)
+{
+    /* TODO */
+    return KOS_VOID;
+}
+
 static int add_std_file(KOS_CONTEXT ctx,
                         KOS_OBJ_ID  module_obj,
                         KOS_OBJ_ID  name_obj,
@@ -1339,16 +1411,19 @@ int kos_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     int        error = KOS_SUCCESS;
     KOS_LOCAL  module;
     KOS_LOCAL  file_proto;
+    KOS_LOCAL  file_lock;
     KOS_LOCAL  priv;
     KOS_OBJ_ID pipe_proto;
 
     KOS_init_local_with(ctx, &module, module_obj);
     KOS_init_local(     ctx, &file_proto);
+    KOS_init_local(     ctx, &file_lock);
     KOS_init_local(     ctx, &priv);
 
     TRY_ADD_CONSTRUCTOR(    ctx, module.o,               "file",      kos_open,       open_args, &file_proto.o);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "close",     kos_close,      KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "flush",     flush,          KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "lock",      kos_lock,       KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "print",     print,          KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "read_line", read_line,      read_line_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "read_some", read_some,      read_some_args);
@@ -1362,7 +1437,10 @@ int kos_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "position",  get_file_pos,   KOS_NULL);
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "size",      get_file_size,  KOS_NULL);
 
-    TRY_ADD_CONSTRUCTOR(    ctx, module.o,               "pipe",      kos_pipe,       KOS_NULL, &pipe_proto);
+    TRY_ADD_CONSTRUCTOR(    ctx, module.o,               "file_lock", kos_lock_ctor,  KOS_NULL,  &file_lock.o);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_lock.o,  "release",   kos_unlock,     KOS_NULL);
+
+    TRY_ADD_CONSTRUCTOR(    ctx, module.o,               "pipe",      kos_pipe,       KOS_NULL,  &pipe_proto);
 
     priv.o = KOS_new_array(ctx, 1);
     TRY_OBJID(priv.o);
