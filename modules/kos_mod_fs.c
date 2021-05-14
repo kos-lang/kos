@@ -634,7 +634,7 @@ static KOS_OBJ_ID kos_rmdir(KOS_CONTEXT ctx,
     else {
         const unsigned last_error = (unsigned)GetLastError();
 
-        if (last_error == ERROR_PATH_NOT_FOUND)
+        if ((last_error == ERROR_PATH_NOT_FOUND) || (last_error == ERROR_FILE_NOT_FOUND))
             ret = KOS_FALSE;
         else {
             KOS_resume_context(ctx);
