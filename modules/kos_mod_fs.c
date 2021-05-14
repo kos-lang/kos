@@ -70,17 +70,17 @@ static void fix_path_separators_vec(KOS_VECTOR *buf)
     fix_path_separators_buf(buf->buffer, buf->buffer + buf->size);
 }
 
-/* @item fs is_file()
+/* @item fs file_exists()
  *
- *     is_file(filename)
+ *     file_exists(filename)
  *
  * Determines whether a file exists.
  *
  * Returns `true` if `filename` exists and is a file, or `false` otherwise.
  */
-static KOS_OBJ_ID is_file(KOS_CONTEXT ctx,
-                          KOS_OBJ_ID  this_obj,
-                          KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID file_exists(KOS_CONTEXT ctx,
+                              KOS_OBJ_ID  this_obj,
+                              KOS_OBJ_ID  args_obj)
 {
     int        error;
     KOS_OBJ_ID ret          = KOS_BADPTR;
@@ -933,14 +933,14 @@ int kos_module_fs_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 
     KOS_init_local_with(ctx, &module, module_obj);
 
-    TRY_ADD_FUNCTION(ctx,  module.o, "is_file", is_file,   filename_arg);
-    TRY_ADD_FUNCTION(ctx,  module.o, "info",    info,      info_args);
-    TRY_ADD_FUNCTION(ctx,  module.o, "remove",  remove,    filename_arg);
-    TRY_ADD_FUNCTION(ctx,  module.o, "cwd",     cwd,       KOS_NULL);
-    TRY_ADD_FUNCTION(ctx,  module.o, "chdir",   kos_chdir, path_arg);
-    TRY_ADD_GENERATOR(ctx, module.o, "listdir", listdir,   path_arg);
-    TRY_ADD_FUNCTION(ctx,  module.o, "mkdir",   kos_mkdir, mkdir_args);
-    TRY_ADD_FUNCTION(ctx,  module.o, "rmdir",   kos_rmdir, path_arg);
+    TRY_ADD_FUNCTION(ctx,  module.o, "file_exists", file_exists, filename_arg);
+    TRY_ADD_FUNCTION(ctx,  module.o, "info",        info,        info_args);
+    TRY_ADD_FUNCTION(ctx,  module.o, "remove",      remove,      filename_arg);
+    TRY_ADD_FUNCTION(ctx,  module.o, "cwd",         cwd,         KOS_NULL);
+    TRY_ADD_FUNCTION(ctx,  module.o, "chdir",       kos_chdir,   path_arg);
+    TRY_ADD_GENERATOR(ctx, module.o, "listdir",     listdir,     path_arg);
+    TRY_ADD_FUNCTION(ctx,  module.o, "mkdir",       kos_mkdir,   mkdir_args);
+    TRY_ADD_FUNCTION(ctx,  module.o, "rmdir",       kos_rmdir,   path_arg);
 
     /* @item fs path_separator
      *

@@ -19,7 +19,7 @@ fun expect_fail(function)
 }
 
 ##############################################################################
-# io.open, fs.is_file, fs.remove
+# io.open, fs.file_exists, fs.remove
 
 do {
     assert typeof io.file           == "class"
@@ -29,7 +29,7 @@ do {
 do {
     const name = "__test_file"
     fs.remove(name)
-    assert ! fs.is_file(name)
+    assert ! fs.file_exists(name)
 
     do {
         const f = io.create(name)
@@ -64,7 +64,7 @@ do {
         expect_fail(()=>f.fd)
     }
 
-    assert fs.is_file(name)
+    assert fs.file_exists(name)
 
     with const f = io.open(name, io.ro) {
         const buf = f.read()
@@ -125,7 +125,7 @@ do {
 do {
     const name = "./__test_file"
     fs.remove(name)
-    assert ! fs.is_file(name)
+    assert ! fs.file_exists(name)
 
     with const f = io.file(name, io.create_flag) {
         const buf = base.buffer(100)
@@ -176,7 +176,7 @@ do {
     }
 
     assert fs.remove(name)
-    assert ! fs.is_file(name)
+    assert ! fs.file_exists(name)
 }
 
 ##############################################################################
@@ -198,7 +198,7 @@ do {
 do {
     const name = "./__text_line"
     fs.remove(name)
-    assert ! fs.is_file(name)
+    assert ! fs.file_exists(name)
 
     with const f = io.create(name) {
         const lines = "abcdefg\nhijklm\nnop";
@@ -231,7 +231,7 @@ do {
 do {
     const name = "./__text_file"
     fs.remove(name)
-    assert ! fs.is_file(name)
+    assert ! fs.file_exists(name)
 
     with const f = io.create(name) {
         const lines = "abc\n\ndef\n\rxyz"
@@ -300,7 +300,7 @@ do {
     }
 
     assert fs.remove(name)
-    assert ! fs.is_file(name)
+    assert ! fs.file_exists(name)
 }
 
 ##############################################################################
@@ -309,7 +309,7 @@ do {
 do {
     const name = "./__text_file"
     fs.remove(name)
-    assert ! fs.is_file(name)
+    assert ! fs.file_exists(name)
 
     with const f = io.create(name) {
         var exception = false
@@ -329,7 +329,7 @@ do {
     }
 
     assert fs.remove(name)
-    assert ! fs.is_file(name)
+    assert ! fs.file_exists(name)
 }
 
 ##############################################################################
@@ -338,7 +338,7 @@ do {
 do {
     const name = "./__text_file"
     fs.remove(name)
-    assert ! fs.is_file(name)
+    assert ! fs.file_exists(name)
 
     with const f = io.create(name) {
         f.write(base.buffer(base.range(10, 20)))
@@ -365,7 +365,7 @@ do {
     }
 
     assert fs.remove(name)
-    assert ! fs.is_file(name)
+    assert ! fs.file_exists(name)
 }
 
 ##############################################################################
@@ -374,7 +374,7 @@ do {
 do {
     const name = "./__text_file"
     fs.remove(name)
-    assert ! fs.is_file(name)
+    assert ! fs.file_exists(name)
 
     with const f = io.create(name) {
         expect_fail(() => f.write([0]))
@@ -383,7 +383,7 @@ do {
     }
 
     assert fs.remove(name)
-    assert ! fs.is_file(name)
+    assert ! fs.file_exists(name)
 }
 
 ##############################################################################
@@ -392,7 +392,7 @@ do {
 do {
     const name = "./__text_file"
     fs.remove(name)
-    assert ! fs.is_file(name)
+    assert ! fs.file_exists(name)
 
     with const f = io.create(name) {
         f.write("false", " ", "void")
@@ -426,7 +426,7 @@ do {
     }
 
     assert fs.remove(name)
-    assert ! fs.is_file(name)
+    assert ! fs.file_exists(name)
 }
 
 ##############################################################################
@@ -435,7 +435,7 @@ do {
 do {
     const name = "./__text_file"
     fs.remove(name)
-    assert ! fs.is_file(name)
+    assert ! fs.file_exists(name)
 
     with const f = io.create(name) {
         const data = base.string(f.write("abcdefghijklmnopqrstuvwxyz").seek(-8).read(4))
@@ -443,7 +443,7 @@ do {
     }
 
     assert fs.remove(name)
-    assert ! fs.is_file(name)
+    assert ! fs.file_exists(name)
 }
 
 ##############################################################################
@@ -452,7 +452,7 @@ do {
 do {
     const name = "./__text_file_info"
     fs.remove(name)
-    assert ! fs.is_file(name)
+    assert ! fs.file_exists(name)
 
     const time_before = datetime.now()
 
@@ -488,7 +488,7 @@ do {
     }
 
     assert fs.remove(name)
-    assert ! fs.is_file(name)
+    assert ! fs.file_exists(name)
 }
 
 do {

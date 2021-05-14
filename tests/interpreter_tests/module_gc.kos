@@ -15,7 +15,7 @@ fun find_program(name)
 {
     for const prefix in ["/bin", "/usr/bin"] {
         const path = prefix + "/" + name
-        if fs.is_file(path) {
+        if fs.file_exists(path) {
             return path
         }
     }
@@ -61,7 +61,7 @@ do {
     const name = "__gc_test_file"
 
     fs.remove(name)
-    assert ! fs.is_file(name)
+    assert ! fs.file_exists(name)
 
     fun {
         io.create(name).write("x")
@@ -69,7 +69,7 @@ do {
 
     kos.collect_garbage()
 
-    assert fs.is_file(name)
+    assert fs.file_exists(name)
     fs.remove(name)
-    assert ! fs.is_file(name)
+    assert ! fs.file_exists(name)
 }

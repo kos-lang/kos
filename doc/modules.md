@@ -124,8 +124,8 @@ Table of Contents
   * [fs](#fs)
     * [chdir()](#chdir)
     * [cwd()](#cwd)
+    * [file\_exists()](#file_exists)
     * [info()](#info)
-    * [is\_file()](#is_file)
     * [listdir()](#listdir)
     * [mkdir()](#mkdir)
     * [path\_separator](#path_separator)
@@ -2995,6 +2995,15 @@ Example:
     > cwd()
     "/home/user"
 
+file_exists()
+-------------
+
+    file_exists(filename)
+
+Determines whether a file exists.
+
+Returns `true` if `filename` exists and is a file, or `false` otherwise.
+
 info()
 ------
 
@@ -3033,15 +3042,6 @@ not produced.
 
 The `device` property is only produced for device objects on some
 OS-es, for example Linux, *BSD, or MacOSX.
-
-is_file()
----------
-
-    is_file(filename)
-
-Determines whether a file exists.
-
-Returns `true` if `filename` exists and is a file, or `false` otherwise.
 
 listdir()
 ---------
