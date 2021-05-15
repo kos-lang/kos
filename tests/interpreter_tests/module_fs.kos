@@ -115,12 +115,7 @@ do {
     expect_fail(() => fs.mkdir(dir_inner, false))
 
     const actual_path = fs.mkdir(dir_inner, true)
-    assert typeof actual_path == "string"
-    assert actual_path.size == dir_inner.size
-    for const i in base.range(actual_path.size) {
-        const expected = (dir_inner[i] == "/") ? fs.path_separator : dir_inner[i]
-        assert actual_path[i] == expected
-    }
+    assert actual_path == dir_inner
 
     assert fs.info(dir_outer).type == "directory"
     assert fs.info(dir_inner).type == "directory"
