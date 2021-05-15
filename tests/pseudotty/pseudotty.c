@@ -469,7 +469,12 @@ static enum INPUT_STATUS receive_input(int                 tty_fd,
     enum RECEIVE_STATUS saved_status     = RECEIVED_NOTHING;
     uint64_t            start_time_ms    = get_time_ms();
     uint64_t            prev_time_ms     = start_time_ms;
-    const int           timeout_ms       = (wait_for == DRAIN_INPUT) ? 5 : 1000;
+#ifdef CONFIG_MAD_GC
+    const int           wait_multiplier  = 10;
+#else
+    const int           wait_multiplier  = 1;
+#endif
+    const int           timeout_ms       = ((wait_for == DRAIN_INPUT) ? 5 : 1000) * wait_multiplier;
     int                 cur_wait_time_ms = 0;
 
     do {
