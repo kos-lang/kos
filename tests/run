@@ -210,7 +210,7 @@ if [ "$RUN_RELEASE" = "1" ]; then
     # Kill release build after 2 minutes in Travis
     ARCH=$(uname -m)
     if [ "$ARCH" = "ppc64le" -o "$ARCH" = "s390x" ]; then
-        sleep 120 && pkill kos &
+        sleep 180 && pkill kos &
     fi
 
     export builtin_modules=0
