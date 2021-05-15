@@ -3500,7 +3500,7 @@ If the lock has already been released, this function does nothing.
 This function is typically used implicitly and automatically from
 a `with` statement.
 
-Throws an exception if the unlock fails.
+Returns `void`.
 
 Example:
 

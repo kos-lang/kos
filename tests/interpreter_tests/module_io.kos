@@ -136,9 +136,11 @@ do {
     }
 
     with const f = io.file(name, io.ro) {
-        assert f.size     == 100
         assert f.position == 0
         assert typeof f.position == "integer"
+
+        assert typeof f.size == "integer"
+        assert f.size == 100
 
         f.seek(50)
         assert f.position == 50
