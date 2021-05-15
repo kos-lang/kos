@@ -32,6 +32,7 @@
 #   pragma warning( pop )
 #   pragma warning( disable : 4996 ) /* 'fopen/getenv': This function may be unsafe */
 #else
+#   include <sys/file.h>
 #   include <sys/stat.h>
 #   include <sys/types.h>
 #   include <unistd.h>
