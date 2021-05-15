@@ -100,7 +100,7 @@ static void release_file(KOS_FILE_HOLDER *file_holder)
         assert(ref_count >= 1);
 
         if (ref_count == 1) {
-            FILE *const file = (FILE *)KOS_atomic_swap_ptr(file_holder->file, KOS_NULL);
+            FILE *const file = (FILE *)KOS_atomic_swap_ptr(file_holder->file, (FILE *)KOS_NULL);
 
             if (file && file_holder->owner)
                 fclose(file);
@@ -1558,7 +1558,9 @@ static KOS_OBJ_ID kos_unlock(KOS_CONTEXT ctx,
                              KOS_OBJ_ID  this_obj,
                              KOS_OBJ_ID  args_obj)
 {
-    KOS_FILE_HOLDER *const file_holder = KOS_object_swap_private(this_obj, &file_lock_priv_class, KOS_NULL);
+    KOS_FILE_HOLDER *file_holder;
+
+    file_holder = (KOS_FILE_HOLDER *)KOS_object_swap_private(this_obj, &file_lock_priv_class, KOS_NULL);
 
     if (file_holder)
         file_lock_finalize(ctx, file_holder);
