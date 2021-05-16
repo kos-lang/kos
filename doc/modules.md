@@ -131,8 +131,6 @@ Table of Contents
     * [path\_separator](#path_separator)
     * [remove()](#remove)
     * [rmdir()](#rmdir)
-  * [gc](#gc)
-    * [collect\_garbage()](#collect_garbage)
   * [io](#io)
     * [append()](#append)
     * [append\_flag](#append_flag)
@@ -174,6 +172,11 @@ Table of Contents
     * [iproduct()](#iproduct)
     * [product()](#product)
     * [reverse()](#reverse)
+  * [kos](#kos)
+    * [collect\_garbage()](#collect_garbage)
+    * [lexer()](#lexer)
+    * [raw\_lexer()](#raw_lexer)
+    * [version](#version)
   * [math](#math)
     * [abs()](#abs)
     * [acos()](#acos)
@@ -3125,21 +3128,6 @@ Example:
 
     > rmdir("/tmp/test")
 
-gc
-==
-
-collect_garbage()
------------------
-
-    collect_garbage()
-
-Runs the garbage collector.
-
-Returns an object containing statistics from the garbage collection cycle.
-
-Throws an exception if there was an error, for example if the heap
-ran out of memory.
-
 io
 ==
 
@@ -3740,6 +3728,82 @@ Examples:
     [3, 2, 1, 0]
     > iter.reverse("language")
     "egaugnal"
+
+kos
+===
+
+collect_garbage()
+-----------------
+
+    collect_garbage()
+
+Runs the garbage collector.
+
+Returns an object containing statistics from the garbage collection cycle.
+
+Throws an exception if there was an error, for example if the heap
+ran out of memory.
+
+lexer()
+-------
+
+    lexer(filename, input)
+
+Kos lexer generator.
+
+`filename` is the name of the script file, which is for informational purposes only.
+
+`input` is a buffer containing UTF-8-encoded Kos script to parse.
+
+The generator yields subsequent tokens parsed from the `input` script.  Each yielded
+token is an object which has the following properties:
+
+ * `token` - string which represents the full token.
+ * `line` - integer which is 1-based line number where the token starts.
+ * `column` - integer which is 1-based column number where the token starts.
+ * `type` - integer which is the token type, one of the `type_*` constants.
+ * `keyword` - integer which is the keyword type, one of the `keyword_*` constants.
+ * `op` - integer which is the operator type, one of the `op_*` constants.
+ * `sep` - integer which is the separator type, one of the `sep_*` constants.
+
+raw_lexer()
+-----------
+
+    raw_lexer(input, ignore_errors = false)
+
+Raw Kos lexer generator.
+
+`input` is a buffer containing UTF-8-encoded Kos script to parse.
+
+`ignore_errors` is a boolean specifying whether any errors that occur should be ignored
+or not.  If `ignore_errors` is `true`, any invalid characters will be returned as whitespace.
+If `ignore_errors` is `false`, which is the default, lexing error will trigger an exception.
+
+See `lexer` for documentation of the generator's output.
+
+The instantiated generator takes a single optional argument, which is an integer 0 or 1
+(defaults to 0 if no argument is given).  When set to 1, this optional argument signifies
+that the lexer should parse a string continuation for an interpolated string, i.e. the part
+of the interpolated string starting with a closed parenthesis.  1 can only be specified
+after a closing parenthesis was encountered, otherwise the lexer throws an exception.
+
+The drawback of using the raw lexer is that string continuations must be handled manually.
+The benefit of using the raw lexer is that it can be used for parsing non-Kos scripts,
+including C source code.
+
+version
+-------
+
+    version
+
+Kos version number.
+
+This is a 3-element array which contains major, minor and revision numbers.
+
+Example:
+
+    > kos.version
+    [1, 0, 0]
 
 math
 ====

@@ -20,34 +20,26 @@
 #include "../core/kos_try.h"
 #include <string.h>
 
-static const char str_column[]             = "column";
-static const char str_err_not_buffer[]     = "object is not a buffer";
-static const char str_err_not_paren[]      = "previous token was not ')'";
-static const char str_err_invalid_arg[]    = "invalid argument";
-static const char str_keyword[]            = "keyword";
-static const char str_line[]               = "line";
-static const char str_op[]                 = "op";
-static const char str_sep[]                = "sep";
-static const char str_token[]              = "token";
-static const char str_type[]               = "type";
+KOS_DECLARE_STATIC_CONST_STRING(str_column,                "column");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_bad_ignore_errors, "`ignore_errors` argument is not a boolean");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_buffer,        "'input' argument object is not a buffer");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_paren,         "previous token was not ')'");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_arg,       "invalid argument");
+KOS_DECLARE_STATIC_CONST_STRING(str_input,                 "input");
+KOS_DECLARE_STATIC_CONST_STRING(str_keyword,               "keyword");
+KOS_DECLARE_STATIC_CONST_STRING(str_line,                  "line");
+KOS_DECLARE_STATIC_CONST_STRING(str_op,                    "op");
+KOS_DECLARE_STATIC_CONST_STRING(str_sep,                   "sep");
+KOS_DECLARE_STATIC_CONST_STRING(str_token,                 "token");
+KOS_DECLARE_STATIC_CONST_STRING(str_type,                  "type");
+KOS_DECLARE_STATIC_CONST_STRING(str_version,               "version");
 
 typedef struct KOS_LEXER_OBJ_S {
     KOS_LEXER lexer;
     KOS_TOKEN token;
-    int       ignore_errors;
+    uint8_t   ignore_errors;
     char      buf[1];
 } KOS_LEXER_OBJ;
-
-typedef enum IDS_E {
-    CONST_STR_TOKEN,
-    CONST_STR_LINE,
-    CONST_STR_COLUMN,
-    CONST_STR_TYPE,
-    CONST_STR_KEYWORD,
-    CONST_STR_OP,
-    CONST_STR_SEP,
-    CONST_STR_NUM_IDS
-} IDS;
 
 static void finalize(KOS_CONTEXT ctx,
                      void       *priv)
@@ -58,32 +50,52 @@ static void finalize(KOS_CONTEXT ctx,
 
 KOS_DECLARE_PRIVATE_CLASS(lexer_priv_class);
 
-KOS_DECLARE_STATIC_CONST_STRING(str_input, "input");
-
 static const KOS_CONVERT raw_lexer_args[2] = {
     KOS_DEFINE_MANDATORY_ARG(str_input),
     KOS_DEFINE_TAIL_ARG()
 };
 
+/* @item kos raw_lexer()
+ *
+ *     raw_lexer(input, ignore_errors = false)
+ *
+ * Raw Kos lexer generator.
+ *
+ * `input` is a buffer containing UTF-8-encoded Kos script to parse.
+ *
+ * `ignore_errors` is a boolean specifying whether any errors that occur should be ignored
+ * or not.  If `ignore_errors` is `true`, any invalid characters will be returned as whitespace.
+ * If `ignore_errors` is `false`, which is the default, lexing error will trigger an exception.
+ *
+ * See `lexer` for documentation of the generator's output.
+ *
+ * The instantiated generator takes a single optional argument, which is an integer 0 or 1
+ * (defaults to 0 if no argument is given).  When set to 1, this optional argument signifies
+ * that the lexer should parse a string continuation for an interpolated string, i.e. the part
+ * of the interpolated string starting with a closed parenthesis.  1 can only be specified
+ * after a closing parenthesis was encountered, otherwise the lexer throws an exception.
+ *
+ * The drawback of using the raw lexer is that string continuations must be handled manually.
+ * The benefit of using the raw lexer is that it can be used for parsing non-Kos scripts,
+ * including C source code.
+ */
 static KOS_OBJ_ID raw_lexer(KOS_CONTEXT ctx,
                             KOS_OBJ_ID  regs_obj,
                             KOS_OBJ_ID  args_obj)
 {
-    int                 error        = KOS_SUCCESS;
-    KOS_OBJ_ID          retval       = KOS_BADPTR;
     KOS_LOCAL           regs;
     KOS_LOCAL           args;
     KOS_LOCAL           lexer;
     KOS_LOCAL           init;
-    KOS_LOCAL           token;
     KOS_LOCAL           value;
-    KOS_LOCAL           ids;
+    KOS_LOCAL           token;
     KOS_LEXER_OBJ      *kos_lexer;
-    KOS_NEXT_TOKEN_MODE next_token   = NT_ANY;
+    KOS_NEXT_TOKEN_MODE next_token = NT_ANY;
+    int                 error      = KOS_SUCCESS;
 
     assert(GET_OBJ_TYPE(regs_obj) == OBJ_ARRAY);
 
-    KOS_init_locals(ctx, 7, &regs, &args, &lexer, &init, &token, &value, &ids);
+    KOS_init_locals(ctx, 6, &regs, &args, &lexer, &init, &value, &token);
 
     regs.o = regs_obj;
     args.o = args_obj;
@@ -105,7 +117,7 @@ static KOS_OBJ_ID raw_lexer(KOS_CONTEXT ctx,
         /* TODO support OBJ_STRING as argument */
 
         if (GET_OBJ_TYPE(init.o) != OBJ_BUFFER)
-            RAISE_EXCEPTION(str_err_not_buffer);
+            RAISE_EXCEPTION_STR(str_err_not_buffer);
 
         buf_size = KOS_get_buffer_size(init.o);
 
@@ -124,46 +136,22 @@ static KOS_OBJ_ID raw_lexer(KOS_CONTEXT ctx,
 
         kos_lexer_init(&kos_lexer->lexer, 0, &kos_lexer->buf[0], &kos_lexer->buf[buf_size]);
 
-        TRY(KOS_array_resize(ctx, regs.o, 2));
-
-        TRY(KOS_array_write(ctx, regs.o, 0, lexer.o));
-
         kos_lexer->ignore_errors = 0;
 
         if (KOS_get_array_size(regs.o) > 1) {
+            KOS_OBJ_ID ignore_errors = KOS_array_read(ctx, regs.o, 1);
 
-            const KOS_OBJ_ID arg = KOS_array_read(ctx, regs.o, 1);
-            TRY_OBJID(arg);
+            TRY_OBJID(ignore_errors);
 
-            kos_lexer->ignore_errors = kos_is_truthy(arg);
+            if (GET_OBJ_TYPE(ignore_errors) != OBJ_BOOLEAN)
+                RAISE_EXCEPTION_STR(str_err_bad_ignore_errors);
+
+            kos_lexer->ignore_errors = (ignore_errors == KOS_TRUE) ? 1 : 0;
         }
 
-        ids.o = KOS_new_array(ctx, CONST_STR_NUM_IDS);
-        TRY_OBJID(ids.o);
+        TRY(KOS_array_resize(ctx, regs.o, 2));
 
-        token.o = KOS_new_const_ascii_string(ctx, str_token,   sizeof(str_token)   - 1);
-        TRY_OBJID(token.o);
-        TRY(KOS_array_write(ctx, ids.o, CONST_STR_TOKEN,   token.o));
-        token.o = KOS_new_const_ascii_string(ctx, str_line,    sizeof(str_line)    - 1);
-        TRY_OBJID(token.o);
-        TRY(KOS_array_write(ctx, ids.o, CONST_STR_LINE,    token.o));
-        token.o = KOS_new_const_ascii_string(ctx, str_column,  sizeof(str_column)  - 1);
-        TRY_OBJID(token.o);
-        TRY(KOS_array_write(ctx, ids.o, CONST_STR_COLUMN,  token.o));
-        token.o = KOS_new_const_ascii_string(ctx, str_type,    sizeof(str_type)    - 1);
-        TRY_OBJID(token.o);
-        TRY(KOS_array_write(ctx, ids.o, CONST_STR_TYPE,    token.o));
-        token.o = KOS_new_const_ascii_string(ctx, str_keyword, sizeof(str_keyword) - 1);
-        TRY_OBJID(token.o);
-        TRY(KOS_array_write(ctx, ids.o, CONST_STR_KEYWORD, token.o));
-        token.o = KOS_new_const_ascii_string(ctx, str_op,      sizeof(str_op)      - 1);
-        TRY_OBJID(token.o);
-        TRY(KOS_array_write(ctx, ids.o, CONST_STR_OP,      token.o));
-        token.o = KOS_new_const_ascii_string(ctx, str_sep,     sizeof(str_sep)     - 1);
-        TRY_OBJID(token.o);
-        TRY(KOS_array_write(ctx, ids.o, CONST_STR_SEP,     token.o));
-
-        TRY(KOS_array_write(ctx, regs.o, 1, ids.o));
+        TRY(KOS_array_write(ctx, regs.o, 0, lexer.o));
     }
     else {
         assert(GET_OBJ_TYPE(lexer.o) == OBJ_OBJECT);
@@ -180,20 +168,17 @@ static KOS_OBJ_ID raw_lexer(KOS_CONTEXT ctx,
             TRY(KOS_get_integer(ctx, arg, &i_value));
 
             if (i_value != 0 && i_value != 1)
-                RAISE_EXCEPTION(str_err_invalid_arg);
+                RAISE_EXCEPTION_STR(str_err_invalid_arg);
 
             if (i_value) {
                 next_token = NT_CONTINUE_STRING;
 
                 if (kos_lexer->token.sep != ST_PAREN_CLOSE)
-                    RAISE_EXCEPTION(str_err_not_paren);
+                    RAISE_EXCEPTION_STR(str_err_not_paren);
 
                 kos_lexer_unget_token(&kos_lexer->lexer, &kos_lexer->token);
             }
         }
-
-        ids.o = KOS_array_read(ctx, regs.o, 1);
-        TRY_OBJID(ids.o);
     }
 
     assert( ! kos_lexer->lexer.error_str);
@@ -215,126 +200,59 @@ static KOS_OBJ_ID raw_lexer(KOS_CONTEXT ctx,
             kos_lexer->lexer.pos.column += cur_token->length;
         }
         else {
-            KOS_LOCAL  parts[6];
-            KOS_OBJ_ID exception;
-
-            KOS_DECLARE_STATIC_CONST_STRING(str_format_parse_error, "parse error ");
-            KOS_DECLARE_STATIC_CONST_STRING(str_format_colon,       ":");
-            KOS_DECLARE_STATIC_CONST_STRING(str_format_colon_space, ": ");
-
-            assert(error == KOS_ERROR_SCANNING_FAILED);
-
-            KOS_init_locals(ctx, 3, &parts[1], &parts[3], &parts[5]);
-
-            parts[0].o = KOS_CONST_ID(str_format_parse_error);
-
-            parts[1].o = KOS_object_to_string(ctx, TO_SMALL_INT((int)kos_lexer->lexer.pos.line));
-            if (IS_BAD_PTR(parts[1].o)) {
-                KOS_destroy_top_locals(ctx, &parts[1], &parts[5]);
-                RAISE_ERROR(KOS_ERROR_EXCEPTION);
-            }
-
-            parts[2].o = KOS_CONST_ID(str_format_colon);
-
-            parts[3].o = KOS_object_to_string(ctx, TO_SMALL_INT((int)kos_lexer->lexer.pos.column));
-            if (IS_BAD_PTR(parts[3].o)) {
-                KOS_destroy_top_locals(ctx, &parts[1], &parts[5]);
-                RAISE_ERROR(KOS_ERROR_EXCEPTION);
-            }
-
-            parts[4].o = KOS_CONST_ID(str_format_colon_space);
-
-            parts[5].o = KOS_new_cstring(ctx, kos_lexer->lexer.error_str);
-            if (IS_BAD_PTR(parts[5].o)) {
-                KOS_destroy_top_locals(ctx, &parts[1], &parts[5]);
-                RAISE_ERROR(KOS_ERROR_EXCEPTION);
-            }
-
-            exception = KOS_string_add_n(ctx, parts, sizeof(parts)/sizeof(parts[0]));
-
-            KOS_destroy_top_locals(ctx, &parts[1], &parts[5]);
-
-            TRY_OBJID(exception);
-
-            KOS_raise_exception(ctx, exception);
+            KOS_raise_printf(ctx,
+                             "parse error %u:%u: %s",
+                             kos_lexer->lexer.pos.line,
+                             kos_lexer->lexer.pos.column,
+                             kos_lexer->lexer.error_str);
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
     }
 
     if (kos_lexer->token.type != TT_EOF) {
 
-        KOS_TOKEN *cur_token = &kos_lexer->token;
-        KOS_OBJ_ID key;
+        KOS_TOKEN *const cur_token = &kos_lexer->token;
 
         token.o = KOS_new_object(ctx);
         TRY_OBJID(token.o);
 
         value.o = KOS_new_string(ctx, cur_token->begin, cur_token->length);
         TRY_OBJID(value.o);
+        TRY(KOS_set_property(ctx, token.o, KOS_CONST_ID(str_token), value.o));
 
-        key = KOS_array_read(ctx, ids.o, CONST_STR_TOKEN);
-        TRY_OBJID(key);
-        TRY(KOS_set_property(ctx,
-                             token.o,
-                             key,
-                             value.o));
+        value.o = KOS_new_int(ctx, (int64_t)cur_token->line);
+        TRY_OBJID(value.o);
+        TRY(KOS_set_property(ctx, token.o, KOS_CONST_ID(str_line), value.o));
 
-        key = KOS_array_read(ctx, ids.o, CONST_STR_LINE);
-        TRY_OBJID(key);
-        TRY(KOS_set_property(ctx,
-                             token.o,
-                             key,
-                             TO_SMALL_INT((int)cur_token->line)));
+        value.o = KOS_new_int(ctx, (int64_t)cur_token->column);
+        TRY_OBJID(value.o);
+        TRY(KOS_set_property(ctx, token.o, KOS_CONST_ID(str_column), value.o));
 
-        key = KOS_array_read(ctx, ids.o, CONST_STR_COLUMN);
-        TRY_OBJID(key);
-        TRY(KOS_set_property(ctx,
-                             token.o,
-                             key,
-                             TO_SMALL_INT((int)cur_token->column)));
+        value.o = KOS_new_int(ctx, (int64_t)cur_token->type);
+        TRY_OBJID(value.o);
+        TRY(KOS_set_property(ctx, token.o, KOS_CONST_ID(str_type), value.o));
 
-        key = KOS_array_read(ctx, ids.o, CONST_STR_TYPE);
-        TRY_OBJID(key);
-        TRY(KOS_set_property(ctx,
-                             token.o,
-                             key,
-                             TO_SMALL_INT((int)cur_token->type)));
+        value.o = KOS_new_int(ctx, (int64_t)cur_token->keyword);
+        TRY_OBJID(value.o);
+        TRY(KOS_set_property(ctx, token.o, KOS_CONST_ID(str_keyword), value.o));
 
-        key = KOS_array_read(ctx, ids.o, CONST_STR_KEYWORD);
-        TRY_OBJID(key);
-        TRY(KOS_set_property(ctx,
-                             token.o,
-                             key,
-                             TO_SMALL_INT((int)cur_token->keyword)));
+        value.o = KOS_new_int(ctx, (int64_t)cur_token->op);
+        TRY_OBJID(value.o);
+        TRY(KOS_set_property(ctx, token.o, KOS_CONST_ID(str_op), value.o));
 
-        key = KOS_array_read(ctx, ids.o, CONST_STR_OP);
-        TRY_OBJID(key);
-        TRY(KOS_set_property(ctx,
-                             token.o,
-                             key,
-                             TO_SMALL_INT((int)cur_token->op)));
-
-        key = KOS_array_read(ctx, ids.o, CONST_STR_SEP);
-        TRY_OBJID(key);
-        TRY(KOS_set_property(ctx,
-                             token.o,
-                             key,
-                             TO_SMALL_INT((int)cur_token->sep)));
+        value.o = KOS_new_int(ctx, (int64_t)cur_token->sep);
+        TRY_OBJID(value.o);
+        TRY(KOS_set_property(ctx, token.o, KOS_CONST_ID(str_sep), value.o));
 
         if (kos_lexer->token.type == TT_STRING || kos_lexer->token.type == TT_STRING_OPEN) {
             /* TODO parse string, raw/non-raw */
         }
-
-        retval = token.o;
     }
 
 cleanup:
-    KOS_destroy_top_locals(ctx, &regs, &ids);
+    token.o = KOS_destroy_top_locals(ctx, &regs, &token);
 
-    if (error)
-        retval = KOS_BADPTR;
-
-    return retval;
+    return error ? KOS_BADPTR : token.o;
 }
 
 static int set_value(KOS_CONTEXT                      ctx,
@@ -354,7 +272,7 @@ cleanup:
     return error;
 }
 
-/* @item gc collect_garbage()
+/* @item kos collect_garbage()
  *
  *     collect_garbage()
  *
@@ -413,20 +331,41 @@ cleanup:
     return error ? KOS_BADPTR : out.o;
 }
 
+/* @item kos version
+ *
+ *     version
+ *
+ * Kos version number.
+ *
+ * This is a 3-element array which contains major, minor and revision numbers.
+ *
+ * Example:
+ *
+ *     > kos.version
+ *     [1, 0, 0]
+ */
+
 int kos_module_kos_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 {
     int       error = KOS_SUCCESS;
     KOS_LOCAL module;
+    KOS_LOCAL version;
 
     KOS_init_local_with(ctx, &module, module_obj);
+    KOS_init_local(     ctx, &version);
 
     TRY_ADD_FUNCTION(        ctx, module.o, "collect_garbage",      collect_garbage, KOS_NULL);
 
     TRY_ADD_GENERATOR(       ctx, module.o, "raw_lexer", raw_lexer, raw_lexer_args);
 
-    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "version_major",        KOS_VERSION_MAJOR);
-    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "version_minor",        KOS_VERSION_MINOR);
-    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "version_revision",     KOS_VERSION_REVISION);
+    version.o = KOS_new_array(ctx, 3);
+    TRY_OBJID(version.o);
+
+    TRY(KOS_array_write(ctx, version.o, 0, TO_SMALL_INT(KOS_VERSION_MAJOR)));
+    TRY(KOS_array_write(ctx, version.o, 1, TO_SMALL_INT(KOS_VERSION_MINOR)));
+    TRY(KOS_array_write(ctx, version.o, 2, TO_SMALL_INT(KOS_VERSION_REVISION)));
+
+    TRY(KOS_module_add_global(ctx, module.o, KOS_CONST_ID(str_version), version.o, KOS_NULL));
 
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "token_whitespace",     TT_WHITESPACE);
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "token_eol",            TT_EOL);
@@ -546,7 +485,7 @@ int kos_module_kos_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "continue_string",      NT_CONTINUE_STRING);
 
 cleanup:
-    KOS_destroy_top_local(ctx, &module);
+    KOS_destroy_top_locals(ctx, &version, &module);
 
     return error;
 }
