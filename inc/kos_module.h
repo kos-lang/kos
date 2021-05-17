@@ -109,65 +109,65 @@ uint32_t KOS_module_func_get_code_size(KOS_MODULE *module,
 
 #define TRY_ADD_GLOBAL(ctx, module, name, value)                                            \
 do {                                                                                        \
-    KOS_DECLARE_STATIC_CONST_STRING(str_name, name);                                        \
-    TRY(KOS_module_add_global((ctx), (module), KOS_CONST_ID(str_name), (value), KOS_NULL)); \
+    KOS_DECLARE_STATIC_CONST_STRING(XstrNAME, name);                                        \
+    TRY(KOS_module_add_global((ctx), (module), KOS_CONST_ID(XstrNAME), (value), KOS_NULL)); \
 } while (0)
 
 #define TRY_ADD_FUNCTION(ctx, module, name, handler, args)               \
 do {                                                                     \
-    KOS_DECLARE_STATIC_CONST_STRING(str_name, name);                     \
-    TRY(KOS_module_add_function((ctx), (module), KOS_CONST_ID(str_name), \
+    KOS_DECLARE_STATIC_CONST_STRING(XstrNAME, name);                     \
+    TRY(KOS_module_add_function((ctx), (module), KOS_CONST_ID(XstrNAME), \
                                 (handler), (args), KOS_FUN));            \
 } while (0)
 
 #define TRY_ADD_GENERATOR(ctx, module, name, handler, args)              \
 do {                                                                     \
-    KOS_DECLARE_STATIC_CONST_STRING(str_name, name);                     \
-    TRY(KOS_module_add_function((ctx), (module), KOS_CONST_ID(str_name), \
+    KOS_DECLARE_STATIC_CONST_STRING(XstrNAME, name);                     \
+    TRY(KOS_module_add_function((ctx), (module), KOS_CONST_ID(XstrNAME), \
                                 (handler), (args), KOS_GEN_INIT));       \
 } while (0)
 
 #define TRY_ADD_CONSTRUCTOR(ctx, module, name, handler, args, ret_proto)    \
 do {                                                                        \
-    KOS_DECLARE_STATIC_CONST_STRING(str_name, name);                        \
-    TRY(KOS_module_add_constructor((ctx), (module), KOS_CONST_ID(str_name), \
+    KOS_DECLARE_STATIC_CONST_STRING(XstrNAME, name);                        \
+    TRY(KOS_module_add_constructor((ctx), (module), KOS_CONST_ID(XstrNAME), \
                                    (handler), (args), (ret_proto)));        \
 } while (0)
 
 #define TRY_ADD_MEMBER_FUNCTION(ctx, module, proto, name, handler, args)                 \
 do {                                                                                     \
-    KOS_DECLARE_STATIC_CONST_STRING(str_name, name);                                     \
-    TRY(KOS_module_add_member_function((ctx), (module), (proto), KOS_CONST_ID(str_name), \
+    KOS_DECLARE_STATIC_CONST_STRING(XstrNAME, name);                                     \
+    TRY(KOS_module_add_member_function((ctx), (module), (proto), KOS_CONST_ID(XstrNAME), \
                                        (handler), (args), KOS_FUN));                     \
 } while (0)
 
 #define TRY_ADD_MEMBER_GENERATOR(ctx, module, proto, name, handler, args)                \
 do {                                                                                     \
-    KOS_DECLARE_STATIC_CONST_STRING(str_name, name);                                     \
-    TRY(KOS_module_add_member_function((ctx), (module), (proto), KOS_CONST_ID(str_name), \
+    KOS_DECLARE_STATIC_CONST_STRING(XstrNAME, name);                                     \
+    TRY(KOS_module_add_member_function((ctx), (module), (proto), KOS_CONST_ID(XstrNAME), \
                                        (handler), (args), KOS_GEN_INIT));                \
 } while (0)
 
 #define TRY_ADD_MEMBER_PROPERTY(ctx, module, proto, name, getter, setter)        \
 do {                                                                             \
-    KOS_DECLARE_STATIC_CONST_STRING(str_name, name);                             \
-    TRY(KOS_set_builtin_dynamic_property((ctx), (proto), KOS_CONST_ID(str_name), \
+    KOS_DECLARE_STATIC_CONST_STRING(XstrNAME, name);                             \
+    TRY(KOS_set_builtin_dynamic_property((ctx), (proto), KOS_CONST_ID(XstrNAME), \
                                          (module), (getter), (setter)));         \
 } while (0)
 
 #define TRY_ADD_INTEGER_CONSTANT(ctx, module, name, value)             \
 do {                                                                   \
-    KOS_DECLARE_STATIC_CONST_STRING(str_name, name);                   \
-    TRY(KOS_module_add_global((ctx), (module), KOS_CONST_ID(str_name), \
+    KOS_DECLARE_STATIC_CONST_STRING(XstrNAME, name);                   \
+    TRY(KOS_module_add_global((ctx), (module), KOS_CONST_ID(XstrNAME), \
                               TO_SMALL_INT((int)(value)), KOS_NULL));  \
 } while (0)
 
 #define TRY_ADD_STRING_CONSTANT(ctx, module, name, value)              \
 do {                                                                   \
-    KOS_DECLARE_STATIC_CONST_STRING(str_name, name);                   \
-    KOS_DECLARE_STATIC_CONST_STRING(str_value, value);                 \
-    TRY(KOS_module_add_global((ctx), (module), KOS_CONST_ID(str_name), \
-                              KOS_CONST_ID(str_value), KOS_NULL));     \
+    KOS_DECLARE_STATIC_CONST_STRING(XstrNAME, name);                   \
+    KOS_DECLARE_STATIC_CONST_STRING(XstrVALUE, value);                 \
+    TRY(KOS_module_add_global((ctx), (module), KOS_CONST_ID(XstrNAME), \
+                              KOS_CONST_ID(XstrVALUE), KOS_NULL));     \
 } while (0)
 
 #ifdef KOS_EXTERNAL_MODULES

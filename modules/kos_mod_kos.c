@@ -413,7 +413,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx,
     if (GET_OBJ_TYPE(arg_id) == OBJ_STRING) {
         TRY(KOS_string_to_cstr_vec(ctx, arg_id, &data_cstr));
         data      = (const uint8_t *)data_cstr.buffer;
-        data_size = data_cstr.size - 1;
+        data_size = (unsigned)data_cstr.size - 1;
     }
     else if (GET_OBJ_TYPE(arg_id) == OBJ_BUFFER) {
         data_size = KOS_get_buffer_size(arg_id);
