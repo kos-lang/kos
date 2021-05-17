@@ -255,22 +255,50 @@ cleanup:
     return error ? KOS_BADPTR : token.o;
 }
 
-static int set_value(KOS_CONTEXT                      ctx,
-                     KOS_LOCAL                       *obj,
-                     const struct KOS_CONST_STRING_S *prop_str,
-                     unsigned                         value)
-{
-    KOS_OBJ_ID value_id;
-    int        error;
+KOS_DECLARE_STATIC_CONST_STRING(str_num_objs_evacuated,     "num_objs_evacuated");
+KOS_DECLARE_STATIC_CONST_STRING(str_num_objs_freed,         "num_objs_freed");
+KOS_DECLARE_STATIC_CONST_STRING(str_num_objs_finalized,     "num_objs_finalized");
+KOS_DECLARE_STATIC_CONST_STRING(str_num_pages_kept,         "num_pages_kept");
+KOS_DECLARE_STATIC_CONST_STRING(str_num_pages_freed,        "num_pages_freed");
+KOS_DECLARE_STATIC_CONST_STRING(str_size_evacuated,         "size_evacuated");
+KOS_DECLARE_STATIC_CONST_STRING(str_size_freed,             "size_freed");
+KOS_DECLARE_STATIC_CONST_STRING(str_size_kept,              "size_kept");
+KOS_DECLARE_STATIC_CONST_STRING(str_initial_heap_size,      "initial_heap_size");
+KOS_DECLARE_STATIC_CONST_STRING(str_initial_used_heap_size, "initial_used_heap_size");
+KOS_DECLARE_STATIC_CONST_STRING(str_initial_malloc_size,    "initial_malloc_size");
+KOS_DECLARE_STATIC_CONST_STRING(str_heap_size,              "heap_size");
+KOS_DECLARE_STATIC_CONST_STRING(str_used_heap_size,         "used_heap_size");
+KOS_DECLARE_STATIC_CONST_STRING(str_malloc_size,            "malloc_size");
+KOS_DECLARE_STATIC_CONST_STRING(str_time_stop_us,           "time_stop_us");
+KOS_DECLARE_STATIC_CONST_STRING(str_time_mark_us,           "time_mark_us");
+KOS_DECLARE_STATIC_CONST_STRING(str_time_evac_us,           "time_evac_us");
+KOS_DECLARE_STATIC_CONST_STRING(str_time_update_us,         "time_update_us");
+KOS_DECLARE_STATIC_CONST_STRING(str_time_finish_us,         "time_finish_us");
+KOS_DECLARE_STATIC_CONST_STRING(str_time_total_us,          "time_total_us");
 
-    value_id = KOS_new_int(ctx, (int64_t)value);
-    TRY_OBJID(value_id);
-
-    error = KOS_set_property(ctx, obj->o, KOS_CONST_ID(*prop_str), value_id);
-
-cleanup:
-    return error;
-}
+static const KOS_CONVERT conv_gc_stats[21] = {
+    { KOS_CONST_ID(str_num_objs_evacuated),     KOS_BADPTR, offsetof(KOS_GC_STATS, num_objs_evacuated),     0, KOS_NATIVE_UINT32 },
+    { KOS_CONST_ID(str_num_objs_freed),         KOS_BADPTR, offsetof(KOS_GC_STATS, num_objs_freed),         0, KOS_NATIVE_UINT32 },
+    { KOS_CONST_ID(str_num_objs_finalized),     KOS_BADPTR, offsetof(KOS_GC_STATS, num_objs_finalized),     0, KOS_NATIVE_UINT32 },
+    { KOS_CONST_ID(str_num_pages_kept),         KOS_BADPTR, offsetof(KOS_GC_STATS, num_pages_kept),         0, KOS_NATIVE_UINT32 },
+    { KOS_CONST_ID(str_num_pages_freed),        KOS_BADPTR, offsetof(KOS_GC_STATS, num_pages_freed),        0, KOS_NATIVE_UINT32 },
+    { KOS_CONST_ID(str_size_evacuated),         KOS_BADPTR, offsetof(KOS_GC_STATS, size_evacuated),         0, KOS_NATIVE_UINT32 },
+    { KOS_CONST_ID(str_size_freed),             KOS_BADPTR, offsetof(KOS_GC_STATS, size_freed),             0, KOS_NATIVE_UINT32 },
+    { KOS_CONST_ID(str_size_kept),              KOS_BADPTR, offsetof(KOS_GC_STATS, size_kept),              0, KOS_NATIVE_UINT32 },
+    { KOS_CONST_ID(str_initial_heap_size),      KOS_BADPTR, offsetof(KOS_GC_STATS, initial_heap_size),      0, KOS_NATIVE_UINT32 },
+    { KOS_CONST_ID(str_initial_used_heap_size), KOS_BADPTR, offsetof(KOS_GC_STATS, initial_used_heap_size), 0, KOS_NATIVE_UINT32 },
+    { KOS_CONST_ID(str_initial_malloc_size),    KOS_BADPTR, offsetof(KOS_GC_STATS, initial_malloc_size),    0, KOS_NATIVE_UINT32 },
+    { KOS_CONST_ID(str_heap_size),              KOS_BADPTR, offsetof(KOS_GC_STATS, heap_size),              0, KOS_NATIVE_UINT32 },
+    { KOS_CONST_ID(str_used_heap_size),         KOS_BADPTR, offsetof(KOS_GC_STATS, used_heap_size),         0, KOS_NATIVE_UINT32 },
+    { KOS_CONST_ID(str_malloc_size),            KOS_BADPTR, offsetof(KOS_GC_STATS, malloc_size),            0, KOS_NATIVE_UINT32 },
+    { KOS_CONST_ID(str_time_stop_us),           KOS_BADPTR, offsetof(KOS_GC_STATS, time_stop_us),           0, KOS_NATIVE_UINT32 },
+    { KOS_CONST_ID(str_time_mark_us),           KOS_BADPTR, offsetof(KOS_GC_STATS, time_mark_us),           0, KOS_NATIVE_UINT32 },
+    { KOS_CONST_ID(str_time_evac_us),           KOS_BADPTR, offsetof(KOS_GC_STATS, time_evac_us),           0, KOS_NATIVE_UINT32 },
+    { KOS_CONST_ID(str_time_update_us),         KOS_BADPTR, offsetof(KOS_GC_STATS, time_update_us),         0, KOS_NATIVE_UINT32 },
+    { KOS_CONST_ID(str_time_finish_us),         KOS_BADPTR, offsetof(KOS_GC_STATS, time_finish_us),         0, KOS_NATIVE_UINT32 },
+    { KOS_CONST_ID(str_time_total_us),          KOS_BADPTR, offsetof(KOS_GC_STATS, time_total_us),          0, KOS_NATIVE_UINT32 },
+    KOS_DEFINE_TAIL_ARG()
+};
 
 /* @item kos collect_garbage()
  *
@@ -298,32 +326,7 @@ static KOS_OBJ_ID collect_garbage(KOS_CONTEXT ctx,
     out.o = KOS_new_object(ctx);
     TRY_OBJID(out.o);
 
-#define SET_VALUE(name) do {                            \
-    KOS_DECLARE_STATIC_CONST_STRING(str_##name, #name); \
-    TRY(set_value(ctx, &out, &str_##name, stats.name)); \
-} while (0)
-
-    SET_VALUE(num_objs_evacuated);
-    SET_VALUE(num_objs_freed);
-    SET_VALUE(num_objs_finalized);
-    SET_VALUE(num_pages_kept);
-    SET_VALUE(num_pages_freed);
-    SET_VALUE(size_evacuated);
-    SET_VALUE(size_freed);
-    SET_VALUE(size_kept);
-    SET_VALUE(initial_heap_size);
-    SET_VALUE(initial_used_heap_size);
-    SET_VALUE(initial_malloc_size);
-    SET_VALUE(heap_size);
-    SET_VALUE(used_heap_size);
-    SET_VALUE(malloc_size);
-    SET_VALUE(time_stop_us);
-    SET_VALUE(time_mark_us);
-    SET_VALUE(time_evac_us);
-    SET_VALUE(time_update_us);
-    SET_VALUE(time_finish_us);
-    SET_VALUE(time_total_us);
-#undef SET_VALUE
+    TRY(KOS_set_properties_from_native(ctx, out.o, conv_gc_stats, &stats));
 
 cleanup:
     out.o = KOS_destroy_top_local(ctx, &out);
