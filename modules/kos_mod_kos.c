@@ -9,7 +9,9 @@
 #include "../inc/kos_entity.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_malloc.h"
+#include "../inc/kos_memory.h"
 #include "../inc/kos_module.h"
+#include "../inc/kos_modules_init.h"
 #include "../inc/kos_object.h"
 #include "../inc/kos_string.h"
 #include "../inc/kos_utils.h"
@@ -22,13 +24,20 @@
 
 KOS_DECLARE_STATIC_CONST_STRING(str_column,                "column");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_bad_ignore_errors, "`ignore_errors` argument is not a boolean");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_not_buffer,        "'input' argument object is not a buffer");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_not_paren,         "previous token was not ')'");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_default_path,      "failed to set default path");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_execute,           "failed to execute script");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_instance_init,     "failed to initialize instance");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_arg,       "invalid argument");
-KOS_DECLARE_STATIC_CONST_STRING(str_input,                 "input");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_string,    "invalid string");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_modules_init,      "failed to initialize modules");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_name_not_string,   "'name' argument is not a string");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_paren,         "previous token was not ')'");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_script_not_buffer, "'script' argument object is not a buffer");
 KOS_DECLARE_STATIC_CONST_STRING(str_keyword,               "keyword");
 KOS_DECLARE_STATIC_CONST_STRING(str_line,                  "line");
+KOS_DECLARE_STATIC_CONST_STRING(str_name,                  "name");
 KOS_DECLARE_STATIC_CONST_STRING(str_op,                    "op");
+KOS_DECLARE_STATIC_CONST_STRING(str_script,                "script");
 KOS_DECLARE_STATIC_CONST_STRING(str_sep,                   "sep");
 KOS_DECLARE_STATIC_CONST_STRING(str_token,                 "token");
 KOS_DECLARE_STATIC_CONST_STRING(str_type,                  "type");
@@ -51,17 +60,17 @@ static void finalize(KOS_CONTEXT ctx,
 KOS_DECLARE_PRIVATE_CLASS(lexer_priv_class);
 
 static const KOS_CONVERT raw_lexer_args[2] = {
-    KOS_DEFINE_MANDATORY_ARG(str_input),
+    KOS_DEFINE_MANDATORY_ARG(str_script),
     KOS_DEFINE_TAIL_ARG()
 };
 
 /* @item kos raw_lexer()
  *
- *     raw_lexer(input, ignore_errors = false)
+ *     raw_lexer(script, ignore_errors = false)
  *
  * Raw Kos lexer generator.
  *
- * `input` is a buffer containing UTF-8-encoded Kos script to parse.
+ * `script` is a string or a buffer containing Kos script to parse.
  *
  * `ignore_errors` is a boolean specifying whether any errors that occur should be ignored
  * or not.  If `ignore_errors` is `true`, any invalid characters will be returned as whitespace.
@@ -107,22 +116,30 @@ static KOS_OBJ_ID raw_lexer(KOS_CONTEXT ctx,
     /* TODO improve passing args for the first time to built-in generators */
 
     /* Instantiate the lexer on first invocation */
-    if (GET_OBJ_TYPE(lexer.o) != OBJ_OBJECT ||
-        ! KOS_object_get_private(lexer.o, &lexer_priv_class)) {
+    if ( ! KOS_object_get_private(lexer.o, &lexer_priv_class)) {
 
         uint32_t buf_size;
 
         init.o = lexer.o;
 
-        /* TODO support OBJ_STRING as argument */
-
-        if (GET_OBJ_TYPE(init.o) != OBJ_BUFFER)
-            RAISE_EXCEPTION_STR(str_err_not_buffer);
-
-        buf_size = KOS_get_buffer_size(init.o);
-
         lexer.o = KOS_new_object_with_private(ctx, KOS_VOID, &lexer_priv_class, finalize);
         TRY_OBJID(lexer.o);
+
+        switch (GET_OBJ_TYPE(init.o)) {
+
+            case OBJ_STRING:
+                buf_size = KOS_string_to_utf8(init.o, KOS_NULL, 0);
+                if (buf_size == ~0U)
+                    RAISE_EXCEPTION_STR(str_err_invalid_string);
+                break;
+
+            case OBJ_BUFFER:
+                buf_size = KOS_get_buffer_size(init.o);
+                break;
+
+            default:
+                RAISE_EXCEPTION_STR(str_err_script_not_buffer);
+        }
 
         kos_lexer = (KOS_LEXER_OBJ *)KOS_malloc(sizeof(KOS_LEXER_OBJ) + buf_size - 1);
         if ( ! kos_lexer) {
@@ -132,7 +149,10 @@ static KOS_OBJ_ID raw_lexer(KOS_CONTEXT ctx,
 
         KOS_object_set_private_ptr(lexer.o, kos_lexer);
 
-        memcpy(&kos_lexer->buf[0], KOS_buffer_data_const(init.o), buf_size);
+        if (GET_OBJ_TYPE(init.o) == OBJ_BUFFER)
+            memcpy(&kos_lexer->buf[0], KOS_buffer_data_const(init.o), buf_size);
+        else
+            KOS_string_to_utf8(init.o, &kos_lexer->buf[0], buf_size);
 
         kos_lexer_init(&kos_lexer->lexer, 0, &kos_lexer->buf[0], &kos_lexer->buf[buf_size]);
 
@@ -334,6 +354,119 @@ cleanup:
     return error ? KOS_BADPTR : out.o;
 }
 
+static const KOS_CONVERT execute_args[3] = {
+    KOS_DEFINE_MANDATORY_ARG(str_script),
+    KOS_DEFINE_OPTIONAL_ARG( str_name, KOS_VOID),
+    KOS_DEFINE_TAIL_ARG()
+};
+
+/* @item kos execute()
+ *
+ *     execute(script, name = "")
+ *
+ * Executes a Kos script in a new interpreter.
+ *
+ * `script` is either a buffer or a string containing the script to execute.
+ *
+ * `name` is optional script name, used in the child interpreter's messages.
+ *
+ * There is no direct way to communicate between the currently running script and the
+ * newly called script.
+ *
+ * This function pauses and waits until the script finishes executing.
+ *
+ * Throws an exception if there was an error in running the script.
+ *
+ * Returns `void` if the script execution succeeded.
+ */
+static KOS_OBJ_ID execute(KOS_CONTEXT ctx,
+                          KOS_OBJ_ID  this_obj,
+                          KOS_OBJ_ID  args_obj)
+{
+    KOS_VECTOR     name_cstr;
+    KOS_VECTOR     data_cstr;
+    KOS_LOCAL      name;
+    KOS_INSTANCE   new_inst;
+    KOS_CONTEXT    new_ctx;
+    KOS_OBJ_ID     arg_id;
+    const uint8_t *data       = KOS_NULL;
+    unsigned       data_size  = 0;
+    int            inst_init  = 0;
+    int            error      = KOS_SUCCESS;
+
+    KOS_vector_init(&name_cstr);
+    KOS_vector_init(&data_cstr);
+
+    KOS_init_local(ctx, &name);
+
+    name.o = KOS_array_read(ctx, args_obj, 1);
+    TRY_OBJID(name.o);
+
+    if ((name.o != KOS_VOID) && (GET_OBJ_TYPE(name.o) != OBJ_STRING))
+        RAISE_EXCEPTION_STR(str_err_name_not_string);
+
+    assert(KOS_get_array_size(args_obj) > 0);
+
+    arg_id = KOS_array_read(ctx, args_obj, 0);
+    TRY_OBJID(arg_id);
+
+    if (GET_OBJ_TYPE(arg_id) == OBJ_STRING) {
+        TRY(KOS_string_to_cstr_vec(ctx, arg_id, &data_cstr));
+        data      = (const uint8_t *)data_cstr.buffer;
+        data_size = data_cstr.size - 1;
+    }
+    else if (GET_OBJ_TYPE(arg_id) == OBJ_BUFFER) {
+        data_size = KOS_get_buffer_size(arg_id);
+        data      = data_size ? KOS_buffer_data_const(arg_id) : KOS_NULL;
+    }
+    else
+        RAISE_EXCEPTION_STR(str_err_script_not_buffer);
+
+    if (name.o == KOS_VOID) {
+        TRY(KOS_vector_resize(&name_cstr, 1));
+        name_cstr.buffer[0] = 0;
+    }
+    else {
+        TRY(KOS_string_to_cstr_vec(ctx, name.o, &name_cstr));
+        name.o = KOS_VOID;
+    }
+
+    error = KOS_instance_init(&new_inst, ctx->inst->flags, &new_ctx);
+    if (error)
+        RAISE_EXCEPTION_STR(str_err_instance_init);
+
+    KOS_suspend_context(ctx);
+
+    inst_init = 1;
+
+    error = KOS_instance_add_default_path(new_ctx, KOS_NULL);
+    if (error)
+        RAISE_EXCEPTION_STR(str_err_default_path);
+
+    error = KOS_modules_init(new_ctx);
+    if (error)
+        RAISE_EXCEPTION_STR(str_err_modules_init);
+
+    arg_id = KOS_repl(new_ctx, name_cstr.buffer, KOS_RUN_ONCE, (const char *)data, data_size);
+    if (IS_BAD_PTR(arg_id)) {
+        KOS_print_exception(new_ctx, KOS_STDERR);
+        RAISE_EXCEPTION_STR(str_err_execute);
+    }
+
+cleanup:
+    if (inst_init) {
+        KOS_instance_destroy(&new_inst);
+        KOS_resume_context(ctx);
+    }
+
+    KOS_destroy_top_local(ctx, &name);
+
+    KOS_vector_destroy(&name_cstr);
+    KOS_vector_destroy(&data_cstr);
+
+    return error ? KOS_BADPTR : KOS_VOID;
+}
+
 /* @item kos version
  *
  *     version
@@ -358,8 +491,8 @@ int kos_module_kos_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     KOS_init_local(     ctx, &version);
 
     TRY_ADD_FUNCTION(        ctx, module.o, "collect_garbage",      collect_garbage, KOS_NULL);
-
-    TRY_ADD_GENERATOR(       ctx, module.o, "raw_lexer", raw_lexer, raw_lexer_args);
+    TRY_ADD_FUNCTION(        ctx, module.o, "execute",              execute,         execute_args);
+    TRY_ADD_GENERATOR(       ctx, module.o, "raw_lexer",            raw_lexer,       raw_lexer_args);
 
     version.o = KOS_new_array(ctx, 3);
     TRY_OBJID(version.o);

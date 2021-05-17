@@ -174,6 +174,7 @@ Table of Contents
     * [reverse()](#reverse)
   * [kos](#kos)
     * [collect\_garbage()](#collect_garbage)
+    * [execute()](#execute)
     * [lexer()](#lexer)
     * [raw\_lexer()](#raw_lexer)
     * [version](#version)
@@ -3744,6 +3745,26 @@ Returns an object containing statistics from the garbage collection cycle.
 Throws an exception if there was an error, for example if the heap
 ran out of memory.
 
+execute()
+---------
+
+    execute(script, name = "")
+
+Executes a Kos script in a new interpreter.
+
+`script` is either a buffer or a string containing the script to execute.
+
+`name` is optional script name, used in the child interpreter's messages.
+
+There is no direct way to communicate between the currently running script and the
+newly called script.
+
+This function pauses and waits until the script finishes executing.
+
+Throws an exception if there was an error in running the script.
+
+Returns `void` if the script execution succeeded.
+
 lexer()
 -------
 
@@ -3769,11 +3790,11 @@ token is an object which has the following properties:
 raw_lexer()
 -----------
 
-    raw_lexer(input, ignore_errors = false)
+    raw_lexer(script, ignore_errors = false)
 
 Raw Kos lexer generator.
 
-`input` is a buffer containing UTF-8-encoded Kos script to parse.
+`script` is a string or a buffer containing Kos script to parse.
 
 `ignore_errors` is a boolean specifying whether any errors that occur should be ignored
 or not.  If `ignore_errors` is `true`, any invalid characters will be returned as whitespace.

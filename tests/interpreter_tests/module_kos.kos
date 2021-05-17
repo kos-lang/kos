@@ -3,6 +3,8 @@
 
 import base
 import kos
+import fs
+import io
 
 fun expect_fail(function)
 {
@@ -178,4 +180,60 @@ do {
     assert t3.column == 3
 
     expect_fail(lexer)
+}
+
+do {
+    const input = "123#456"
+    const lexer = kos.raw_lexer(input)
+
+    const t1 = lexer()
+    assert t1.type   == kos.token_numeric
+    assert t1.token  == "123"
+    assert t1.op     == kos.op_none
+    assert t1.sep    == kos.sep_none
+    assert t1.line   == 1
+    assert t1.column == 1
+
+    const t2 = lexer()
+    assert t2.type   == kos.token_comment
+    assert t2.token  == "#456"
+    assert t2.op     == kos.op_none
+    assert t2.sep    == kos.sep_none
+    assert t2.line   == 1
+    assert t2.column == 4
+
+    expect_fail(lexer)
+}
+
+do {
+    const ver = kos.version
+    assert typeof ver == "array"
+    assert ver.size == 3
+    for const val in ver {
+        assert typeof val == "integer"
+    }
+}
+
+do {
+    const filename = "__test_kos_exec"
+
+    const test_script = "import io ; with const f = io.create(\"\(filename)\") { f.print(\"Hello, Kos\") }"
+
+    fun run_execute_test(script, name = void)
+    {
+        fs.remove(filename)
+        assert ! fs.file_exists(filename)
+
+        assert kos.execute(script, name) == void
+
+        assert fs.file_exists(filename)
+        with const f = io.open(filename, io.ro) {
+            assert base.string(f.read()).strip() == "Hello, Kos"
+        }
+
+        fs.remove(filename)
+    }
+
+    run_execute_test(test_script)
+    run_execute_test(base.buffer(test_script), "from buffer")
 }
