@@ -78,6 +78,11 @@ do {
     expect_fail(() => re.re(r"[0-]"))
     expect_fail(() => re.re(r"[0--]"))
     expect_fail(() => re.re(r"[1-0]"))
+    expect_fail(() => re.re(r"("))
+    expect_fail(() => re.re(r"(?"))
+    expect_fail(() => re.re(r"(?)"))
+    expect_fail(() => re.re(r"(??)"))
+    expect_fail(() => re.re(r"(?:"))
 }
 
 do {
@@ -570,4 +575,24 @@ do {
     assert result.match_groups[0] == "3"
     assert result.match_groups[1] == void
     assert result.match_groups[2] == "3"
+}
+
+do {
+    const r = re.re("^(\w+(?: *))$|^(#{1,3}(?: *))$")
+    assert ! r.find(" ab ")
+    assert ! r.find("ab  a")
+    assert ! r.find(" ### ")
+    assert ! r.find("####  ")
+
+    const r1 = r.find("ab  ")
+    assert r1.match == "ab  "
+    assert r1.match_groups.size == 2
+    assert r1.match_groups[0] == "ab  "
+    assert r1.match_groups[1] == void
+
+    const r2 = r.find("###  ")
+    assert r2.match == "###  "
+    assert r2.match_groups.size == 2
+    assert r2.match_groups[0] == void
+    assert r2.match_groups[1] == "###  "
 }

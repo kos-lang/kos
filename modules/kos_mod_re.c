@@ -111,7 +111,9 @@ KOS_DECLARE_STATIC_CONST_STRING(str_string,                 "string");
  *
  * LineEnd ::= "$"
  *
- * EscapeSequence ::= "\\" ( "\\" | "<" | ">" | "A" | "b" | "B" | "d" | "D" | "s" | "S" | "w" | "W" | "Z" | Digit )
+ * EscapeSequence ::= "\\" ( LiteralEscapeChar | "<" | ">" | "A" | "b" | "B" | "d" | "D" | "s" | "S" | "w" | "W" | "Z" | Digit )
+ *
+ * LiteralEscapeChar ::= "*" | "+" | "?" "{" | "^" | "$" | "\" | "[" | "]" | "|" | "(" | """
  *
  * CharacterClass ::= "[" [ "^" ] ClassGroup ( ClassGroup )* "]"
  *
@@ -126,7 +128,7 @@ KOS_DECLARE_STATIC_CONST_STRING(str_string,                 "string");
  *
  * Group ::= "(" [ GroupOpt ] AlternateMatchSequence ")"
  *
- * GroupOpt ::= TODO
+ * GroupOpt ::= "?" ":"
  */
 
 enum RE_FLAG {
@@ -717,11 +719,27 @@ static int parse_escape_seq(struct RE_PARSE_CTX *re_ctx)
 
     switch (code) {
 
+        case '*':
+            /* fall through */
+        case '+':
+            /* fall through */
+        case '?':
+            /* fall through */
+        case '{':
+            /* fall through */
+        case '^':
+            /* fall through */
+        case '$':
+            /* fall through */
         case '\\':
             /* fall through */
         case '[':
             /* fall through */
         case ']':
+            /* fall through */
+        case '|':
+            /* fall through */
+        case '(':
             /* fall through */
         case '"':
             error = emit_instr1(re_ctx, INSTR_MATCH_ONE_CHAR, code);
@@ -792,10 +810,45 @@ static int parse_escape_seq(struct RE_PARSE_CTX *re_ctx)
     return error;
 }
 
+static int is_capturing_group(uint16_t group_id)
+{
+    return group_id < 0x7FFFU;
+}
+
 static int parse_group(struct RE_PARSE_CTX *re_ctx)
 {
     int      error;
-    unsigned group_id = re_ctx->num_groups++;
+    unsigned group_id   = re_ctx->num_groups++;
+    uint32_t group_type = peek_next_char(&re_ctx->iter);
+
+    if (group_type == '?') {
+        consume_next_char(re_ctx);
+
+        group_type = peek_next_char(&re_ctx->iter);
+
+        if (group_type == END_OF_STR)
+            return expect_char(re_ctx, ')');
+
+        consume_next_char(re_ctx);
+
+        switch (group_type) {
+
+            /* non-capturing group */
+            case ':':
+                --re_ctx->num_groups;
+                group_id = 0xFFFFU;
+                break;
+
+            default: {
+                char str_code[6];
+
+                encode_utf8(group_type, &str_code[0], sizeof(str_code));
+                KOS_raise_printf(re_ctx->ctx, "unsupported group type '%s' at position %d",
+                                 str_code, re_ctx->idx);
+                return KOS_ERROR_EXCEPTION;
+            }
+        }
+    }
 
     error = emit_instr1(re_ctx, INSTR_BEGIN_GROUP, group_id);
     if (error)
@@ -1632,7 +1685,8 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
             BEGIN_INSTRUCTION(BEGIN_GROUP): {
                 const uint16_t group_id = bytecode[1];
 
-                get_group(poss_stack, re->num_counts, group_id)[0] = get_iter_pos(str.o, &iter);
+                if (is_capturing_group(group_id))
+                    get_group(poss_stack, re->num_counts, group_id)[0] = get_iter_pos(str.o, &iter);
 
                 bytecode += 2;
                 NEXT_INSTRUCTION;
@@ -1641,7 +1695,8 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
             BEGIN_INSTRUCTION(END_GROUP): {
                 const uint16_t group_id = bytecode[1];
 
-                get_group(poss_stack, re->num_counts, group_id)[1] = get_iter_pos(str.o, &iter);
+                if (is_capturing_group(group_id))
+                    get_group(poss_stack, re->num_counts, group_id)[1] = get_iter_pos(str.o, &iter);
 
                 bytecode += 2;
                 NEXT_INSTRUCTION;
