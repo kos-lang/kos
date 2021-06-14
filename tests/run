@@ -68,11 +68,6 @@ echo "Using $JOBS jobs"
 # Parallel tests use this env var to run number of threads proportional to the number of CPUs
 export TEST_CPUS="$JOBS"
 
-# Optimize for the current architecture
-if [ "$(uname -m)" != "ppc64le" ]; then
-    export native=1
-fi
-
 # Save for overriding
 ORIG_JOBS=$JOBS
 
@@ -124,6 +119,12 @@ runtests()
     [ "$3" = "noclean" ] || rm -rf Out
     $MAKE -k -j "$JOBS" test CLANG_VER=$1 CPPLANG_VER=$2 strict=1 --warn-undefined-variables
 }
+
+# Kill release build after a few minutes in Travis
+ARCH=$(uname -m)
+if [ "$ARCH" = "ppc64le" -o "$ARCH" = "s390x" ]; then
+    sleep 240 && pkill kos &
+fi
 
 cd "$(dirname $0)"/..
 
@@ -207,12 +208,6 @@ fi
 
 unset debug
 if [ "$RUN_RELEASE" = "1" ]; then
-    # Kill release build after 2 minutes in Travis
-    ARCH=$(uname -m)
-    if [ "$ARCH" = "ppc64le" -o "$ARCH" = "s390x" ]; then
-        sleep 180 && pkill kos &
-    fi
-
     export builtin_modules=0
     runtests c11 c++11
     unset builtin_modules
