@@ -151,7 +151,7 @@ if [ "$RUN_VALGRIND" = "1" ]; then
     export tool="valgrind --error-exitcode=1 --track-origins=yes"
 
     # Limit number of jobs to reduce memory pressure
-    JOBS=$(($JOBS / 2))
+    [ $JOBS -gt 4 ] && JOBS=$(($JOBS / 2))
     [ $JOBS -eq 0 ] && JOBS=1
     [ $JOBS -gt 8 ] && JOBS=8
 
