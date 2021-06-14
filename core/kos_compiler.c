@@ -1780,12 +1780,11 @@ static int while_stmt(KOS_COMP_UNIT      *program,
 
         continue_tgt_offs = program->cur_offs;
 
-        if (is_truthy)
+        if (is_truthy) {
             continue_tgt_offs = loop_start_offs;
 
-        if (is_truthy)
             reg = KOS_NULL;
-
+        }
         else {
 
             TRY(add_addr2line(program, &cond_node->token, KOS_FALSE_VALUE));
