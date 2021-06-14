@@ -41,7 +41,7 @@ kos()
         "$KOS" -v "$@" >"$DIR/stdout" 2>"$DIR/stderr" || RET=$?
     fi
 
-    [ $RET -eq 0 ] || [ $RET -eq 1 ] || die "Unexpected exit code $RET"
+    [ $RET -eq 0 ] || [ $RET -eq 1 ] || die "module_loading: Unexpected exit code $RET in command: kos $@"
 
     return $RET
 }
