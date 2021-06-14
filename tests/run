@@ -116,7 +116,6 @@ runtests()
     echo "Testing $MODE as $PRINT_LANG$WITH_TOOL"
     echo "***************************************************************************"
 
-    [ "$3" = "noclean" ] || rm -rf Out
     $MAKE -k -j "$JOBS" test CLANG_VER=$1 CPPLANG_VER=$2 strict=1 --warn-undefined-variables
 }
 
@@ -134,7 +133,7 @@ unset gcov
 unset seqfail
 export debug=1
 
-if [ "$RUN_C89" = "1" -o "$RUN_VALGRIND" = "1" ]; then
+if [ "$RUN_C89" = "1" ]; then
     runtests c89 c++98
 fi
 
@@ -156,7 +155,7 @@ if [ "$RUN_VALGRIND" = "1" ]; then
     [ $JOBS -eq 0 ] && JOBS=1
     [ $JOBS -gt 8 ] && JOBS=8
 
-    TEST_CPUS=2 runtests c89 c++98 noclean
+    TEST_CPUS=2 runtests c89 c++98
 
     unset tool
     JOBS=$ORIG_JOBS
