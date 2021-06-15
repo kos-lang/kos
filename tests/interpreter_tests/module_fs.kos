@@ -141,3 +141,29 @@ do {
 
     expect_fail(() => fs.info(dir_outer))
 }
+
+do {
+    const dir_name = "./test_dir_mkdir"
+
+    if fs.file_exists(dir_name) {
+        fs.remove(dir_name)
+    }
+    else {
+        fs.rmdir(dir_name)
+    }
+
+    with const f = io.create(dir_name) {
+        expect_fail(() => fs.mkdir(dir_name, false))
+        expect_fail(() => fs.mkdir(dir_name, true))
+    }
+
+    fs.remove(dir_name)
+    assert ! fs.file_exists(dir_name)
+
+    fs.mkdir(dir_name)
+
+    expect_fail(() => fs.mkdir(dir_name, false))
+    fs.mkdir(dir_name, true)
+
+    fs.rmdir(dir_name)
+}

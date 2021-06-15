@@ -497,9 +497,13 @@ static int make_directory(KOS_CONTEXT ctx,
 
     KOS_suspend_context(ctx);
 
-    if (fail_if_exists || (stat(path_cstr, &statbuf) != 0) || ! S_ISDIR(statbuf.st_mode)) {
-        if (mkdir(path_cstr, 0777)) {
-            const int saved_errno = errno;
+    if (mkdir(path_cstr, 0777)) {
+        const int saved_errno = errno;
+
+        if (fail_if_exists ||
+            (saved_errno != EEXIST) ||
+            (stat(path_cstr, &statbuf) != 0) ||
+            ! S_ISDIR(statbuf.st_mode)) {
 
             KOS_resume_context(ctx);
 
