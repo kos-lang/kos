@@ -4,7 +4,7 @@
 public class some
 {
     # Can't reference class from member arguments
-    member(a = fun { return some })
+    fun member(a = fun { return some })
     {
         return a
     }

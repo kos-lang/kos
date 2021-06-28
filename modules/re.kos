@@ -12,7 +12,7 @@ public class re
         this.regex  = cache[regex]
         this.string = regex
     }
-    find(args...) {
+    fun find(args...) {
         return this.regex.find(args...)
     }
 }

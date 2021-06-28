@@ -36,7 +36,7 @@ fun remove_indentation(lines)
 
 class create_docs {
 
-    scan_file(filename, f)
+    fun scan_file(filename, f)
     {
         fun is_cpp
         {

@@ -444,11 +444,11 @@ Constructors and prototype-based inheritance
             this.count = init
         }
 
-        print {
+        fun print {
             print(this.count)
         }
 
-        add(n) {
+        fun add(n) {
             this.count += n
         }
     }

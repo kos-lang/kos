@@ -1129,7 +1129,7 @@ do {
 repeat {
     defer {
         class s {
-            x { return ! s }
+            fun x { return ! s }
         }
     }
 

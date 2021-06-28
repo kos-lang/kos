@@ -95,7 +95,7 @@ do {
 
 do {
     class stuff {
-        to_string(x) { print(x) ; return "\(x)" }
+        fun to_string(x) { print(x) ; return "\(x)" }
     }
 
     const o = stuff()

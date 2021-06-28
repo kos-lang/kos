@@ -811,10 +811,10 @@ do {
             constructor {
                 this.x += 1
             }
-            uses_super {
+            fun uses_super {
                 return super.x
             }
-            unused_super {
+            fun unused_super {
                 if constant {
                     return this.x
                 }

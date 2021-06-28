@@ -22,14 +22,14 @@ class create_defs {
     constructor {
         this.symbols = []
     }
-    add_symbol(file_name, token, data) {
+    fun add_symbol(file_name, token, data) {
         this.symbols.push({
             file:  file_name,
             token: token,
             data:  data
         })
     }
-    extract(file_name, f) {
+    fun extract(file_name, f) {
         var new_line   = true
         var new_expr   = true
         var api_token  = void

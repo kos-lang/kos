@@ -9,24 +9,24 @@ class new_fib {
         this.cur  = 1
     }
 
-    get_prev { return this.prev }
-    get_cur  { return this.cur  }
+    fun get_prev { return this.prev }
+    fun get_cur  { return this.cur  }
 
-    reset {
+    fun reset {
         this.prev = 1
         this.cur  = 1
     }
 
-    set_next(next) {
+    fun set_next(next) {
         this.prev = this.cur
         this.cur  = next
     }
 
-    advance {
+    fun advance {
         this.set_next( this.get_prev() + this.get_cur() )
     }
 
-    execute(n) {
+    fun execute(n) {
         for const i in range(n) {
             this.advance()
         }

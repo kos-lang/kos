@@ -663,11 +663,14 @@ static int class_literal(KOS_PARSER    *parser,
 
             ast_push(*ret, ctor_node);
         }
-        else if (parser->token.type == TT_IDENTIFIER || parser->token.type == TT_KEYWORD) {
+        else if (parser->token.keyword == KW_FUN) {
 
-            KOS_AST_NODE *prop_node      = KOS_NULL;
-            KOS_AST_NODE *fun_node       = KOS_NULL;
-            KOS_TOKEN     fun_name_token = parser->token;
+            KOS_AST_NODE *prop_node = KOS_NULL;
+            KOS_AST_NODE *fun_node  = KOS_NULL;
+            KOS_TOKEN     fun_name_token;
+
+            TRY(next_token(parser));
+            fun_name_token = parser->token;
 
             TRY(push_node(parser, members_node, NT_PROPERTY, &prop_node));
 

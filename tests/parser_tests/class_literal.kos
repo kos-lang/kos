@@ -2,29 +2,29 @@ class {
 }
 
 class {
-    cat {
+    fun cat {
         return 0
     }
 
-    dog() {
+    fun dog() {
         return 1
     }
 
-    pet(name) {
+    fun pet(name) {
         return name + "x"
     }
 
-    parrot(num_wings, color) {
+    fun parrot(num_wings, color) {
         return num_wings + color
     }
 }
 
 class {
-    aaa { }
+    fun aaa { }
 
     constructor { this.x = 0 }
 
-    bbb { }
+    fun bbb { }
 }
 
 @ 0
@@ -40,86 +40,102 @@ class {
             (scope 1 7 {
                 (return 1 7 {
                     (this 1 7 {)
-            ))
+                )
+            )
             (landmark 1 7 {)
-    ))
-
+        )
+    )
     (class 4 1 class
         (empty 4 7 {)
         (object 4 7 {
-            (property 5 5 cat
-                (string 5 5 cat)
-                (function 5 5 cat
-                    (name 5 5 cat
-                        (identifier 5 5 cat))
-                    (parameters 5 9 {)
-                    (landmark 5 9 {)
-                    (scope 5 9 {
+            (property 5 9 cat
+                (string 5 9 cat)
+                (function 5 9 cat
+                    (name 5 9 cat
+                        (identifier 5 9 cat)
+                    )
+                    (parameters 5 13 {)
+                    (landmark 5 13 {)
+                    (scope 5 13 {
                         (return 6 9 return
                             (number 6 16 0)
                         )
                         (return 7 5 }
                             (void 7 5 })
-                    ))
+                        )
+                    )
                     (landmark 7 5 })
-            ))
-            (property 9 5 dog
-                (string 9 5 dog)
-                (function 9 5 dog
-                    (name 9 5 dog
-                        (identifier 9 5 dog))
-                    (parameters 9 8 paren_open)
-                    (landmark 9 11 {)
-                    (scope 9 11 {
+                )
+            )
+            (property 9 9 dog
+                (string 9 9 dog)
+                (function 9 9 dog
+                    (name 9 9 dog
+                        (identifier 9 9 dog)
+                    )
+                    (parameters 9 12 paren_open)
+                    (landmark 9 15 {)
+                    (scope 9 15 {
                         (return 10 9 return
                             (number 10 16 1)
                         )
                         (return 11 5 }
                             (void 11 5 })
-                    ))
-                    (landmark 11 5 })
-            ))
-            (property 13 5 pet
-                (string 13 5 pet)
-                (function 13 5 pet
-                    (name 13 5 pet
-                        (identifier 13 5 pet))
-                    (parameters 13 8 paren_open
-                        (identifier 13 9 name)
+                        )
                     )
-                    (landmark 13 15 {)
-                    (scope 13 15 {
+                    (landmark 11 5 })
+                )
+            )
+            (property 13 9 pet
+                (string 13 9 pet)
+                (function 13 9 pet
+                    (name 13 9 pet
+                        (identifier 13 9 pet)
+                    )
+                    (parameters 13 12 paren_open
+                        (identifier 13 13 name)
+                    )
+                    (landmark 13 19 {)
+                    (scope 13 19 {
                         (return 14 9 return
                             (operator 14 21 +
                                 (identifier 14 16 name)
                                 (string 14 23 "x")
-                        ))
+                            )
+                        )
                         (return 15 5 }
                             (void 15 5 })
-                    ))
-                    (landmark 15 5 })
-            ))
-            (property 17 5 parrot
-                (string 17 5 parrot)
-                (function 17 5 parrot
-                    (name 17 5 parrot
-                        (identifier 17 5 parrot))
-                    (parameters 17 11 paren_open
-                        (identifier 17 12 num_wings)
-                        (identifier 17 23 color)
+                        )
                     )
-                    (landmark 17 30 {)
-                    (scope 17 30 {
+                    (landmark 15 5 })
+                )
+            )
+            (property 17 9 parrot
+                (string 17 9 parrot)
+                (function 17 9 parrot
+                    (name 17 9 parrot
+                        (identifier 17 9 parrot)
+                    )
+                    (parameters 17 15 paren_open
+                        (identifier 17 16 num_wings)
+                        (identifier 17 27 color)
+                    )
+                    (landmark 17 34 {)
+                    (scope 17 34 {
                         (return 18 9 return
                             (operator 18 26 +
                                 (identifier 18 16 num_wings)
                                 (identifier 18 28 color)
-                        ))
+                            )
+                        )
                         (return 19 5 }
                             (void 19 5 })
-                    ))
+                        )
+                    )
                     (landmark 19 5 })
-        )))
+                )
+            )
+        )
         (constructor 4 1 class
             (name 4 1 class)
             (parameters 4 7 {)
@@ -127,39 +143,46 @@ class {
             (scope 4 7 {
                 (return 4 7 {
                     (this 4 7 {)
-            ))
+                )
+            )
             (landmark 4 7 {)
-    ))
-
+        )
+    )
     (class 22 1 class
         (empty 22 7 {)
         (object 22 7 {
-            (property 23 5 aaa
-                (string 23 5 aaa)
-                (function 23 5 aaa
-                    (name 23 5 aaa
-                        (identifier 23 5 aaa))
-                    (parameters 23 9 {)
-                    (landmark 23 9 {)
-                    (scope 23 9 {
-                        (return 23 11 }
-                            (void 23 11 })
-                    ))
-                    (landmark 23 11 })
-            ))
-            (property 27 5 bbb
-                (string 27 5 bbb)
-                (function 27 5 bbb
-                    (name 27 5 bbb
-                        (identifier 27 5 bbb))
-                    (parameters 27 9 {)
-                    (landmark 27 9 {)
-                    (scope 27 9 {
-                        (return 27 11 }
-                            (void 27 11 })
-                    ))
-                    (landmark 27 11 })
-            ))
+            (property 23 9 aaa
+                (string 23 9 aaa)
+                (function 23 9 aaa
+                    (name 23 9 aaa
+                        (identifier 23 9 aaa)
+                    )
+                    (parameters 23 13 {)
+                    (landmark 23 13 {)
+                    (scope 23 13 {
+                        (return 23 15 }
+                            (void 23 15 })
+                        )
+                    )
+                    (landmark 23 15 })
+                )
+            )
+            (property 27 9 bbb
+                (string 27 9 bbb)
+                (function 27 9 bbb
+                    (name 27 9 bbb
+                        (identifier 27 9 bbb)
+                    )
+                    (parameters 27 13 {)
+                    (landmark 27 13 {)
+                    (scope 27 13 {
+                        (return 27 15 }
+                            (void 27 15 })
+                        )
+                    )
+                    (landmark 27 15 })
+                )
+            )
         )
         (constructor 25 5 constructor
             (name 25 5 constructor)
@@ -171,23 +194,26 @@ class {
                         (refinement 25 23 .
                             (this 25 19 this)
                             (string 25 24 x)
-                    ))
+                        )
+                    )
                     (number 25 28 0)
                 )
                 (return 25 30 }
                     (this 25 30 })
-            ))
+                )
+            )
             (landmark 25 30 })
-    ))
+        )
+    )
 )
 
 @------------------------------------------------------------------------------
 class named {
     constructor(a, b) { this[a] = b }
 
-    fun1(a) { return a }
+    fun fun1(a) { return a }
 
-    fun2 { return this.a }
+    fun fun2 { return this.a }
 }
 
 class onlyctor {
@@ -204,42 +230,49 @@ class onlyctor {
         (class 1 7 named
             (empty 1 13 {)
             (object 1 13 {
-                (property 4 5 fun1
-                    (string 4 5 fun1)
-                    (function 4 5 fun1
-                        (name 4 5 fun1
-                            (identifier 4 5 fun1))
-                        (parameters 4 9 paren_open
-                            (identifier 4 10 a)
+                (property 4 9 fun1
+                    (string 4 9 fun1)
+                    (function 4 9 fun1
+                        (name 4 9 fun1
+                            (identifier 4 9 fun1)
                         )
-                        (landmark 4 13 {)
-                        (scope 4 13 {
-                            (return 4 15 return
-                                (identifier 4 22 a)
+                        (parameters 4 13 paren_open
+                            (identifier 4 14 a)
+                        )
+                        (landmark 4 17 {)
+                        (scope 4 17 {
+                            (return 4 19 return
+                                (identifier 4 26 a)
                             )
-                            (return 4 24 }
-                                (void 4 24 })
-                        ))
-                        (landmark 4 24 })
-                ))
-                (property 6 5 fun2
-                    (string 6 5 fun2)
-                    (function 6 5 fun2
-                        (name 6 5 fun2
-                            (identifier 6 5 fun2))
-                        (parameters 6 10 {)
-                        (landmark 6 10 {)
-                        (scope 6 10 {
-                            (return 6 12 return
-                                (refinement 6 23 .
-                                    (this 6 19 this)
-                                    (string 6 24 a)
-                            ))
-                            (return 6 26 }
-                                (void 6 26 })
-                        ))
-                        (landmark 6 26 })
-                ))
+                            (return 4 28 }
+                                (void 4 28 })
+                            )
+                        )
+                        (landmark 4 28 })
+                    )
+                )
+                (property 6 9 fun2
+                    (string 6 9 fun2)
+                    (function 6 9 fun2
+                        (name 6 9 fun2
+                            (identifier 6 9 fun2)
+                        )
+                        (parameters 6 14 {)
+                        (landmark 6 14 {)
+                        (scope 6 14 {
+                            (return 6 16 return
+                                (refinement 6 27 .
+                                    (this 6 23 this)
+                                    (string 6 28 a)
+                                )
+                            )
+                            (return 6 30 }
+                                (void 6 30 })
+                            )
+                        )
+                        (landmark 6 30 })
+                    )
+                )
             )
             (constructor 2 5 constructor
                 (name_const 2 5 constructor
@@ -344,7 +377,7 @@ class extends x {
         super()
         super
     }
-    super {
+    fun super {
         return super
     }
 }
@@ -355,19 +388,26 @@ class extends x {
     (class 1 1 class
         (identifier 1 15 x)
         (object 1 17 {
-            (property 6 5 super
-                (string 6 5 super)
-                (function 6 5 super
-                    (name 6 5 super
-                        (identifier 6 5 super))
-                    (parameters 6 11 {)
-                    (landmark 6 11 {)
-                    (scope 6 11 {
+            (property 6 9 super
+                (string 6 9 super)
+                (function 6 9 super
+                    (name 6 9 super
+                        (identifier 6 9 super)
+                    )
+                    (parameters 6 15 {)
+                    (landmark 6 15 {)
+                    (scope 6 15 {
                         (return 7 9 return
-                            (super-proto 7 16 super))
+                            (super-proto 7 16 super)
+                        )
                         (return 8 5 }
-                            (void 8 5 })))
-                    (landmark 8 5 }))))
+                            (void 8 5 })
+                        )
+                    )
+                    (landmark 8 5 })
+                )
+            )
+        )
         (constructor 2 5 constructor
             (name 2 5 constructor)
             (parameters 2 17 {)
@@ -383,6 +423,54 @@ class extends x {
 )
 
 @------------------------------------------------------------------------------
+# Function named "constructor" is OK
+class extends x {
+    fun constructor {
+        return 42
+    }
+}
+
+@ 0
+
+(scope 1 1
+    (class 2 1 class
+        (identifier 2 15 x)
+        (object 2 17 {
+            (property 3 9 constructor
+                (string 3 9 constructor)
+                (function 3 9 constructor
+                    (name 3 9 constructor
+                        (identifier 3 9 constructor)
+                    )
+                    (parameters 3 21 {)
+                    (landmark 3 21 {)
+                    (scope 3 21 {
+                        (return 4 9 return
+                            (number 4 16 42)
+                        )
+                        (return 5 5 }
+                            (void 5 5 })
+                        )
+                    )
+                    (landmark 5 5 })
+                )
+            )
+        )
+        (constructor 2 1 class
+            (name 2 1 class)
+            (parameters 2 7 extends)
+            (landmark 2 7 extends)
+            (scope 2 7 extends
+                (return 2 7 extends
+                    (this 2 7 extends)
+                )
+            )
+            (landmark 2 7 extends)
+        )
+    )
+)
+
+@------------------------------------------------------------------------------
 class failed
 {
     constructor { }
@@ -393,11 +481,11 @@ class failed
 
 @------------------------------------------------------------------------------
 class {
-    aaa { }
+    fun aaa { }
 
     constructor { this.x = 0 }
 
-    bbb { }
+    fun bbb { }
 
     constructor(a) { }
 }
@@ -461,7 +549,7 @@ fun x { super }
 @------------------------------------------------------------------------------
 # super not directly in a class member (is not capturing)
 class C extends a {
-    xyz {
+    fun xyz {
         fun zzz {
             super
         }
@@ -473,16 +561,16 @@ class C extends a {
 @------------------------------------------------------------------------------
 # super not allowed in arguments
 class abc extends a {
-    xyz(a = super.x) {
+    fun xyz(a = super.x) {
     }
 }
 
-@ 10 3 13
+@ 10 3 17
 
 @------------------------------------------------------------------------------
 # super in a non-derived class
 class abc {
-    xyz {
+    fun xyz {
         return super.x
     }
 }
@@ -492,7 +580,7 @@ class abc {
 @------------------------------------------------------------------------------
 # super invocation outside of constructor
 class abc extends def {
-    xyz {
+    fun xyz {
         super()
     }
 }
@@ -502,9 +590,18 @@ class abc extends def {
 @------------------------------------------------------------------------------
 # super invocation outside of constructor (stream operator)
 class abc extends def {
-    xyz(a) {
+    fun xyz(a) {
         a -> super
     }
 }
 
 @ 10 4 14
+
+@------------------------------------------------------------------------------
+# Missing fun keyword
+class abc {
+    xyz(a) {
+    }
+}
+
+@ 10 3 5

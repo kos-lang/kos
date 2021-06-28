@@ -458,7 +458,7 @@ Constructors
             this.y = y
         }
 
-        length
+        fun length
         {
             return math.sqrt(this.x * this.x + this.y * this.y)
         }

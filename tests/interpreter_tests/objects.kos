@@ -256,13 +256,13 @@ do {
             this.im = im
         }
 
-        add(other)
+        fun add(other)
         {
             return complex(this.re + other.re,
                            this.im + other.im)
         }
 
-        dot(other)
+        fun dot(other)
         {
             return this.re * other.re +
                    this.im * other.im
@@ -291,10 +291,10 @@ do {
 
 do {
     class value {
-        setv(x) {
+        fun setv(x) {
             this.x = x
         }
-        getv() {
+        fun getv() {
             return this.x
         }
     }
@@ -417,7 +417,7 @@ do {
             constructor {
                 this.a = a
             }
-            get_a {
+            fun get_a {
                 return this.a
             }
         }
@@ -452,10 +452,10 @@ do {
         constructor {
             this.a = 3
         }
-        getvalue {
+        fun getvalue {
             return this.a
         }
-        geta {
+        fun geta {
             return -this.a
         }
     }
@@ -464,10 +464,10 @@ do {
         constructor {
             this.b = 4
         }
-        getvalue {
+        fun getvalue {
             return this.b
         }
-        getb {
+        fun getb {
             return -this.b
         }
     }
@@ -546,12 +546,12 @@ do {
 # extends
 do {
     class c0 {
-        a { return 1 }
-        b { return 2 }
+        fun a { return 1 }
+        fun b { return 2 }
     }
 
     class c1 extends c0 {
-        c { return 3 }
+        fun c { return 3 }
     }
 
     const x0 = c0()
@@ -591,7 +591,7 @@ do {
     assert "iterator" propertyof x1
 
     class c2 extends void {
-        d { return 4 }
+        fun d { return 4 }
     }
 
     const x2 = c2()
@@ -626,7 +626,7 @@ do {
     }
 
     class d extends b {
-        getx {
+        fun getx {
             return this.x
         }
     }
@@ -851,17 +851,17 @@ do {
 # access super prototype
 do {
     class b {
-        add_2(x) { return x + 2 }
-        get_a { return this.a }
+        fun add_2(x) { return x + 2 }
+        fun get_a { return this.a }
         constructor(x) {
             this.a = x
         }
     }
 
     class d extends b {
-        add_2(x) { return x + 3 }
-        super_add_2(x) { return super.add_2(x) }
-        get_a { return this.b }
+        fun add_2(x) { return x + 3 }
+        fun super_add_2(x) { return super.add_2(x) }
+        fun get_a { return this.b }
         constructor(x, y) {
             super(x)
             this.b = y
@@ -886,23 +886,23 @@ do {
 # prototype chain
 do {
     class c1 {
-        get_c() { return 11 }
-        get_x() { return this.x }
+        fun get_c() { return 11 }
+        fun get_x() { return this.x }
     }
 
     class c2 extends c1 {
-        get_c() { return 22 }
-        get_c1() { return super.get_c() }
+        fun get_c() { return 22 }
+        fun get_c1() { return super.get_c() }
     }
 
     class c3 extends c2 {
-        get_c() { return 33 }
-        get_c2() { return super.get_c() }
+        fun get_c() { return 33 }
+        fun get_c2() { return super.get_c() }
     }
 
     class c4 extends c3 {
-        get_c() { return 44 }
-        get_c3() { return super.get_c() }
+        fun get_c() { return 44 }
+        fun get_c3() { return super.get_c() }
         constructor { this.x = 55 }
     }
 
@@ -918,7 +918,7 @@ do {
 # invoking functions in base prototype should keep top-level this
 do {
     class X {
-        execute {
+        fun execute {
             return 11
         }
     }
@@ -929,10 +929,10 @@ do {
                 this.execute = fun { return 33 }
             }
         }
-        execute {
+        fun execute {
             return 22
         }
-        run {
+        fun run {
             return super.execute()
         }
     }
@@ -991,7 +991,7 @@ do {
             this.x = 11
             this.y = 22
         }
-        get_value { return this.y }
+        fun get_value { return this.y }
     }
 
     const o = BBB ()
@@ -1023,7 +1023,7 @@ do {
         constructor(x = 42) {
             this.x = x
         }
-        x_plus_1 {
+        fun x_plus_1 {
             return this.x + 1
         }
     }
@@ -1410,7 +1410,7 @@ do {
         constructor {
             this.a = () => 1
         }
-        b { return 2 }
+        fun b { return 2 }
     }
 
     const o = c()
@@ -1423,14 +1423,14 @@ do {
 
 do {
     class b {
-        c { return 3 }
+        fun c { return 3 }
     }
 
     class c extends b {
         constructor {
             this.a = () => 1
         }
-        b { return 2 }
+        fun b { return 2 }
     }
 
     const o = c()
@@ -1448,7 +1448,7 @@ do {
         constructor {
             this.a = () => 1
         }
-        b { return 2 }
+        fun b { return 2 }
     }
 
     const o = c()
@@ -1472,7 +1472,7 @@ do {
 do {
     class base { }
     class derived extends base {
-        get_ctor {
+        fun get_ctor {
             return derived
         }
     }

@@ -3,7 +3,7 @@
 
 class a { }
 class b extends a {
-    foo {
+    fun foo {
         super.x = fun { }
     }
 }

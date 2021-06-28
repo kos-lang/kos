@@ -469,7 +469,7 @@ do {
 do {
     class empty { }
     class ctor { constructor { } }
-    class noctor { a { } b { } }
+    class noctor { fun a { } fun b { } }
 
     assert empty  instanceof base.function
     assert empty  instanceof base.class
@@ -524,7 +524,7 @@ do {
 }
 
 do {
-    class c1 { hello { return "hello" } }
+    class c1 { fun hello { return "hello" } }
     c1.prototype.x = 42
 
     const o1 = c1()
@@ -856,15 +856,15 @@ do {
 
 do {
     class abase {
-        f1 { }
-        f2 { }
+        fun f1 { }
+        fun f2 { }
     }
     class derived extends abase {
         constructor {
             this.first = 101
             this.second = "102"
         }
-        f3 { }
+        fun f3 { }
     }
     const a = base.array(derived())
     assert typeof a == "array"
@@ -1064,7 +1064,7 @@ do {
         constructor(x) {
             this.x = x + 1
         }
-        get_value {
+        fun get_value {
             return this.x * 10
         }
     }

@@ -221,7 +221,7 @@ do {
             this.value = init
         }
 
-        push(x) {
+        fun push(x) {
             this.value = this.value * 10 + x
         }
     }
@@ -289,7 +289,7 @@ do {
             this.value = init
         }
 
-        push(x) {
+        fun push(x) {
             this.value += x
         }
     }

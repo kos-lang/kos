@@ -596,9 +596,7 @@ Class statement
 
     ClassBody          ::= "{" ( ClassMember )* "}"
 
-    ClassMember        ::= ConstructorLiteral | MemberFunction
-
-    MemberFunction     ::= Identifier [ ParameterList ] CompoundStatement
+    ClassMember        ::= ConstructorLiteral | FunctionDeclaration
 
 
 Constructor literal

@@ -4,7 +4,7 @@ public var   a = 1
 public fun   a { }
 public const a = b => b
 public fun   a(b) { return b }
-public class a { f { } }
+public class a { fun f { } }
 
 @ 0
 
@@ -69,17 +69,17 @@ public class a { f { } }
         (class 7 14 a
             (empty 7 16 {)
             (object 7 16 {
-                (property 7 18 f
-                    (string 7 18 f)
-                    (function 7 18 f
-                        (name 7 18 f
-                            (identifier 7 18 f))
-                        (parameters 7 20 {)
-                        (landmark 7 20 {)
-                        (scope 7 20 {
-                            (return 7 22 }
-                                (void 7 22 })))
-                        (landmark 7 22 }))))
+                (property 7 22 f
+                    (string 7 22 f)
+                    (function 7 22 f
+                        (name 7 22 f
+                            (identifier 7 22 f))
+                        (parameters 7 24 {)
+                        (landmark 7 24 {)
+                        (scope 7 24 {
+                            (return 7 26 }
+                                (void 7 26 })))
+                        (landmark 7 26 }))))
             (constructor 7 14 a
                 (name_const 7 14 a
                     (identifier 7 14 a)
