@@ -1150,6 +1150,36 @@ do {
     }
 }
 
+# member data in prototype
+do {
+    class Base {
+        var a = 100
+        var b = 200
+        var c = 300
+        constructor(x) { this.b = x }
+        fun get_data { return [this.a, this.b, this.c] }
+    }
+
+    assert "a" propertyof Base.prototype
+    assert Base.prototype.a == 100
+    assert "b" propertyof Base.prototype
+    assert Base.prototype.b == 200
+
+    const b = Base(10)
+    assert b.get_data() == [100, 10, 300]
+
+    Base.prototype.a = 400
+    Base.prototype.b = 500
+    assert b.get_data() == [400, 10, 300]
+
+    class Derived extends Base {
+        constructor(x) { super(600); this.c = x }
+    }
+
+    const d = Derived(42)
+    assert d.get_data() == [400, 600, 42]
+}
+
 ##############################################################################
 # base.object
 

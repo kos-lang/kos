@@ -471,6 +471,47 @@ class extends x {
 )
 
 @------------------------------------------------------------------------------
+class banana
+{
+    var length = 1 + 2
+}
+
+@ 0
+
+(scope 1 1
+    (assignment 1 1 class
+        (const 1 1 class
+            (identifier 1 7 banana)
+        )
+        (class 1 7 banana
+            (empty 2 1 {)
+            (object 2 1 {
+                (property 3 9 length
+                    (string 3 9 length)
+                    (operator 3 20 +
+                        (number 3 18 1)
+                        (number 3 22 2)
+                    )
+                )
+            )
+            (constructor 1 7 banana
+                (name_const 1 7 banana
+                    (identifier 1 7 banana)
+                )
+                (parameters 2 1 {)
+                (landmark 2 1 {)
+                (scope 2 1 {
+                    (return 2 1 {
+                        (this 2 1 {)
+                    )
+                )
+                (landmark 2 1 {)
+            )
+        )
+    )
+)
+
+@------------------------------------------------------------------------------
 class failed
 {
     constructor { }
@@ -605,3 +646,19 @@ class abc {
 }
 
 @ 10 3 5
+
+@------------------------------------------------------------------------------
+# Missing identifier for member var
+class some {
+    var = 1
+}
+
+@ 10 3 9
+
+@------------------------------------------------------------------------------
+# Missing '=' for member var
+class some {
+    var value 1
+}
+
+@ 10 3 15

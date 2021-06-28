@@ -559,8 +559,6 @@ Function arguments are a list of comma-separated identifiers, which are
 names of the argument variables.  The list of arguments is delimited by
 parentheses.  The list of arguments is optional.
 
-TODO - no default values right now
-
 Arguments can have default values specified after an `=` assignment sign.
 The default values are computed at the place of function declaration.
 
@@ -596,7 +594,9 @@ Class statement
 
     ClassBody          ::= "{" ( ClassMember )* "}"
 
-    ClassMember        ::= ConstructorLiteral | FunctionDeclaration
+    ClassMember        ::= ConstructorLiteral | FunctionDeclaration | DataMember
+
+    DataMember         ::= "var" Identifier "=" RHSExpression
 
 
 Constructor literal

@@ -682,6 +682,35 @@ static int class_literal(KOS_PARSER    *parser,
 
             ast_push(prop_node, fun_node);
         }
+        else if (parser->token.keyword == KW_VAR) {
+
+            KOS_AST_NODE *prop_node = KOS_NULL;
+            KOS_AST_NODE *var_node  = KOS_NULL;
+
+            TRY(next_token(parser));
+
+            if (parser->token.type != TT_IDENTIFIER) {
+                parser->error_str = str_err_expected_identifier;
+                error = KOS_ERROR_PARSE_FAILED;
+                goto cleanup;
+            }
+
+            TRY(push_node(parser, members_node, NT_PROPERTY, &prop_node));
+
+            TRY(push_node(parser, prop_node, NT_STRING_LITERAL, KOS_NULL));
+
+            TRY(next_token(parser));
+
+            if (parser->token.op != OT_SET) {
+                parser->error_str = str_err_expected_var_assignment;
+                error = KOS_ERROR_PARSE_FAILED;
+                goto cleanup;
+            }
+
+            TRY(right_hand_side_expr(parser, &var_node));
+
+            ast_push(prop_node, var_node);
+        }
         else {
             parser->unget = 1;
             break;

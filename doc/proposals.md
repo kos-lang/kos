@@ -11,7 +11,14 @@
         const re5 = dsl(re)(.*)
         const sh  = dsl("glsl"){ main() { outColor = vec3(1, 0, 0.5) } }
 
-* Add 'static' functions in classes.
+* Add 'static' members in classes.
+
+        class fruit {
+            static var type = "apple" # fruit.type = "apple"
+            static fun get_value { return 0 } # fruit.get_value = fun { ... }
+        }
+
+* Add 'enum' syntax sugar for multiple, consecutive integer constants.
 
 * Allow invoking functions declared anywhere in current and outer scopes.
 
