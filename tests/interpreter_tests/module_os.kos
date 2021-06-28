@@ -51,6 +51,7 @@ do {
     expect_fail(() => os.spawn([bin_true]))
     expect_fail(() => os.spawn([bin_true[1:].split(sep)...]))
     expect_fail(() => os.spawn("no such program %%%"))
+    expect_fail(() => os.process())
 }
 
 if bin_true {
@@ -69,6 +70,7 @@ if bin_true {
     expect_fail(() => os.spawn(program=bin_true, env=1))
     expect_fail(() => os.spawn(program=bin_true, env={STH: 1}))
     expect_fail(() => os.spawn(program=bin_true, env={STH: true}))
+    expect_fail(() => os.spawn(program=bin_true, env={STH: 1}, inherit_env=false))
     expect_fail(() => os.spawn(program=bin_true, env={"some=": "x"}))
     os.spawn(program=bin_true, env={})
     os.spawn(program=bin_true, env={}, args=[])
@@ -228,6 +230,20 @@ if bin_cat {
         assert it() == "world"
         expect_fail(it)
     }
+
+    fs.remove(name)
+}
+
+# Fail to spawn a program
+do {
+    const name = "__spawn_test_file3" + ext
+    fs.remove(name)
+
+    with const f = io.create(name) {
+        f.write("bad stuff")
+    }
+
+    expect_fail(() => os.spawn(program = "." + sep + name))
 
     fs.remove(name)
 }
