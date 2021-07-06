@@ -900,13 +900,6 @@ static void update_jump_offs(KOS_COMP_UNIT *program,
     write_jump_offs(program, &program->code_gen_buf, jump_instr_offs, target_offs);
 }
 
-static void remove_last_instr(KOS_COMP_UNIT *program,
-                              int            offs)
-{
-    --program->cur_frame->num_instr;
-    program->cur_offs = offs;
-}
-
 static KOS_SCOPE *push_scope(KOS_COMP_UNIT      *program,
                              const KOS_AST_NODE *node)
 {
@@ -1339,35 +1332,182 @@ static int visit_cond_node(KOS_COMP_UNIT      *program,
     return visit_node(program, node, reg);
 }
 
+typedef struct JUMP_ARRAY_S {
+    uint16_t num_jumps;
+    uint16_t capacity;
+    int     *offs;
+    int      tmp[4];
+} JUMP_ARRAY;
+
+static void init_jump_array(JUMP_ARRAY *jump_array)
+{
+    jump_array->num_jumps = 0;
+    jump_array->capacity  = (uint16_t)(sizeof(jump_array->tmp) / sizeof(jump_array->tmp[0]));
+    jump_array->offs      = &jump_array->tmp[0];
+}
+
+static void reset_jump_array(JUMP_ARRAY *jump_array)
+{
+    jump_array->num_jumps = 0;
+}
+
+static void update_jump_array(KOS_COMP_UNIT *program,
+                              JUMP_ARRAY    *jump_array,
+                              int            target_offs)
+{
+    int       *offs = jump_array->offs;
+    int *const end  = offs + jump_array->num_jumps;
+
+    for (; offs < end; offs++)
+        update_jump_offs(program, *offs, target_offs);
+}
+
+static int push_jump_array(KOS_COMP_UNIT *program,
+                           JUMP_ARRAY    *jump_array,
+                           int            offs)
+{
+    if (jump_array->num_jumps >= jump_array->capacity) {
+        const uint16_t new_capacity = jump_array->capacity * 2;
+        int     *const new_buf      = (int *)KOS_mempool_alloc(&program->allocator,
+                                                               sizeof(int) * new_capacity);
+
+        if ( ! new_buf)
+            return KOS_ERROR_OUT_OF_MEMORY;
+
+        if (jump_array->num_jumps)
+            memcpy(new_buf, jump_array->offs, sizeof(int) * jump_array->num_jumps);
+
+        jump_array->offs = new_buf;
+    }
+
+    jump_array->offs[jump_array->num_jumps++] = offs;
+
+    return KOS_SUCCESS;
+}
+
+static int negate_jump_opcode(int opcode)
+{
+    assert((opcode == INSTR_JUMP_COND) || (opcode == INSTR_JUMP_NOT_COND));
+
+    return (opcode == INSTR_JUMP_COND) ? INSTR_JUMP_NOT_COND : INSTR_JUMP_COND;
+}
+
+static int gen_cond_jump_inner(KOS_COMP_UNIT      *program,
+                               const KOS_AST_NODE *node,
+                               int                 opcode,
+                               JUMP_ARRAY         *jump_array,
+                               JUMP_ARRAY         *near_jump_array)
+{
+    int error     = KOS_SUCCESS;
+    int jump_offs = -1;
+    int is_truthy = 0;
+    int is_falsy  = 0;
+
+    while (node->type == NT_OPERATOR) {
+
+        const unsigned op = node->token.op;
+
+        if (op == OT_LOGNOT) {
+            node = node->children;
+            assert(node);
+
+            opcode = negate_jump_opcode(opcode);
+        }
+        else if (((op == OT_LOGOR)  && (opcode == INSTR_JUMP_COND)) ||
+                 ((op == OT_LOGAND) && (opcode == INSTR_JUMP_NOT_COND))) {
+
+            node = node->children;
+            assert(node);
+            TRY(gen_cond_jump_inner(program, node, opcode, jump_array, near_jump_array));
+
+            node = node->next;
+            assert(node);
+            assert( ! node->next);
+        }
+        else if (((op == OT_LOGAND) && (opcode == INSTR_JUMP_COND)) ||
+                 ((op == OT_LOGOR)  && (opcode == INSTR_JUMP_NOT_COND))) {
+
+            node = node->children;
+            assert(node);
+            TRY(gen_cond_jump_inner(program, node, negate_jump_opcode(opcode), near_jump_array, jump_array));
+
+            node = node->next;
+            assert(node);
+            assert( ! node->next);
+        }
+        else
+            break;
+    }
+
+    if (program->optimize) {
+        is_truthy = kos_node_is_truthy(program, node);
+        if ( ! is_truthy)
+            is_falsy = kos_node_is_falsy(program, node);
+    }
+
+    if ((is_truthy && (opcode == INSTR_JUMP_COND)) ||
+        (is_falsy  && (opcode == INSTR_JUMP_NOT_COND))) {
+
+        jump_offs = program->cur_offs;
+        TRY(gen_instr1(program, INSTR_JUMP, 0));
+    }
+    else if ((is_truthy && (opcode == INSTR_JUMP_NOT_COND)) ||
+             (is_falsy  && (opcode == INSTR_JUMP_COND))) {
+        /* Skip generating jump instruction, since it will never jump anyway */
+    }
+    else {
+
+        KOS_REG *reg = KOS_NULL;
+
+        TRY(visit_node(program, node, &reg));
+
+        jump_offs = program->cur_offs;
+        TRY(gen_instr2(program, opcode, 0, reg->reg));
+
+        free_reg(program, reg);
+    }
+
+    if (jump_offs >= 0)
+        TRY(push_jump_array(program, jump_array, jump_offs));
+
+cleanup:
+    return error;
+}
+
+static int gen_cond_jump(KOS_COMP_UNIT      *program,
+                         const KOS_AST_NODE *node,
+                         int                 opcode,
+                         JUMP_ARRAY         *jump_array)
+{
+    JUMP_ARRAY near_jump_array;
+    int        error;
+
+    init_jump_array(&near_jump_array);
+
+    error = gen_cond_jump_inner(program, node, opcode, jump_array, &near_jump_array);
+    if (error)
+        return error;
+
+    update_jump_array(program, &near_jump_array, program->cur_offs);
+
+    return KOS_SUCCESS;
+}
+
 static int if_stmt(KOS_COMP_UNIT      *program,
                    const KOS_AST_NODE *node)
 {
-    int error = KOS_SUCCESS;
-    int offs  = -1;
-    int always_truthy;
+    KOS_REG   *reg   = KOS_NULL;
+    JUMP_ARRAY jump_array;
+    int        error = KOS_SUCCESS;
 
-    KOS_REG *reg = KOS_NULL;
+    init_jump_array(&jump_array);
 
     TRY(add_addr2line(program, &node->token, KOS_FALSE_VALUE));
 
     node = node->children;
     assert(node);
 
-    always_truthy = kos_node_is_truthy(program, node);
-
-    if ( ! always_truthy) {
-
-        unsigned negated = 0;
-
-        TRY(visit_cond_node(program, node, &reg, &negated));
-        assert(reg);
-
-        offs = program->cur_offs;
-        TRY(gen_instr2(program, negated ? INSTR_JUMP_COND : INSTR_JUMP_NOT_COND, 0, reg->reg));
-
-        free_reg(program, reg);
-        reg = KOS_NULL;
-    }
+    TRY(gen_cond_jump(program, node, INSTR_JUMP_NOT_COND, &jump_array));
 
     node = node->next;
     assert(node);
@@ -1375,15 +1515,15 @@ static int if_stmt(KOS_COMP_UNIT      *program,
     assert(!reg);
 
     node = node->next;
-    if (node && ! always_truthy) {
+    if (node) {
 
         const int jump_offs = program->cur_offs;
         TRY(gen_instr1(program, INSTR_JUMP, 0));
 
-        assert(offs >= 0);
+        update_jump_array(program, &jump_array, program->cur_offs);
 
-        update_jump_offs(program, offs, program->cur_offs);
-        offs = jump_offs;
+        reset_jump_array(&jump_array);
+        TRY(push_jump_array(program, &jump_array, jump_offs));
 
         TRY(visit_node(program, node, &reg));
         assert(!reg);
@@ -1391,8 +1531,7 @@ static int if_stmt(KOS_COMP_UNIT      *program,
         assert(!node->next);
     }
 
-    if (offs >= 0)
-        update_jump_offs(program, offs, program->cur_offs);
+    update_jump_array(program, &jump_array, program->cur_offs);
 
 cleanup:
     return error;
@@ -1559,27 +1698,21 @@ cleanup:
 static int assert_stmt(KOS_COMP_UNIT      *program,
                        const KOS_AST_NODE *node)
 {
-    int      error;
-    int      jump_instr_offs;
-    int      str_idx;
-    unsigned negated = 0;
-    KOS_REG *reg     = KOS_NULL;
+    JUMP_ARRAY jump_array;
+    KOS_REG   *reg     = KOS_NULL;
+    int        error;
+    int        str_idx;
 
     assert(node->children);
 
-    TRY(visit_cond_node(program, node->children, &reg, &negated));
-    assert(reg);
+    init_jump_array(&jump_array);
 
-    jump_instr_offs = program->cur_offs;
-    TRY(gen_instr2(program, negated ? INSTR_JUMP_NOT_COND : INSTR_JUMP_COND, 0, reg->reg));
+    TRY(gen_cond_jump(program, node->children, INSTR_JUMP_COND, &jump_array));
 
     assert(node->children);
     assert(node->children->next);
     assert(node->children->next->type == NT_LANDMARK);
     assert( ! node->children->next->next);
-
-    free_reg(program, reg);
-    reg = KOS_NULL;
 
     TRY(gen_assert_str(program, node, &str_idx));
 
@@ -1592,7 +1725,7 @@ static int assert_stmt(KOS_COMP_UNIT      *program,
 
     TRY(gen_instr1(program, INSTR_THROW, reg->reg));
 
-    update_jump_offs(program, jump_instr_offs, program->cur_offs);
+    update_jump_array(program, &jump_array, program->cur_offs);
 
     free_reg(program, reg);
 
@@ -1670,7 +1803,6 @@ static int repeat(KOS_COMP_UNIT      *program,
                   const KOS_AST_NODE *node)
 {
     int             error;
-    int             jump_instr_offs;
     int             test_instr_offs;
     const int       loop_start_offs = program->cur_offs;
     KOS_REG        *reg             = KOS_NULL;
@@ -1695,24 +1827,15 @@ static int repeat(KOS_COMP_UNIT      *program,
 
     if ( ! kos_node_is_falsy(program, node)) {
 
-        const int is_truthy = kos_node_is_truthy(program, node);
-        unsigned  negated   = 0;
+        JUMP_ARRAY jump_array;
 
-        if ( ! is_truthy) {
-            TRY(visit_cond_node(program, node, &reg, &negated));
-            assert(reg);
-        }
+        init_jump_array(&jump_array);
 
-        assert(!node->next);
+        assert( ! node->next);
 
-        jump_instr_offs = program->cur_offs;
+        TRY(gen_cond_jump(program, node, INSTR_JUMP_COND, &jump_array));
 
-        if (reg)
-            TRY(gen_instr2(program, negated ? INSTR_JUMP_NOT_COND : INSTR_JUMP_COND, 0, reg->reg));
-        else
-            TRY(gen_instr1(program, INSTR_JUMP, 0));
-
-        update_jump_offs(program, jump_instr_offs, loop_start_offs);
+        update_jump_array(program, &jump_array, loop_start_offs);
     }
 
     finish_break_continue(program, test_instr_offs, old_break_offs);
@@ -1738,36 +1861,18 @@ static int while_stmt(KOS_COMP_UNIT      *program,
 
     if ( ! kos_node_is_falsy(program, cond_node)) {
 
-        int                 loop_start_offs;
-        int                 cond_jump_instr_offs = -1;
-        int                 final_jump_instr_offs;
-        int                 continue_tgt_offs;
-        int                 is_truthy;
-        unsigned            negated              = 0;
-        KOS_REG            *reg                  = KOS_NULL;
+        KOS_REG   *reg = KOS_NULL;
+        JUMP_ARRAY start_jump_array;
+        JUMP_ARRAY end_jump_array;
+        int        loop_start_offs;
+        int        continue_tgt_offs;
 
         program->cur_frame->break_offs = KOS_NULL;
 
-        is_truthy = kos_node_is_truthy(program, cond_node);
+        init_jump_array(&start_jump_array);
+        init_jump_array(&end_jump_array);
 
-        if (cond_node->type == NT_EMPTY) {
-            assert( ! is_truthy);
-            is_truthy = 1;
-        }
-
-        if ( ! is_truthy) {
-
-            TRY(add_addr2line(program, &cond_node->token, KOS_FALSE_VALUE));
-
-            TRY(visit_cond_node(program, cond_node, &reg, &negated));
-            assert(reg);
-
-            cond_jump_instr_offs = program->cur_offs;
-            TRY(gen_instr2(program, negated ? INSTR_JUMP_COND : INSTR_JUMP_NOT_COND, 0, reg->reg));
-
-            free_reg(program, reg);
-            reg = KOS_NULL;
-        }
+        TRY(gen_cond_jump(program, cond_node, INSTR_JUMP_NOT_COND, &end_jump_array));
 
         loop_start_offs = program->cur_offs;
 
@@ -1780,34 +1885,10 @@ static int while_stmt(KOS_COMP_UNIT      *program,
 
         continue_tgt_offs = program->cur_offs;
 
-        if (is_truthy) {
-            continue_tgt_offs = loop_start_offs;
+        TRY(gen_cond_jump(program, cond_node, INSTR_JUMP_COND, &start_jump_array));
 
-            reg = KOS_NULL;
-        }
-        else {
-
-            TRY(add_addr2line(program, &cond_node->token, KOS_FALSE_VALUE));
-
-            TRY(visit_cond_node(program, cond_node, &reg, &negated));
-        }
-
-        final_jump_instr_offs = program->cur_offs;
-
-        if (reg) {
-
-            TRY(gen_instr2(program, negated ? INSTR_JUMP_NOT_COND : INSTR_JUMP_COND, 0, reg->reg));
-
-            free_reg(program, reg);
-            reg = KOS_NULL;
-        }
-        else
-            TRY(gen_instr1(program, INSTR_JUMP, 0));
-
-        update_jump_offs(program, final_jump_instr_offs, loop_start_offs);
-        if (cond_jump_instr_offs > -1)
-            update_jump_offs(program, cond_jump_instr_offs, program->cur_offs);
-
+        update_jump_array(program, &start_jump_array, loop_start_offs);
+        update_jump_array(program, &end_jump_array, program->cur_offs);
         finish_break_continue(program, continue_tgt_offs, old_break_offs);
     }
 
@@ -3929,38 +4010,61 @@ cleanup:
     return error;
 }
 
+static int check_if_node_is_register(const KOS_AST_NODE *node,
+                                     KOS_REG            *reg)
+{
+    return reg &&
+           node->type == NT_IDENTIFIER &&
+           node->is_local_var &&
+           node->u.var->reg == reg;
+}
+
 static int log_tri(KOS_COMP_UNIT      *program,
                    const KOS_AST_NODE *node,
                    KOS_REG           **reg)
 {
-    int      error;
-    int      offs1;
-    int      offs2;
-    int      offs3;
-    int      offs4;
-    unsigned negated  = 0;
-    KOS_REG *cond_reg = KOS_NULL;
-    KOS_REG *src      = *reg;
+    JUMP_ARRAY          jump_array;
+    const KOS_AST_NODE *cond_node;
+    const KOS_AST_NODE *true_node;
+    const KOS_AST_NODE *false_node;
+    int                 true_node_is_dest;
+    int                 false_node_is_dest;
+    int                 final_jump_offs = -1;
+    int                 error           = KOS_SUCCESS;
 
-    node = node->children;
-    assert(node);
+    cond_node = node->children;
+    assert(cond_node);
 
-    TRY(visit_cond_node(program, node, &cond_reg, &negated));
-    assert(cond_reg);
+    true_node = cond_node->next;
+    assert(true_node);
 
-    offs1 = program->cur_offs;
-    TRY(gen_instr2(program, negated ? INSTR_JUMP_COND : INSTR_JUMP_NOT_COND, 0, cond_reg->reg));
+    false_node = true_node->next;
+    assert(false_node);
+    assert( ! false_node->next);
 
-    free_reg(program, cond_reg);
+    true_node_is_dest  = check_if_node_is_register(true_node,  *reg);
+    false_node_is_dest = check_if_node_is_register(false_node, *reg);
 
-    node = node->next;
-    assert(node);
+    init_jump_array(&jump_array);
 
-    offs2 = program->cur_offs;
-    TRY(visit_node(program, node, &src));
-    assert(src);
+    if (true_node_is_dest && false_node_is_dest) {
 
-    if (program->cur_offs != offs2 || src != *reg) {
+        KOS_REG *tmp = KOS_NULL;
+
+        TRY(visit_node(program, cond_node, &tmp));
+        assert(tmp);
+
+        free_reg(program, tmp);
+    }
+    else
+        TRY(gen_cond_jump(program, cond_node, true_node_is_dest ? INSTR_JUMP_COND : INSTR_JUMP_NOT_COND, &jump_array));
+
+    if ( ! true_node_is_dest) {
+
+        KOS_REG *src = *reg;
+
+        TRY(visit_node(program, true_node, &src));
+        assert(src);
 
         if (src != *reg) {
             if ( ! *reg)
@@ -3968,44 +4072,41 @@ static int log_tri(KOS_COMP_UNIT      *program,
 
             TRY(gen_instr2(program, INSTR_MOVE, (*reg)->reg, src->reg));
 
-            if (src != *reg) {
+            if (src != *reg)
                 free_reg(program, src);
-                src = *reg;
-            }
         }
 
-        offs3 = program->cur_offs;
-        TRY(gen_instr1(program, INSTR_JUMP, 0));
+        if ( ! false_node_is_dest) {
+            final_jump_offs = program->cur_offs;
+            TRY(gen_instr1(program, INSTR_JUMP, 0));
+        }
 
-        update_jump_offs(program, offs1, program->cur_offs);
-    }
-    else {
-        remove_last_instr(program, offs1);
-        offs3 = offs1;
-        TRY(gen_instr2(program, negated ? INSTR_JUMP_NOT_COND : INSTR_JUMP_COND, 0, cond_reg->reg));
+        update_jump_array(program, &jump_array, program->cur_offs);
     }
 
-    node = node->next;
-    assert(node);
-    assert(!node->next);
+    if ( ! false_node_is_dest) {
 
-    offs4 = program->cur_offs;
-    TRY(visit_node(program, node, &src));
+        KOS_REG *src = *reg;
 
-    if (program->cur_offs != offs4 || src != *reg) {
+        TRY(visit_node(program, false_node, &src));
+        assert(src);
 
         if (src != *reg) {
-            TRY(gen_instr2(program, INSTR_MOVE, (*reg)->reg, src->reg));
-            free_reg(program, src);
-        }
+            if ( ! *reg)
+                TRY(gen_dest_reg(program, reg, src));
 
-        update_jump_offs(program, offs3, program->cur_offs);
+            TRY(gen_instr2(program, INSTR_MOVE, (*reg)->reg, src->reg));
+
+            if (src != *reg)
+                free_reg(program, src);
+        }
     }
-    else {
-        remove_last_instr(program, offs3);
-        if (offs3 > offs1)
-            update_jump_offs(program, offs1, program->cur_offs);
-    }
+
+    if (true_node_is_dest)
+        update_jump_array(program, &jump_array, program->cur_offs);
+
+    if (final_jump_offs >= 0)
+        update_jump_offs(program, final_jump_offs, program->cur_offs);
 
 cleanup:
     return error;

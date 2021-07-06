@@ -2770,13 +2770,14 @@ cleanup:
 
 static int loop_stmt(KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
-    int error = KOS_SUCCESS;
-
-    KOS_AST_NODE *node = KOS_NULL;
+    KOS_AST_NODE *node      = KOS_NULL;
+    KOS_AST_NODE *true_node = KOS_NULL;
+    int           error     = KOS_SUCCESS;
 
     TRY(new_node(parser, ret, NT_WHILE));
 
-    TRY(push_node(parser, *ret, NT_EMPTY, KOS_NULL));
+    TRY(push_node(parser, *ret, NT_BOOL_LITERAL, &true_node));
+    true_node->token.keyword = KW_TRUE;
 
     ++parser->state.allow_continue;
     ++parser->state.allow_break;

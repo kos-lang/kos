@@ -402,7 +402,7 @@ do {
     }
     assert unreachable_if_from_const() == 10
 
-    check(unreachable_if_from_const, { registers: 2, instructions: 3, size: 8 })
+    check(unreachable_if_from_const, { registers: 1, instructions: 2, size: 5 })
 }
 
 #============================================================================#

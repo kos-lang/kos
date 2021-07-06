@@ -194,6 +194,7 @@ int kos_node_is_truthy(KOS_COMP_UNIT      *program,
         (node->type == NT_NUMERIC_LITERAL && node->token.length == 1 && *node->token.begin != '0') ||
         (node->type == NT_STRING_LITERAL)      ||
         (node->type == NT_FUNCTION_LITERAL)    ||
+        /* Note: optimizer will remove side effects for these: */
         (node->type == NT_CLASS_LITERAL)       ||
         (node->type == NT_ARRAY_LITERAL)       ||
         (node->type == NT_OBJECT_LITERAL)      ||
@@ -450,16 +451,16 @@ static int process_scope(KOS_COMP_UNIT *program,
 }
 
 static int if_stmt(KOS_COMP_UNIT *program,
-                   KOS_AST_NODE  *node,
+                   KOS_AST_NODE  *if_node,
                    int           *is_terminal)
 {
-    int error     = KOS_SUCCESS;
-    int is_truthy = 0;
-    int is_falsy  = 0;
-    int t1;
-    int t2;
+    KOS_AST_NODE *node      = if_node->children;
+    int           error     = KOS_SUCCESS;
+    int           is_truthy = 0;
+    int           is_falsy  = 0;
+    int           t1;
+    int           t2;
 
-    node = node->children;
     assert(node);
     TRY(visit_node(program, node, &t1));
 
@@ -471,19 +472,24 @@ static int if_stmt(KOS_COMP_UNIT *program,
     assert(node->next);
 
     if (is_truthy) {
-        if (node->next->next) {
-            node->next->next = KOS_NULL;
-            ++program->num_optimizations;
-        }
+        assert(node->next->type == NT_SCOPE);
+        promote(program, if_node, node->next);
+        ++program->num_optimizations;
+
+        return visit_node(program, if_node, is_terminal);
     }
     else if (is_falsy) {
-        collapse(node, NT_BOOL_LITERAL, TT_KEYWORD, KW_TRUE, KOS_NULL, 0);
-        if (node->next->next)
-            node->next = node->next->next;
-        else
-            collapse(node->next, NT_EMPTY, TT_IDENTIFIER, KW_NONE, KOS_NULL, 0);
         ++program->num_optimizations;
-        is_truthy = 1;
+
+        if (node->next->next) {
+            assert(node->next->next->type == NT_SCOPE);
+            promote(program, if_node, node->next->next);
+
+            return visit_node(program, if_node, is_terminal);
+        }
+
+        collapse(if_node, NT_EMPTY, TT_IDENTIFIER, KW_NONE, KOS_NULL, 0);
+        return KOS_SUCCESS;
     }
 
     node = node->next;
@@ -554,7 +560,7 @@ static int while_stmt(KOS_COMP_UNIT *program,
     assert(t == TERM_NONE);
 
     if (program->optimize) {
-        is_truthy = node->type == NT_EMPTY || kos_node_is_truthy(program, node);
+        is_truthy = kos_node_is_truthy(program, node);
         is_falsy  = is_truthy ? 0 : kos_node_is_falsy(program, node);
     }
 
@@ -571,8 +577,8 @@ static int while_stmt(KOS_COMP_UNIT *program,
     if ( ! is_truthy || (*is_terminal & TERM_BREAK))
         *is_terminal = TERM_NONE;
 
-    if (*is_terminal && program->optimize && node->type != NT_EMPTY) {
-        collapse(node, NT_EMPTY, TT_IDENTIFIER, KW_NONE, KOS_NULL, 0);
+    if (*is_terminal && program->optimize && node->type != NT_BOOL_LITERAL) {
+        collapse(node, NT_BOOL_LITERAL, TT_IDENTIFIER, KW_TRUE, KOS_NULL, 0);
         ++program->num_optimizations;
     }
 
