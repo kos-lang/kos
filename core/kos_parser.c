@@ -613,7 +613,7 @@ static int class_literal(KOS_PARSER    *parser,
 {
     KOS_AST_NODE *members_node    = KOS_NULL;
     KOS_AST_NODE *empty_ctor      = KOS_NULL;
-    int           saved_derived   = parser->state.in_derived_class;
+    char          saved_derived   = parser->state.in_derived_class;
     int           error           = KOS_SUCCESS;
     int           had_constructor = 0;
 
