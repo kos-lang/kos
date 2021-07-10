@@ -479,11 +479,13 @@ static int if_stmt(KOS_COMP_UNIT *program,
         return visit_node(program, if_node, is_terminal);
     }
     else if (is_falsy) {
+        KOS_AST_NODE *else_node = node->next->next;
+
         ++program->num_optimizations;
 
-        if (node->next->next) {
-            assert(node->next->next->type == NT_SCOPE);
-            promote(program, if_node, node->next->next);
+        if (else_node) {
+            assert(else_node->type == NT_SCOPE || else_node->type == NT_IF);
+            promote(program, if_node, else_node);
 
             return visit_node(program, if_node, is_terminal);
         }

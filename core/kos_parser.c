@@ -611,12 +611,11 @@ cleanup:
 static int class_literal(KOS_PARSER    *parser,
                          KOS_AST_NODE **ret)
 {
-    int           error           = KOS_SUCCESS;
-    int           had_constructor = 0;
     KOS_AST_NODE *members_node    = KOS_NULL;
     KOS_AST_NODE *empty_ctor      = KOS_NULL;
-
-    assert( ! parser->state.in_derived_class);
+    int           saved_derived   = parser->state.in_derived_class;
+    int           error           = KOS_SUCCESS;
+    int           had_constructor = 0;
 
     TRY(new_node(parser, ret, NT_CLASS_LITERAL));
 
@@ -637,6 +636,7 @@ static int class_literal(KOS_PARSER    *parser,
         TRY(push_node(parser, *ret, NT_EMPTY, KOS_NULL));
 
         parser->unget = 1;
+        parser->state.in_derived_class = 0;
     }
 
     TRY(assume_separator(parser, ST_CURLY_OPEN));
@@ -671,6 +671,11 @@ static int class_literal(KOS_PARSER    *parser,
 
             TRY(next_token(parser));
             fun_name_token = parser->token;
+            if (fun_name_token.type != TT_IDENTIFIER && fun_name_token.type != TT_KEYWORD) {
+                parser->error_str = str_err_expected_identifier;
+                error = KOS_ERROR_PARSE_FAILED;
+                goto cleanup;
+            }
 
             TRY(push_node(parser, members_node, NT_PROPERTY, &prop_node));
 
@@ -723,7 +728,7 @@ static int class_literal(KOS_PARSER    *parser,
     TRY(assume_separator(parser, ST_CURLY_CLOSE));
 
 cleanup:
-    parser->state.in_derived_class = 0;
+    parser->state.in_derived_class = saved_derived;
 
     return error;
 }

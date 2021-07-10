@@ -1180,6 +1180,63 @@ do {
     assert d.get_data() == [400, 600, 42]
 }
 
+# class as member in prototype
+do {
+    class has_class_member extends class {} {
+        var a = class { }
+    }
+
+    const obj = has_class_member()
+
+    assert typeof obj.a == "class"
+}
+
+# super in class as member in prototype
+do {
+    class base_a {
+        var aa = "aa"
+    }
+
+    class base_b {
+        var bb = "bb"
+    }
+
+    class outer extends base_a {
+        var inner = class extends base_b {
+            fun get_bb {
+                return super.bb
+            }
+        }
+
+        fun get_aa {
+            return super.aa
+        }
+    }
+
+    const a = outer()
+    const b = a.inner()
+
+    assert "aa" propertyof a
+    assert ! ("bb" propertyof a)
+    assert "bb" propertyof b
+    assert ! ("aa" propertyof b)
+
+    assert a.aa == "aa"
+    assert b.bb == "bb"
+
+    assert a.get_aa() == "aa"
+    assert b.get_bb() == "bb"
+
+    a.aa = 42
+    b.bb = 43
+
+    assert a.aa == 42
+    assert b.bb == 43
+
+    assert a.get_aa() == "aa"
+    assert b.get_bb() == "bb"
+}
+
 ##############################################################################
 # base.object
 

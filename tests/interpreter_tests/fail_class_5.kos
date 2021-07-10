@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2014-2021 Chris Dragan
+
+do {
+    class base {
+        var abc = "abc"
+    }
+
+    class derived extends base {
+        fun get_proto {
+            # Fail here: cannot get prototype this way
+            return super
+        }
+    }
+
+    const o = derived()
+
+    assert "abc" in o
+}

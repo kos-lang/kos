@@ -1377,7 +1377,8 @@ static int push_jump_array(KOS_COMP_UNIT *program,
         if (jump_array->num_jumps)
             memcpy(new_buf, jump_array->offs, sizeof(int) * jump_array->num_jumps);
 
-        jump_array->offs = new_buf;
+        jump_array->offs     = new_buf;
+        jump_array->capacity = new_capacity;
     }
 
     jump_array->offs[jump_array->num_jumps++] = offs;
@@ -1507,6 +1508,7 @@ static int if_stmt(KOS_COMP_UNIT      *program,
     node = node->children;
     assert(node);
 
+    /* TODO simplify jump if the body has only break or continue */
     TRY(gen_cond_jump(program, node, INSTR_JUMP_NOT_COND, &jump_array));
 
     node = node->next;
@@ -1872,6 +1874,8 @@ static int while_stmt(KOS_COMP_UNIT      *program,
         init_jump_array(&start_jump_array);
         init_jump_array(&end_jump_array);
 
+        continue_tgt_offs = program->cur_offs;
+
         TRY(gen_cond_jump(program, cond_node, INSTR_JUMP_NOT_COND, &end_jump_array));
 
         loop_start_offs = program->cur_offs;
@@ -1883,8 +1887,9 @@ static int while_stmt(KOS_COMP_UNIT      *program,
         TRY(visit_node(program, node, &reg));
         assert( ! reg);
 
-        continue_tgt_offs = program->cur_offs;
+        TRY(add_addr2line(program, &node->token, KOS_FALSE_VALUE));
 
+        /* TODO simplify jumps if body ends with a break */
         TRY(gen_cond_jump(program, cond_node, INSTR_JUMP_COND, &start_jump_array));
 
         update_jump_array(program, &start_jump_array, loop_start_offs);
@@ -3909,6 +3914,7 @@ static int log_not(KOS_COMP_UNIT      *program,
     assert(node);
     assert(!node->next);
 
+    /* TODO use gen_cond_jump() instead of visit_cond_node() */
     TRY(visit_cond_node(program, node, &src, &negated));
     assert(src);
 
