@@ -121,7 +121,7 @@ runtests()
 
 # Kill release build after a few minutes in Travis
 ARCH=$(uname -m)
-if [ "$ARCH" = "ppc64le" -o "$ARCH" = "s390x" ]; then
+if [ "$ARCH" = "ppc64le" -o "$ARCH" = "s390x" -o "$ARCH" = "aarch64" ]; then
     sleep 240 && pkill kos &
 fi
 
