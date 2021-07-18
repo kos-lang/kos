@@ -507,8 +507,6 @@ static int if_stmt(KOS_COMP_UNIT *program,
         if (t1 && t2)
             *is_terminal = t1 | t2;
     }
-    else if (is_truthy)
-        *is_terminal = t1;
 
 cleanup:
     return error;
