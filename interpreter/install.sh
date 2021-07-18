@@ -40,6 +40,6 @@ fi
 install -d "$BIN_DIR"
 install -d "$MODULES_DIR"
 install -m 0755 "$KOS_EXE" "$BIN_DIR"
-for FILE in ../modules/*.kos "$SO_DIR"/*.$SO_EXT; do
+for FILE in ../modules/*.kos $(find "$SO_DIR"/ -type f -name "*.$SO_EXT"); do
     install -m 0644 "$FILE" "$MODULES_DIR"
 done
