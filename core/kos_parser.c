@@ -608,14 +608,66 @@ cleanup:
     return error;
 }
 
+static int call_super_from_default_ctor(KOS_PARSER   *parser,
+                                        KOS_AST_NODE *node)
+{
+    KOS_TOKEN     args_token;
+    KOS_AST_NODE *params_node     = KOS_NULL;
+    KOS_AST_NODE *invocation_node = KOS_NULL;
+    int           error           = KOS_SUCCESS;
+
+    node = node->children;
+    assert(node);
+    assert(node->type == NT_NAME);
+
+    params_node = node->next;
+    assert(params_node);
+    assert(params_node->type == NT_PARAMETERS);
+
+    args_token = params_node->token;
+
+    node = params_node->next;
+    assert(node);
+    assert(node->type == NT_LANDMARK);
+
+    node = node->next;
+    assert(node);
+    assert(node->type == NT_SCOPE);
+
+    TRY(push_node(parser, params_node, NT_ELLIPSIS, &params_node));
+    params_node->token = args_token;
+
+    TRY(push_node(parser, params_node, NT_IDENTIFIER, &params_node));
+    params_node->token = args_token;
+
+    TRY(new_node(parser, &invocation_node, NT_INVOCATION));
+    invocation_node->token = args_token;
+
+    invocation_node->next = node->children;
+    node->children        = invocation_node;
+
+    TRY(push_node(parser, invocation_node, NT_SUPER_CTOR_LITERAL, &node));
+    node->token = args_token;
+
+    TRY(push_node(parser, invocation_node, NT_EXPAND, &node));
+    node->token = args_token;
+
+    TRY(push_node(parser, node, NT_IDENTIFIER, &node));
+    node->token = args_token;
+
+cleanup:
+    return error;
+}
+
 static int class_literal(KOS_PARSER    *parser,
                          KOS_AST_NODE **ret)
 {
     KOS_AST_NODE *members_node    = KOS_NULL;
     KOS_AST_NODE *empty_ctor      = KOS_NULL;
-    char          saved_derived   = parser->state.in_derived_class;
     int           error           = KOS_SUCCESS;
-    int           had_constructor = 0;
+    char          had_constructor = 0;
+    char          has_base        = 0;
+    char          saved_derived   = parser->state.in_derived_class;
 
     TRY(new_node(parser, ret, NT_CLASS_LITERAL));
 
@@ -631,6 +683,9 @@ static int class_literal(KOS_PARSER    *parser,
         ast_push(*ret, extends_node);
 
         parser->state.in_derived_class = 1;
+
+        if (extends_node->type != NT_VOID_LITERAL)
+            has_base = 1;
     }
     else {
         TRY(push_node(parser, *ret, NT_EMPTY, KOS_NULL));
@@ -722,8 +777,12 @@ static int class_literal(KOS_PARSER    *parser,
         }
     }
 
-    if ( ! had_constructor)
+    if ( ! had_constructor) {
         ast_push(*ret, empty_ctor);
+
+        if (has_base)
+            TRY(call_super_from_default_ctor(parser, empty_ctor));
+    }
 
     TRY(assume_separator(parser, ST_CURLY_CLOSE));
 

@@ -344,9 +344,15 @@ class y extends a.b { }
             (constructor 1 7 x
                 (name_const 1 7 x
                     (identifier 1 7 x))
-                (parameters 1 9 extends)
+                (parameters 1 9 extends
+                    (ellipsis 1 9 extends
+                        (identifier 1 9 extends)))
                 (landmark 1 9 extends)
                 (scope 1 9 extends
+                    (invocation 1 9 extends
+                        (super-ctor 1 9 extends)
+                        (expand 1 9 extends
+                            (identifier 1 9 extends)))
                     (return 1 9 extends
                         (this 1 9 extends)))
                 (landmark 1 9 extends)))
@@ -362,9 +368,15 @@ class y extends a.b { }
             (constructor 3 7 y
                 (name_const 3 7 y
                     (identifier 3 7 y))
-                (parameters 3 9 extends)
+                (parameters 3 9 extends
+                    (ellipsis 3 9 extends
+                        (identifier 3 9 extends)))
                 (landmark 3 9 extends)
                 (scope 3 9 extends
+                    (invocation 3 9 extends
+                        (super-ctor 3 9 extends)
+                        (expand 3 9 extends
+                            (identifier 3 9 extends)))
                     (return 3 9 extends
                         (this 3 9 extends)))
                 (landmark 3 9 extends)))
@@ -458,9 +470,15 @@ class extends x {
         )
         (constructor 2 1 class
             (name 2 1 class)
-            (parameters 2 7 extends)
+            (parameters 2 7 extends
+                (ellipsis 2 7 extends
+                    (identifier 2 7 extends)))
             (landmark 2 7 extends)
             (scope 2 7 extends
+                (invocation 2 7 extends
+                    (super-ctor 2 7 extends)
+                    (expand 2 7 extends
+                        (identifier 2 7 extends)))
                 (return 2 7 extends
                     (this 2 7 extends)
                 )

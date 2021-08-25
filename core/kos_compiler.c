@@ -5406,6 +5406,18 @@ static int gen_function(KOS_COMP_UNIT      *program,
     }
     assert(scope->num_args <= KOS_MAX_REGS);
 
+    /* Generate register for 'this' */
+    if (scope->uses_this) {
+        TRY(gen_reg(program, &frame->this_reg));
+        assert(frame->this_reg->reg == ++last_reg);
+        frame->this_reg->tmp = 0;
+        constant->this_reg = (uint8_t)frame->this_reg->reg;
+    }
+    else {
+        assert( ! frame->this_reg);
+        assert(constant->this_reg == KOS_NO_REG);
+    }
+
     /* Generate register for ellipsis */
     if (scope->ellipsis) {
         if (scope->ellipsis->type == VAR_INDEPENDENT_LOCAL) {
@@ -5419,18 +5431,6 @@ static int gen_function(KOS_COMP_UNIT      *program,
             assert(scope->ellipsis->reg->reg == ++last_reg);
             constant->ellipsis_reg = (uint8_t)scope->ellipsis->reg->reg;
         }
-    }
-
-    /* Generate register for 'this' */
-    if (scope->uses_this) {
-        TRY(gen_reg(program, &frame->this_reg));
-        assert(frame->this_reg->reg == ++last_reg);
-        frame->this_reg->tmp = 0;
-        constant->this_reg = (uint8_t)frame->this_reg->reg;
-    }
-    else {
-        assert( ! frame->this_reg);
-        assert(constant->this_reg == KOS_NO_REG);
     }
 
     /* Generate registers for closures */

@@ -676,6 +676,48 @@ do {
     assert o.y == 22
 }
 
+# default ctor in derived class passes all args to base ctor
+do {
+    class b {
+        constructor(x, y) {
+            this.x = x
+            this.y = y
+        }
+
+        fun get_sum {
+            return this.get_a() + this.x + this.y
+        }
+
+        fun get_a {
+            return 42
+        }
+    }
+
+    class d extends b {
+        fun get_a {
+            return 100
+        }
+    }
+
+    const ob = b(10, 3)
+    const od = d(3, 20)
+
+    assert ob instanceof b
+    assert od instanceof b
+    assert od instanceof d
+
+    assert ob.x == 10
+    assert ob.y == 3
+    assert od.x == 3
+    assert od.y == 20
+
+    assert ob.get_a() == 42
+    assert od.get_a() == 100
+
+    assert ob.get_sum() == 55
+    assert od.get_sum() == 123
+}
+
 # multiple super constructor invocations
 do {
     class Base {
