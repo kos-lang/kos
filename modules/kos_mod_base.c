@@ -3843,7 +3843,9 @@ cleanup:
  *
  * The element comparison is done by comparing object reference, not contents.
  *
- * Returns the element stored in the array at index `pos`.
+ * Returns the original element stored in the array at index `pos` before the `cas`
+ * operation.  If `cas` failed, returns the value stored at the time of the comparison.
+ * If `cas` succeeded, returns `old_value`.
  */
 static const KOS_CONVERT array_cas_args[4] = {
     KOS_DEFINE_MANDATORY_ARG(str_pos      ),
