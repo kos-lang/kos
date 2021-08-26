@@ -16,6 +16,9 @@ if [ $# -ne 2 ]; then
     exit 1
 fi
 
+# Debug hangs in Travis
+[ "$(uname -m)" != "ppc64le" -a "$(uname -m)" != "s390x" ] || VERBOSE="1"
+
 UNAME=$(uname -s)
 case "$UNAME" in
     CYGWIN*|MINGW*|MSYS*) UNAME="Windows" ;;
