@@ -1147,9 +1147,9 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
         } while (0)
 
         HANDLE             handle;
-        FILE_BASIC_INFO    basic_info   = { 0 };
-        FILE_STANDARD_INFO std_info     = { 0 };
-        FILE_STORAGE_INFO  storage_info = { 0 };
+        FILE_BASIC_INFO    basic_info;
+        FILE_STANDARD_INFO std_info;
+        FILE_STORAGE_INFO  storage_info;
         DWORD              last_error   = 0;
         BOOL               ok           = FALSE;
         BOOL               have_storage = FALSE;
@@ -1159,6 +1159,10 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
         KOS_DECLARE_STATIC_CONST_STRING(str_type_dir,      "directory");
         KOS_DECLARE_STATIC_CONST_STRING(str_type_dev,      "device");
         KOS_DECLARE_STATIC_CONST_STRING(str_err_file_stat, "unable to obtain information about file");
+
+        memset(&basic_info, 0, sizeof(basic_info));
+        memset(&std_info, 0, sizeof(std_info));
+        memset(&storage_info, 0, sizeof(storage_info));
 
         KOS_suspend_context(ctx);
 
@@ -1266,10 +1270,12 @@ static KOS_OBJ_ID get_file_size(KOS_CONTEXT ctx,
 #ifdef _WIN32
     {
         HANDLE             handle;
-        FILE_STANDARD_INFO std_info = { 0 };
+        FILE_STANDARD_INFO std_info;
         BOOL               ok       = FALSE;
 
         KOS_DECLARE_STATIC_CONST_STRING(str_err_file_stat, "unable to obtain information about file");
+
+        memset(&std_info, 0, sizeof(std_info));
 
         KOS_suspend_context(ctx);
 
