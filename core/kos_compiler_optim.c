@@ -271,6 +271,7 @@ static KOS_SCOPE *push_scope(KOS_COMP_UNIT      *program,
 
     scope->num_vars       = 0;
     scope->num_indep_vars = 0;
+    scope->uses_this      = 0;
 
     if (scope->has_frame) {
         KOS_FRAME *const frame = (KOS_FRAME *)scope;
@@ -2031,6 +2032,37 @@ static void super_proto_literal(KOS_COMP_UNIT *program)
     ++frame->num_binds;
 }
 
+static void this_literal(KOS_COMP_UNIT *program, KOS_AST_NODE *node)
+{
+    KOS_SCOPE *const scope = &program->cur_frame->scope;
+
+    assert(scope->is_function);
+
+    scope->uses_this = 1;
+}
+
+static int invocation(KOS_COMP_UNIT *program, KOS_AST_NODE *node)
+{
+    const KOS_AST_NODE *child_node = node->children;
+
+    assert(child_node);
+    if (child_node->type == NT_REFINEMENT) {
+
+        child_node = child_node->children;
+        assert(child_node);
+        if (child_node->type == NT_SUPER_PROTO_LITERAL) {
+
+            KOS_SCOPE *const scope = &program->cur_frame->scope;
+
+            assert(scope->is_function);
+
+            scope->uses_this = 1;
+        }
+    }
+
+    return visit_child_nodes(program, node);
+}
+
 static int visit_node(KOS_COMP_UNIT *program,
                       KOS_AST_NODE  *node,
                       int           *is_terminal)
@@ -2127,6 +2159,15 @@ static int visit_node(KOS_COMP_UNIT *program,
             error = KOS_SUCCESS;
             break;
 
+        case NT_THIS_LITERAL:
+            this_literal(program, node);
+            error = KOS_SUCCESS;
+            break;
+
+        case NT_INVOCATION:
+            error = invocation(program, node);
+            break;
+
         case NT_EMPTY:
             /* fall through */
         case NT_FALLTHROUGH:
@@ -2136,8 +2177,6 @@ static int visit_node(KOS_COMP_UNIT *program,
         case NT_NUMERIC_LITERAL:
             /* fall through */
         case NT_STRING_LITERAL:
-            /* fall through */
-        case NT_THIS_LITERAL:
             /* fall through */
         case NT_SUPER_CTOR_LITERAL:
             /* fall through */
@@ -2163,8 +2202,6 @@ static int visit_node(KOS_COMP_UNIT *program,
         case NT_REFINEMENT:
             /* fall through */
         case NT_SLICE:
-            /* fall through */
-        case NT_INVOCATION:
             /* fall through */
         case NT_VAR:
             /* fall through */

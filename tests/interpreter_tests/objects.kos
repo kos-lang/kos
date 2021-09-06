@@ -925,6 +925,38 @@ do {
     assert od.add_2(20) == 23
 }
 
+# invocation with super prototype, passes current this
+do {
+    class b {
+        var x = 1
+
+        constructor {
+            this.x = 2
+        }
+
+        fun get_x {
+            return this.x
+        }
+    }
+
+    class d extends b {
+        var x = 3
+
+        constructor {
+            this.x = 4
+        }
+
+        fun get_x_p10 {
+            return super.get_x() + 10
+        }
+    }
+
+    const o = d()
+    assert o.x == 4
+    assert o.get_x() == 4
+    assert o.get_x_p10() == 14
+}
+
 # prototype chain
 do {
     class c1 {

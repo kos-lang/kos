@@ -3190,8 +3190,18 @@ static int refinement_object(KOS_COMP_UNIT      *program,
         TRY(visit_node(program, node, &obj));
     assert(obj);
 
+    /* Object is requested only for invocation */
     if (out_obj) {
-        *out_obj = obj;
+        /* When invoking a function on super, use this as object */
+        if (node->type == NT_SUPER_PROTO_LITERAL) {
+            assert(program->cur_frame->scope.uses_this);
+            assert(program->cur_frame->this_reg);
+
+            *out_obj = program->cur_frame->this_reg;
+        }
+        else
+            *out_obj = obj;
+
         TRY(gen_reg(program, reg));
     }
     else
