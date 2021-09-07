@@ -72,7 +72,7 @@ die()
 }
 
 note "test 1"
-if kos; then
+if echo "" | kos; then
     die "Failed: Interpreter exited successfuly without any modules"
 fi
 
