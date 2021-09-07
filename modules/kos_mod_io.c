@@ -1460,6 +1460,15 @@ static void file_lock_finalize(KOS_CONTEXT ctx,
         KOS_FILE_HOLDER *const file_holder = (KOS_FILE_HOLDER *)priv;
 
 #ifdef _WIN32
+        {
+            HANDLE     handle;
+            OVERLAPPED overlapped;
+            memset(&overlapped, 0, sizeof(overlapped));
+            overlapped.hEvent = INVALID_HANDLE_VALUE;
+
+            handle = (HANDLE)_get_osfhandle(_fileno(get_file(file_holder)));
+            UnlockFileEx(handle, 0, ~0U, ~0U, &overlapped);
+        }
 #else
         flock(fileno(get_file(file_holder)), LOCK_UN);
 #endif
@@ -1516,6 +1525,23 @@ static KOS_OBJ_ID kos_lock(KOS_CONTEXT ctx,
     KOS_suspend_context(ctx);
 
 #ifdef _WIN32
+    {
+        HANDLE     handle;
+        OVERLAPPED overlapped;
+        memset(&overlapped, 0, sizeof(overlapped));
+        overlapped.hEvent = INVALID_HANDLE_VALUE;
+
+        handle = (HANDLE)_get_osfhandle(_fileno(get_file(file_holder)));
+
+        if (!LockFileEx(handle, LOCKFILE_EXCLUSIVE_LOCK, 0, ~0U, ~0U, &overlapped)) {
+            const DWORD last_error = GetLastError();
+
+            KOS_resume_context(ctx);
+
+            KOS_raise_last_error(ctx, "LockFileEx", last_error);
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+    }
 #else
     if (flock(fileno(get_file(file_holder)), LOCK_EX)) {
         const int saved_errno = errno;

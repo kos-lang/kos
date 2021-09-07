@@ -541,3 +541,21 @@ do {
     assert data.unpack("s")[0] == "test"
     p.read.close()
 }
+
+##############################################################################
+# file.lock
+
+do {
+    const name = "./__lock_file"
+    fs.remove(name)
+    assert ! fs.file_exists(name)
+
+    with const f = io.create(name) {
+        with f.lock() {
+            f.write("xyz")
+        }
+    }
+
+    assert fs.remove(name)
+    assert ! fs.file_exists(name)
+}
