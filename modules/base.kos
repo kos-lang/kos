@@ -907,35 +907,103 @@ string.prototype.split_lines = fun(keep_ends = false)
     }
 }
 
-/* @item base keys()
+/* @item base first()
  *
- *     keys(iterable)
+ *     first(iterable)
  *
- * A generator which produces first elements of each element from an iterable
- * object.  When iterating objects (including `base.deep()` and
- * `base.shallow()`), object keys are yielded.
+ * Returns the first element from an iterable object.
  *
- * Returns an iterator function, which iterates over the elements of an iterable
- * object, then for each of the elements extracts its first sub-element and
- * yields it.
+ * If `iterable` is an object, it can return any key-value pair.
  *
- * This is typically useful to iterate over keys of an object.  Normally
- * iterating over an object yields pairs (two-element arrays) containing
- * object keys and values.  The `keys` function can convert that
- * sequence to just keys.
+ * Throws an exception if there is no first element.
  *
  * Examples:
  *
- *     > keys({ A: 1, B: 2, C: 3}) -> array
+ *     > first("ABC")
+ *     "A"
+ *     > first(range(5, 10))
+ *     5
+ *     > { A: 1, B: 2, C: 3} -> map(first) -> array
  *     ["A", "C", "B"]
- *     > keys(["kos", "lang", "first"]) -> array
- *     ["k", "l", "f"]
  */
-public fun keys(iterable)
+
+public fun first(iterable)
 {
-    for const x in iterable {
-        yield x.iterator()()
+    switch typeof iterable {
+
+        case "array", "string", "buffer" {
+            if iterable.size {
+                return iterable[0]
+            }
+        }
+
+        case "void" {
+            break
+        }
+
+        default {
+            for const elem in iterable {
+                return elem
+            }
+        }
     }
+
+    throw "no first element"
+}
+
+/* @item base last()
+ *
+ *     last(iterable)
+ *
+ * Returns the last element from an iterable object.
+ *
+ * If `iterable` is an object, it can return any key-value pair.
+ *
+ * Throws an exception if there are no element in the iterable object.
+ *
+ * Examples:
+ *
+ *     > last("ABC")
+ *     "C"
+ *     > last(range(5, 10))
+ *     9
+ */
+
+public fun last(iterable)
+{
+    switch typeof iterable {
+
+        case "array", "string", "buffer" {
+            const size = iterable.size
+            if size {
+                return iterable[size - 1]
+            }
+        }
+
+        case "void" {
+            break
+        }
+
+        case "object" {
+            for const elem in iterable {
+                return elem
+            }
+        }
+
+        default {
+            var prev = void
+            var has_elems = false
+            for const elem in iterable {
+                has_elems = true
+                prev = elem
+            }
+            if has_elems {
+                return prev
+            }
+        }
+    }
+
+    throw "no last element"
 }
 
 /* @item base map()

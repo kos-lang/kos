@@ -47,6 +47,7 @@ Table of Contents
     * [exception()](#exception)
       * [exception.prototype.print()](#exceptionprototypeprint)
     * [filter()](#filter)
+    * [first()](#first)
     * [float()](#float)
     * [function()](#function)
       * [function.prototype.apply()](#functionprototypeapply)
@@ -67,7 +68,7 @@ Table of Contents
     * [integer()](#integer)
       * [integer.prototype.hex()](#integerprototypehex)
     * [join()](#join)
-    * [keys()](#keys)
+    * [last()](#last)
     * [map()](#map)
     * [method()](#method)
     * [number()](#number)
@@ -363,7 +364,9 @@ guarantees.
 
 The element comparison is done by comparing object reference, not contents.
 
-Returns the element stored in the array at index `pos`.
+Returns the original element stored in the array at index `pos` before the `cas`
+operation.  If `cas` failed, returns the value stored at the time of the comparison.
+If `cas` succeeded, returns `old_value`.
 
 array.prototype.fill()
 ----------------------
@@ -1311,6 +1314,26 @@ Examples:
     > odd([10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) -> array
     [9, 7, 5, 3, 1]
 
+first()
+-------
+
+    first(iterable)
+
+Returns the first element from an iterable object.
+
+If `iterable` is an object, it can return any key-value pair.
+
+Throws an exception if there is no first element.
+
+Examples:
+
+    > first("ABC")
+    "A"
+    > first(range(5, 10))
+    5
+    > { A: 1, B: 2, C: 3} -> map(first) -> array
+    ["A", "C", "B"]
+
 float()
 -------
 
@@ -1719,30 +1742,23 @@ Examples:
     > range(4) -> join(" ")
     "0 1 2 3"
 
-keys()
+last()
 ------
 
-    keys(iterable)
+    last(iterable)
 
-A generator which produces first elements of each element from an iterable
-object.  When iterating objects (including `base.deep()` and
-`base.shallow()`), object keys are yielded.
+Returns the last element from an iterable object.
 
-Returns an iterator function, which iterates over the elements of an iterable
-object, then for each of the elements extracts its first sub-element and
-yields it.
+If `iterable` is an object, it can return any key-value pair.
 
-This is typically useful to iterate over keys of an object.  Normally
-iterating over an object yields pairs (two-element arrays) containing
-object keys and values.  The `keys` function can convert that
-sequence to just keys.
+Throws an exception if there are no element in the iterable object.
 
 Examples:
 
-    > keys({ A: 1, B: 2, C: 3}) -> array
-    ["A", "C", "B"]
-    > keys(["kos", "lang", "first"]) -> array
-    ["k", "l", "f"]
+    > last("ABC")
+    "C"
+    > last(range(5, 10))
+    9
 
 map()
 -----
