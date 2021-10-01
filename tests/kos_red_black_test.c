@@ -152,15 +152,6 @@ static int check_tree(struct MYNODE *n)
     return error;
 }
 
-static void free_tree(struct MYNODE *n)
-{
-    if (n) {
-        free_tree((struct MYNODE *)n->node.left);
-        free_tree((struct MYNODE *)n->node.right);
-        KOS_free(n);
-    }
-}
-
 static int print_tree_node(KOS_RED_BLACK_NODE *node, void *cookie)
 {
     struct MYNODE *n     = (struct MYNODE *)node;
@@ -331,29 +322,23 @@ int main(int argc, char *argv[])
         int            total = 0;
         struct KOS_RNG rng;
         struct MYNODE *root   = 0;
-        intptr_t      *values = (intptr_t *)KOS_malloc(size * sizeof(intptr_t));
+        struct MYNODE *values = (struct MYNODE *)KOS_malloc(size * sizeof(struct MYNODE));
 
         kos_rng_init(&rng);
 
         for (i = 0; i < size; i++) {
             const uintptr_t v = (uintptr_t)kos_rng_random(&rng);
-            values[i]         = v == ((uintptr_t)1U << (sizeof(intptr_t)*8-1)) ? 0 : (intptr_t)v;
+            values[i].value   = v == ((uintptr_t)1U << (sizeof(intptr_t)*8-1)) ? 0 : (intptr_t)v;
         }
 
-        for (i = 0; i < size*2; i++) {
-            struct MYNODE *node;
-
+        for (i = 0; i < size; i++) {
             if (kos_red_black_find((KOS_RED_BLACK_NODE *)root,
-                                   (void *)values[i % size],
+                                   (void *)values[i].value,
                                    cmp_value))
                 continue;
 
-            node = (struct MYNODE *)KOS_malloc(sizeof(struct MYNODE));
-
-            node->value = values[i % size];
-
             kos_red_black_insert((KOS_RED_BLACK_NODE **)&root,
-                                 (KOS_RED_BLACK_NODE *)node,
+                                 &values[i].node,
                                  cmp_node);
 
             ++total;
@@ -370,13 +355,12 @@ int main(int argc, char *argv[])
             const uint64_t idx  = kos_rng_random(&rng);
             struct MYNODE *node = (struct MYNODE *)kos_red_black_find(
                     (KOS_RED_BLACK_NODE *)root,
-                    (void *)values[(unsigned)idx % size],
+                    (void *)values[(unsigned)idx % size].value,
                     cmp_value);
 
             if (node) {
                 kos_red_black_delete((KOS_RED_BLACK_NODE **)&root,
                                      (KOS_RED_BLACK_NODE *)node);
-                KOS_free(node);
                 --total;
             }
         }
@@ -388,7 +372,6 @@ int main(int argc, char *argv[])
         if (total < 20)
             print_tree(root);
 
-        free_tree(root);
         KOS_free(values);
 
         print_error(error);
