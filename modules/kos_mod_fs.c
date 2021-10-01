@@ -23,7 +23,9 @@
 #else
 #   include <errno.h>
 #   include <dirent.h>
-#   include <sys/dir.h>
+#   if !defined(__HAIKU__)
+#       include <sys/dir.h>
+#   endif
 #   include <sys/types.h>
 #   include <sys/stat.h>
 #   include <unistd.h>
@@ -239,7 +241,7 @@ static KOS_OBJ_ID info(KOS_CONTEXT ctx,
     {
         struct stat st;
         int         ret;
-        int         saved_errno;
+        int         saved_errno = 0;
 
         KOS_suspend_context(ctx);
 
