@@ -32,10 +32,16 @@
 #   include <fcntl.h>
 #   include <signal.h>
 #   include <sys/stat.h>
-#   include <sys/sysctl.h>
 #   include <sys/types.h>
 #   include <sys/wait.h>
 #   include <unistd.h>
+#endif
+
+#if defined(__APPLE__)   || \
+    defined(__FreeBSD__) || \
+    defined(__NetBSD__)  || \
+    defined(__OpenBSD__)
+#   include <sys/sysctl.h>
 #endif
 
 #if defined(__ANDROID__)
@@ -1565,7 +1571,7 @@ cleanup:
     return error ? KOS_BADPTR : obj;
 }
 
-static int64_t get_num_cpus()
+static int64_t get_num_cpus(void)
 {
 #ifdef _WIN32
 
@@ -1581,7 +1587,7 @@ static int64_t get_num_cpus()
 
     const long ncpus = sysconf(_SC_NPROCESSORS_ONLN);
 
-    return (ncpus < 0) ? 1 : ncpus;
+    return (ncpus < 1) ? 1 : ncpus;
 
 #elif defined(__APPLE__)   || \
       defined(__FreeBSD__) || \
