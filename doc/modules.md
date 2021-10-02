@@ -205,6 +205,7 @@ Table of Contents
     * [sqrt()](#sqrt)
     * [tan()](#tan)
   * [os](#os)
+    * [cpus](#cpus)
     * [getenv()](#getenv)
     * [process()](#process)
       * [process.prototype.pid](#processprototypepid)
@@ -4200,6 +4201,18 @@ Example:
 
 os
 ==
+
+cpus
+----
+
+    cpus
+
+Constant integer representing the number of usable CPUs in the system.
+
+Example:
+
+    > cpus
+    4
 
 getenv()
 --------

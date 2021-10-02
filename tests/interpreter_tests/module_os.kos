@@ -256,6 +256,12 @@ assert os.sysname != "Unknown"
 assert os.sysname.size
 
 ##############################################################################
+# os.cpus
+
+assert typeof os.cpus == "integer"
+assert os.cpus > 0
+
+##############################################################################
 # os.getenv
 
 do {
