@@ -45,6 +45,7 @@ _KOS_get_integer
 _KOS_get_library_function
 _KOS_get_module
 _KOS_get_named_arg
+_KOS_get_num_cpus
 _KOS_get_numeric_arg
 _KOS_get_property_with_depth
 _KOS_get_prototype

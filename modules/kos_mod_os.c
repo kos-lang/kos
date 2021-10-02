@@ -11,6 +11,7 @@
 #include "../inc/kos_module.h"
 #include "../inc/kos_object.h"
 #include "../inc/kos_string.h"
+#include "../inc/kos_system.h"
 #include "../inc/kos_utils.h"
 #include "../core/kos_debug.h"
 #include "../core/kos_math.h"
@@ -32,16 +33,8 @@
 #   include <fcntl.h>
 #   include <signal.h>
 #   include <sys/stat.h>
-#   include <sys/types.h>
 #   include <sys/wait.h>
 #   include <unistd.h>
-#endif
-
-#if defined(__APPLE__)   || \
-    defined(__FreeBSD__) || \
-    defined(__NetBSD__)  || \
-    defined(__OpenBSD__)
-#   include <sys/sysctl.h>
 #endif
 
 #if defined(__ANDROID__)
@@ -1571,43 +1564,6 @@ cleanup:
     return error ? KOS_BADPTR : obj;
 }
 
-static int64_t get_num_cpus(void)
-{
-#ifdef _WIN32
-
-    SYSTEM_INFO sysinfo;
-
-    GetSystemInfo(&sysinfo);
-
-    return (int64_t)sysinfo.dwNumberOfProcessors;
-
-#elif defined(__ANDROID__) || \
-      defined(__HAIKU__)   || \
-      defined(__linux__)
-
-    const long ncpus = sysconf(_SC_NPROCESSORS_ONLN);
-
-    return (ncpus < 1) ? 1 : ncpus;
-
-#elif defined(__APPLE__)   || \
-      defined(__FreeBSD__) || \
-      defined(__NetBSD__)  || \
-      defined(__OpenBSD__)
-
-    int    mib[2] = { CTL_HW, HW_NCPU };
-    int    ncpus  = 0;
-    size_t len    = sizeof(ncpus);
-
-    if (sysctl(mib, 2, &ncpus, &len, KOS_NULL, 0) < 0)
-        return 1;
-
-    return (int64_t)ncpus;
-
-#else
-    return 1;
-#endif
-}
-
 KOS_INIT_MODULE(os, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 {
     int       error = KOS_SUCCESS;
@@ -1679,7 +1635,7 @@ KOS_INIT_MODULE(os, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
      *     > cpus
      *     4
      */
-    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "cpus",    get_num_cpus());
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "cpus",    (int64_t)KOS_get_num_cpus());
 
     TRY(KOS_array_write(ctx, priv.o, 0, wait_proto.o));
 

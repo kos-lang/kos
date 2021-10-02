@@ -41,6 +41,15 @@
 #ifdef __linux__
 #   include <sys/sysmacros.h>
 #endif
+#if defined(__APPLE__)   || \
+    defined(__FreeBSD__) || \
+    defined(__NetBSD__)  || \
+    defined(__OpenBSD__)
+#   include <sys/sysctl.h>
+#endif
+#ifdef __QNX__
+#   include <sys/syspage.h>
+#endif
 
 int KOS_is_stdin_interactive(void)
 {
@@ -662,3 +671,44 @@ cleanup:
     return error ? KOS_BADPTR : info.o;
 }
 #endif
+
+unsigned KOS_get_num_cpus(void)
+{
+#ifdef _WIN32
+
+    SYSTEM_INFO sysinfo;
+
+    GetSystemInfo(&sysinfo);
+
+    return (unsigned)sysinfo.dwNumberOfProcessors;
+
+#elif defined(__ANDROID__) || \
+      defined(__HAIKU__)   || \
+      defined(__linux__)
+
+    const long ncpus = sysconf(_SC_NPROCESSORS_ONLN);
+
+    return (ncpus < 1) ? 1 : (unsigned)ncpus;
+
+#elif defined(__APPLE__)   || \
+      defined(__FreeBSD__) || \
+      defined(__NetBSD__)  || \
+      defined(__OpenBSD__)
+
+    int    mib[2] = { CTL_HW, HW_NCPU };
+    int    ncpus  = 0;
+    size_t len    = sizeof(ncpus);
+
+    if (sysctl(mib, 2, &ncpus, &len, KOS_NULL, 0) < 0)
+        return 1;
+
+    return (ncpus < 1) ? 1 : (unsigned)ncpus;
+
+#elif defined(__QNX__)
+
+    return (unsigned)_syspage_ptr->num_cpu;
+
+#else
+    return 1;
+#endif
+}

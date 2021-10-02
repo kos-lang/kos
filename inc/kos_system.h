@@ -78,6 +78,9 @@ typedef void (* LIB_FUNCTION)(void);
 KOS_API
 LIB_FUNCTION KOS_get_library_function(KOS_SHARED_LIB lib, const char *func_name, struct KOS_VECTOR_S *error_cstr);
 
+KOS_API
+unsigned KOS_get_num_cpus(void);
+
 #ifdef __cplusplus
 }
 #endif
