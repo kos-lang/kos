@@ -23,9 +23,6 @@
 #else
 #   include <errno.h>
 #   include <dirent.h>
-#   if !defined(__HAIKU__)
-#       include <sys/dir.h>
-#   endif
 #   include <sys/types.h>
 #   include <sys/stat.h>
 #   include <unistd.h>
