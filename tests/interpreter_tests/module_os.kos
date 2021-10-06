@@ -262,6 +262,21 @@ assert typeof os.cpus == "integer"
 assert os.cpus > 0
 
 ##############################################################################
+# os.getloadavg
+
+do {
+    const loadavg = os.getloadavg()
+    assert typeof loadavg == "array"
+    assert loadavg.size == 3
+    assert typeof loadavg[0] == "float"
+    assert loadavg[0] >= 0
+    assert typeof loadavg[1] == "float"
+    assert loadavg[1] >= 0
+    assert typeof loadavg[2] == "float"
+    assert loadavg[2] >= 0
+}
+
+##############################################################################
 # os.getenv
 
 do {

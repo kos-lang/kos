@@ -1564,6 +1564,64 @@ cleanup:
     return error ? KOS_BADPTR : obj;
 }
 
+/* @item os getloadavg()
+ *
+ *     getloadavg()
+ *
+ * Returns an array with three numbers:
+ *  * System load in the last minute.
+ *  * System load in the last 5 minutes.
+ *  * System load in the last 15 minutes.
+ *
+ * System load indicates how many processes have been active, averaged over
+ * a span of time (1/5/15 minutes).
+ *
+ * On systems which don't support load average, such as Windows, zeroes
+ * are returned.
+ *
+ * Example:
+ *
+ *      > getloadavg()
+ *      [1.38, 4.75, 5.60]
+ */
+static KOS_OBJ_ID kos_getloadavg(KOS_CONTEXT ctx,
+                                 KOS_OBJ_ID  this_obj,
+                                 KOS_OBJ_ID  args_obj)
+{
+    double    loadavg[3] = { 0.0, 0.0, 0.0 };
+    KOS_LOCAL ret;
+    const int maxavg     = (int)(sizeof(loadavg) / sizeof(loadavg[0]));
+    int       error      = KOS_SUCCESS;
+    int       i;
+
+    KOS_init_local(ctx, &ret);
+
+    ret.o = KOS_new_array(ctx, maxavg);
+    TRY_OBJID(ret.o);
+
+#if !defined(_WIN32)
+    i = getloadavg(loadavg, maxavg);
+
+    if (i < 0)
+        i = 0;
+
+    for ( ; i < maxavg; i++)
+        loadavg[i] = 0.0;
+#endif
+
+    for (i = 0; i < maxavg; i++) {
+        const KOS_OBJ_ID num = KOS_new_float(ctx, loadavg[i]);
+        TRY_OBJID(num);
+
+        TRY(KOS_array_write(ctx, ret.o, i, num));
+    }
+
+cleanup:
+    ret.o = KOS_destroy_top_local(ctx, &ret);
+
+    return error ? KOS_BADPTR : ret.o;
+}
+
 KOS_INIT_MODULE(os, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 {
     int       error = KOS_SUCCESS;
@@ -1604,12 +1662,13 @@ KOS_INIT_MODULE(os, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 
     KOS_atomic_write_relaxed_ptr(OBJPTR(MODULE, module.o)->priv, priv.o);
 
-    TRY_ADD_FUNCTION(       ctx, module.o,               "spawn",   spawn,          spawn_args);
-    TRY_ADD_FUNCTION(       ctx, module.o,               "getenv",  kos_getenv,     getenv_args);
+    TRY_ADD_FUNCTION(       ctx, module.o,               "spawn",      spawn,          spawn_args);
+    TRY_ADD_FUNCTION(       ctx, module.o,               "getenv",     kos_getenv,     getenv_args);
+    TRY_ADD_FUNCTION(       ctx, module.o,               "getloadavg", kos_getloadavg, KOS_NULL);
 
-    TRY_ADD_CONSTRUCTOR(    ctx, module.o,               "process", process_ctor,   KOS_NULL, &wait_proto.o);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, wait_proto.o, "wait",    wait_for_child, KOS_NULL);
-    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, wait_proto.o, "pid",     get_pid,        0);
+    TRY_ADD_CONSTRUCTOR(    ctx, module.o,               "process",    process_ctor,   KOS_NULL, &wait_proto.o);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, wait_proto.o, "wait",       wait_for_child, KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, wait_proto.o, "pid",        get_pid,        0);
 
     /* @item os sysname
      *

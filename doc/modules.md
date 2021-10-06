@@ -207,6 +207,7 @@ Table of Contents
   * [os](#os)
     * [cpus](#cpus)
     * [getenv()](#getenv)
+    * [getloadavg()](#getloadavg)
     * [process()](#process)
       * [process.prototype.pid](#processprototypepid)
       * [process.prototype.wait()](#processprototypewait)
@@ -4227,6 +4228,27 @@ Example:
 
      > getenv("PATH")
      "/usr/bin:/bin:/usr/sbin:/sbin"
+
+getloadavg()
+------------
+
+    getloadavg()
+
+Returns an array with three numbers:
+ * System load in the last minute.
+ * System load in the last 5 minutes.
+ * System load in the last 15 minutes.
+
+System load indicates how many processes have been active, averaged over
+a span of time (1/5/15 minutes).
+
+On systems which don't support load average, such as Windows, zeroes
+are returned.
+
+Example:
+
+     > getloadavg()
+     [1.38, 4.75, 5.60]
 
 process()
 ---------
