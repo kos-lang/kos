@@ -1044,7 +1044,7 @@ static KOS_OBJ_ID function_to_str(KOS_CONTEXT ctx,
     KOS_OBJ_ID    ret   = KOS_BADPTR;
     KOS_LOCAL     strings[3];
     KOS_LOCAL     func;
-    char          cstr_ptr[22];
+    char          cstr_ptr[15];
 
     assert(GET_OBJ_TYPE(obj_id) == OBJ_FUNCTION ||
            GET_OBJ_TYPE(obj_id) == OBJ_CLASS);
@@ -1067,7 +1067,7 @@ static KOS_OBJ_ID function_to_str(KOS_CONTEXT ctx,
     strings[1].o = OBJPTR(FUNCTION, func.o)->name;
 
     if (OBJPTR(FUNCTION, func.o)->handler)
-        snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%" PRIu64 ">",
+        snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%" PRIx64 ">",
                  (uint64_t)(uintptr_t)OBJPTR(FUNCTION, func.o)->handler);
     else
         snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%x>",
