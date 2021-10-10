@@ -225,6 +225,13 @@ Table of Contents
     * [clear\_cache()](#clear_cache)
     * [re()](#re)
       * [re.prototype.find()](#reprototypefind)
+  * [threads](#threads)
+    * [mutex()](#mutex)
+      * [mutex.prototype.acquire()](#mutexprototypeacquire)
+      * [mutex.prototype.release()](#mutexprototyperelease)
+    * [semaphore()](#semaphore)
+      * [semaphore.prototype.acquire()](#semaphoreprototypeacquire)
+      * [semaphore.prototype.release()](#semaphoreprototyperelease)
 <!--te-->
 base
 ====
@@ -4551,4 +4558,77 @@ found.
 Example:
 
     > re(r"down.*(rabbit)").find("tumbling down the rabbit hole")
+
+threads
+=======
+
+mutex()
+-------
+
+    mutex()
+
+Mutex object class.
+
+Mutex objects are best used with the `with` statement.
+
+mutex.prototype.acquire()
+-------------------------
+
+    mutex.prototype.acquire()
+
+Locks the mutex object.
+
+If the mutex is already locked by another thread, this function will wait
+until it is unlocked.
+
+Returns `this` mutex object.
+
+mutex.prototype.release()
+-------------------------
+
+    mutex.prototype.release()
+
+Unlocks the mutex object, if it is held by the current thread.
+
+If the mutex is not held by the current thread, this function does nothing.
+
+Returns `this` mutex object.
+
+semaphore()
+-----------
+
+    semaphore(init = 0)
+
+Semaphore object class.
+
+A semaphore is an integer number which can be incremented (release)
+or decremented (acquire).  If an `acquire()` function is called on
+a semaphore which has a zero-value, the function will block until
+another thread increments the semaphore.
+
+`init` is the initial integer value for the new semaphore object.
+
+Semaphore objects can be used with the `with` statement.
+
+semaphore.prototype.acquire()
+-----------------------------
+
+    semaphore.prototype.acquire()
+
+Decrements the semaphore value.
+
+If the semaphore value is already 0, blocks until another thread increments it,
+then performs the decrement operation.
+
+Returns `this` semaphore object.
+
+semaphore.prototype.release()
+-----------------------------
+
+    semaphore.prototype.release()
+
+Increments the semaphore value and signals other threads that may be
+waiting on `acquire()`.
+
+Returns `this` semaphore object.
 

@@ -1,0 +1,132 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2014-2021 Chris Dragan
+
+import base
+import threads
+import test_tools.expect_fail
+
+do {
+    const m = threads.mutex()
+    assert m instanceof threads.mutex
+    assert m.acquire() == m
+    assert m.release() == m
+}
+
+do {
+    const m = threads.mutex()
+    m.acquire()
+    var value = 0
+
+    const th = async do {
+        with m {
+            value += 1
+        }
+    }
+
+    assert th
+    assert value == 0
+    m.release()
+    th.wait()
+    assert value == 1
+}
+
+do {
+    const s = threads.semaphore()
+    assert s instanceof threads.semaphore
+    assert s.value == 0
+    assert s.release() == s
+    assert s.value == 1
+    assert s.acquire() == s
+    assert s.value == 0
+}
+
+expect_fail(() => threads.semaphore(-1))
+expect_fail(() => threads.semaphore(0x8000_0000))
+
+do {
+    const s = threads.semaphore(0)
+    assert s.value == 0
+
+    expect_fail(() => s.acquire(-1))
+    expect_fail(() => s.release(-1))
+    expect_fail(() => s.acquire(0x8000_0000))
+    expect_fail(() => s.release(0x8000_0000))
+
+    assert s.release(1) == s
+    assert s.value == 1
+    expect_fail(() => s.release(0x7FFF_FFFF))
+    assert s.release(0x7FFF_FFFE)
+    assert s.value == 0x7FFF_FFFF
+}
+
+do {
+    const q = threads.queue()
+    assert q instanceof threads.queue
+    assert ! (q instanceof threads.stack)
+    assert q.size == 0
+
+    assert q.push() == q
+    assert q.size == 0
+
+    assert q.push("abc", "def") == q
+    assert q.size == 2
+
+    assert q.pop() == "abc"
+    assert q.size == 1
+    assert q.pop() == "def"
+    assert q.size == 0
+
+    assert q.push("x")
+    assert q.push("y")
+    assert q.push("z")
+    assert q.size == 3
+
+    const xy = q.pop(2)
+    assert q.size == 1
+    assert typeof xy == "array"
+    assert xy.size == 2
+    assert xy[0] == "x"
+    assert xy[1] == "y"
+
+    const z = q.pop(1)
+    assert q.size == 0
+    assert typeof z == "array"
+    assert z.size == 1
+    assert z[0] == "z"
+}
+
+do {
+    const s = threads.stack()
+    assert s instanceof threads.stack
+    assert ! (s instanceof threads.queue)
+    assert s.size == 0
+
+    assert s.push() == s
+    assert s.size == 0
+
+    assert s.push("abc", "def") == s
+    assert s.size == 2
+
+    assert s.pop() == "def"
+    assert s.size == 1
+    assert s.pop() == "abc"
+    assert s.size == 0
+
+    assert s.push("x")
+    assert s.push("y")
+    assert s.push("z")
+    assert s.size == 3
+
+    const xy = s.pop(2)
+    assert s.size == 1
+    assert typeof xy == "array"
+    assert xy.size == 2
+    assert xy[0] == "y"
+    assert xy[1] == "z"
+
+    const z = s.pop(1)
+    assert s.size == 0
+    assert typeof z == "array"
+    assert z.size == 1
+    assert z[0] == "x"
+}

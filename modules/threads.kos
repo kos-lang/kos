@@ -1,0 +1,79 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2014-2021 Chris Dragan
+
+class ts_collection {
+    constructor {
+        this.sem        = semaphore()
+        this.mutex      = mutex()
+        this.size       = 0
+        this.collection = []
+    }
+
+    fun push(elems...) {
+        const count = elems.size
+        if count {
+            with this.mutex {
+                this.collection.insert(this.collection.size, elems)
+                this.size += count
+            }
+            this.sem.release(count)
+        }
+        return this
+    }
+}
+
+public class queue extends ts_collection {
+    fun pop(count = void) {
+        const just_one = count == void
+        const num      = just_one ? 1 : count
+
+        if ! num {
+            return void
+        }
+
+        this.sem.acquire(num)
+
+        with this.mutex {
+            if just_one {
+                const elem = this.collection[0]
+                this.collection.insert(0, 1, [])
+                this.size -= 1
+                return elem
+            }
+            else {
+                const elems = this.collection[0:num]
+                this.collection.insert(0, num, [])
+                this.size -= num
+                return elems
+            }
+        }
+    }
+}
+
+public class stack extends ts_collection {
+    fun pop(count = void) {
+        const just_one = count == void
+        const num      = just_one ? 1 : count
+
+        if ! num {
+            return void
+        }
+
+        this.sem.acquire(num)
+
+        with this.mutex {
+            if just_one {
+                const elem = this.collection[-1]
+                this.collection.resize(this.collection.size - 1)
+                this.size -= 1
+                return elem
+            }
+            else {
+                const elems = this.collection[-num:]
+                this.collection.resize(this.collection.size - num)
+                this.size -= num
+                return elems
+            }
+        }
+    }
+}

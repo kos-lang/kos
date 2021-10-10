@@ -9,6 +9,7 @@ c_files += kos_mod_fs.c
 c_files += kos_mod_io.c
 c_files += kos_mod_kos.c
 c_files += kos_mod_random.c
+c_files += kos_mod_threads.c
 c_files += kos_modules_init.c
 
 include ../build/rules.mk

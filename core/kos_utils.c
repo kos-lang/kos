@@ -1956,7 +1956,6 @@ struct KOS_INT_LIMITS_S {
 
 #define KOS_MIN_INT32 ((int32_t)((uint32_t)1U << 31))
 #define KOS_MIN_INT64 ((int64_t)((uint64_t)1U << 63))
-#define KOS_MAX_INT64 ((int64_t)~((uint64_t)1U << 63))
 #define KOS_MAX_SIZE  ((int64_t)~(size_t)0U)
 
 static const struct KOS_INT_LIMITS_S int_limits[12] = {
@@ -1965,11 +1964,11 @@ static const struct KOS_INT_LIMITS_S int_limits[12] = {
     { 0,             0xFF                 },
     { 0,             0xFFFF               },
     { 0,             (int64_t)0xFFFFFFFFU },
-    { KOS_MIN_INT64, KOS_MAX_INT64        },
+    { KOS_MIN_INT64, MAX_INT64            },
     { -0x80,         0x7F                 },
     { -0x8000,       0x7FFF               },
     { KOS_MIN_INT32, 0x7FFFFFFF           },
-    { KOS_MIN_INT64, KOS_MAX_INT64        },
+    { KOS_MIN_INT64, MAX_INT64            },
     { 0,             KOS_MAX_SIZE         },
     { 0,             0x7FFFFFFF           }
 };

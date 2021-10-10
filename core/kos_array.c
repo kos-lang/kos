@@ -748,8 +748,6 @@ int KOS_array_push(KOS_CONTEXT ctx,
             continue;
         }
 
-        /* TODO this is not atomic wrt pop! */
-
         if (KOS_atomic_cas_weak_u32(OBJPTR(ARRAY, array.o)->size, len, len+1))
             break;
     }
@@ -782,8 +780,6 @@ cleanup:
 KOS_OBJ_ID KOS_array_pop(KOS_CONTEXT ctx,
                          KOS_OBJ_ID  obj_id)
 {
-    /* TODO rewrite lock-free */
-
     int       error = KOS_SUCCESS;
     uint32_t  len;
     KOS_LOCAL array;
