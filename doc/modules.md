@@ -493,24 +493,28 @@ Example:
 array.prototype.pop()
 ---------------------
 
-    array.prototype.pop(num_elements = 1)
+    array.prototype.pop(num_elements = void)
 
 Removes elements from the end of array.
 
-`num_elements` is the number of elements to remove and it defaults to `1`.
+`num_elements` is the number of elements to remove and it defaults to `void`.
 
-If `num_elements` is `1`, returns the element removed.
+If `num_elements` is `void`, returns the last element removed from the array.
 If `num_elements` is `0`, returns `void`.
-If `num_elements` is greater than `1`, returns an array
+If `num_elements` is a number greater than `0`, returns an array
 containing the elements removed.
 
 Throws if the array is empty or if more elements are being removed
 than the array already contains.
 
-Example:
+Examples:
 
     > [1, 2, 3, 4, 5].pop()
     5
+    > [1, 2, 3, 4, 5].pop(1)
+    [5]
+    > [1, 2, 3, 4, 5].pop(2)
+    [4, 5]
 
 array.prototype.push()
 ----------------------
@@ -4613,12 +4617,18 @@ Semaphore objects can be used with the `with` statement.
 semaphore.prototype.acquire()
 -----------------------------
 
-    semaphore.prototype.acquire()
+    semaphore.prototype.acquire(count = 1)
 
-Decrements the semaphore value.
+Subtracts `count` from the semaphore value.
+
+`count` defaults to 1.  If `count` is less than 1 or greater than 0x7FFFFFFF
+throws an exception.
 
 If the semaphore value is already 0, blocks until another thread increments it,
-then performs the decrement operation.
+then performs the decrement operation.  This is repeated until the value has
+been decremented `count` times.  The decrement operation is non-atomic meaning
+that if two threads are trying to acquire with `count > 1`, each of them could
+decrement the value by 1 multiple times.
 
 Returns `this` semaphore object.
 

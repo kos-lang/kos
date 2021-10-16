@@ -167,23 +167,22 @@ public fun product(args...)
         generators.push(generator(args[i]))
     }
 
-    fun product_from_generators(args...)
+    fun product_from_generators(gens...)
     {
-        if (args.size == 1) {
-            for var elem in args[0]() {
-                const a = []
-                a.resize(dim)
+        if (gens.size == 1) {
+            for const elem in gens[0]() {
+                const a = array(dim)
                 a[0] = elem
                 yield a
             }
             return
         }
 
-        const outer_gen = args.pop()
-        const offs      = args.size
+        const outer_gen = gens.pop()
+        const offs      = gens.size
 
-        for var elem in outer_gen() {
-            for var other in product_from_generators(args...) {
+        for const elem in outer_gen() {
+            for const other in product_from_generators(gens...) {
                 other[offs] = elem
                 yield other
             }

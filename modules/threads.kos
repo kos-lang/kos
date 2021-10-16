@@ -23,6 +23,10 @@ class ts_collection {
 }
 
 public class queue extends ts_collection {
+    constructor {
+        this.front = 0
+    }
+
     fun pop(count = void) {
         const just_one = count == void
         const num      = just_one ? 1 : count
@@ -34,18 +38,20 @@ public class queue extends ts_collection {
         this.sem.acquire(num)
 
         with this.mutex {
-            if just_one {
-                const elem = this.collection[0]
-                this.collection.insert(0, 1, [])
-                this.size -= 1
-                return elem
+            const size  = this.size - num
+            const oldfr = this.front
+            var   front = oldfr + num
+            const elems = this.collection[oldfr:front]
+
+            if front > 8 && (front > size / 4 || front > 128) {
+                this.collection.insert(0, front, [])
+                front = 0
             }
-            else {
-                const elems = this.collection[0:num]
-                this.collection.insert(0, num, [])
-                this.size -= num
-                return elems
-            }
+
+            this.size  = size
+            this.front = front
+
+            return just_one ? elems[0] : elems
         }
     }
 }
@@ -62,18 +68,9 @@ public class stack extends ts_collection {
         this.sem.acquire(num)
 
         with this.mutex {
-            if just_one {
-                const elem = this.collection[-1]
-                this.collection.resize(this.collection.size - 1)
-                this.size -= 1
-                return elem
-            }
-            else {
-                const elems = this.collection[-num:]
-                this.collection.resize(this.collection.size - num)
-                this.size -= num
-                return elems
-            }
+            const elems = this.collection.pop(num)
+            this.size -= num
+            return just_one ? elems[0] : elems
         }
     }
 }

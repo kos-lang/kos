@@ -3965,29 +3965,33 @@ cleanup:
 
 /* @item base array.prototype.pop()
  *
- *     array.prototype.pop(num_elements = 1)
+ *     array.prototype.pop(num_elements = void)
  *
  * Removes elements from the end of array.
  *
- * `num_elements` is the number of elements to remove and it defaults to `1`.
+ * `num_elements` is the number of elements to remove and it defaults to `void`.
  *
- * If `num_elements` is `1`, returns the element removed.
+ * If `num_elements` is `void`, returns the last element removed from the array.
  * If `num_elements` is `0`, returns `void`.
- * If `num_elements` is greater than `1`, returns an array
+ * If `num_elements` is a number greater than `0`, returns an array
  * containing the elements removed.
  *
  * Throws if the array is empty or if more elements are being removed
  * than the array already contains.
  *
- * Example:
+ * Examples:
  *
  *     > [1, 2, 3, 4, 5].pop()
  *     5
+ *     > [1, 2, 3, 4, 5].pop(1)
+ *     [5]
+ *     > [1, 2, 3, 4, 5].pop(2)
+ *     [4, 5]
  */
 KOS_DECLARE_STATIC_CONST_STRING(str_num_elements, "num_elements");
 
 static const KOS_CONVERT pop_args[2] = {
-    KOS_DEFINE_OPTIONAL_ARG(str_num_elements, TO_SMALL_INT(1)),
+    KOS_DEFINE_OPTIONAL_ARG(str_num_elements, KOS_VOID),
     KOS_DEFINE_TAIL_ARG()
 };
 
@@ -3998,9 +4002,10 @@ static KOS_OBJ_ID pop(KOS_CONTEXT ctx,
     KOS_LOCAL self;
     KOS_LOCAL arg;
     KOS_LOCAL new_array;
-    int64_t   num = 0;
+    int64_t   num      = 1;
     int       idx;
-    int       error = KOS_SUCCESS;
+    int       just_one = 0;
+    int       error    = KOS_SUCCESS;
 
     assert(KOS_get_array_size(args_obj) >= 1);
 
@@ -4011,14 +4016,18 @@ static KOS_OBJ_ID pop(KOS_CONTEXT ctx,
     arg.o = KOS_array_read(ctx, args_obj, 0);
     TRY_OBJID(arg.o);
 
-    TRY(KOS_get_integer(ctx, arg.o, &num));
+    if (arg.o == KOS_VOID)
+        just_one = 1;
+    else {
+        TRY(KOS_get_integer(ctx, arg.o, &num));
 
-    if (num < 0 || num > INT_MAX)
-        RAISE_EXCEPTION_STR(str_err_invalid_array_size);
+        if (num < 0 || num > INT_MAX)
+            RAISE_EXCEPTION_STR(str_err_invalid_array_size);
+    }
 
     if (num == 0)
         new_array.o = KOS_VOID;
-    else if (num == 1)
+    else if (just_one)
         new_array.o = KOS_array_pop(ctx, self.o);
     else {
         new_array.o = KOS_new_array(ctx, (unsigned)num);

@@ -332,7 +332,7 @@ static KOS_OBJ_ID semaphore_acquire(KOS_CONTEXT ctx,
 
     if (sem) {
 
-        int suspended = 0;;
+        int suspended = 0;
 
         do {
             const uint32_t old_value = KOS_atomic_read_relaxed_u32(sem->value);
@@ -346,6 +346,8 @@ static KOS_OBJ_ID semaphore_acquire(KOS_CONTEXT ctx,
                     kos_lock_mutex(sem->mutex);
 
                     suspended = 1;
+
+                    continue;
                 }
 
                 kos_wait_cond_var(sem->cond_var, sem->mutex);
@@ -397,14 +399,21 @@ static KOS_OBJ_ID semaphore_release(KOS_CONTEXT ctx,
 
     if (sem) {
         uint32_t old_value;
+        uint32_t max_inc;
+
+        KOS_suspend_context(ctx);
+
+        kos_lock_mutex(sem->mutex);
 
         do {
-            uint32_t max_inc;
-
             old_value = KOS_atomic_read_relaxed_u32(sem->value);
             max_inc   = (uint32_t)KOS_MAX_SEM - old_value;
 
             if (count > max_inc) {
+                kos_unlock_mutex(sem->mutex);
+
+                KOS_resume_context(ctx);
+
                 KOS_destroy_top_local(ctx, &semaphore);
 
                 KOS_raise_printf(ctx, "semaphore value %u cannot be increased by %u",
@@ -414,7 +423,11 @@ static KOS_OBJ_ID semaphore_release(KOS_CONTEXT ctx,
 
         } while ( ! KOS_atomic_cas_weak_u32(sem->value, old_value, old_value + count));
 
-        kos_signal_cond_var(sem->cond_var);
+        kos_unlock_mutex(sem->mutex);
+
+        kos_broadcast_cond_var(sem->cond_var);
+
+        KOS_resume_context(ctx);
     }
 
     return KOS_destroy_top_local(ctx, &semaphore);
