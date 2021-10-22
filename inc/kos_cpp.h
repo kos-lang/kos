@@ -16,6 +16,10 @@
 #include <string>
 #include <vector>
 
+#if __cplusplus >= 202002L
+#   include <compare>
+#endif
+
 // Detect compiler support for exceptions
 #if defined(__cpp_exceptions) && __cpp_exceptions
 #   define KOS_USE_EXCEPTIONS 1
@@ -336,7 +340,11 @@ class object: public handle {
             id = OBJ_OBJECT
         };
 
+#ifdef KOS_CPP11
+        object() = default;
+#else
         object() { }
+#endif
 
         object(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
             : handle(ctx, obj_id)
@@ -382,7 +390,11 @@ class integer: public object {
             id = OBJ_INTEGER
         };
 
+#ifdef KOS_CPP11
+        integer() = default;
+#else
         integer() { }
+#endif
 
         integer(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
             : object(ctx, obj_id)
@@ -426,7 +438,11 @@ class floating: public object {
             id = OBJ_FLOAT
         };
 
+#ifdef KOS_CPP11
+        floating() = default;
+#else
         floating() { }
+#endif
 
         floating(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
             : object(ctx, obj_id)
@@ -459,7 +475,11 @@ class string: public object {
             id = OBJ_STRING
         };
 
+#ifdef KOS_CPP11
+        string() = default;
+#else
         string() { }
+#endif
 
         string(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
             : object(ctx, obj_id)
@@ -498,6 +518,14 @@ class string: public object {
             return KOS_string_compare(*this, s) == 0;
         }
 
+#if __cplusplus >= 202002L
+        std::strong_ordering operator<=>(const string& s) const {
+            const int ret = KOS_string_compare(*this, s);
+            return (ret == 0) ? std::strong_ordering::equal :
+                   (ret <  0) ? std::strong_ordering::less  :
+                                std::strong_ordering::greater;
+        }
+#else
         bool operator!=(const string& s) const {
             return KOS_string_compare(*this, s) != 0;
         }
@@ -517,6 +545,7 @@ class string: public object {
         bool operator>=(const string& s) const {
             return KOS_string_compare(*this, s) >= 0;
         }
+#endif
 };
 
 class boolean: public object {
@@ -525,7 +554,11 @@ class boolean: public object {
             id = OBJ_BOOLEAN
         };
 
+#ifdef KOS_CPP11
+        boolean() = default;
+#else
         boolean() { }
+#endif
 
         boolean(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
             : object(ctx, obj_id)
@@ -569,7 +602,11 @@ class void_type: public object {
             id = OBJ_VOID
         };
 
+#ifdef KOS_CPP11
+        void_type() = default;
+#else
         void_type() { }
+#endif
 
         void_type(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
             : object(ctx, obj_id)
@@ -613,7 +650,11 @@ class random_access_iterator {
         typedef element_type*                             pointer;   // TODO pointer to actual element
         typedef element_type&                             reference; // TODO reference to actual element
 
+#ifdef KOS_CPP11
+        random_access_iterator() = default;
+#else
         random_access_iterator() { }
+#endif
 
         random_access_iterator(handle obj, int idx)
             : elem_(obj, idx)
@@ -627,7 +668,7 @@ class random_access_iterator {
         }
 
         operator random_access_iterator<const value_type>() const {
-            return random_access_iterator<const value_type>(elem_.get_object(), elem_.get_index());
+            return random_access_iterator<const value_type>(get_object(), get_index());
         }
 
         random_access_iterator& operator++() {
@@ -641,23 +682,23 @@ class random_access_iterator {
         }
 
         random_access_iterator operator++(int) {
-            random_access_iterator tmp(elem_.get_object(), elem_.get_index());
+            random_access_iterator tmp(get_object(), get_index());
             operator++();
             return tmp;
         }
 
         random_access_iterator operator--(int) {
-            random_access_iterator tmp(elem_.get_object(), elem_.get_index());
+            random_access_iterator tmp(get_object(), get_index());
             operator--();
             return tmp;
         }
 
         random_access_iterator operator+(int delta) const {
-            return random_access_iterator(elem_.get_object(), elem_.get_index() + delta);
+            return random_access_iterator(get_object(), get_index() + delta);
         }
 
         random_access_iterator operator-(int delta) const {
-            return random_access_iterator(elem_.get_object(), elem_.get_index() - delta);
+            return random_access_iterator(get_object(), get_index() - delta);
         }
 
         random_access_iterator& operator+=(int delta) {
@@ -670,44 +711,58 @@ class random_access_iterator {
             return *this;
         }
 
-        difference_type operator-(const random_access_iterator& it) const {
-            return elem_.get_index() - it.elem_.get_index();
+        difference_type operator-(const random_access_iterator<element_type>& it) const {
+            return get_index() - it.get_index();
         }
 
-        bool operator==(const random_access_iterator& it) const {
-            return elem_.get_object() == it.elem_.get_object() &&
-                   elem_.get_index()  == it.elem_.get_index();
+        template<typename other_element_type>
+        bool operator==(const random_access_iterator<other_element_type>& it) const {
+            return get_object() == it.get_object() &&
+                   get_index()  == it.get_index();
         }
 
-        bool operator!=(const random_access_iterator& it) const {
-            return elem_.get_object() != it.elem_.get_object() ||
-                   elem_.get_index()  != it.elem_.get_index();
+        template<typename other_element_type>
+        bool operator!=(const random_access_iterator<other_element_type>& it) const {
+            return get_object() != it.get_object() ||
+                   get_index()  != it.get_index();
         }
 
-        bool operator<(const random_access_iterator& it) const {
-            return elem_.get_object() == it.elem_.get_object() &&
-                   elem_.get_index()  <  it.elem_.get_index();
+        template<typename other_element_type>
+        bool operator<(const random_access_iterator<other_element_type>& it) const {
+            return get_object() == it.get_object() &&
+                   get_index()  <  it.get_index();
         }
 
-        bool operator>(const random_access_iterator& it) const {
-            return elem_.get_object() == it.elem_.get_object() &&
-                   elem_.get_index()  >  it.elem_.get_index();
+        template<typename other_element_type>
+        bool operator>(const random_access_iterator<other_element_type>& it) const {
+            return get_object() == it.get_object() &&
+                   get_index()  >  it.get_index();
         }
 
-        bool operator<=(const random_access_iterator& it) const {
-            return elem_.get_object() == it.elem_.get_object() &&
-                   elem_.get_index()  <= it.elem_.get_index();
+        template<typename other_element_type>
+        bool operator<=(const random_access_iterator<other_element_type>& it) const {
+            return get_object() == it.get_object() &&
+                   get_index()  <= it.get_index();
         }
 
-        bool operator>=(const random_access_iterator& it) const {
-            return elem_.get_object() == it.elem_.get_object() &&
-                   elem_.get_index()  >= it.elem_.get_index();
+        template<typename other_element_type>
+        bool operator>=(const random_access_iterator<other_element_type>& it) const {
+            return get_object() == it.get_object() &&
+                   get_index()  >= it.get_index();
         }
 
         // TODO reference to actual element
         reference operator*() const {
             assert(static_cast<KOS_CONTEXT>(elem_.get_context()));
             return elem_;
+        }
+
+        const handle& get_object() const {
+            return elem_.get_object();
+        }
+
+        int get_index() const {
+            return elem_.get_index();
         }
 
     private:
@@ -720,7 +775,11 @@ class array: public object {
             id = OBJ_ARRAY
         };
 
+#ifdef KOS_CPP11
+        array() = default;
+#else
         array() { }
+#endif
 
         array(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
             : object(ctx, obj_id)
@@ -893,7 +952,11 @@ class buffer: public object {
             id = OBJ_BUFFER
         };
 
+#ifdef KOS_CPP11
+        buffer() = default;
+#else
         buffer() { }
+#endif
 
         buffer(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
             : object(ctx, obj_id)
@@ -1091,7 +1154,11 @@ class function: public object {
             id = OBJ_FUNCTION
         };
 
+#ifdef KOS_CPP11
+        function() = default;
+#else
         function() { }
+#endif
 
         function(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id)
             : object(ctx, obj_id)
@@ -1865,7 +1932,11 @@ class object::const_iterator {
         typedef const value_type*         pointer;
         typedef const value_type&         reference;
 
+#ifdef KOS_CPP11
+        const_iterator() = default;
+#else
         const_iterator() { }
+#endif
 
         const_iterator(context     ctx,
                        KOS_OBJ_ID  obj_id,
@@ -1896,9 +1967,7 @@ class object::const_iterator {
         }
 
         bool operator!=(const const_iterator& it) const {
-            const KOS_OBJ_ID left  = elem_.first;
-            const KOS_OBJ_ID right = it.elem_.first;
-            return left != right;
+            return ! operator==(it);
         }
 
         const_iterator& operator++() {
