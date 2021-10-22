@@ -1,7 +1,7 @@
 " Vim syntax file
 " Language:     Kos
 " Maintainer:   Chris Dragan <chris@chris.dragan.name>
-" Last Change:  2018 Sep 25
+" Last Change:  2020 Oct 8
 
 " For version 5.x: Clear all syntax items
 " For version 6.x: Quit when a syntax file was already loaded
@@ -40,11 +40,11 @@ syn keyword kosBranch           break continue fallthrough
 syn keyword kosOperator         delete instanceof propertyof typeof yield async in extends
 syn keyword kosStatement        return with import defer do
 syn keyword kosBoolean          true false
-syn keyword kosVoid             void
+syn keyword kosVoid             void _
 syn keyword kosIdentifier       __line__ this super
 syn keyword kosVarConst         var const public
 syn keyword kosException        throw assert try catch
-syn keyword kosReserved         set get static
+syn keyword kosReserved         set get match static
 syn keyword kosClass            class
 
 syn match   kosLambda           "=>"
