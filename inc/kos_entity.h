@@ -568,12 +568,12 @@ KOS_OBJ_ID KOS_get_named_arg(KOS_CONTEXT ctx,
 
 #ifdef __cplusplus
 
-static inline KOS_OBJ_ID KOS_atomic_read_relaxed_obj(KOS_ATOMIC(KOS_OBJ_ID)& src)
+static inline KOS_OBJ_ID KOS_atomic_read_relaxed_obj(const KOS_ATOMIC(KOS_OBJ_ID)& src)
 {
     return (KOS_OBJ_ID)KOS_atomic_read_relaxed_ptr(src);
 }
 
-static inline KOS_OBJ_ID KOS_atomic_read_acquire_obj(KOS_ATOMIC(KOS_OBJ_ID)& src)
+static inline KOS_OBJ_ID KOS_atomic_read_acquire_obj(const KOS_ATOMIC(KOS_OBJ_ID)& src)
 {
     return (KOS_OBJ_ID)KOS_atomic_read_acquire_ptr(src);
 }

@@ -117,29 +117,29 @@ static inline void KOS_atomic_release_barrier()
     std::atomic_thread_fence(std::memory_order_release);
 }
 
-static inline uint32_t KOS_atomic_read_relaxed_u32(KOS_ATOMIC(uint32_t)& src)
+static inline uint32_t KOS_atomic_read_relaxed_u32(const KOS_ATOMIC(uint32_t)& src)
 {
     return src.load(std::memory_order_relaxed);
 }
 
-static inline uint64_t KOS_atomic_read_relaxed_u64(KOS_ATOMIC(uint64_t)& src)
+static inline uint64_t KOS_atomic_read_relaxed_u64(const KOS_ATOMIC(uint64_t)& src)
 {
     return src.load(std::memory_order_relaxed);
 }
 
-static inline uint32_t KOS_atomic_read_acquire_u32(KOS_ATOMIC(uint32_t)& src)
+static inline uint32_t KOS_atomic_read_acquire_u32(const KOS_ATOMIC(uint32_t)& src)
 {
     return src.load(std::memory_order_acquire);
 }
 
 template<typename T>
-T* KOS_atomic_read_relaxed_ptr(KOS_ATOMIC(T*)& src)
+T* KOS_atomic_read_relaxed_ptr(const KOS_ATOMIC(T*)& src)
 {
     return src.load(std::memory_order_relaxed);
 }
 
 template<typename T>
-T* KOS_atomic_read_acquire_ptr(KOS_ATOMIC(T*)& src)
+T* KOS_atomic_read_acquire_ptr(const KOS_ATOMIC(T*)& src)
 {
     return src.load(std::memory_order_acquire);
 }
