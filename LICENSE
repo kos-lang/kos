@@ -1,19 +1,3 @@
-Introduction
-------------
-
-To ensure that Kos is as useful as possible, it is distributed on the
-MIT license.  This means that you can integrate Kos with your project
-regardless of whether your project is open source or closed source.
-
-However, it is recommended that you share any modifications you make to Kos
-core or modules with the community.  This will benefit everyone, including
-you.  This way you will be able to easily integrate future updates from
-upstream with your project.  Please see [Contributing](doc/contributing.md)
-for further details on how you can contribute.
-
-MIT License
------------
-
 Copyright (c) 2014-2021 Chris Dragan
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
