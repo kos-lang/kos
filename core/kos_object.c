@@ -325,6 +325,20 @@ static void copy_table(KOS_CONTEXT ctx,
     }
 }
 
+static KOS_OBJ_ID help_copy_table(KOS_CONTEXT ctx,
+                                  KOS_OBJ_ID  src_obj_id,
+                                  KOS_OBJ_ID  old_table)
+{
+    const KOS_OBJ_ID new_table = KOS_atomic_read_relaxed_obj(
+                                    OBJPTR(OBJECT_STORAGE, old_table)->new_prop_table);
+    assert( ! IS_BAD_PTR(new_table));
+
+    if (KOS_atomic_read_relaxed_u32(OBJPTR(OBJECT_STORAGE, old_table)->active_copies))
+        copy_table(ctx, src_obj_id, old_table, new_table);
+
+    return new_table;
+}
+
 static int need_resize(KOS_OBJ_ID table, unsigned num_reprobes)
 {
     /* Determine if resize is needed based on the number of reprobes */
@@ -367,7 +381,7 @@ static int resize_prop_table(KOS_CONTEXT ctx,
 
     if ( ! IS_BAD_PTR(new_table)) {
         /* Another thread is already resizing the property table, help it */
-        copy_table(ctx, obj_id, old_table_obj, new_table);
+        help_copy_table(ctx, obj_id, old_table_obj);
 
         KOS_PERF_CNT(object_resize_success);
     }
@@ -408,11 +422,7 @@ static int resize_prop_table(KOS_CONTEXT ctx,
                 /* Somebody already resized it */
                 else {
                     /* Help copy the new table if it is still being resized */
-                    if (KOS_atomic_read_relaxed_u32(OBJPTR(OBJECT_STORAGE, old_table.o)->active_copies)) {
-                        new_table = KOS_atomic_read_relaxed_obj(
-                                OBJPTR(OBJECT_STORAGE, old_table.o)->new_prop_table);
-                        copy_table(ctx, obj.o, old_table.o, new_table);
-                    }
+                    help_copy_table(ctx, obj.o, old_table.o);
 
                     KOS_PERF_CNT(object_resize_fail);
                 }
@@ -449,123 +459,141 @@ static void raise_no_property(KOS_CONTEXT ctx, KOS_OBJ_ID prop)
     KOS_vector_destroy(&prop_cstr);
 }
 
+static KOS_ATOMIC(KOS_OBJ_ID) *find_valid_prototype(KOS_CONTEXT             ctx,
+                                                    KOS_OBJ_ID             *obj_id,
+                                                    KOS_ATOMIC(KOS_OBJ_ID) *props)
+{
+    while ( ! props || IS_BAD_PTR(read_props(props))) {
+        const KOS_OBJ_ID next_obj_id = KOS_get_prototype(ctx, *obj_id);
+
+        *obj_id = next_obj_id;
+
+        if (IS_BAD_PTR(next_obj_id)) {
+            props = KOS_NULL;
+            break;
+        }
+
+        props = get_properties(next_obj_id);
+    }
+
+    return props;
+}
+
+enum GET_STATUS {
+    GET_TRY_NEW_TABLE,
+    GET_TRY_PROTOTYPE,
+    GET_FOUND
+};
+
+static enum GET_STATUS find_property(KOS_OBJ_ID  prop_table,
+                                     KOS_OBJ_ID  prop,
+                                     uint32_t    hash,
+                                     KOS_OBJ_ID *retval)
+{
+    KOS_PITEM *items        = OBJPTR(OBJECT_STORAGE, prop_table)->items;
+    uint32_t   num_reprobes = KOS_atomic_read_relaxed_u32(OBJPTR(OBJECT_STORAGE, prop_table)->capacity);
+    uint32_t   mask         = num_reprobes - 1;
+    uint32_t   idx          = hash;
+
+    for (;;) {
+        KOS_PITEM *const cur_item  = items + (idx &= mask);
+        KOS_OBJ_ID       cur_key   = KOS_atomic_read_relaxed_obj(cur_item->key);
+        const KOS_OBJ_ID cur_value = KOS_atomic_read_acquire_obj(cur_item->value);
+
+        /* Empty slot means this key is not present in this hash table, try prototype */
+        if (IS_BAD_PTR(cur_key))
+            break;
+
+        /* Object property table is being resized, so read value from the new table */
+        if (cur_value == CLOSED)
+            return GET_TRY_NEW_TABLE;
+
+        /* Key found */
+        if (is_key_equal(prop, hash, cur_key, cur_item)) {
+
+            if (cur_value != TOMBSTONE) {
+                assert(cur_value != RESERVED);
+                *retval = cur_value;
+                return GET_FOUND;
+            }
+
+            /* Key deleted or write incomplete, will look in prototype */
+            break;
+        }
+
+        /* Circled the whole hash table, so key not found, look in prototype */
+        if ( ! num_reprobes)
+            break;
+
+        /* Probe next slot */
+        ++idx;
+        --num_reprobes;
+    }
+
+    return GET_TRY_PROTOTYPE;
+}
+
 KOS_OBJ_ID KOS_get_property_with_depth(KOS_CONTEXT      ctx,
                                        KOS_OBJ_ID       obj_id,
                                        KOS_OBJ_ID       prop,
                                        enum KOS_DEPTH_E shallow)
 {
-    KOS_OBJ_ID retval = KOS_BADPTR;
+    KOS_ATOMIC(KOS_OBJ_ID) *props;
+    KOS_OBJ_ID              retval = KOS_BADPTR;
+    KOS_OBJ_ID              prop_table;
+    uint32_t                hash;
 
     assert( ! IS_BAD_PTR(obj_id));
     assert( ! IS_BAD_PTR(prop));
 
-    if (GET_OBJ_TYPE(prop) != OBJ_STRING)
+    if (GET_OBJ_TYPE(prop) != OBJ_STRING) {
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_string));
-    else {
-        KOS_ATOMIC(KOS_OBJ_ID) *props = get_properties(obj_id);
+        KOS_PERF_CNT(object_get_fail);
+        return KOS_BADPTR;
+    }
 
-        /* Find non-empty property table in this object or in a prototype */
-        if ( ! shallow) {
-            while ( ! props || IS_BAD_PTR(read_props(props))) {
-                obj_id = KOS_get_prototype(ctx, obj_id);
+    props = get_properties(obj_id);
 
-                if (IS_BAD_PTR(obj_id)) {
-                    props = KOS_NULL;
-                    break;
-                }
+    /* Find non-empty property table in this object or in a prototype */
+    if ( ! shallow)
+        props = find_valid_prototype(ctx, &obj_id, props);
+    else if (props && IS_BAD_PTR(read_props(props)))
+        props = KOS_NULL;
 
-                props = get_properties(obj_id);
+    if ( ! props) {
+        raise_no_property(ctx, prop);
+        KOS_PERF_CNT(object_get_fail);
+        return KOS_BADPTR;
+    }
+
+    hash       = KOS_string_get_hash(prop);
+    prop_table = read_props(props);
+
+    for (;;) {
+
+        /* Find property */
+        const enum GET_STATUS status = find_property(prop_table, prop, hash, &retval);
+
+        if (status == GET_FOUND)
+            break;
+        else if (status == GET_TRY_PROTOTYPE) {
+
+            /* Find non-empty property table in a prototype */
+            props = shallow ? KOS_NULL : find_valid_prototype(ctx, &obj_id, KOS_NULL);
+
+            if ( ! props) {
+                raise_no_property(ctx, prop);
+                break;
             }
+
+            prop_table = read_props(props);
         }
-        else if (props && IS_BAD_PTR(read_props(props)))
-            props = KOS_NULL;
+        else {
+            assert(status == GET_TRY_NEW_TABLE);
 
-        if (props) {
-            const uint32_t hash         = KOS_string_get_hash(prop);
-            unsigned       idx          = hash;
-            KOS_OBJ_ID     prop_table   = read_props(props);
-            KOS_PITEM     *items        = OBJPTR(OBJECT_STORAGE, prop_table)->items;
-            unsigned       num_reprobes = KOS_atomic_read_relaxed_u32(
-                                            OBJPTR(OBJECT_STORAGE, prop_table)->capacity);
-            unsigned       mask         = num_reprobes - 1;
-
-            for (;;) {
-                KOS_PITEM *const cur_item  = items + (idx &= mask);
-                KOS_OBJ_ID       cur_key   = KOS_atomic_read_relaxed_obj(cur_item->key);
-                const KOS_OBJ_ID cur_value = KOS_atomic_read_acquire_obj(cur_item->value);
-
-                /* Object property table is being resized, so read value from the new table */
-                if (cur_value == CLOSED) {
-                    /* Help copy the old table to avoid races when it is partially copied */
-                    KOS_OBJ_ID new_prop_table = KOS_atomic_read_relaxed_obj(
-                            OBJPTR(OBJECT_STORAGE, prop_table)->new_prop_table);
-                    assert( ! IS_BAD_PTR(new_prop_table));
-
-                    copy_table(ctx, obj_id, prop_table, new_prop_table);
-
-                    idx          = hash;
-                    prop_table   = new_prop_table;
-                    items        = OBJPTR(OBJECT_STORAGE, prop_table)->items;
-                    num_reprobes = KOS_atomic_read_relaxed_u32(OBJPTR(OBJECT_STORAGE, prop_table)->capacity);
-                    mask         = num_reprobes - 1;
-                    continue;
-                }
-
-                /* Key found */
-                if ( ! IS_BAD_PTR(cur_key) && is_key_equal(prop, hash, cur_key, cur_item)) {
-
-                    if (cur_value != TOMBSTONE) {
-                        assert(cur_value != RESERVED);
-                        retval = cur_value;
-                        break;
-                    }
-
-                    /* Key deleted or write incomplete, will look in prototype */
-                    cur_key = KOS_BADPTR;
-                }
-
-                /* Assume key not found if too many reprobes */
-                if ( ! num_reprobes)
-                    cur_key = KOS_BADPTR;
-
-                /* If no such key, look in prototypes */
-                if (IS_BAD_PTR(cur_key)) {
-
-                    /* Find non-empty property table in a prototype */
-                    if ( ! shallow) {
-                        do {
-                            obj_id = KOS_get_prototype(ctx, obj_id);
-
-                            if (IS_BAD_PTR(obj_id)) /* end of prototype chain */
-                                break;
-
-                            props = get_properties(obj_id);
-                        } while ( ! props || IS_BAD_PTR(read_props(props)));
-                    }
-                    else
-                        obj_id = KOS_BADPTR;
-
-                    if (IS_BAD_PTR(obj_id)) {
-                        raise_no_property(ctx, prop);
-                        break;
-                    }
-                    assert(props);
-
-                    idx          = hash;
-                    prop_table   = read_props(props);
-                    items        = OBJPTR(OBJECT_STORAGE, prop_table)->items;
-                    num_reprobes = KOS_atomic_read_relaxed_u32(OBJPTR(OBJECT_STORAGE, prop_table)->capacity);
-                    mask         = num_reprobes - 1;
-                }
-                else {
-                    /* Probe next slot */
-                    ++idx;
-                    --num_reprobes;
-                }
-            }
+            /* Help copy the old table to avoid races when it is partially copied */
+            prop_table = help_copy_table(ctx, obj_id, prop_table);
         }
-        else
-            raise_no_property(ctx, prop);
     }
 
     if ( ! IS_BAD_PTR(retval))
@@ -589,15 +617,120 @@ int kos_object_copy_prop_table(KOS_CONTEXT ctx,
     return resize_prop_table(ctx, obj_id, props ? read_props(props) : KOS_BADPTR, 1U);
 }
 
+enum SET_STATUS {
+    SET_FAILED,
+    SET_TRY_AGAIN,
+    SET_CALL_SETTER,
+    SET_SUCCESS
+};
+
+static enum SET_STATUS set_property(KOS_CONTEXT ctx,
+                                    KOS_LOCAL  *obj,
+                                    KOS_OBJ_ID *prop_table,
+                                    KOS_LOCAL  *prop,
+                                    uint32_t    hash,
+                                    KOS_LOCAL  *value,
+                                    uint32_t   *out_num_reprobes)
+{
+    KOS_PITEM *items        = OBJPTR(OBJECT_STORAGE, *prop_table)->items;
+    uint32_t   mask         = KOS_atomic_read_relaxed_u32(OBJPTR(OBJECT_STORAGE, *prop_table)->capacity) - 1;
+    uint32_t   num_reprobes = 0;
+    uint32_t   idx          = hash;
+
+    #ifdef CONFIG_PERF
+    int        collis_depth = -1;
+    #endif
+
+    for (;;) {
+        KOS_PITEM *cur_item = items + (idx &= mask);
+        KOS_OBJ_ID cur_key  = KOS_atomic_read_relaxed_obj(cur_item->key);
+        KOS_OBJ_ID oldval;
+
+        #ifdef CONFIG_PERF
+        ++collis_depth;
+        #endif
+
+        /* Found a new empty slot */
+        if (IS_BAD_PTR(cur_key)) {
+
+            /* If we are deleting a non-existent property, just bail */
+            if (value->o == TOMBSTONE)
+                break;
+
+            /* Attempt to write the new key */
+            if ( ! KOS_atomic_cas_weak_ptr(cur_item->key, KOS_BADPTR, prop->o))
+                /* Reprobe the slot if another thread has written a key */
+                continue;
+
+            KOS_PERF_CNT_ARRAY(object_collision, KOS_min(collis_depth, 3));
+
+            KOS_atomic_write_relaxed_u32(cur_item->hash.hash, hash);
+            KOS_atomic_add_i32(OBJPTR(OBJECT_STORAGE, *prop_table)->num_slots_used, 1);
+        }
+        /* Otherwise check if this key matches the sought property */
+        else if ( ! is_key_equal(prop->o, hash, cur_key, cur_item)) {
+
+            /* Resize if property table is full */
+            if (num_reprobes > KOS_MAX_PROP_REPROBES) {
+                const int error = resize_prop_table(ctx, obj->o, *prop_table, 2U);
+                if (error)
+                    return SET_FAILED;
+
+                *prop_table = read_props(get_properties(obj->o));
+                return SET_TRY_AGAIN;
+            }
+            /* Probe next slot */
+            else {
+                ++idx;
+                ++num_reprobes;
+            }
+            continue;
+        }
+
+        /* Read value at this slot */
+        oldval = KOS_atomic_read_acquire_obj(cur_item->value);
+
+        /* We will use the new table if it was copied */
+        if (oldval != CLOSED) {
+
+            /* If this is a dynamic property, throw it */
+            if ( ! IS_BAD_PTR(oldval) &&
+                GET_OBJ_TYPE(oldval) == OBJ_DYNAMIC_PROP &&
+                value->o != TOMBSTONE) {
+
+                KOS_raise_exception(ctx, oldval);
+                return SET_CALL_SETTER;
+            }
+
+            /* It's OK if someone else wrote in the mean time */
+            if ( ! KOS_atomic_cas_strong_ptr(cur_item->value, oldval, value->o))
+                /* Re-read in case it was moved to the new table */
+                oldval = KOS_atomic_read_acquire_obj(cur_item->value);
+        }
+
+        /* Another thread is resizing the table - use new property table */
+        if (oldval == CLOSED) {
+            *prop_table = help_copy_table(ctx, obj->o, *prop_table);
+            return SET_TRY_AGAIN;
+        }
+
+        break;
+    }
+
+    *out_num_reprobes = num_reprobes;
+    return SET_SUCCESS;
+}
+
 int KOS_set_property(KOS_CONTEXT ctx,
                      KOS_OBJ_ID  obj_id,
                      KOS_OBJ_ID  prop_obj,
                      KOS_OBJ_ID  value_obj)
 {
-    KOS_LOCAL obj;
-    KOS_LOCAL prop;
-    KOS_LOCAL value;
-    int       error = KOS_ERROR_EXCEPTION;
+    KOS_ATOMIC(KOS_OBJ_ID) *props;
+    KOS_LOCAL               obj;
+    KOS_LOCAL               prop;
+    KOS_LOCAL               value;
+    int                     error = KOS_ERROR_EXCEPTION;
 
     assert( ! IS_BAD_PTR(obj_id));
     assert( ! IS_BAD_PTR(prop_obj));
@@ -608,156 +741,64 @@ int KOS_set_property(KOS_CONTEXT ctx,
     KOS_init_local_with(ctx, &value, value_obj);
 
     if (GET_OBJ_TYPE(prop.o) != OBJ_STRING)
-        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_string));
+        RAISE_EXCEPTION_STR(str_err_not_string);
     else if ( ! has_properties(obj.o))
-        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_no_own_properties));
-    else {
-        KOS_ATOMIC(KOS_OBJ_ID) *props;
+        RAISE_EXCEPTION_STR(str_err_no_own_properties);
 
-        props = get_properties(obj.o);
+    props = get_properties(obj.o);
 
-        /* Check if property table is non-empty */
-        if (IS_BAD_PTR(read_props(props))) {
+    /* Check if property table is non-empty */
+    if (IS_BAD_PTR(read_props(props))) {
 
-            /* It is OK to delete non-existent props even if property table is empty */
-            if (value.o == TOMBSTONE) {
-                error = KOS_SUCCESS;
+        /* It is OK to delete non-existent props even if property table is empty */
+        if (value.o == TOMBSTONE) {
+            error = KOS_SUCCESS;
+            props = KOS_NULL;
+        }
+        /* Allocate property table */
+        else {
+            error = resize_prop_table(ctx, obj.o, KOS_BADPTR, 0U);
+            if ( ! error) {
+                error = KOS_ERROR_EXCEPTION;
+                props = get_properties(obj.o);
+            }
+            else {
+                assert(KOS_is_exception_pending(ctx));
                 props = KOS_NULL;
             }
-            /* Allocate property table */
-            else {
-                error = resize_prop_table(ctx, obj.o, KOS_BADPTR, 0U);
-                if ( ! error) {
-                    error = KOS_ERROR_EXCEPTION;
-                    props = get_properties(obj.o);
-                }
-                else {
-                    assert(KOS_is_exception_pending(ctx));
-                    props = KOS_NULL;
-                }
-            }
-        }
-#ifdef CONFIG_MAD_GC
-        else {
-            error = kos_trigger_mad_gc(ctx);
-            props = error ? KOS_NULL : get_properties(obj.o);
-        }
-#endif
-
-        if (props) {
-            const uint32_t hash         = KOS_string_get_hash(prop.o);
-            unsigned       idx          = hash;
-            unsigned       num_reprobes = 0;
-            KOS_OBJ_ID     prop_table   = read_props(props);
-            KOS_PITEM     *items;
-            unsigned       mask;
-            #ifdef CONFIG_PERF
-            int            collis_depth = -1;
-            #endif
-
-            items = OBJPTR(OBJECT_STORAGE, prop_table)->items;
-            mask  = KOS_atomic_read_relaxed_u32(OBJPTR(OBJECT_STORAGE, prop_table)->capacity) - 1;
-
-            for (;;) {
-                KOS_PITEM *cur_item = items + (idx &= mask);
-                KOS_OBJ_ID cur_key  = KOS_atomic_read_relaxed_obj(cur_item->key);
-                KOS_OBJ_ID oldval;
-
-                #ifdef CONFIG_PERF
-                ++collis_depth;
-                #endif
-
-                /* Found a new empty slot */
-                if (IS_BAD_PTR(cur_key)) {
-
-                    /* If we are deleting a non-existent property, just bail */
-                    if (value.o == TOMBSTONE) {
-                        error = KOS_SUCCESS;
-                        break;
-                    }
-
-                    /* Attempt to write the new key */
-                    if ( ! KOS_atomic_cas_weak_ptr(cur_item->key, KOS_BADPTR, prop.o))
-                        /* Reprobe the slot if another thread has written a key */
-                        continue;
-
-                    KOS_PERF_CNT_ARRAY(object_collision, KOS_min(collis_depth, 3));
-
-                    KOS_atomic_write_relaxed_u32(cur_item->hash.hash, hash);
-                    KOS_atomic_add_i32(OBJPTR(OBJECT_STORAGE, prop_table)->num_slots_used, 1);
-                }
-                /* Otherwise check if this key matches the sought property */
-                else if ( ! is_key_equal(prop.o, hash, cur_key, cur_item)) {
-
-                    /* Resize if property table is full */
-                    if (num_reprobes > KOS_MAX_PROP_REPROBES) {
-                        error = resize_prop_table(ctx, obj.o, prop_table, 2U);
-                        if (error)
-                            break;
-
-                        props        = get_properties(obj.o);
-                        prop_table   = read_props(props);
-                        idx          = hash;
-                        items        = OBJPTR(OBJECT_STORAGE, prop_table)->items;
-                        mask         = KOS_atomic_read_relaxed_u32(OBJPTR(OBJECT_STORAGE, prop_table)->capacity) - 1;
-                        num_reprobes = 0;
-                    }
-                    /* Probe next slot */
-                    else {
-                        ++idx;
-                        ++num_reprobes;
-                    }
-                    continue;
-                }
-
-                /* Read value at this slot */
-                oldval = KOS_atomic_read_acquire_obj(cur_item->value);
-
-                /* We will use the new table if it was copied */
-                if (oldval != CLOSED) {
-
-                    /* If this is a dynamic property, throw it */
-                    if ( ! IS_BAD_PTR(oldval) &&
-                        GET_OBJ_TYPE(oldval) == OBJ_DYNAMIC_PROP &&
-                        value.o != TOMBSTONE) {
-
-                        KOS_raise_exception(ctx, oldval);
-                        error = KOS_ERROR_SETTER;
-                        break;
-                    }
-
-                    /* It's OK if someone else wrote in the mean time */
-                    if ( ! KOS_atomic_cas_strong_ptr(cur_item->value, oldval, value.o))
-                        /* Re-read in case it was moved to the new table */
-                        oldval = KOS_atomic_read_acquire_obj(cur_item->value);
-                }
-
-                /* Another thread is resizing the table - use new property table */
-                if (oldval == CLOSED) {
-                    const KOS_OBJ_ID new_prop_table = KOS_atomic_read_relaxed_obj(
-                            OBJPTR(OBJECT_STORAGE, prop_table)->new_prop_table);
-                    assert( ! IS_BAD_PTR(new_prop_table));
-
-                    copy_table(ctx, obj.o, prop_table, new_prop_table);
-
-                    prop_table   = new_prop_table;
-                    idx          = hash;
-                    items        = OBJPTR(OBJECT_STORAGE, prop_table)->items;
-                    mask         = KOS_atomic_read_relaxed_u32(
-                                    OBJPTR(OBJECT_STORAGE, prop_table)->capacity) - 1;
-                    num_reprobes = 0;
-                    continue;
-                }
-
-                error = KOS_SUCCESS;
-                break;
-            }
-
-            /* Check if we need to resize the table */
-            if ( ! error && need_resize(prop_table, num_reprobes))
-                error = resize_prop_table(ctx, obj.o, prop_table, 2U);
         }
     }
+#ifdef CONFIG_MAD_GC
+    else {
+        error = kos_trigger_mad_gc(ctx);
+        props = error ? KOS_NULL : get_properties(obj.o);
+    }
+#endif
+
+    if (props) {
+        KOS_LOCAL       prop_table;
+        const uint32_t  hash         = KOS_string_get_hash(prop.o);
+        uint32_t        num_reprobes = 0;
+        enum SET_STATUS status;
+
+        KOS_init_local_with(ctx, &prop_table, read_props(props));
+
+        do {
+            status = set_property(ctx, &obj, &prop_table.o, &prop, hash, &value, &num_reprobes);
+
+            switch (status) {
+                case SET_CALL_SETTER: error = KOS_ERROR_SETTER;    break;
+                case SET_FAILED:      error = KOS_ERROR_EXCEPTION; break;
+                default:              error = KOS_SUCCESS;         break;
+            }
+        } while (status == SET_TRY_AGAIN);
+
+        /* Check if we need to resize the table */
+        if ( ! error && need_resize(prop_table.o, num_reprobes))
+            error = resize_prop_table(ctx, obj.o, prop_table.o, 2U);
+
+        KOS_destroy_top_local(ctx, &prop_table);
+     }
 
 #ifdef CONFIG_PERF
     if (value.o == TOMBSTONE) {
@@ -774,6 +815,7 @@ int KOS_set_property(KOS_CONTEXT ctx,
     }
 #endif
 
+cleanup:
     KOS_destroy_top_locals(ctx, &value, &obj);
 
     return error;
