@@ -444,3 +444,38 @@ find_in_output "^base: parsing *:"
 find_in_output "^base: compilation *:"
 find_in_output "^base: optimization passes *:"
 find_in_output "^Hello$"
+
+##############################################################################
+# main() passed via -c
+
+"$KOS" -c 'public fun main(args...) { for const i, v in enumerate(args) { print("\(i): \(v)") } }' "a b" "c d" | remove_cr > "$OUTPUT"
+
+COUNT=$(wc -l < "$OUTPUT")
+
+if [ $COUNT -lt 3 ]; then
+    echo "$LINENO: Error: Expected at least 3 lines of output" >&2
+    cat "$OUTPUT"
+    exit 1
+fi
+
+find_in_output "^0: public fun main"
+find_in_output "^1: a b$"
+find_in_output "^2: c d$"
+
+##############################################################################
+# main() passed via stdin
+
+echo 'public fun main(args...) { for const i, v in enumerate(args) { print("\(i): \(v)") } }' | \
+    "$KOS" - "x y" "z w" | remove_cr > "$OUTPUT"
+
+COUNT=$(wc -l < "$OUTPUT")
+
+if [ $COUNT -lt 3 ]; then
+    echo "$LINENO: Error: Expected at least 3 lines of output" >&2
+    cat "$OUTPUT"
+    exit 1
+fi
+
+find_in_output "^0: $"
+find_in_output "^1: x y$"
+find_in_output "^2: z w$"

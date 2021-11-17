@@ -42,8 +42,20 @@ KOS_API
 KOS_OBJ_ID KOS_repl(KOS_CONTEXT           ctx,
                     const char           *module_name,
                     enum KOS_REPL_FLAGS_E flags,
+                    KOS_OBJ_ID           *out_module,
                     const char           *buf,
                     unsigned              buf_size);
+
+enum KOS_RUN_FUNC_FLAGS_E {
+    KOS_FUNC_OPTIONAL,
+    KOS_FUNC_REQUIRED
+};
+
+KOS_API
+KOS_OBJ_ID KOS_module_run_function(KOS_CONTEXT               ctx,
+                                   KOS_OBJ_ID                module_obj,
+                                   KOS_OBJ_ID                func_name,
+                                   enum KOS_RUN_FUNC_FLAGS_E run_flags);
 
 KOS_API
 KOS_OBJ_ID KOS_get_module(KOS_CONTEXT ctx);

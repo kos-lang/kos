@@ -18,6 +18,7 @@
 #include "kos_disasm.h"
 #include "kos_heap.h"
 #include "kos_math.h"
+#include "kos_misc.h"
 #include "kos_object_internal.h"
 #include "kos_parser.h"
 #include "kos_perf.h"
@@ -1881,6 +1882,7 @@ cleanup:
 KOS_OBJ_ID KOS_repl(KOS_CONTEXT           ctx,
                     const char           *module_name,
                     enum KOS_REPL_FLAGS_E flags,
+                    KOS_OBJ_ID           *out_module,
                     const char           *buf,
                     unsigned              buf_size)
 {
@@ -1899,7 +1901,7 @@ KOS_OBJ_ID KOS_repl(KOS_CONTEXT           ctx,
 
     KOS_vector_init(&storage);
 
-    KOS_init_locals(ctx, 2, &module, &module_name_str);
+    KOS_init_locals(ctx, 2, &module_name_str, &module);
 
     /* TODO use global mutex for thread safety */
 
@@ -1988,7 +1990,7 @@ cleanup:
     if (chain_init)
         inst->modules.load_chain = loading.next;
 
-    KOS_destroy_top_locals(ctx, &module, &module_name_str);
+    module.o = KOS_destroy_top_locals(ctx, &module_name_str, &module);
 
     KOS_vector_destroy(&storage);
 
@@ -1998,7 +2000,41 @@ cleanup:
         assert(!KOS_is_exception_pending(ctx));
     }
 
+    if (out_module)
+        *out_module = module.o;
+
     return error ? KOS_BADPTR : ret;
+}
+
+KOS_OBJ_ID KOS_module_run_function(KOS_CONTEXT               ctx,
+                                   KOS_OBJ_ID                module_obj,
+                                   KOS_OBJ_ID                func_name,
+                                   enum KOS_RUN_FUNC_FLAGS_E run_flags)
+{
+    KOS_LOCAL  func;
+    KOS_OBJ_ID args;
+    KOS_OBJ_ID ret = KOS_BADPTR;
+
+    const int error = KOS_module_get_global(ctx, module_obj, func_name, &func.o, nullptr);
+
+    if (error) {
+        if (run_flags != KOS_FUNC_OPTIONAL)
+            return KOS_BADPTR;
+
+        KOS_clear_exception(ctx);
+        return KOS_VOID;
+    }
+
+    KOS_init_local_with(ctx, &func, func.o);
+
+    args = KOS_array_slice(ctx, ctx->inst->args, 0, MAX_INT64);
+
+    if ( ! IS_BAD_PTR(args))
+        ret = KOS_call_function(ctx, func.o, KOS_VOID, args);
+
+    KOS_destroy_top_local(ctx, &func);
+
+    return ret;
 }
 
 int KOS_module_add_global(KOS_CONTEXT ctx,

@@ -35,6 +35,7 @@ KOS_DECLARE_STATIC_CONST_STRING(str_err_not_paren,         "previous token was n
 KOS_DECLARE_STATIC_CONST_STRING(str_err_script_not_buffer, "'script' argument object is not a buffer");
 KOS_DECLARE_STATIC_CONST_STRING(str_keyword,               "keyword");
 KOS_DECLARE_STATIC_CONST_STRING(str_line,                  "line");
+KOS_DECLARE_STATIC_CONST_STRING(str_main,                  "main");
 KOS_DECLARE_STATIC_CONST_STRING(str_name,                  "name");
 KOS_DECLARE_STATIC_CONST_STRING(str_op,                    "op");
 KOS_DECLARE_STATIC_CONST_STRING(str_script,                "script");
@@ -388,6 +389,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx,
     KOS_LOCAL      name;
     KOS_INSTANCE   new_inst;
     KOS_CONTEXT    new_ctx;
+    KOS_OBJ_ID     module_obj;
     KOS_OBJ_ID     arg_id;
     const uint8_t *data       = KOS_NULL;
     unsigned       data_size  = 0;
@@ -447,7 +449,13 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx,
     if (error)
         RAISE_EXCEPTION_STR(str_err_modules_init);
 
-    arg_id = KOS_repl(new_ctx, name_cstr.buffer, KOS_RUN_ONCE, (const char *)data, data_size);
+    arg_id = KOS_repl(new_ctx, name_cstr.buffer, KOS_RUN_ONCE, &module_obj, (const char *)data, data_size);
+    if (IS_BAD_PTR(arg_id)) {
+        KOS_print_exception(new_ctx, KOS_STDERR);
+        RAISE_EXCEPTION_STR(str_err_execute);
+    }
+
+    arg_id = KOS_module_run_function(new_ctx, module_obj, KOS_CONST_ID(str_main), KOS_FUNC_OPTIONAL);
     if (IS_BAD_PTR(arg_id)) {
         KOS_print_exception(new_ctx, KOS_STDERR);
         RAISE_EXCEPTION_STR(str_err_execute);

@@ -59,6 +59,8 @@ static kos_shutdown_tracy shutdown_profiler;
 static const char str_cmdline[] = "<commandline>";
 static const char str_stdin[]   = "<stdin>";
 
+KOS_DECLARE_STATIC_CONST_STRING(str_main, "main");
+
 static int is_option(const char *arg,
                      const char *short_opt,
                      const char *long_opt);
@@ -252,22 +254,35 @@ int main(int argc, char *argv[])
 
     if (i_module) {
 
+        KOS_OBJ_ID     module_obj;
         const unsigned mod_name_len = (unsigned)strlen(argv[i_module]);
 
         /* Load script from command line */
         if (is_script) {
-            KOS_OBJ_ID ret = KOS_repl(ctx, str_cmdline, KOS_RUN_ONCE, argv[i_module], mod_name_len);
+            const KOS_OBJ_ID ret = KOS_repl(ctx, str_cmdline, KOS_RUN_ONCE, &module_obj, argv[i_module], mod_name_len);
             if (IS_BAD_PTR(ret))
                 error = KOS_ERROR_EXCEPTION;
         }
         /* Load script from a file */
         else {
-            const KOS_OBJ_ID module_obj = KOS_load_module(ctx, argv[i_module], mod_name_len);
+            KOS_LOCAL module;
 
-            if (IS_BAD_PTR(module_obj))
+            KOS_init_local(ctx, &module);
+
+            module.o = KOS_load_module(ctx, argv[i_module], mod_name_len);
+
+            if (IS_BAD_PTR(module.o))
                 error = KOS_ERROR_EXCEPTION;
             else
-                error = IS_BAD_PTR(KOS_run_module(ctx, module_obj)) ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
+                error = IS_BAD_PTR(KOS_run_module(ctx, module.o)) ? KOS_ERROR_EXCEPTION : KOS_SUCCESS;
+
+            module_obj = KOS_destroy_top_local(ctx, &module);
+        }
+
+        if ( ! error) {
+            const KOS_OBJ_ID ret = KOS_module_run_function(ctx, module_obj, KOS_CONST_ID(str_main), KOS_FUNC_OPTIONAL);
+            if (IS_BAD_PTR(ret))
+                error = KOS_ERROR_EXCEPTION;
         }
     }
     else {
@@ -281,7 +296,14 @@ int main(int argc, char *argv[])
 
         /* Load script from stdin */
         else {
-            KOS_OBJ_ID ret = KOS_repl(ctx, str_stdin, KOS_RUN_STDIN, KOS_NULL, 0);
+            KOS_OBJ_ID module_obj = KOS_BADPTR;
+            KOS_OBJ_ID ret;
+
+            ret = KOS_repl(ctx, str_stdin, KOS_RUN_STDIN, &module_obj, KOS_NULL, 0);
+
+            if ( ! IS_BAD_PTR(ret))
+                ret = KOS_module_run_function(ctx, module_obj, KOS_CONST_ID(str_main), KOS_FUNC_OPTIONAL);
+
             if (IS_BAD_PTR(ret))
                 error = KOS_ERROR_EXCEPTION;
         }
@@ -415,7 +437,7 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
 
     /* Initialize module */
     {
-        KOS_OBJ_ID ret = KOS_repl(ctx, str_stdin, KOS_INIT_REPL, KOS_NULL, 0);
+        KOS_OBJ_ID ret = KOS_repl(ctx, str_stdin, KOS_INIT_REPL, KOS_NULL, KOS_NULL, 0);
         if (IS_BAD_PTR(ret))
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
@@ -495,7 +517,7 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
         if ( ! buf->size)
             continue;
 
-        ret = KOS_repl(ctx, str_stdin, KOS_RUN_AGAIN, buf->buffer, (unsigned)buf->size);
+        ret = KOS_repl(ctx, str_stdin, KOS_RUN_AGAIN, KOS_NULL, buf->buffer, (unsigned)buf->size);
         buf->size = 0;
 
         if (IS_BAD_PTR(ret)) {
