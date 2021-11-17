@@ -404,7 +404,7 @@ static int get_env_array(KOS_CONTEXT    ctx,
     PROCESS_ARRAY out_ptr;
 #endif
 
-    KOS_init_locals(ctx, 3, &obj, &in_obj, &name);
+    KOS_init_locals(ctx, &obj, &in_obj, &name, KOS_NULL);
 
     /* If inheriting environment, join vars from environment with overrides from the call */
     if (inherit_env) {
@@ -1651,7 +1651,7 @@ KOS_INIT_MODULE(os, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     KOS_init_debug_output();
 
     KOS_init_local_with(ctx, &module, module_obj);
-    KOS_init_locals(ctx, 3, &wait_func, &priv, &wait_proto);
+    KOS_init_locals(    ctx, &wait_func, &priv, &wait_proto, KOS_NULL);
 
 #ifndef _WIN32
     OBJPTR(MODULE, module_obj)->finalize = cleanup_wait_list;

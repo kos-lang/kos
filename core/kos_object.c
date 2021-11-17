@@ -1042,7 +1042,7 @@ KOS_OBJ_ID kos_new_object_walk(KOS_CONTEXT      ctx,
     KOS_LOCAL               walk;
     KOS_ATOMIC(KOS_OBJ_ID) *props;
 
-    KOS_init_locals(ctx, 2, &obj, &walk);
+    KOS_init_locals(ctx, &obj, &walk, KOS_NULL);
     obj.o = obj_id;
 
     walk.o = OBJID(ITERATOR,
@@ -1092,7 +1092,7 @@ int kos_object_walk(KOS_CONTEXT ctx,
     KOS_LOCAL returned_keys;
     KOS_LOCAL key;
 
-    KOS_init_locals(ctx, 4, &walk, &table, &returned_keys, &key);
+    KOS_init_locals(ctx, &walk, &table, &returned_keys, &key, KOS_NULL);
     walk.o = iterator_id;
 
     assert(GET_OBJ_TYPE(walk.o) == OBJ_ITERATOR);

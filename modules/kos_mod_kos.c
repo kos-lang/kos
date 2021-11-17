@@ -105,7 +105,7 @@ static KOS_OBJ_ID raw_lexer(KOS_CONTEXT ctx,
 
     assert(GET_OBJ_TYPE(regs_obj) == OBJ_ARRAY);
 
-    KOS_init_locals(ctx, 6, &regs, &args, &lexer, &init, &value, &token);
+    KOS_init_locals(ctx, &regs, &args, &lexer, &init, &value, &token, KOS_NULL);
 
     regs.o = regs_obj;
     args.o = args_obj;

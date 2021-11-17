@@ -188,7 +188,7 @@ KOS_OBJ_ID KOS_new_class(KOS_CONTEXT ctx, KOS_OBJ_ID proto_obj)
     KOS_LOCAL proto;
     KOS_LOCAL func;
 
-    KOS_init_locals(ctx, 2, &proto, &func);
+    KOS_init_locals(ctx, &proto, &func, KOS_NULL);
 
     proto.o = proto_obj;
 

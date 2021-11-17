@@ -274,7 +274,7 @@ void KOS_print_exception(KOS_CONTEXT ctx, enum KOS_PRINT_WHERE_E print_where)
 
     KOS_vector_init(&cstr);
 
-    KOS_init_locals(ctx, 2, &exception, &last_exception);
+    KOS_init_locals(ctx, &exception, &last_exception, KOS_NULL);
 
     exception.o = KOS_get_exception(ctx);
     assert(!IS_BAD_PTR(exception.o));
@@ -742,7 +742,7 @@ static KOS_OBJ_ID array_to_str(KOS_CONTEXT        ctx,
         return KOS_new_const_ascii_string(ctx, str_empty_array,
                                           sizeof(str_empty_array) - 1);
 
-    KOS_init_locals(ctx, 4, &array, &str_comma, &aux_array, &value);
+    KOS_init_locals(ctx, &array, &str_comma, &aux_array, &value, KOS_NULL);
 
     array.o = array_obj;
 
@@ -913,7 +913,7 @@ static int vector_append_object(KOS_CONTEXT        ctx,
 
     assert(GET_OBJ_TYPE(obj_id) == OBJ_OBJECT);
 
-    KOS_init_locals(ctx, 3, &obj, &walk, &value);
+    KOS_init_locals(ctx, &obj, &walk, &value, KOS_NULL);
 
     obj.o = obj_id;
 
@@ -1049,7 +1049,7 @@ static KOS_OBJ_ID function_to_str(KOS_CONTEXT ctx,
     assert(GET_OBJ_TYPE(obj_id) == OBJ_FUNCTION ||
            GET_OBJ_TYPE(obj_id) == OBJ_CLASS);
 
-    KOS_init_locals(ctx, 3, &strings[1], &strings[2], &func);
+    KOS_init_locals(ctx, &strings[1], &strings[2], &func, KOS_NULL);
 
     func.o = obj_id;
 
@@ -1279,7 +1279,7 @@ int KOS_array_push_expand(KOS_CONTEXT ctx,
     KOS_LOCAL array;
     KOS_LOCAL value;
 
-    KOS_init_locals(ctx, 2, &array, &value);
+    KOS_init_locals(ctx, &array, &value, KOS_NULL);
 
     array.o = array_obj;
     value.o = value_obj;

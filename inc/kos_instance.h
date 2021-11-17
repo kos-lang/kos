@@ -363,7 +363,7 @@ void KOS_init_local_with(KOS_CONTEXT ctx, KOS_LOCAL *local, KOS_OBJ_ID obj_id);
 #define KOS_init_local(ctx, local) KOS_init_local_with((ctx), (local), KOS_BADPTR)
 
 KOS_API
-void KOS_init_locals(KOS_CONTEXT ctx, int num_locals, ...);
+void KOS_init_locals(KOS_CONTEXT ctx, ...);
 
 KOS_API
 void KOS_init_ulocal(KOS_CONTEXT ctx, KOS_ULOCAL *ulocal);

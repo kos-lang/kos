@@ -92,7 +92,7 @@ static KOS_OBJ_ID kos_random(KOS_CONTEXT ctx,
 
     assert(KOS_get_array_size(args_obj) >= 1);
 
-    KOS_init_locals(ctx, 3, &args, &seed, &ret);
+    KOS_init_locals(ctx, &args, &seed, &ret, KOS_NULL);
 
     args.o = args_obj;
 

@@ -886,7 +886,7 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
 
     KOS_vector_init(&cstr);
 
-    KOS_init_locals(ctx, 4, &value, &backtrace, &frame_desc, &array);
+    KOS_init_locals(ctx, &value, &backtrace, &frame_desc, &array, KOS_NULL);
 
     value.o = KOS_get_property(ctx, exception, KOS_STR_VALUE);
     TRY_OBJID(value.o);
@@ -1028,18 +1028,19 @@ void KOS_init_ulocal(KOS_CONTEXT ctx, KOS_ULOCAL *local)
         next->prev   = local;
 }
 
-void KOS_init_locals(KOS_CONTEXT ctx, int num_locals, ...)
+void KOS_init_locals(KOS_CONTEXT ctx, ...)
 {
     va_list     args;
     KOS_LOCAL  *head     = KOS_NULL;
     KOS_LOCAL **tail_ptr = &head;
 
-    assert(num_locals);
+    va_start(args, ctx);
 
-    va_start(args, num_locals);
-
-    for ( ; num_locals; --num_locals) {
+    for (;;) {
         KOS_LOCAL *local = (KOS_LOCAL *)va_arg(args, KOS_LOCAL *);
+
+        if ( ! local)
+            break;
 
         check_local_list(head, local);
         check_local_list(ctx->local_list, local);

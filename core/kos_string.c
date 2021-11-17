@@ -681,7 +681,7 @@ KOS_OBJ_ID KOS_string_add(KOS_CONTEXT ctx,
         return KOS_BADPTR;
     }
 
-    KOS_init_locals(ctx, 2, &str_array, &new_str);
+    KOS_init_locals(ctx, &str_array, &new_str, KOS_NULL);
 
     str_array.o = str_array_id;
 

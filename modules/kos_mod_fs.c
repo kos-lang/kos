@@ -885,7 +885,7 @@ static KOS_OBJ_ID listdir(KOS_CONTEXT ctx,
     KOS_OBJ_ID ret = KOS_BADPTR;
     int        error;
 
-    KOS_init_locals(ctx, 2, &regs, &dir_walk);
+    KOS_init_locals(ctx, &regs, &dir_walk, KOS_NULL);
 
     regs.o = regs_obj;
 
