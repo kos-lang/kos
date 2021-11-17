@@ -2015,7 +2015,7 @@ KOS_OBJ_ID KOS_module_run_function(KOS_CONTEXT               ctx,
     KOS_OBJ_ID args;
     KOS_OBJ_ID ret = KOS_BADPTR;
 
-    const int error = KOS_module_get_global(ctx, module_obj, func_name, &func.o, nullptr);
+    const int error = KOS_module_get_global(ctx, module_obj, func_name, &func.o, KOS_NULL);
 
     if (error) {
         if (run_flags != KOS_FUNC_OPTIONAL)
