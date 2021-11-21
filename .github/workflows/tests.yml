@@ -20,15 +20,22 @@ jobs:
         test:
           - c89
           - release
-
     runs-on: ${{ matrix.os }}
-
     timeout-minutes: 5
-
     steps:
       - uses: actions/checkout@v2
       - name: Test
         run: tests/run ${{ matrix.test }}
+
+  unit_from_fuzz:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - name: Test
+        run: tests/fuzz --unit
 
   full_test:
     strategy:
@@ -40,11 +47,8 @@ jobs:
           - asan deepstack
           - valgrind
           - lcov
-
     runs-on: ubuntu-20.04
-
     timeout-minutes: 20
-
     steps:
       - uses: actions/checkout@v2
       - name: Install Valgrind
@@ -76,11 +80,8 @@ jobs:
           - c89
           - release
           - seqfail
-
     runs-on: windows-latest
-
     timeout-minutes: 10
-
     steps:
       - uses: msys2/setup-msys2@v2
         with:
