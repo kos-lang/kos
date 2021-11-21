@@ -1549,7 +1549,7 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
     KOS_STRING_ITER       iter;
     int                   error        = KOS_SUCCESS;
 
-    KOS_init_locals(ctx, &groups, &match_groups, &str, &ret, KOS_NULL);
+    KOS_init_locals(ctx, &groups, &match_groups, &str, &ret, kos_end_locals);
     TRY(reset_possibility_stack(poss_stack, ctx, re));
 
     str.o = str_obj;
@@ -1898,7 +1898,7 @@ static KOS_OBJ_ID re_ctor(KOS_CONTEXT ctx,
 
     assert(KOS_get_array_size(args_obj) >= 1);
 
-    KOS_init_locals(ctx, &regex_str, &regex, KOS_NULL);
+    KOS_init_locals(ctx, &regex_str, &regex, kos_end_locals);
 
     regex_str.o = KOS_array_read(ctx, args_obj, 0);
     TRY_OBJID(regex_str.o);

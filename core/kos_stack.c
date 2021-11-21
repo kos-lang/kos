@@ -593,7 +593,7 @@ void kos_wrap_exception(KOS_CONTEXT ctx)
             return;
     }
 
-    KOS_init_locals(ctx, &exception, &backtrace, &thrown_object, &dump_ctx.backtrace, KOS_NULL);
+    KOS_init_locals(ctx, &exception, &backtrace, &thrown_object, &dump_ctx.backtrace, kos_end_locals);
 
     thrown_object.o = ctx->exception;
 

@@ -457,7 +457,7 @@ int kos_module_threads_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     KOS_LOCAL semaphore_proto;
 
     KOS_init_local_with(ctx, &module, module_obj);
-    KOS_init_locals(    ctx, &priv, &mutex_proto, &semaphore_proto, KOS_NULL);
+    KOS_init_locals(    ctx, &priv, &mutex_proto, &semaphore_proto, kos_end_locals);
 
     priv.o = KOS_new_array(ctx, 2);
     TRY_OBJID(priv.o);

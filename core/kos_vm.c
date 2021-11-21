@@ -546,7 +546,7 @@ static int init_registers(KOS_CONTEXT ctx,
 
     assert(IS_BAD_PTR(stack_obj) || ! kos_is_heap_object(stack_obj));
 
-    KOS_init_locals(ctx, &func, &rest, &args, KOS_NULL);
+    KOS_init_locals(ctx, &func, &rest, &args, kos_end_locals);
 
     args.o = args_obj;
     func.o = func_obj;
@@ -3306,7 +3306,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 KOS_LOCAL      this_;
                 KOS_LOCAL      args;
 
-                KOS_init_locals(ctx, &func, &ret, &this_, &args, KOS_NULL);
+                KOS_init_locals(ctx, &func, &ret, &this_, &args, kos_end_locals);
 
                 switch (instr) {
 

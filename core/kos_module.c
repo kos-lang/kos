@@ -180,7 +180,7 @@ static int find_module(KOS_CONTEXT            ctx,
 
     KOS_vector_init(&cpath);
 
-    KOS_init_locals(ctx, &path, &dir, &components[0], &components[2], KOS_NULL);
+    KOS_init_locals(ctx, &path, &dir, &components[0], &components[2], kos_end_locals);
 
     components[1].o = KOS_CONST_ID(str_path_sep);
     components[2].o = module_name;
@@ -352,7 +352,7 @@ static KOS_OBJ_ID alloc_module(KOS_CONTEXT ctx,
     uint32_t  u_idx = 0;
     int       error = KOS_SUCCESS;
 
-    KOS_init_locals(ctx, &module_name, &obj, &module, KOS_NULL);
+    KOS_init_locals(ctx, &module_name, &obj, &module, kos_end_locals);
 
     module_name.o = module_name_obj;
 
@@ -815,7 +815,7 @@ static KOS_OBJ_ID format_error(KOS_CONTEXT  ctx,
     KOS_vector_init(&cstr);
 
     KOS_init_locals(ctx, &parts[0], &parts[2], &parts[4], &parts[6], &parts[8], &parts[10],
-                    KOS_NULL);
+                    kos_end_locals);
 
     parts[0].o = KOS_get_file_name(ctx, OBJPTR(MODULE, module_obj)->path);
     TRY_OBJID(parts[0].o);
@@ -1627,7 +1627,7 @@ static KOS_OBJ_ID import_module(KOS_CONTEXT ctx,
     PROF_ZONE_NAME(loading.module_name, loading.length)
 
     KOS_init_locals(ctx, &actual_module_name, &module_dir, &module_path, &mod_init, &module,
-                    KOS_NULL);
+                    kos_end_locals);
 
     if (name_size > 0xFFFFU) {
         KOS_raise_printf(ctx, "Module name length %u exceeds 65535 bytes\n", name_size);
@@ -1900,7 +1900,7 @@ KOS_OBJ_ID KOS_repl(KOS_CONTEXT           ctx,
 
     KOS_vector_init(&storage);
 
-    KOS_init_locals(ctx, &module_name_str, &module, KOS_NULL);
+    KOS_init_locals(ctx, &module_name_str, &module, kos_end_locals);
 
     /* TODO use global mutex for thread safety */
 

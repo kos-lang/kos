@@ -886,7 +886,7 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
 
     KOS_vector_init(&cstr);
 
-    KOS_init_locals(ctx, &value, &backtrace, &frame_desc, &array, KOS_NULL);
+    KOS_init_locals(ctx, &value, &backtrace, &frame_desc, &array, kos_end_locals);
 
     value.o = KOS_get_property(ctx, exception, KOS_STR_VALUE);
     TRY_OBJID(value.o);

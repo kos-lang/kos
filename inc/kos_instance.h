@@ -365,6 +365,9 @@ void KOS_init_local_with(KOS_CONTEXT ctx, KOS_LOCAL *local, KOS_OBJ_ID obj_id);
 KOS_API
 void KOS_init_locals(KOS_CONTEXT ctx, ...);
 
+/* Last argument for KOS_init_locals() */
+#define kos_end_locals ((KOS_LOCAL *)KOS_NULL)
+
 KOS_API
 void KOS_init_ulocal(KOS_CONTEXT ctx, KOS_ULOCAL *ulocal);
 

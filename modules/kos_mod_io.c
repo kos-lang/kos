@@ -236,7 +236,7 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
     KOS_vector_init(&filename_cstr);
     KOS_vector_init(&flags_cstr);
 
-    KOS_init_locals(ctx, &this_, &args, &ret, KOS_NULL);
+    KOS_init_locals(ctx, &this_, &args, &ret, kos_end_locals);
 
     this_.o = this_obj;
     args.o  = args_obj;
@@ -899,7 +899,7 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
 
     KOS_vector_init(&cstr);
 
-    KOS_init_locals(ctx, &print_args, &arg, &args, &this_, KOS_NULL);
+    KOS_init_locals(ctx, &print_args, &arg, &args, &this_, kos_end_locals);
 
     args.o  = args_obj;
     this_.o = this_obj;
@@ -1130,7 +1130,7 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
     KOS_FILE_HOLDER *file_holder = KOS_NULL;
     int              error;
 
-    KOS_init_locals(ctx, &aux, &info, KOS_NULL);
+    KOS_init_locals(ctx, &aux, &info, kos_end_locals);
 
     error = acquire_file_object(ctx, this_obj, &file_holder);
 
@@ -1505,7 +1505,7 @@ static KOS_OBJ_ID kos_lock(KOS_CONTEXT ctx,
     KOS_FILE_HOLDER *file_holder = KOS_NULL;
     int              error;
 
-    KOS_init_locals(ctx, &proto, &lock, KOS_NULL);
+    KOS_init_locals(ctx, &proto, &lock, kos_end_locals);
 
     proto.o = KOS_get_module(ctx);
     TRY_OBJID(proto.o);

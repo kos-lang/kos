@@ -143,7 +143,7 @@ static KOS_OBJ_ID object_iterator(KOS_CONTEXT      ctx,
     KOS_LOCAL  walk;
     KOS_LOCAL  value;
 
-    KOS_init_locals(ctx, &regs, &array, &walk, &value, KOS_NULL);
+    KOS_init_locals(ctx, &regs, &array, &walk, &value, kos_end_locals);
 
     regs.o = regs_obj;
 
@@ -647,7 +647,7 @@ static KOS_OBJ_ID string_constructor(KOS_CONTEXT ctx,
     KOS_LOCAL      substrings;
     KOS_LOCAL      ret;
 
-    KOS_init_locals(ctx, &args, &obj, &codes, &substrings, &ret, KOS_NULL);
+    KOS_init_locals(ctx, &args, &obj, &codes, &substrings, &ret, kos_end_locals);
 
     args.o = args_obj;
 
@@ -918,7 +918,7 @@ static KOS_OBJ_ID object_constructor(KOS_CONTEXT ctx,
 
     assert(KOS_get_array_size(args_obj) >= 2);
 
-    KOS_init_locals(ctx, &keys, &values, &key, &elem, &obj, KOS_NULL);
+    KOS_init_locals(ctx, &keys, &values, &key, &elem, &obj, kos_end_locals);
 
     values.o = args_obj;
 
@@ -1124,7 +1124,7 @@ static KOS_OBJ_ID array_constructor(KOS_CONTEXT ctx,
     if (num_args == 0)
         return KOS_new_array(ctx, 0);
 
-    KOS_init_locals(ctx, &args, &arg, &gen_args, &walk, &walk_val, &gen_ret, &ret, KOS_NULL);
+    KOS_init_locals(ctx, &args, &arg, &gen_args, &walk, &walk_val, &gen_ret, &ret, kos_end_locals);
 
     args.o = args_obj;
 
@@ -1385,7 +1385,7 @@ static KOS_OBJ_ID buffer_constructor(KOS_CONTEXT ctx,
     KOS_LOCAL      arg;
     KOS_LOCAL      buffer;
 
-    KOS_init_locals(ctx, &args, &arg, &buffer, KOS_NULL);
+    KOS_init_locals(ctx, &args, &arg, &buffer, kos_end_locals);
 
     args.o = args_obj;
 
@@ -1851,7 +1851,7 @@ static KOS_OBJ_ID apply(KOS_CONTEXT ctx,
     KOS_LOCAL  arg_this;
     KOS_LOCAL  arg_args;
 
-    KOS_init_locals(ctx, &func, &arg_this, &arg_args, KOS_NULL);
+    KOS_init_locals(ctx, &func, &arg_this, &arg_args, kos_end_locals);
 
     func.o     = this_obj;
     arg_args.o = args_obj;
@@ -1918,7 +1918,7 @@ static KOS_OBJ_ID async(KOS_CONTEXT ctx,
         return KOS_BADPTR;
     }
 
-    KOS_init_locals(ctx, &func, &arg_this, &arg_args, &thread_obj, KOS_NULL);
+    KOS_init_locals(ctx, &func, &arg_this, &arg_args, &thread_obj, kos_end_locals);
 
     func.o     = this_obj;
     arg_args.o = args_obj;
@@ -2165,7 +2165,7 @@ static KOS_OBJ_ID expand_for_sort(KOS_CONTEXT ctx,
 
     assert(GET_OBJ_TYPE(iterable_obj) == OBJ_ARRAY);
 
-    KOS_init_locals(ctx, &iterable, &key_func, &key_args, &src, &dest, &val, &expanded, KOS_NULL);
+    KOS_init_locals(ctx, &iterable, &key_func, &key_args, &src, &dest, &val, &expanded, kos_end_locals);
 
     iterable.o = iterable_obj;
     key_func.o = key_func_obj;
@@ -2380,7 +2380,7 @@ static KOS_OBJ_ID sort(KOS_CONTEXT ctx,
 
     assert(KOS_get_array_size(args_obj) >= 2);
 
-    KOS_init_locals(ctx, &to_expand, &expanded, &sort_key, KOS_NULL);
+    KOS_init_locals(ctx, &to_expand, &expanded, &sort_key, kos_end_locals);
 
     if (GET_OBJ_TYPE(this_obj) != OBJ_ARRAY)
         RAISE_EXCEPTION_STR(str_err_not_array);
@@ -2545,7 +2545,7 @@ static KOS_OBJ_ID resize(KOS_CONTEXT ctx,
 
     assert(KOS_get_array_size(args_obj) >= 2);
 
-    KOS_init_locals(ctx, &args, &value, &array, KOS_NULL);
+    KOS_init_locals(ctx, &args, &value, &array, kos_end_locals);
 
     array.o = this_obj;
     args.o  = args_obj;
@@ -3498,7 +3498,7 @@ static KOS_OBJ_ID pack(KOS_CONTEXT ctx,
     struct KOS_PACK_FORMAT_S fmt;
     KOS_LOCAL                buffer;
 
-    KOS_init_locals(ctx, &fmt.fmt_str, &fmt.data, &buffer, KOS_NULL);
+    KOS_init_locals(ctx, &fmt.fmt_str, &fmt.data, &buffer, kos_end_locals);
 
     buffer.o = this_obj;
 
@@ -3570,7 +3570,7 @@ static KOS_OBJ_ID unpack(KOS_CONTEXT ctx,
     KOS_LOCAL                args;
     int                      error;
 
-    KOS_init_locals(ctx, &buffer, &args, &fmt.fmt_str, &fmt.data, KOS_NULL);
+    KOS_init_locals(ctx, &buffer, &args, &fmt.fmt_str, &fmt.data, kos_end_locals);
 
     buffer.o = this_obj;
     args.o   = args_obj;
@@ -4008,7 +4008,7 @@ static KOS_OBJ_ID pop(KOS_CONTEXT ctx,
 
     assert(KOS_get_array_size(args_obj) >= 1);
 
-    KOS_init_locals(ctx, &self, &arg, &new_array, KOS_NULL);
+    KOS_init_locals(ctx, &self, &arg, &new_array, kos_end_locals);
 
     self.o = this_obj;
 

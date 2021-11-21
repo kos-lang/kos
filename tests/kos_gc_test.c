@@ -1758,7 +1758,7 @@ int main(void)
 
         TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
 
-        KOS_init_locals(ctx, &local[0], &local[1], &local[2], KOS_NULL);
+        KOS_init_locals(ctx, &local[0], &local[1], &local[2], kos_end_locals);
 
         for (i = 0; i < NELEMS(local); i++) {
             local[i].o = KOS_new_object_with_private(ctx, KOS_VOID, &priv_class_47, finalize_47);
@@ -1974,7 +1974,7 @@ int main(void)
         TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
         inst.heap.max_heap_size = SMALL_HEAP_PAGES << KOS_PAGE_BITS;
 
-        KOS_init_locals(ctx, &array, &ballast, &obj, KOS_NULL);
+        KOS_init_locals(ctx, &array, &ballast, &obj, kos_end_locals);
 
         /* Allocate ballast to make sure big object won't fit in existing page */
         ballast.o = alloc_ballast(ctx, force_slots, &ballast_objs);
@@ -2043,7 +2043,7 @@ int main(void)
         TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
         inst.heap.max_heap_size = SMALL_HEAP_PAGES << KOS_PAGE_BITS;
 
-        KOS_init_locals(ctx, &array, &ballast, &obj, KOS_NULL);
+        KOS_init_locals(ctx, &array, &ballast, &obj, kos_end_locals);
 
         /* Allocate ballast to make sure big object won't fit in existing page */
         ballast.o = alloc_ballast(ctx, force_slots, &ballast_objs);
@@ -2156,7 +2156,7 @@ int main(void)
             TEST(KOS_instance_init(&inst, inst_flags, &ctx) == KOS_SUCCESS);
             inst.heap.max_heap_size = SMALL_HEAP_PAGES << KOS_PAGE_BITS;
 
-            KOS_init_locals(ctx, &array, &ballast, KOS_NULL);
+            KOS_init_locals(ctx, &array, &ballast, kos_end_locals);
 
             /* Prepare the desired scenario */
             if (dir == 0) {

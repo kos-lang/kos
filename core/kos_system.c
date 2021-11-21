@@ -620,7 +620,7 @@ KOS_OBJ_ID kos_stat(KOS_CONTEXT ctx, struct stat *st)
     KOS_DECLARE_STATIC_CONST_STRING(str_type_socket,  "socket");
     KOS_DECLARE_STATIC_CONST_STRING(str_type_unknown, "unknown");
 
-    KOS_init_locals(ctx, &aux, &info, KOS_NULL);
+    KOS_init_locals(ctx, &aux, &info, kos_end_locals);
 
     info.o = KOS_new_object(ctx);
     TRY_OBJID(info.o);
