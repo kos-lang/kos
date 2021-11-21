@@ -85,9 +85,39 @@ merge_corpus()
 }
 
 if [[ "$UNITTEST" = "1" ]]; then
+    HEX_DIGITS="0123456789abcdef"
+    unit_job()
+    {
+        local IDX="$1"
+        local JOBFILE="out_$1.log"
+        local FINAL_EXITCODE=0
+        local FILE
+
+        while [[ $IDX -lt ${#HEX_DIGITS} ]]; do
+            for FILE in "$CORPUS"/${HEX_DIGITS:$IDX:1}*; do
+                local EXITCODE=0
+                "./$FUZZ" "$FILE" > "$JOBFILE" 2>&1 || EXITCODE=$?
+                if [[ $EXITCODE != 0 ]]; then
+                    cat "$JOBFILE"
+                    FINAL_EXITCODE=$EXITCODE
+                fi
+            done
+
+            IDX=$(($IDX + $JOBS))
+        done
+
+        return $FINAL_EXITCODE
+    }
+
+    JOB_IDS=( )
+    for IDX in $(seq 0 $(($JOBS - 1))); do
+        unit_job "$IDX" &
+        JOB_IDS+=( $! )
+    done
+
     FAILED=0
-    for FILE in "$CORPUS"/*; do
-        "./$FUZZ" "$FILE" || FAILED=1
+    for IDX in "${JOB_IDS[@]}"; do
+        wait $IDX || FAILED=$?
     done
     exit $FAILED
 fi
