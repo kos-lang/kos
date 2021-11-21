@@ -94,14 +94,13 @@ if [[ "$UNITTEST" = "1" ]]; then
         local FILE
 
         while [[ $IDX -lt ${#HEX_DIGITS} ]]; do
-            for FILE in "$CORPUS"/${HEX_DIGITS:$IDX:1}*; do
-                local EXITCODE=0
-                "./$FUZZ" "$FILE" > "$JOBFILE" 2>&1 || EXITCODE=$?
-                if [[ $EXITCODE != 0 ]]; then
-                    cat "$JOBFILE"
-                    FINAL_EXITCODE=$EXITCODE
-                fi
-            done
+            local EXITCODE=0
+            "./$FUZZ" -verbosity=0 "$CORPUS"/${HEX_DIGITS:$IDX:1}* > "$JOBFILE" 2>&1 || EXITCODE=$?
+
+            if [[ $EXITCODE != 0 ]]; then
+                FINAL_EXITCODE=$EXITCODE
+                cat "$JOBFILE"
+            fi
 
             IDX=$(($IDX + $JOBS))
         done
