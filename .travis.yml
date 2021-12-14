@@ -4,6 +4,8 @@ language: cpp
 os: linux
 dist: bionic
 compiler: gcc
+git:
+  submodules: false
 
 jobs:
     include:
