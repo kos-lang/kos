@@ -18,6 +18,7 @@ show_help()
     echo
     echo "Options:"
     echo "    --test NAME       Run test: interpreter (default) or compiler"
+    echo "    --unit            Treat corpus as unit tests"
     echo "    --merge           Merge corpus (deduplicate, etc.)"
     echo "    --minimize NAME   Minimize a crashing test case"
     echo "    -j N              Run N jobs (default is autodetect)"
@@ -88,10 +89,13 @@ if [[ "$UNITTEST" = "1" ]]; then
     HEX_DIGITS="0123456789abcdef"
     unit_job()
     {
-        local IDX="$1"
-        local JOBFILE="out_$1.log"
+        local THREAD_IDX="$1"
+        local IDX="$THREAD_IDX"
+        local JOBFILE="out_$THREAD_IDX.log"
         local FINAL_EXITCODE=0
         local FILE
+
+        echo "Running thread $THREAD_IDX"
 
         while [[ $IDX -lt ${#HEX_DIGITS} ]]; do
             local EXITCODE=0
@@ -104,6 +108,8 @@ if [[ "$UNITTEST" = "1" ]]; then
 
             IDX=$(($IDX + $JOBS))
         done
+
+        echo "Thread $THREAD_IDX exited with code $FINAL_EXITCODE"
 
         return $FINAL_EXITCODE
     }
