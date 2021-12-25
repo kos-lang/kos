@@ -3779,20 +3779,15 @@ execute()
 
     execute(script, name = "")
 
-Executes a Kos script in a new interpreter.
+Executes a Kos script in a new temporary module.
 
 `script` is either a buffer or a string containing the script to execute.
 
-`name` is optional script name, used in the child interpreter's messages.
-
-There is no direct way to communicate between the currently running script and the
-newly called script.
+`name` is optional module name, used in messages.
 
 This function pauses and waits until the script finishes executing.
 
-Throws an exception if there was an error in running the script.
-
-Returns `void` if the script execution succeeded.
+Returns the result of the last statement in `script`.
 
 lexer()
 -------

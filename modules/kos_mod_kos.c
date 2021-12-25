@@ -24,18 +24,13 @@
 
 KOS_DECLARE_STATIC_CONST_STRING(str_column,                "column");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_bad_ignore_errors, "`ignore_errors` argument is not a boolean");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_default_path,      "failed to set default path");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_execute,           "failed to execute script");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_instance_init,     "failed to initialize instance");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_arg,       "invalid argument");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_string,    "invalid string");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_modules_init,      "failed to initialize modules");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_name_not_string,   "'name' argument is not a string");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_paren,         "previous token was not ')'");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_script_not_buffer, "'script' argument object is not a buffer");
 KOS_DECLARE_STATIC_CONST_STRING(str_keyword,               "keyword");
 KOS_DECLARE_STATIC_CONST_STRING(str_line,                  "line");
-KOS_DECLARE_STATIC_CONST_STRING(str_main,                  "main");
 KOS_DECLARE_STATIC_CONST_STRING(str_name,                  "name");
 KOS_DECLARE_STATIC_CONST_STRING(str_op,                    "op");
 KOS_DECLARE_STATIC_CONST_STRING(str_script,                "script");
@@ -365,36 +360,28 @@ static const KOS_CONVERT execute_args[3] = {
  *
  *     execute(script, name = "")
  *
- * Executes a Kos script in a new interpreter.
+ * Executes a Kos script in a new temporary module.
  *
  * `script` is either a buffer or a string containing the script to execute.
  *
- * `name` is optional script name, used in the child interpreter's messages.
- *
- * There is no direct way to communicate between the currently running script and the
- * newly called script.
+ * `name` is optional module name, used in messages.
  *
  * This function pauses and waits until the script finishes executing.
  *
- * Throws an exception if there was an error in running the script.
- *
- * Returns `void` if the script execution succeeded.
+ * Returns the result of the last statement in `script`.
  */
 static KOS_OBJ_ID execute(KOS_CONTEXT ctx,
                           KOS_OBJ_ID  this_obj,
                           KOS_OBJ_ID  args_obj)
 {
-    KOS_VECTOR     name_cstr;
-    KOS_VECTOR     data_cstr;
-    KOS_LOCAL      name;
-    KOS_INSTANCE   new_inst;
-    KOS_CONTEXT    new_ctx;
-    KOS_OBJ_ID     module_obj;
-    KOS_OBJ_ID     arg_id;
-    const uint8_t *data       = KOS_NULL;
-    unsigned       data_size  = 0;
-    int            inst_init  = 0;
-    int            error      = KOS_SUCCESS;
+    KOS_VECTOR   name_cstr;
+    KOS_VECTOR   data_cstr;
+    KOS_LOCAL    name;
+    KOS_OBJ_ID   arg_id;
+    KOS_OBJ_ID   ret        = KOS_VOID;
+    const char  *data       = KOS_NULL;
+    unsigned     data_size  = 0;
+    int          error      = KOS_SUCCESS;
 
     KOS_vector_init(&name_cstr);
     KOS_vector_init(&data_cstr);
@@ -414,12 +401,12 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx,
 
     if (GET_OBJ_TYPE(arg_id) == OBJ_STRING) {
         TRY(KOS_string_to_cstr_vec(ctx, arg_id, &data_cstr));
-        data      = (const uint8_t *)data_cstr.buffer;
+        data      = data_cstr.buffer;
         data_size = (unsigned)data_cstr.size - 1;
     }
     else if (GET_OBJ_TYPE(arg_id) == OBJ_BUFFER) {
         data_size = KOS_get_buffer_size(arg_id);
-        data      = data_size ? KOS_buffer_data_const(arg_id) : KOS_NULL;
+        data      = data_size ? (const char *)KOS_buffer_data_const(arg_id) : KOS_NULL;
     }
     else
         RAISE_EXCEPTION_STR(str_err_script_not_buffer);
@@ -433,46 +420,15 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx,
         name.o = KOS_VOID;
     }
 
-    error = KOS_instance_init(&new_inst, ctx->inst->flags, &new_ctx);
-    if (error)
-        RAISE_EXCEPTION_STR(str_err_instance_init);
-
-    KOS_suspend_context(ctx);
-
-    inst_init = 1;
-
-    error = KOS_instance_add_default_path(new_ctx, KOS_NULL);
-    if (error)
-        RAISE_EXCEPTION_STR(str_err_default_path);
-
-    error = KOS_modules_init(new_ctx);
-    if (error)
-        RAISE_EXCEPTION_STR(str_err_modules_init);
-
-    arg_id = KOS_repl(new_ctx, name_cstr.buffer, KOS_RUN_ONCE, &module_obj, (const char *)data, data_size);
-    if (IS_BAD_PTR(arg_id)) {
-        KOS_print_exception(new_ctx, KOS_STDERR);
-        RAISE_EXCEPTION_STR(str_err_execute);
-    }
-
-    arg_id = KOS_module_run_function(new_ctx, module_obj, KOS_CONST_ID(str_main), KOS_FUNC_OPTIONAL);
-    if (IS_BAD_PTR(arg_id)) {
-        KOS_print_exception(new_ctx, KOS_STDERR);
-        RAISE_EXCEPTION_STR(str_err_execute);
-    }
+    ret = KOS_repl(ctx, name_cstr.buffer, KOS_RUN_EVAL, KOS_NULL, data, data_size);
 
 cleanup:
-    if (inst_init) {
-        KOS_instance_destroy(&new_inst);
-        KOS_resume_context(ctx);
-    }
-
     KOS_destroy_top_local(ctx, &name);
 
     KOS_vector_destroy(&name_cstr);
     KOS_vector_destroy(&data_cstr);
 
-    return error ? KOS_BADPTR : KOS_VOID;
+    return error ? KOS_BADPTR : ret;
 }
 
 /* @item kos version

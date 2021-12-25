@@ -35,7 +35,8 @@ enum KOS_REPL_FLAGS_E {
     KOS_RUN_ONCE         = 1,
     KOS_INIT_REPL        = 2,
     KOS_RUN_AGAIN        = 3,
-    KOS_RUN_STDIN        = 4
+    KOS_RUN_EVAL         = 4,
+    KOS_RUN_STDIN        = 5
 };
 
 KOS_API

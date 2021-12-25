@@ -5,6 +5,7 @@ import base
 import kos
 import fs
 import io
+import test_tools.shared
 
 fun expect_fail(function)
 {
@@ -236,4 +237,31 @@ do {
 
     run_execute_test(test_script)
     run_execute_test(base.buffer(test_script), "from buffer")
+}
+
+do {
+    assert kos.execute("return 42") == 42
+}
+
+do {
+    assert shared.size == 0
+
+    # push() is the last statement which returns 0
+    assert kos.execute("import test_tools.shared ; shared.push(fun(a, b) { return a + b + 1 })") == 0
+
+    assert shared.size == 1
+    assert typeof shared[0] == "function"
+    assert shared[0](2, 4) == 7
+}
+
+do {
+    var exc = void
+    try {
+        kos.execute("throw \"hello\"")
+    }
+    catch const e {
+        exc = e.value
+    }
+
+    assert exc == "hello"
 }

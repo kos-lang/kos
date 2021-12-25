@@ -1241,7 +1241,11 @@ static int compile_module(KOS_CONTEXT           ctx,
     TRY(error);
 
     /* Import base module if necessary */
-    if ((flags == KOS_RUN_ONCE) || (flags == KOS_INIT_REPL) || (flags == KOS_RUN_STDIN)) {
+    if ((flags == KOS_RUN_ONCE) ||
+        (flags == KOS_INIT_REPL) ||
+        (flags == KOS_RUN_EVAL) ||
+        (flags == KOS_RUN_STDIN)) {
+
         if (kos_parser_import_base(&parser, ast)) {
             KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
@@ -1926,7 +1930,7 @@ KOS_OBJ_ID KOS_repl(KOS_CONTEXT           ctx,
     TRY(load_base_module(ctx, module_name, name_size));
 
     /* Find module object */
-    {
+    if (flags != KOS_RUN_EVAL) {
         KOS_OBJ_ID module_idx_obj = KOS_get_property_shallow(ctx, inst->modules.module_names, module_name_str.o);
 
         KOS_clear_exception(ctx);
@@ -1972,7 +1976,7 @@ KOS_OBJ_ID KOS_repl(KOS_CONTEXT           ctx,
     TRY(compile_module(ctx, module.o, (uint16_t)module_idx, buf, buf_size, flags));
 
     /* Put module on the list */
-    if (flags != KOS_RUN_AGAIN) {
+    if ((flags != KOS_RUN_AGAIN) && (flags != KOS_RUN_EVAL)) {
         TRY(KOS_array_write(ctx, inst->modules.modules, (uint16_t)module_idx, module.o));
         TRY(KOS_set_property(ctx, inst->modules.module_names, module_name_str.o, TO_SMALL_INT(module_idx)));
     }
