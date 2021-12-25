@@ -401,18 +401,30 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx,
 
     if (GET_OBJ_TYPE(arg_id) == OBJ_STRING) {
         TRY(KOS_string_to_cstr_vec(ctx, arg_id, &data_cstr));
-        data      = data_cstr.buffer;
         data_size = (unsigned)data_cstr.size - 1;
     }
     else if (GET_OBJ_TYPE(arg_id) == OBJ_BUFFER) {
         data_size = KOS_get_buffer_size(arg_id);
-        data      = data_size ? (const char *)KOS_buffer_data_const(arg_id) : KOS_NULL;
+
+        if (data_size) {
+            if (KOS_vector_resize(&data_cstr, data_size)) {
+                KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+                goto cleanup;
+            }
+
+            memcpy(data_cstr.buffer, KOS_buffer_data_const(arg_id), data_size);
+        }
     }
     else
         RAISE_EXCEPTION_STR(str_err_script_not_buffer);
 
+    data = data_cstr.buffer;
+
     if (name.o == KOS_VOID) {
-        TRY(KOS_vector_resize(&name_cstr, 1));
+        if (KOS_vector_resize(&name_cstr, 1)) {
+            KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+            goto cleanup;
+        }
         name_cstr.buffer[0] = 0;
     }
     else {
