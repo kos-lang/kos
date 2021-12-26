@@ -241,6 +241,8 @@ do {
 
 do {
     assert kos.execute("return 42") == 42
+    assert kos.execute("72") == 72
+    assert kos.execute("") == void
 }
 
 do {
@@ -264,4 +266,10 @@ do {
     }
 
     assert exc == "hello"
+}
+
+do {
+    expect_fail(() => kos.execute("$invalid$ syntax error"))
+    expect_fail(() => kos.execute("var redeclared = 0; var redeclared = 1"))
+    expect_fail(() => kos.execute("import nonexistentmodule"))
 }
