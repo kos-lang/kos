@@ -372,6 +372,9 @@ static void finalize_object(KOS_CONTEXT     ctx,
 
             if (obj->data) {
 
+                if ( ! IS_BAD_PTR(obj->object))
+                    finalize_object(ctx, (KOS_OBJ_HEADER *)((intptr_t)obj->object - 1), stats);
+
                 gc_trace(("free huge %p\n", (void *)obj->data));
 
                 KOS_free_aligned(obj->data);
