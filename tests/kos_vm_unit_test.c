@@ -93,7 +93,7 @@ static int test_instr(KOS_CONTEXT           ctx,
         return KOS_ERROR_EXCEPTION;
     }
 
-    memset(module, 0, sizeof(*module));
+    memset((void *)module, 0, sizeof(KOS_MODULE));
 
     constants = KOS_new_array(ctx, MAX_ARGS + 4);
     if (IS_BAD_PTR(constants)) {
