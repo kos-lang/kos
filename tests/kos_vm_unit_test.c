@@ -93,6 +93,8 @@ static int test_instr(KOS_CONTEXT           ctx,
         return KOS_ERROR_EXCEPTION;
     }
 
+    memset(module, 0, sizeof(*module));
+
     constants = KOS_new_array(ctx, MAX_ARGS + 4);
     if (IS_BAD_PTR(constants)) {
         printf("Failed: Unable to allocate constants!\n");
