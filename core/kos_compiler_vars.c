@@ -564,7 +564,9 @@ static int import(KOS_COMP_UNIT *program,
                                                 node->token.length,
                                                 import_global,
                                                 &info);
-                if (error && (error != KOS_ERROR_OUT_OF_MEMORY)) {
+                if (error) {
+                    if (error == KOS_ERROR_COMPILE_FAILED || error == KOS_ERROR_OUT_OF_MEMORY)
+                        goto cleanup;
                     program->error_token = &node->token;
                     program->error_str   = str_err_no_such_module_variable;
                     RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
