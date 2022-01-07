@@ -269,7 +269,12 @@ do {
 }
 
 do {
+    assert kos.execute("typeof print", "", true)
+}
+
+do {
     expect_fail(() => kos.execute("$invalid$ syntax error"))
     expect_fail(() => kos.execute("var redeclared = 0; var redeclared = 1"))
     expect_fail(() => kos.execute("import nonexistentmodule"))
+    expect_fail(() => kos.execute("typeof print", "", false))
 }

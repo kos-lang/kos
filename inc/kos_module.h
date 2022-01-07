@@ -31,21 +31,21 @@ KOS_API
 KOS_OBJ_ID KOS_run_module(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj);
 
 enum KOS_REPL_FLAGS_E {
-    KOS_RUN_ONCE_NO_BASE = 0,
-    KOS_RUN_ONCE         = 1,
-    KOS_INIT_REPL        = 2,
-    KOS_RUN_AGAIN        = 3,
-    KOS_RUN_EVAL         = 4,
-    KOS_RUN_STDIN        = 5
+    KOS_RUN_NO_FLAGS     = 0,
+    KOS_IMPORT_BASE      = 1,
+    KOS_RUN_INTERACTIVE  = 2,
+    KOS_RUN_TEMPORARY    = 4,
+    KOS_RUN_CONTINUE     = 8,
+    KOS_RUN_STDIN        = 16
 };
 
 KOS_API
-KOS_OBJ_ID KOS_repl(KOS_CONTEXT           ctx,
-                    const char           *module_name,
-                    enum KOS_REPL_FLAGS_E flags,
-                    KOS_OBJ_ID           *out_module,
-                    const char           *buf,
-                    unsigned              buf_size);
+KOS_OBJ_ID KOS_repl(KOS_CONTEXT ctx,
+                    const char *module_name,
+                    unsigned    flags,
+                    KOS_OBJ_ID *out_module,
+                    const char *buf,
+                    unsigned    buf_size);
 
 enum KOS_RUN_FUNC_FLAGS_E {
     KOS_FUNC_OPTIONAL,

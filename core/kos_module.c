@@ -1183,12 +1183,12 @@ static int print_func(void *cookie, uint32_t func_index)
     return KOS_SUCCESS;
 }
 
-static int compile_module(KOS_CONTEXT           ctx,
-                          KOS_OBJ_ID            module_obj,
-                          uint16_t              module_idx,
-                          const char           *data,
-                          unsigned              data_size,
-                          enum KOS_REPL_FLAGS_E flags)
+static int compile_module(KOS_CONTEXT ctx,
+                          KOS_OBJ_ID  module_obj,
+                          uint16_t    module_idx,
+                          const char *data,
+                          unsigned    data_size,
+                          unsigned    flags)
 {
     PROF_ZONE(MODULE)
 
@@ -1241,11 +1241,7 @@ static int compile_module(KOS_CONTEXT           ctx,
     TRY(error);
 
     /* Import base module if necessary */
-    if ((flags == KOS_RUN_ONCE) ||
-        (flags == KOS_INIT_REPL) ||
-        (flags == KOS_RUN_EVAL) ||
-        (flags == KOS_RUN_STDIN)) {
-
+    if ((flags & KOS_IMPORT_BASE)) {
         if (kos_parser_import_base(&parser, ast)) {
             KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
@@ -1260,7 +1256,7 @@ static int compile_module(KOS_CONTEXT           ctx,
 
     /* Prepare compiler */
     program.ctx            = ctx;
-    program.is_interactive = ((flags == KOS_INIT_REPL) || (flags == KOS_RUN_AGAIN)) ? 1 : 0;
+    program.is_interactive = (flags & KOS_RUN_INTERACTIVE) ? 1 : 0;
     TRY(predefine_globals(ctx,
                           &program,
                           OBJPTR(MODULE, module.o)->global_names,
@@ -1770,7 +1766,7 @@ static KOS_OBJ_ID import_module(KOS_CONTEXT ctx,
     }
 
     /* Compile module source to bytecode */
-    TRY(compile_module(ctx, module.o, (uint16_t)module_idx, data, data_size, KOS_RUN_ONCE_NO_BASE));
+    TRY(compile_module(ctx, module.o, (uint16_t)module_idx, data, data_size, KOS_RUN_NO_FLAGS));
 
     /* Free file buffer */
     KOS_unload_file(&file_buf);
@@ -1882,12 +1878,12 @@ cleanup:
     return error;
 }
 
-KOS_OBJ_ID KOS_repl(KOS_CONTEXT           ctx,
-                    const char           *module_name,
-                    enum KOS_REPL_FLAGS_E flags,
-                    KOS_OBJ_ID           *out_module,
-                    const char           *buf,
-                    unsigned              buf_size)
+KOS_OBJ_ID KOS_repl(KOS_CONTEXT ctx,
+                    const char *module_name,
+                    unsigned    flags,
+                    KOS_OBJ_ID *out_module,
+                    const char *buf,
+                    unsigned    buf_size)
 {
     KOS_MODULE_LOAD_CHAIN loading    = { KOS_NULL, KOS_NULL, 0 };
     KOS_VECTOR            storage;
@@ -1895,12 +1891,16 @@ KOS_OBJ_ID KOS_repl(KOS_CONTEXT           ctx,
     KOS_LOCAL             module_name_str;
     KOS_OBJ_ID            ret        = KOS_BADPTR;
     KOS_INSTANCE         *inst       = ctx->inst;
-    const unsigned        name_size  = (unsigned)strlen(module_name);
+    static const char     unnamed[]  = "<unnamed>";
+    const unsigned        name_size  = module_name[0] ? (unsigned)strlen(module_name) : (unsigned)sizeof(unnamed) - 1;
     int                   chain_init = 0;
     int                   module_idx = -1;
     int                   error      = KOS_SUCCESS;
 
-    assert(flags != KOS_RUN_ONCE_NO_BASE);
+    assert(flags);
+
+    if ( ! module_name[0])
+        module_name = unnamed;
 
     KOS_vector_init(&storage);
 
@@ -1908,19 +1908,30 @@ KOS_OBJ_ID KOS_repl(KOS_CONTEXT           ctx,
 
     /* TODO use global mutex for thread safety */
 
-    if ((flags == KOS_RUN_STDIN) || (flags == KOS_INIT_REPL)) {
+    if ((flags & KOS_RUN_STDIN)) {
         assert( ! buf);
         assert( ! buf_size);
-    }
 
-    if (flags == KOS_RUN_STDIN) {
         TRY(append_stdin(ctx, &storage));
 
         buf      = storage.buffer;
         buf_size = (unsigned)storage.size;
     }
+    else if ((flags & KOS_IMPORT_BASE)) {
+        if ( ! buf_size) {
+            buf      = " ";
+            buf_size = 1;
+        }
+    }
 
-    if (flags != KOS_RUN_AGAIN)
+    if ( ! buf_size) {
+        ret = KOS_VOID;
+        goto cleanup;
+    }
+
+    assert(buf);
+
+    if ( ! (flags & KOS_RUN_CONTINUE))
         TRY(insert_first_search_path(ctx, KOS_CONST_ID(str_cur_dir)));
 
     module_name_str.o = KOS_new_string(ctx, module_name, name_size);
@@ -1930,17 +1941,17 @@ KOS_OBJ_ID KOS_repl(KOS_CONTEXT           ctx,
     TRY(load_base_module(ctx, module_name, name_size));
 
     /* Find module object */
-    if (flags != KOS_RUN_EVAL) {
+    if ( ! (flags & KOS_RUN_TEMPORARY)) {
         KOS_OBJ_ID module_idx_obj = KOS_get_property_shallow(ctx, inst->modules.module_names, module_name_str.o);
 
         KOS_clear_exception(ctx);
 
-        if ((flags == KOS_RUN_AGAIN) && IS_BAD_PTR(module_idx_obj)) {
+        if ((flags & KOS_RUN_CONTINUE) && IS_BAD_PTR(module_idx_obj)) {
             KOS_raise_printf(ctx, "module \"%s\" not found", module_name);
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
 
-        if ((flags != KOS_RUN_AGAIN) && ! IS_BAD_PTR(module_idx_obj)) {
+        if ( ! (flags & KOS_RUN_CONTINUE) && ! IS_BAD_PTR(module_idx_obj)) {
             KOS_raise_printf(ctx, "module \"%s\" already loaded", module_name);
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
@@ -1962,12 +1973,13 @@ KOS_OBJ_ID KOS_repl(KOS_CONTEXT           ctx,
 
     /* Allocate module object and reserve module index */
     if (module_idx == -1) {
-        assert(flags != KOS_RUN_AGAIN);
+        assert( ! (flags & KOS_RUN_CONTINUE));
+        /* TODO don't accumulate if KOS_RUN_TEMPORARY */
         module.o = alloc_module(ctx, module_name_str.o, &module_idx);
         TRY_OBJID(module.o);
     }
     else {
-        assert(flags == KOS_RUN_AGAIN);
+        assert((flags & KOS_RUN_CONTINUE));
     }
 
     assert(module_idx <= 0xFFFF);
@@ -1976,7 +1988,7 @@ KOS_OBJ_ID KOS_repl(KOS_CONTEXT           ctx,
     TRY(compile_module(ctx, module.o, (uint16_t)module_idx, buf, buf_size, flags));
 
     /* Put module on the list */
-    if ((flags != KOS_RUN_AGAIN) && (flags != KOS_RUN_EVAL)) {
+    if ( ! (flags & (KOS_RUN_CONTINUE | KOS_RUN_TEMPORARY))) {
         TRY(KOS_array_write(ctx, inst->modules.modules, (uint16_t)module_idx, module.o));
         TRY(KOS_set_property(ctx, inst->modules.module_names, module_name_str.o, TO_SMALL_INT(module_idx)));
     }

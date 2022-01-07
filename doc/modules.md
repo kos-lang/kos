@@ -3777,13 +3777,16 @@ ran out of memory.
 execute()
 ---------
 
-    execute(script, name = "")
+    execute(script, name = "", base = true)
 
 Executes a Kos script in a new temporary module.
 
 `script` is either a buffer or a string containing the script to execute.
 
 `name` is optional module name, used in messages.
+
+`base` is a boolean indicating whether contents of the base module should
+be imported into the script, it defaults to `true`.
 
 This function pauses and waits until the script finishes executing.
 

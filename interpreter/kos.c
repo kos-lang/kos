@@ -259,7 +259,7 @@ int main(int argc, char *argv[])
 
         /* Load script from command line */
         if (is_script) {
-            const KOS_OBJ_ID ret = KOS_repl(ctx, str_cmdline, KOS_RUN_ONCE, &module_obj, argv[i_module], mod_name_len);
+            const KOS_OBJ_ID ret = KOS_repl(ctx, str_cmdline, KOS_IMPORT_BASE, &module_obj, argv[i_module], mod_name_len);
             if (IS_BAD_PTR(ret))
                 error = KOS_ERROR_EXCEPTION;
         }
@@ -299,7 +299,7 @@ int main(int argc, char *argv[])
             KOS_OBJ_ID module_obj = KOS_BADPTR;
             KOS_OBJ_ID ret;
 
-            ret = KOS_repl(ctx, str_stdin, KOS_RUN_STDIN, &module_obj, KOS_NULL, 0);
+            ret = KOS_repl(ctx, str_stdin, KOS_RUN_STDIN | KOS_IMPORT_BASE, &module_obj, KOS_NULL, 0);
 
             if ( ! IS_BAD_PTR(ret))
                 ret = KOS_module_run_function(ctx, module_obj, KOS_CONST_ID(str_main), KOS_FUNC_OPTIONAL);
@@ -437,7 +437,7 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
 
     /* Initialize module */
     {
-        KOS_OBJ_ID ret = KOS_repl(ctx, str_stdin, KOS_INIT_REPL, KOS_NULL, KOS_NULL, 0);
+        KOS_OBJ_ID ret = KOS_repl(ctx, str_stdin, KOS_IMPORT_BASE | KOS_RUN_INTERACTIVE, KOS_NULL, KOS_NULL, 0);
         if (IS_BAD_PTR(ret))
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
@@ -517,7 +517,7 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
         if ( ! buf->size)
             continue;
 
-        ret = KOS_repl(ctx, str_stdin, KOS_RUN_AGAIN, KOS_NULL, buf->buffer, (unsigned)buf->size);
+        ret = KOS_repl(ctx, str_stdin, KOS_RUN_INTERACTIVE | KOS_RUN_CONTINUE, KOS_NULL, buf->buffer, (unsigned)buf->size);
         buf->size = 0;
 
         if (IS_BAD_PTR(ret)) {

@@ -22,6 +22,7 @@
 #include "../core/kos_try.h"
 #include <string.h>
 
+KOS_DECLARE_STATIC_CONST_STRING(str_base,                  "base");
 KOS_DECLARE_STATIC_CONST_STRING(str_column,                "column");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_bad_ignore_errors, "`ignore_errors` argument is not a boolean");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_arg,       "invalid argument");
@@ -350,21 +351,25 @@ cleanup:
     return error ? KOS_BADPTR : out.o;
 }
 
-static const KOS_CONVERT execute_args[3] = {
+static const KOS_CONVERT execute_args[4] = {
     KOS_DEFINE_MANDATORY_ARG(str_script),
     KOS_DEFINE_OPTIONAL_ARG( str_name, KOS_VOID),
+    KOS_DEFINE_OPTIONAL_ARG( str_base, KOS_TRUE),
     KOS_DEFINE_TAIL_ARG()
 };
 
 /* @item kos execute()
  *
- *     execute(script, name = "")
+ *     execute(script, name = "", base = true)
  *
  * Executes a Kos script in a new temporary module.
  *
  * `script` is either a buffer or a string containing the script to execute.
  *
  * `name` is optional module name, used in messages.
+ *
+ * `base` is a boolean indicating whether contents of the base module should
+ * be imported into the script, it defaults to `true`.
  *
  * This function pauses and waits until the script finishes executing.
  *
@@ -381,6 +386,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx,
     KOS_OBJ_ID   ret        = KOS_VOID;
     const char  *data       = KOS_NULL;
     unsigned     data_size  = 0;
+    unsigned     flags      = KOS_RUN_TEMPORARY;
     int          error      = KOS_SUCCESS;
 
     KOS_vector_init(&name_cstr);
@@ -388,13 +394,17 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx,
 
     KOS_init_local(ctx, &name);
 
+    assert(KOS_get_array_size(args_obj) > 1);
+
+    arg_id = KOS_array_read(ctx, args_obj, 2);
+    if (arg_id == KOS_TRUE)
+        flags |= KOS_IMPORT_BASE;
+
     name.o = KOS_array_read(ctx, args_obj, 1);
     TRY_OBJID(name.o);
 
     if ((name.o != KOS_VOID) && (GET_OBJ_TYPE(name.o) != OBJ_STRING))
         RAISE_EXCEPTION_STR(str_err_name_not_string);
-
-    assert(KOS_get_array_size(args_obj) > 0);
 
     arg_id = KOS_array_read(ctx, args_obj, 0);
     TRY_OBJID(arg_id);
@@ -432,7 +442,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx,
         name.o = KOS_VOID;
     }
 
-    ret = KOS_repl(ctx, name_cstr.buffer, KOS_RUN_EVAL, KOS_NULL, data, data_size);
+    ret = KOS_repl(ctx, name_cstr.buffer, flags, KOS_NULL, data, data_size);
 
 cleanup:
     KOS_destroy_top_local(ctx, &name);
