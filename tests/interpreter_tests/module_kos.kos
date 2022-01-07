@@ -278,3 +278,15 @@ do {
     expect_fail(() => kos.execute("import nonexistentmodule"))
     expect_fail(() => kos.execute("typeof print", "", false))
 }
+
+public var stage = 0
+
+# Import self from a script and make sure importing the same module multiple
+# times doesn't re-run it
+do {
+    assert kos.execute("import module_kos.stage; stage") == 0
+    stage = 1
+    assert kos.execute("import module_kos.stage; stage") == 1
+    stage = 2
+    assert kos.execute("import module_kos.stage; stage") == 2
+}

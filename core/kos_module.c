@@ -1530,6 +1530,7 @@ static KOS_OBJ_ID import_module(KOS_CONTEXT ctx,
                                 int         is_path,
                                 const char *data,
                                 unsigned    data_size,
+                                int        *out_already_loaded,
                                 int        *out_module_idx);
 
 static int load_base_module(KOS_CONTEXT ctx,
@@ -1548,7 +1549,7 @@ static int load_base_module(KOS_CONTEXT ctx,
     if (inst->flags & KOS_INST_VERBOSE)
         print_search_paths(ctx, inst->modules.search_paths);
 
-    base_obj = import_module(ctx, base, sizeof(base) - 1, 0, KOS_NULL, 0, &base_idx);
+    base_obj = import_module(ctx, base, sizeof(base) - 1, 0, KOS_NULL, 0, KOS_NULL, &base_idx);
     TRY_OBJID(base_obj);
 
     assert(base_idx == KOS_BASE_MODULE_IDX);
@@ -1604,6 +1605,7 @@ static KOS_OBJ_ID import_module(KOS_CONTEXT ctx,
                                 int         is_path,     /* Module name can be a path              */
                                 const char *data,        /* Module data or 0 if load from file     */
                                 unsigned    data_size,   /* Data length if data is not 0           */
+                                int        *out_already_loaded,
                                 int        *out_module_idx)
 {
     PROF_ZONE(MODULE)
@@ -1701,8 +1703,11 @@ static KOS_OBJ_ID import_module(KOS_CONTEXT ctx,
             module.o = KOS_array_read(ctx, inst->modules.modules, (int)GET_SMALL_INT(module_idx_obj));
             if (IS_BAD_PTR(module.o))
                 error = KOS_ERROR_EXCEPTION;
-            else
+            else {
                 module_idx = (int)GET_SMALL_INT(module_idx_obj);
+                if (out_already_loaded)
+                    *out_already_loaded = 1;
+            }
             goto cleanup;
         }
     }
@@ -1799,7 +1804,7 @@ KOS_OBJ_ID KOS_load_module(KOS_CONTEXT ctx, const char *path, unsigned path_len)
 {
     int idx;
 
-    return import_module(ctx, path, path_len, 1, KOS_NULL, 0, &idx);
+    return import_module(ctx, path, path_len, 1, KOS_NULL, 0, KOS_NULL, &idx);
 }
 
 KOS_OBJ_ID KOS_load_module_from_memory(KOS_CONTEXT ctx,
@@ -1810,13 +1815,7 @@ KOS_OBJ_ID KOS_load_module_from_memory(KOS_CONTEXT ctx,
 {
     int idx;
 
-    return import_module(ctx,
-                         module_name,
-                         module_name_len,
-                         0,
-                         buf,
-                         buf_size,
-                         &idx);
+    return import_module(ctx, module_name, module_name_len, 0, buf, buf_size, KOS_NULL, &idx);
 }
 
 int kos_comp_import_module(void       *vframe,
@@ -1826,22 +1825,24 @@ int kos_comp_import_module(void       *vframe,
 {
     KOS_CONTEXT ctx = (KOS_CONTEXT)vframe;
     KOS_OBJ_ID  module_obj;
-    KOS_OBJ_ID  ret;
+    int         already_loaded = 0;
 
     assert(module_idx);
 
-    module_obj = import_module(ctx, name, length, 0, KOS_NULL, 0, module_idx);
+    module_obj = import_module(ctx, name, length, 0, KOS_NULL, 0, &already_loaded, module_idx);
 
     if (IS_BAD_PTR(module_obj)) {
         assert(KOS_is_exception_pending(ctx));
         return KOS_ERROR_EXCEPTION;
     }
 
-    ret = KOS_run_module(ctx, module_obj);
+    if ( ! already_loaded) {
+        const KOS_OBJ_ID ret = KOS_run_module(ctx, module_obj);
 
-    if (IS_BAD_PTR(ret)) {
-        assert(KOS_is_exception_pending(ctx));
-        return KOS_ERROR_EXCEPTION;
+        if (IS_BAD_PTR(ret)) {
+            assert(KOS_is_exception_pending(ctx));
+            return KOS_ERROR_EXCEPTION;
+        }
     }
 
     return KOS_SUCCESS;
