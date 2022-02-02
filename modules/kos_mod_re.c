@@ -725,6 +725,8 @@ static int parse_escape_seq(struct RE_PARSE_CTX *re_ctx)
 
     switch (code) {
 
+        case '.':
+            /* fall through */
         case '*':
             /* fall through */
         case '+':

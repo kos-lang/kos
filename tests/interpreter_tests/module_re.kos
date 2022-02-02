@@ -597,3 +597,12 @@ do {
     assert r2.match_groups[0] == void
     assert r2.match_groups[1] == "###  "
 }
+
+do {
+    const r = re.re(r"a\.")
+
+    const r1 = r.find("bca.x")
+    assert r1.match == "a."
+    assert r1.begin == 2
+    assert r1.end   == 4
+}
