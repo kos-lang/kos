@@ -3594,6 +3594,7 @@ static int invocation(KOS_COMP_UNIT      *program,
 
     if (node->children->type == NT_SUPER_CTOR_LITERAL) {
         assert(instr == INSTR_CALL);
+        assert(program->cur_frame->this_reg);
         return super_invocation(program, node, reg);
     }
 

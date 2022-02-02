@@ -1311,6 +1311,32 @@ do {
     assert b.get_bb() == "bb"
 }
 
+# Throw 'this' value returned by super constructor
+do {
+    class base {
+        constructor(a) {
+            this.a = a
+        }
+    }
+    class super_throw extends base {
+        constructor(a) {
+            throw super(a)
+        }
+    }
+    var exc = void
+    var ret = void
+    try {
+        ret = super_throw(123)
+    }
+    catch const e {
+        exc = e.value
+    }
+    assert ret == void
+    assert exc != void
+    assert "a" in exc
+    assert exc.a == 123
+}
+
 ##############################################################################
 # base.object
 

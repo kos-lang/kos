@@ -2059,6 +2059,13 @@ static int invocation(KOS_COMP_UNIT *program, KOS_AST_NODE *node)
             scope->uses_this = 1;
         }
     }
+    else if (child_node->type == NT_SUPER_CTOR_LITERAL) {
+        KOS_SCOPE *const scope = &program->cur_frame->scope;
+
+        assert(scope->is_function);
+
+        scope->uses_this = 1;
+    }
 
     return visit_child_nodes(program, node);
 }
