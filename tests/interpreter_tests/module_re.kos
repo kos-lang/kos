@@ -83,6 +83,7 @@ do {
     expect_fail(() => re.re(r"(?)"))
     expect_fail(() => re.re(r"(??)"))
     expect_fail(() => re.re(r"(?:"))
+    expect_fail(() => re.re("\\\\\\\x{400200}"))
 }
 
 do {

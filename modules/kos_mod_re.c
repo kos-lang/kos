@@ -332,9 +332,15 @@ static void encode_utf8(uint32_t code, char *buf, size_t buf_size)
 {
     const unsigned len = KOS_utf8_calc_buf_size_32(&code, 1);
 
-    assert(len < buf_size);
-    KOS_utf8_encode_32(&code, 1, (uint8_t *)buf);
-    buf[len] = 0;
+    if (len != ~0U) {
+        assert(len < buf_size);
+        KOS_utf8_encode_32(&code, 1, (uint8_t *)buf);
+        buf[len] = 0;
+    }
+    else {
+        buf[0] = '?';
+        buf[1] = 0;
+    }
 }
 
 static int expect_char(struct RE_PARSE_CTX *re_ctx, char c)
