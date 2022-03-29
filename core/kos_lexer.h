@@ -179,6 +179,10 @@ void kos_lexer_init(KOS_LEXER  *lexer,
                     const char *begin,
                     const char *end);
 
+void kos_lexer_update(KOS_LEXER  *lexer,
+                      const char *begin,
+                      const char *end);
+
 int  kos_lexer_next_token(KOS_LEXER          *lexer,
                           KOS_NEXT_TOKEN_MODE mode,
                           KOS_TOKEN          *token);

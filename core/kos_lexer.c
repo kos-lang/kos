@@ -820,6 +820,22 @@ static void set_seq_fail(const char *begin, const char *end)
 #   define set_seq_fail(begin, end) ((void)0)
 #endif
 
+static void skip_bom(KOS_LEXER *lexer)
+{
+    const char *begin   = lexer->prefetch_begin;
+    const char *buf_end = lexer->buf_end;
+    const char *bom_end = begin + 3;
+
+    if (bom_end <= buf_end &&
+        begin[0] == '\xEF' &&
+        begin[1] == '\xBB' &&
+        begin[2] == '\xBF') {
+
+        lexer->prefetch_begin = bom_end;
+        lexer->prefetch_end   = bom_end;
+    }
+}
+
 void kos_lexer_init(KOS_LEXER  *lexer,
                     uint16_t    file_id,
                     const char *begin,
@@ -838,14 +854,22 @@ void kos_lexer_init(KOS_LEXER  *lexer,
     lexer->old_pos.column  = 0;
 
     /* Ignore UTF-8 byte order mark at the beginning of a file */
-    if ((uintptr_t)begin + 3U <= (uintptr_t)end &&
-        begin[0] == '\xEF' &&
-        begin[1] == '\xBB' &&
-        begin[2] == '\xBF') {
+    skip_bom(lexer);
+}
 
-        lexer->prefetch_begin += 3;
-        lexer->prefetch_end   += 3;
-    }
+void kos_lexer_update(KOS_LEXER  *lexer,
+                      const char *begin,
+                      const char *end)
+{
+    assert(lexer->pos.line >= 1);
+    assert(lexer->error_str == KOS_NULL);
+
+    lexer->buf             = begin;
+    lexer->buf_end         = end;
+    lexer->prefetch_begin  = begin;
+    lexer->prefetch_end    = begin;
+
+    --lexer->pos.column;
 }
 
 int kos_lexer_next_token(KOS_LEXER          *lexer,
