@@ -3,15 +3,19 @@
 
 /* @item kos lexer()
  *
- *     lexer(filename, input)
+ *     lexer(filename, script)
  *
  * Kos lexer generator.
  *
  * `filename` is the name of the script file, which is for informational purposes only.
  *
- * `input` is a buffer containing UTF-8-encoded Kos script to parse.
+ * `script` is a string, buffer or generator containing Kos script to parse.
  *
- * The generator yields subsequent tokens parsed from the `input` script.  Each yielded
+ * If `script` is a generator, it must produce strings.  Each of these strings will be
+ * subsequently parsed for consecutive tokens.  The occurrence of EOL characters is used
+ * to signify ends of lines.  Tokens cannot span across subsequent strings.
+ *
+ * The Kos lexer generator yields subsequent tokens parsed from `script`.  Each produced
  * token is an object which has the following properties:
  *
  *  * `token` - string which represents the full token.
@@ -22,9 +26,9 @@
  *  * `op` - integer which is the operator type, one of the `op_*` constants.
  *  * `sep` - integer which is the separator type, one of the `sep_*` constants.
  */
-public fun lexer(filename, input)
+public fun lexer(filename, script)
 {
-    const next = raw_lexer(input)
+    const next = raw_lexer(script)
 
     const brackets = []
 
@@ -54,6 +58,7 @@ public fun lexer(filename, input)
             case sep_paren_close,
                  sep_square_close,
                  sep_curly_close {
+
                 if ! brackets.size {
                     throw_token(token, "unexpected '\(token.token)'")
                 }

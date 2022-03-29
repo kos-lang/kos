@@ -22,44 +22,72 @@ fun expect_fail(function)
     assert failed
 }
 
+fun check_token(idx, token, expected, field)
+{
+    const cur_value = token[field]
+    const exp_value = expected[idx][field]
+    const sep       = typeof exp_value == "string" ? "'" : ""
+    if cur_value != exp_value {
+        io.stderr.print("expected '\(field)' at index \(idx) to be \(sep)\(exp_value
+                         )\(sep) but got \(sep)\(cur_value)\(sep)")
+    }
+    assert cur_value == exp_value
+}
+
+fun check_all_tokens(lexer, expected)
+{
+    for const i, token in base.enumerate(lexer) {
+        assert i < expected.size
+        for const field, _ in expected[i] {
+            check_token(i, token, expected, field)
+        }
+    }
+}
+
 do {
-    const buf = base.buffer();
-    buf.pack("s", "try/*comment*/+0=0x44")
-    const expected = [ [  1, "token_keyword",  "try"         ],
-                       [  4, "token_comment",  "/*comment*/" ],
-                       [ 15, "token_operator", "+"           ],
-                       [ 16, "token_numeric",  "0"           ],
-                       [ 17, "token_operator", "="           ],
-                       [ 18, "token_numeric",  "0x44"        ] ]
-    var idx = 0
+    const script = "try/*comment*/+0=0x44"
 
-    for var token in kos.raw_lexer(buf) {
-        assert token.line   == 1
-        assert token.column == expected[idx][0]
-        assert token.type   == kos[expected[idx][1]]
-        assert token.token  == expected[idx][2]
-        idx += 1
+    const expected = [
+        { line: 1, column: 1,  type: kos.token_keyword,    token: "try"         },
+        { line: 1, column: 4,  type: kos.token_comment,    token: "/*comment*/" },
+        { line: 1, column: 15, type: kos.token_operator,   token: "+"           },
+        { line: 1, column: 16, type: kos.token_numeric,    token: "0"           },
+        { line: 1, column: 17, type: kos.token_operator,   token: "="           },
+        { line: 1, column: 18, type: kos.token_numeric,    token: "0x44"        },
+    ]
 
-        # Force buffer reallocation in the middle of parsing
-        if idx == 3 {
-            buf.reserve(1024)
+    check_all_tokens(kos.raw_lexer(script), expected)
+    check_all_tokens(kos.raw_lexer(base.buffer(script)), expected)
+    check_all_tokens(kos.lexer("file", script), expected)
+    check_all_tokens(kos.lexer("file", base.buffer(script)), expected)
+
+    fun realloc_buf_lexer(script)
+    {
+        const buf = base.buffer()
+        buf.pack("s", script)
+
+        for const i, token in base.enumerate(kos.raw_lexer(buf)) {
+            if i == 2 {
+                # Force buffer reallocation in the middle of parsing
+                buf.reserve(65536)
+            }
+
+            yield token
         }
     }
 
-    assert idx == 6
+    check_all_tokens(realloc_buf_lexer(script), expected)
 }
 
 do {
     expect_fail(fun {
-        const buf = base.buffer()
-        buf.pack("s", "'")
-        const it = kos.raw_lexer(buf)
+        const it = kos.raw_lexer("'")
         it()
     })
 }
 
 do {
-    const lexer = base.buffer().pack("s", ")hello\"") -> kos.raw_lexer
+    const lexer = kos.raw_lexer(")hello\"")
 
     const t1 = lexer()
     assert t1.line   == 1
@@ -78,7 +106,7 @@ do {
 }
 
 do {
-    const lexer = base.buffer().pack("s", ")str\"") -> kos.raw_lexer
+    const lexer = kos.raw_lexer(")str\"")
     const t     = lexer(kos.continue_string)
 
     assert t.type  == kos.token_separator
@@ -87,7 +115,7 @@ do {
 }
 
 do {
-    const lexer = base.buffer().pack("s", "\"a\\()b\"") -> kos.raw_lexer
+    const lexer = kos.raw_lexer("\"a\\()b\"")
 
     const t1 = lexer()
     assert t1.line   == 1
@@ -110,44 +138,34 @@ do {
 }
 
 do {
-    const lexer = base.buffer().pack("s", "(str\"") -> kos.raw_lexer
+    const lexer = kos.raw_lexer("(str\"")
 
     const t1 = lexer()
     expect_fail(()=>lexer(kos.continue_string))
 }
 
 do {
-    const lexer = kos.lexer("filename", base.buffer().pack("s", "{([\"\\()\"])}"))
+    const script = "{([\"\\()\"])}"
 
-    const expected = [ [  1, "token_separator",   "sep_curly_open",   "{"     ],
-                       [  2, "token_separator",   "sep_paren_open",   "("     ],
-                       [  3, "token_separator",   "sep_square_open",  "["     ],
-                       [  4, "token_string_open", "sep_none",         "\"\\(" ], #)\"
-                       [  7, "token_string",      "sep_none",         ")\""   ],
-                       [  9, "token_separator",   "sep_square_close", "]"     ],
-                       [ 10, "token_separator",   "sep_paren_close",  ")"     ],
-                       [ 11, "token_separator",   "sep_curly_close",  "}"     ] ]
+    const expected = [
+        { line: 1, column: 1, type: kos.token_separator,   sep: kos.sep_curly_open,   token: "{"     },
+        { line: 1, column: 2, type: kos.token_separator,   sep: kos.sep_paren_open,   token: "("     },
+        { line: 1, column: 3, type: kos.token_separator,   sep: kos.sep_square_open,  token: "["     },
+        { line: 1, column: 4, type: kos.token_string_open, sep: kos.sep_none,         token: "\"\\(" }, #)\"
+        { line: 1, column: 7, type: kos.token_string,      sep: kos.sep_none,         token: ")\""   },
+        { line: 1, column: 9, type: kos.token_separator,   sep: kos.sep_square_close, token: "]"     },
+        { line: 1, column:10, type: kos.token_separator,   sep: kos.sep_paren_close,  token: ")"     },
+        { line: 1, column:11, type: kos.token_separator,   sep: kos.sep_curly_close,  token: "}"     }
+    ]
 
-    var idx = 0
-
-    for var token in lexer {
-        assert token.line   == 1
-        assert token.column == expected[idx][0]
-        assert token.type   == kos[expected[idx][1]]
-        assert token.sep    == kos[expected[idx][2]]
-        assert token.token  == expected[idx][3]
-        idx += 1
-    }
-
-    assert idx == 8
+    check_all_tokens(kos.lexer("filename", script), expected)
 }
 
 do {
-    const input = "+\\hello"
-    const buf   = base.buffer().pack("s", input)
+    const script = "+\\hello"
 
     do {
-        const lexer = kos.raw_lexer(buf)
+        const lexer = kos.raw_lexer(script)
         const token = lexer()
         assert token.type  == kos.token_operator
         assert token.token == "+"
@@ -156,54 +174,50 @@ do {
         expect_fail(lexer)
     }
 
-    const lexer = kos.raw_lexer(buf, true) # ignore_errors=true
+    const lexer = kos.raw_lexer(script, true) # ignore_errors=true
 
-    const t1 = lexer()
-    assert t1.type   == kos.token_operator
-    assert t1.token  == "+"
-    assert t1.op     == kos.op_add
-    assert t1.line   == 1
-    assert t1.column == 1
+    const expected = [
+        { line: 1, column: 1, type: kos.token_operator,   op: kos.op_add,  sep: kos.sep_none, token: "+"     },
+        { line: 1, column: 2, type: kos.token_whitespace, op: kos.op_none, sep: kos.sep_none, token: "\\"    },
+        { line: 1, column: 3, type: kos.token_identifier, op: kos.op_none, sep: kos.sep_none, token: "hello" },
+    ]
 
-    const t2 = lexer()
-    assert t2.type    == kos.token_whitespace
-    assert t2.token   == "\\"
-    assert t2.keyword == kos.keyword_none
-    assert t2.op      == kos.op_none
-    assert t2.sep     == kos.sep_none
-    assert t2.line    == 1
-    assert t2.column  == 2
-
-    const t3 = lexer()
-    assert t3.type   == kos.token_identifier
-    assert t3.token  == "hello"
-    assert t3.line   == 1
-    assert t3.column == 3
+    check_all_tokens(lexer, expected)
 
     expect_fail(lexer)
 }
 
 do {
-    const input = "123#456"
-    const lexer = kos.raw_lexer(input)
+    const lexer = kos.raw_lexer("123#456")
 
-    const t1 = lexer()
-    assert t1.type   == kos.token_numeric
-    assert t1.token  == "123"
-    assert t1.op     == kos.op_none
-    assert t1.sep    == kos.sep_none
-    assert t1.line   == 1
-    assert t1.column == 1
+    const expected = [
+        { line: 1, column: 1, type: kos.token_numeric, op: kos.op_none, sep: kos.sep_none, token: "123"  },
+        { line: 1, column: 4, type: kos.token_comment, op: kos.op_none, sep: kos.sep_none, token: "#456" },
+    ]
 
-    const t2 = lexer()
-    assert t2.type   == kos.token_comment
-    assert t2.token  == "#456"
-    assert t2.op     == kos.op_none
-    assert t2.sep    == kos.sep_none
-    assert t2.line   == 1
-    assert t2.column == 4
+    check_all_tokens(lexer, expected)
 
     expect_fail(lexer)
+}
+
+do {
+    const lines = [
+        "\n",
+        "\"hello\".void\n",
+        "        12+true"
+    ]
+    const expected = [
+        { line: 1, column: 1,  type: kos.token_eol,        token: "\n"        },
+        { line: 2, column: 1,  type: kos.token_string,     token: "\"hello\"" },
+        { line: 2, column: 8,  type: kos.token_operator,   token: "."         },
+        { line: 2, column: 9,  type: kos.token_keyword,    token: "void"      },
+        { line: 2, column: 13, type: kos.token_eol,        token: "\n"        },
+        { line: 3, column: 1,  type: kos.token_whitespace, token: "        "  },
+        { line: 3, column: 9,  type: kos.token_numeric,    token: "12"        },
+        { line: 3, column: 11, type: kos.token_operator,   token: "+"         },
+        { line: 3, column: 12, type: kos.token_keyword,    token: "true"      },
+    ]
+    check_all_tokens(kos.lexer("", lines.iterator()), expected)
 }
 
 do {
@@ -213,6 +227,40 @@ do {
     for const val in ver {
         assert typeof val == "integer"
     }
+}
+
+do {
+    assert kos.version.size == 3
+
+    var failed = false
+    try {
+        kos.version.resize(1)
+    }
+    catch const e {
+        failed = true
+    }
+
+    assert failed
+    assert kos.version.size == 3
+}
+
+do {
+    const version = kos.version[:]
+
+    var failed = false
+    try {
+        kos.version[1] = version[1] + 10
+    }
+    catch const e {
+        failed = true
+    }
+
+    assert failed
+    assert kos.version[1] == version[1]
+}
+
+do {
+    assert kos.search_paths().any(s => s.ends_with("interpreter_tests"))
 }
 
 do {

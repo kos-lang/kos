@@ -182,6 +182,7 @@ Table of Contents
     * [execute()](#execute)
     * [lexer()](#lexer)
     * [raw\_lexer()](#raw_lexer)
+    * [search\_paths()](#search_paths)
     * [version](#version)
   * [math](#math)
     * [abs()](#abs)
@@ -3888,15 +3889,19 @@ Returns the result of the last statement in `script`.
 lexer()
 -------
 
-    lexer(filename, input)
+    lexer(filename, script)
 
 Kos lexer generator.
 
 `filename` is the name of the script file, which is for informational purposes only.
 
-`input` is a buffer containing UTF-8-encoded Kos script to parse.
+`script` is a string, buffer or generator containing Kos script to parse.
 
-The generator yields subsequent tokens parsed from the `input` script.  Each yielded
+If `script` is a generator, it must produce strings.  Each of these strings will be
+subsequently parsed for consecutive tokens.  The occurrence of EOL characters is used
+to signify ends of lines.  Tokens cannot span across subsequent strings.
+
+The Kos lexer generator yields subsequent tokens parsed from `script`.  Each produced
 token is an object which has the following properties:
 
  * `token` - string which represents the full token.
@@ -3914,7 +3919,11 @@ raw_lexer()
 
 Raw Kos lexer generator.
 
-`script` is a string or a buffer containing Kos script to parse.
+`script` is a string, buffer or generator containing Kos script to parse.
+
+If `script` is a generator, it must produce strings.  Each of these strings will be
+subsequently parsed for consecutive tokens.  The occurrence of EOL characters is used
+to signify ends of lines.  Tokens cannot span across subsequent strings.
 
 `ignore_errors` is a boolean specifying whether any errors that occur should be ignored
 or not.  If `ignore_errors` is `true`, any invalid characters will be returned as whitespace.
@@ -3931,6 +3940,13 @@ after a closing parenthesis was encountered, otherwise the lexer throws an excep
 The drawback of using the raw lexer is that string continuations must be handled manually.
 The benefit of using the raw lexer is that it can be used for parsing non-Kos scripts,
 including C source code.
+
+search_paths()
+--------------
+
+    search_paths()
+
+Returns array containing module search paths used for finding modules to import.
 
 version
 -------

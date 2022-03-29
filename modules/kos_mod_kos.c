@@ -22,36 +22,48 @@
 #include "../core/kos_try.h"
 #include <string.h>
 
-KOS_DECLARE_STATIC_CONST_STRING(str_base,                  "base");
-KOS_DECLARE_STATIC_CONST_STRING(str_column,                "column");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_bad_ignore_errors, "`ignore_errors` argument is not a boolean");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_arg,       "invalid argument");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_string,    "invalid string");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_name_not_string,   "'name' argument is not a string");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_not_paren,         "previous token was not ')'");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_script_not_buffer, "'script' argument object is not a buffer");
-KOS_DECLARE_STATIC_CONST_STRING(str_keyword,               "keyword");
-KOS_DECLARE_STATIC_CONST_STRING(str_line,                  "line");
-KOS_DECLARE_STATIC_CONST_STRING(str_name,                  "name");
-KOS_DECLARE_STATIC_CONST_STRING(str_op,                    "op");
-KOS_DECLARE_STATIC_CONST_STRING(str_script,                "script");
-KOS_DECLARE_STATIC_CONST_STRING(str_sep,                   "sep");
-KOS_DECLARE_STATIC_CONST_STRING(str_token,                 "token");
-KOS_DECLARE_STATIC_CONST_STRING(str_type,                  "type");
-KOS_DECLARE_STATIC_CONST_STRING(str_version,               "version");
+KOS_DECLARE_STATIC_CONST_STRING(str_base,                     "base");
+KOS_DECLARE_STATIC_CONST_STRING(str_column,                   "column");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_bad_ignore_errors,    "`ignore_errors` argument is not a boolean");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_gen_line_not_string,  "data from generator fed to lexer is not a string");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_arg,          "invalid argument");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_string,       "invalid string");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_name_not_string,      "'name' argument is not a string");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_paren,            "previous token was not ')'");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_script_not_buffer,    "'script' argument object is not a buffer");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_script_not_generator, "'script' argument object is a function but not a generator");
+KOS_DECLARE_STATIC_CONST_STRING(str_keyword,                  "keyword");
+KOS_DECLARE_STATIC_CONST_STRING(str_line,                     "line");
+KOS_DECLARE_STATIC_CONST_STRING(str_lines,                    "lines");
+KOS_DECLARE_STATIC_CONST_STRING(str_name,                     "name");
+KOS_DECLARE_STATIC_CONST_STRING(str_op,                       "op");
+KOS_DECLARE_STATIC_CONST_STRING(str_script,                   "script");
+KOS_DECLARE_STATIC_CONST_STRING(str_sep,                      "sep");
+KOS_DECLARE_STATIC_CONST_STRING(str_token,                    "token");
+KOS_DECLARE_STATIC_CONST_STRING(str_type,                     "type");
+KOS_DECLARE_STATIC_CONST_STRING(str_version,                  "version");
 
 typedef struct KOS_LEXER_OBJ_S {
     KOS_LEXER lexer;
     KOS_TOKEN token;
+    char     *own_buf;
+    uint32_t  own_buf_size;
     uint8_t   ignore_errors;
+    uint8_t   from_generator;
     char      buf[1];
 } KOS_LEXER_OBJ;
 
 static void finalize(KOS_CONTEXT ctx,
                      void       *priv)
 {
-    if (priv)
+    if (priv) {
+        KOS_LEXER_OBJ *const lexer = (KOS_LEXER_OBJ *)priv;
+
+        if (lexer->own_buf)
+            KOS_free(lexer->own_buf);
+
         KOS_free(priv);
+    }
 }
 
 KOS_DECLARE_PRIVATE_CLASS(lexer_priv_class);
@@ -67,7 +79,11 @@ static const KOS_CONVERT raw_lexer_args[2] = {
  *
  * Raw Kos lexer generator.
  *
- * `script` is a string or a buffer containing Kos script to parse.
+ * `script` is a string, buffer or generator containing Kos script to parse.
+ *
+ * If `script` is a generator, it must produce strings.  Each of these strings will be
+ * subsequently parsed for consecutive tokens.  The occurrence of EOL characters is used
+ * to signify ends of lines.  Tokens cannot span across subsequent strings.
  *
  * `ignore_errors` is a boolean specifying whether any errors that occur should be ignored
  * or not.  If `ignore_errors` is `true`, any invalid characters will be returned as whitespace.
@@ -134,6 +150,16 @@ static KOS_OBJ_ID raw_lexer(KOS_CONTEXT ctx,
                 buf_size = KOS_get_buffer_size(init.o);
                 break;
 
+            case OBJ_FUNCTION: {
+                KOS_FUNCTION_STATE state;
+
+                if ( ! KOS_is_generator(init.o, &state))
+                    RAISE_EXCEPTION_STR(str_err_script_not_generator);
+
+                buf_size = 0;
+                break;
+            }
+
             default:
                 RAISE_EXCEPTION_STR(str_err_script_not_buffer);
         }
@@ -141,19 +167,35 @@ static KOS_OBJ_ID raw_lexer(KOS_CONTEXT ctx,
         kos_lexer = (KOS_LEXER_OBJ *)KOS_malloc(sizeof(KOS_LEXER_OBJ) + buf_size - 1);
         if ( ! kos_lexer) {
             KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
-            goto cleanup;
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
 
         KOS_object_set_private_ptr(lexer.o, kos_lexer);
 
-        if (GET_OBJ_TYPE(init.o) == OBJ_BUFFER)
-            memcpy(&kos_lexer->buf[0], KOS_buffer_data_const(init.o), buf_size);
-        else
-            KOS_string_to_utf8(init.o, &kos_lexer->buf[0], buf_size);
+        switch (GET_OBJ_TYPE(init.o)) {
+
+            case OBJ_BUFFER:
+                memcpy(&kos_lexer->buf[0], KOS_buffer_data_const(init.o), buf_size);
+                kos_lexer->from_generator = 0;
+                break;
+
+            case OBJ_STRING:
+                KOS_string_to_utf8(init.o, &kos_lexer->buf[0], buf_size);
+                kos_lexer->from_generator = 0;
+                break;
+
+            default:
+                assert(GET_OBJ_TYPE(init.o) == OBJ_FUNCTION);
+                kos_lexer->from_generator = 1;
+                TRY(KOS_set_property(ctx, lexer.o, KOS_CONST_ID(str_lines), init.o));
+                break;
+        }
 
         kos_lexer_init(&kos_lexer->lexer, 0, &kos_lexer->buf[0], &kos_lexer->buf[buf_size]);
 
         kos_lexer->ignore_errors = 0;
+        kos_lexer->own_buf       = KOS_NULL;
+        kos_lexer->own_buf_size  = 0;
 
         if (KOS_get_array_size(regs.o) > 1) {
             KOS_OBJ_ID ignore_errors = KOS_array_read(ctx, regs.o, 1);
@@ -200,7 +242,49 @@ static KOS_OBJ_ID raw_lexer(KOS_CONTEXT ctx,
 
     assert( ! kos_lexer->lexer.error_str);
 
-    error = kos_lexer_next_token(&kos_lexer->lexer, next_token, &kos_lexer->token);
+    init.o = KOS_BADPTR;
+
+    for (;;) {
+        char    *own_buf  = kos_lexer->own_buf;
+        uint32_t buf_size = 0;
+
+        error = kos_lexer_next_token(&kos_lexer->lexer, next_token, &kos_lexer->token);
+
+        if (error || (kos_lexer->token.type != TT_EOF) || ! kos_lexer->from_generator)
+            break;
+
+        if (IS_BAD_PTR(init.o)) {
+            init.o = KOS_get_property(ctx, lexer.o, KOS_CONST_ID(str_lines));
+            TRY_OBJID(init.o);
+        }
+
+        value.o = KOS_call_generator(ctx, init.o, KOS_VOID, KOS_EMPTY_ARRAY);
+        if (IS_BAD_PTR(value.o)) { /* end of iterator */
+            if (KOS_is_exception_pending(ctx))
+                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+            break;
+        }
+
+        if (GET_OBJ_TYPE(value.o) != OBJ_STRING)
+            RAISE_EXCEPTION_STR(str_err_gen_line_not_string);
+
+        buf_size = KOS_string_to_utf8(value.o, KOS_NULL, 0);
+
+        if (buf_size > kos_lexer->own_buf_size) {
+            own_buf = (char *)KOS_realloc(own_buf, buf_size);
+
+            if ( ! own_buf) {
+                KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+            }
+
+            kos_lexer->own_buf      = own_buf;
+            kos_lexer->own_buf_size = buf_size;
+        }
+
+        KOS_string_to_utf8(value.o, own_buf, buf_size);
+        kos_lexer_update(&kos_lexer->lexer, own_buf, own_buf + buf_size);
+    }
 
     if (error) {
         if (kos_lexer->ignore_errors) {
@@ -453,6 +537,19 @@ cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
+/* @item kos search_paths()
+ *
+ *     search_paths()
+ *
+ * Returns array containing module search paths used for finding modules to import.
+ */
+static KOS_OBJ_ID search_paths(KOS_CONTEXT ctx,
+                               KOS_OBJ_ID  this_obj,
+                               KOS_OBJ_ID  args_obj)
+{
+    return KOS_array_slice(ctx, ctx->inst->modules.search_paths, 0, 0x7FFFFFFFU);
+}
+
 /* @item kos version
  *
  *     version
@@ -478,6 +575,7 @@ int kos_module_kos_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 
     TRY_ADD_FUNCTION(        ctx, module.o, "collect_garbage",      collect_garbage, KOS_NULL);
     TRY_ADD_FUNCTION(        ctx, module.o, "execute",              execute,         execute_args);
+    TRY_ADD_FUNCTION(        ctx, module.o, "search_paths",         search_paths,    KOS_NULL);
     TRY_ADD_GENERATOR(       ctx, module.o, "raw_lexer",            raw_lexer,       raw_lexer_args);
 
     version.o = KOS_new_array(ctx, 3);
@@ -486,6 +584,7 @@ int kos_module_kos_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY(KOS_array_write(ctx, version.o, 0, TO_SMALL_INT(KOS_VERSION_MAJOR)));
     TRY(KOS_array_write(ctx, version.o, 1, TO_SMALL_INT(KOS_VERSION_MINOR)));
     TRY(KOS_array_write(ctx, version.o, 2, TO_SMALL_INT(KOS_VERSION_REVISION)));
+    TRY(KOS_lock_object(ctx, version.o));
 
     TRY(KOS_module_add_global(ctx, module.o, KOS_CONST_ID(str_version), version.o, KOS_NULL));
 
