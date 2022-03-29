@@ -102,30 +102,6 @@ create_pkg_dir()
     cd ..
 }
 
-pkg_sources()
-{
-    local PKGBASENAME="$1"
-    local OUTDIR="$2"
-
-    rm -rf "$PKGBASENAME"
-    mkdir "$PKGBASENAME"
-    cp -a *md Makefile build core doc inc interpreter modules tests tools "$PKGBASENAME"/
-
-    sed -i -r "/define *KOS_VERSION_MAJOR/s/[0-9]+/$VERSION_MAJOR/" "$PKGBASENAME"/inc/kos_version.h
-    sed -i -r "/define *KOS_VERSION_MINOR/s/[0-9]+/$VERSION_MINOR/" "$PKGBASENAME"/inc/kos_version.h
-    sed -i -r "/define *KOS_VERSION_REVISION/s/[0-9]+/$VERSION_REVISION/" "$PKGBASENAME"/inc/kos_version.h
-
-    tar czf "$OUTDIR"/"$PKGBASENAME".tar.gz "$PKGBASENAME"
-    zip -r -9 -q "$OUTDIR"/"$PKGBASENAME".zip "$PKGBASENAME"
-
-    rm -rf "$PKGBASENAME"
-
-    cd "$OUTDIR"
-    shasum -a 256 "$PKGBASENAME".tar.gz | tee "$PKGBASENAME".tar.gz.sha
-    shasum -a 256 "$PKGBASENAME".zip | tee "$PKGBASENAME".zip.sha
-    cd - > /dev/null
-}
-
 # Create MacOS package
 if [ "$UNAME" = "Darwin" ]; then
     create_pkg_dir
@@ -141,8 +117,6 @@ if [ "$UNAME" = "Darwin" ]; then
 # Create Linux package
 elif [ "$UNAME" = "Linux" ]; then
     create_pkg_dir
-
-    pkg_sources "$PKGNAME"-src "$BUILDDIR"
 
     PKGNAME="$PKGNAME-linux-amd64"
 
