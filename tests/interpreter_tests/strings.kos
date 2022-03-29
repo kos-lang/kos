@@ -832,3 +832,14 @@ do {
     expect_fail(() => "".uppercase.apply(void, []))
     expect_fail(() => "".uppercase.apply(1, []))
 }
+
+##############################################################################
+# base.string.prototype.get
+
+do {
+    const s = "abc"
+    assert s.get(1)      == "b"
+    assert s.get(-1)     == "c"
+    assert s.get(4)      == void
+    assert s.get(-4, 42) == 42
+}

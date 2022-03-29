@@ -8,6 +8,7 @@ Table of Contents
     * [array()](#array)
       * [array.prototype.cas()](#arrayprototypecas)
       * [array.prototype.fill()](#arrayprototypefill)
+      * [array.prototype.get()](#arrayprototypeget)
       * [array.prototype.indices()](#arrayprototypeindices)
       * [array.prototype.insert()](#arrayprototypeinsert)
       * [array.prototype.insert\_array()](#arrayprototypeinsert_array)
@@ -25,6 +26,7 @@ Table of Contents
     * [buffer()](#buffer)
       * [buffer.prototype.copy\_buffer()](#bufferprototypecopy_buffer)
       * [buffer.prototype.fill()](#bufferprototypefill)
+      * [buffer.prototype.get()](#bufferprototypeget)
       * [buffer.prototype.indices()](#bufferprototypeindices)
       * [buffer.prototype.insert()](#bufferprototypeinsert)
       * [buffer.prototype.iterator()](#bufferprototypeiterator)
@@ -77,6 +79,7 @@ Table of Contents
       * [object.prototype.any()](#objectprototypeany)
       * [object.prototype.count()](#objectprototypecount)
       * [object.prototype.filter()](#objectprototypefilter)
+      * [object.prototype.get()](#objectprototypeget)
       * [object.prototype.iterator()](#objectprototypeiterator)
       * [object.prototype.map()](#objectprototypemap)
       * [object.prototype.reduce()](#objectprototypereduce)
@@ -90,6 +93,7 @@ Table of Contents
       * [string.prototype.code()](#stringprototypecode)
       * [string.prototype.ends\_with()](#stringprototypeends_with)
       * [string.prototype.find()](#stringprototypefind)
+      * [string.prototype.get()](#stringprototypeget)
       * [string.prototype.indices()](#stringprototypeindices)
       * [string.prototype.iterator()](#stringprototypeiterator)
       * [string.prototype.join()](#stringprototypejoin)
@@ -402,6 +406,29 @@ Example:
     > const a = array(5)
     > a.fill("foo")
     ["foo", "foo", "foo", "foo", "foo"]
+
+array.prototype.get()
+---------------------
+
+    array.prototype.get(index, default_value = void)
+
+Retrieves array element without ever failing.
+
+If the element at the specified `index` exists, returns that element,
+otherwise returns `default_value`.
+
+If another thread resizes the array while this function is
+executing, an exception could be thrown or incorrect element may
+be returned if `index` was negative.
+
+Examples:
+
+    > ["a", "b", "c", "d"].get(2, "-")
+    "c"
+    > ["a", "b", "c", "d"].get(20, "-")
+    "-"
+    > ["a", "b", "c", "d"].get(-1, "-")
+    "d"
 
 array.prototype.indices()
 -------------------------
@@ -803,6 +830,29 @@ Example:
     > const b = buffer(5)
     > b.fill(0x20)
     <20 20 20 20 20>
+
+buffer.prototype.get()
+----------------------
+
+    buffer.prototype.get(index, default_value = void)
+
+Retrieves buffer element without ever failing.
+
+If the element at the specified `index` exists, returns that element,
+otherwise returns `default_value`.
+
+If another thread resizes the array while this function is
+executing, an exception could be thrown or incorrect element may
+be returned if `index` was negative.
+
+Examples:
+
+    > buffer([10, 11, 12, 13]).get(2, "-")
+    12
+    > buffer([10, 11, 12, 13]).get(20, "-")
+    "-"
+    > buffer([10, 11, 12, 13]).get(-1, "-")
+    13
 
 buffer.prototype.indices()
 --------------------------
@@ -1986,6 +2036,30 @@ Example:
     > [1, 2, 3, 4, 5, 6].filter(x => x & 1) -> array
     [1, 3, 5]
 
+object.prototype.get()
+----------------------
+
+    object.prototype.get(key, default_value = void)
+
+Retrieves object element without ever failing.  The object is addressed
+in a shallow manner, without following prototype chain.
+
+If the element at the specified `key` exists, returns that element,
+otherwise returns `default_value`.
+
+If another thread deletes the element while this function is
+executing, an exception could be thrown or an element from the
+prototype could be returned.
+
+Examples:
+
+    > {a:1, b:2, c:3}.get("a", "-")
+    1
+    > {a:1, b:2, c:3}.get("x", 0)
+    0
+    > {a:1, b:2, c:3}.get("y")
+    void
+
 object.prototype.iterator()
 ---------------------------
 
@@ -2357,6 +2431,25 @@ Examples:
     3
     > "language".find("g", -3)
     6
+
+string.prototype.get()
+----------------------
+
+    string.prototype.get(index, default_value = void)
+
+Retrieves string element without ever failing.
+
+If the element at the specified `index` exists, returns that element,
+otherwise returns `default_value`.
+
+Examples:
+
+    > "abcd".get(2, "-")
+    "c"
+    > "abcd".get(20, "-")
+    "-"
+    > "abcd".get(-1, "-")
+    "d"
 
 string.prototype.indices()
 --------------------------
@@ -4231,7 +4324,7 @@ getenv()
 
 Returns contents of an environment variable.
 
-If the environment variable does not exist, returns the `default_value` value.
+If the environment variable does not exist, returns `default_value`.
 
 Example:
 

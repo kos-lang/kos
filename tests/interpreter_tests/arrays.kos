@@ -1579,3 +1579,14 @@ do {
     expect_fail(()=>input.cas(void, 2, 3))
     expect_fail(()=>base.array.prototype.cas.apply(void, [1,2,3]))
 }
+
+##############################################################################
+# base.array.prototype.get
+
+do {
+    const a = [1, 2, 3]
+    assert a.get(1)      == 2
+    assert a.get(-1)     == 3
+    assert a.get(4)      == void
+    assert a.get(-4, 42) == 42
+}

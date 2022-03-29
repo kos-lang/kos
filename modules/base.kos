@@ -554,6 +554,114 @@ string.prototype.indices = indices
  */
 buffer.prototype.indices = indices
 
+fun get_value_from_array(index, default_value = void)
+{
+    const size = this.size
+    if index < 0 {
+        index = size + index
+        if index < 0 {
+            index = size
+        }
+    }
+    return index < size ? this[index] : default_value
+}
+
+/* @item base array.prototype.get()
+ *
+ *     array.prototype.get(index, default_value = void)
+ *
+ * Retrieves array element without ever failing.
+ *
+ * If the element at the specified `index` exists, returns that element,
+ * otherwise returns `default_value`.
+ *
+ * If another thread resizes the array while this function is
+ * executing, an exception could be thrown or incorrect element may
+ * be returned if `index` was negative.
+ *
+ * Examples:
+ *
+ *     > ["a", "b", "c", "d"].get(2, "-")
+ *     "c"
+ *     > ["a", "b", "c", "d"].get(20, "-")
+ *     "-"
+ *     > ["a", "b", "c", "d"].get(-1, "-")
+ *     "d"
+ */
+array.prototype.get = get_value_from_array
+
+/* @item base buffer.prototype.get()
+ *
+ *     buffer.prototype.get(index, default_value = void)
+ *
+ * Retrieves buffer element without ever failing.
+ *
+ * If the element at the specified `index` exists, returns that element,
+ * otherwise returns `default_value`.
+ *
+ * If another thread resizes the array while this function is
+ * executing, an exception could be thrown or incorrect element may
+ * be returned if `index` was negative.
+ *
+ * Examples:
+ *
+ *     > buffer([10, 11, 12, 13]).get(2, "-")
+ *     12
+ *     > buffer([10, 11, 12, 13]).get(20, "-")
+ *     "-"
+ *     > buffer([10, 11, 12, 13]).get(-1, "-")
+ *     13
+ */
+buffer.prototype.get = get_value_from_array
+
+/* @item base string.prototype.get()
+ *
+ *     string.prototype.get(index, default_value = void)
+ *
+ * Retrieves string element without ever failing.
+ *
+ * If the element at the specified `index` exists, returns that element,
+ * otherwise returns `default_value`.
+ *
+ * Examples:
+ *
+ *     > "abcd".get(2, "-")
+ *     "c"
+ *     > "abcd".get(20, "-")
+ *     "-"
+ *     > "abcd".get(-1, "-")
+ *     "d"
+ */
+string.prototype.get = get_value_from_array
+
+/* @item base object.prototype.get()
+ *
+ *     object.prototype.get(key, default_value = void)
+ *
+ * Retrieves object element without ever failing.  The object is addressed
+ * in a shallow manner, without following prototype chain.
+ *
+ * If the element at the specified `key` exists, returns that element,
+ * otherwise returns `default_value`.
+ *
+ * If another thread deletes the element while this function is
+ * executing, an exception could be thrown or an element from the
+ * prototype could be returned.
+ *
+ * Examples:
+ *
+ *     > {a:1, b:2, c:3}.get("a", "-")
+ *     1
+ *     > {a:1, b:2, c:3}.get("x", 0)
+ *     0
+ *     > {a:1, b:2, c:3}.get("y")
+ *     void
+ */
+object.prototype.get = fun(key, default_value = void)
+{
+    return (key in this) ? this[key] : default_value
+}
+
 /* @item base string.prototype.ljust()
  *
  *     string.prototype.ljust(size, fill = " ")

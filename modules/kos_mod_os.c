@@ -1519,7 +1519,7 @@ cleanup:
  *
  * Returns contents of an environment variable.
  *
- * If the environment variable does not exist, returns the `default_value` value.
+ * If the environment variable does not exist, returns `default_value`.
  *
  * Example:
  *

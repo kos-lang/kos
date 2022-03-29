@@ -1158,3 +1158,13 @@ do {
     expect_fail(()=>a.repeat(void))
     expect_fail(()=>a.repeat())
 }
+
+##############################################################################
+# base.buffer.prototype.get
+do {
+    const b = buffer([1, 2, 3])
+    assert b.get(1)      == 2
+    assert b.get(-1)     == 3
+    assert b.get(4)      == void
+    assert b.get(-4, 42) == 42
+}

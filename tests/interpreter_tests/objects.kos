@@ -1680,3 +1680,31 @@ do {
     }
     assert name == "a"
 }
+
+##############################################################################
+# base.object.prototype.get
+
+do {
+    class base {
+        var d = 4
+    }
+    class derived extends base {
+        constructor {
+            this.a = 1
+            this.b = 2
+            this.c = 3
+        }
+    }
+
+    const o = derived()
+
+    assert "a" in o
+    assert ! ("d" in o)
+    assert "d" propertyof o
+
+    assert o.get("a")     == 1
+    assert o.get("b", 7)  == 2
+    assert o.get("d", 7)  == 7
+    assert o.get(1)       == void
+    assert o.get("x", 42) == 42
+}
