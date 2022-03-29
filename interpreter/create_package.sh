@@ -66,8 +66,12 @@ collect_package()
     else
         mkdir -p "$PKGDIR_LOCAL"/bin
         mkdir -p "$PKGDIR_LOCAL"/share/kos/modules
-        ln "$BUILDDIR_LOCAL"/interpreter/kos "$PKGDIR_LOCAL"/bin/
         ln "$BUILDDIR_LOCAL"/share/kos/modules/* "$PKGDIR_LOCAL"/share/kos/modules/
+        if [ "$UNAME" = "Darwin" ]; then
+            lipo -create -output "$PKGDIR_LOCAL"/bin/kos "$BUILDDIR_LOCAL"/interpreter/kos "$BUILDDIR_LOCAL"-arm64/interpreter/kos
+        else
+            ln "$BUILDDIR_LOCAL"/interpreter/kos "$PKGDIR_LOCAL"/bin/
+        fi
     fi
 }
 
@@ -76,6 +80,10 @@ create_pkg_dir()
     rm -rf Out
 
     compile_kos test
+
+    if [ "$UNAME" = "Darwin" ]; then
+        compile_kos target=arm64
+    fi
 
     collect_package "$BUILDDIR"
 
@@ -124,10 +132,10 @@ if [ "$UNAME" = "Darwin" ]; then
 
     cp interpreter/macos/uninstall.sh "$PKGDIR"/share/kos
 
-    PKGNAME_AMD64="$PKGNAME-macos-x86_64"
-    productbuild --root "$PKGDIR" /usr/local --product interpreter/macos/kos-x86_64.plist "$BUILDDIR"/"$PKGNAME_AMD64.pkg"
+    PKGNAME="$PKGNAME-macos"
+    productbuild --root "$PKGDIR" /usr/local --product interpreter/macos/kos.plist "$BUILDDIR"/"$PKGNAME.pkg"
     cd "$BUILDDIR"
-    shasum -a 256 "$PKGNAME_AMD64.pkg" | tee "$PKGNAME_AMD64.pkg.sha"
+    shasum -a 256 "$PKGNAME.pkg" | tee "$PKGNAME.pkg.sha"
     cd - >/dev/null
 
 # Create Linux package
