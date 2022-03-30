@@ -17,6 +17,8 @@ die()
 
 rm -rf "$4"
 
+export MallocNanoZone=0 # Work around MacOS issue with address sanitizer
+
 "$1" "$2" < "$3" > "$4".tmp
 
 [ -f "$3.expected" ] || die "Error: Missing '$3.expected'"
