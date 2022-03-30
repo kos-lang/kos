@@ -52,7 +52,7 @@ To find out more about Kos, follow these links:
 * [List of possible ideas for future development](doc/proposals.md)
 * [Formal description of Kos syntax](doc/grammar.md)
 * [Information on how to contribute to Kos](doc/contributing.md)
-* [Kos license](LICENSE.md)
+* [Kos license](LICENSE)
 
 Examples
 --------
