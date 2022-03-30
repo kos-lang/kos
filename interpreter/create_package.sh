@@ -41,7 +41,7 @@ echo "Using $JOBS jobs"
 
 # Check if we're in the right directory
 if ! test -d interpreter; then
-    echo $(basename "$0") "must be run from root directory of the Kos project" >&2
+    echo "$(basename "$0") must be run from root directory of the Kos project" >&2
     exit 1
 fi
 
@@ -143,7 +143,7 @@ elif [ "$UNAME" = "Linux" ]; then
 
     sed "$CTRLSCRIPT" < interpreter/debian/control > "$PKGDIR"/DEBIAN/control
 
-    dpkg -b "$PKGDIR" "$BUILDDIR"/"$PKGNAME.deb"
+    dpkg-deb --root-owner-group --build "$PKGDIR" "$BUILDDIR"/"$PKGNAME.deb"
 
     cd "$BUILDDIR"
     shasum -a 256 "$PKGNAME.deb" | tee "$PKGNAME.deb.sha"
