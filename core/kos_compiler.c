@@ -1236,7 +1236,8 @@ static int gen_indep_vars(KOS_COMP_UNIT *program,
             var->reg->tmp  = 0;
             var->array_idx = var->reg->reg;
 
-            assert(var->reg->reg == ++*last_reg);
+            ++*last_reg;
+            assert(var->reg->reg == *last_reg);
         }
 
 cleanup:
@@ -5385,7 +5386,8 @@ static int gen_function(KOS_COMP_UNIT      *program,
 
                     TRY(gen_reg(program, &var->reg));
 
-                    assert(var->reg->reg == ++last_reg);
+                    ++last_reg;
+                    assert(var->reg->reg == last_reg);
 
                     if (var->num_reads)
                         var->reg->tmp = 0;
@@ -5412,7 +5414,8 @@ static int gen_function(KOS_COMP_UNIT      *program,
                 frame->args_reg->tmp = 0;
             /* TODO don't generate rest reg if unused */
             constant->rest_reg = (uint8_t)frame->args_reg->reg;
-            assert(frame->args_reg->reg == ++last_reg);
+            ++last_reg;
+            assert(frame->args_reg->reg == last_reg);
         }
     }
     assert(scope->num_args <= KOS_MAX_REGS);
@@ -5420,7 +5423,8 @@ static int gen_function(KOS_COMP_UNIT      *program,
     /* Generate register for 'this' */
     if (scope->uses_this) {
         TRY(gen_reg(program, &frame->this_reg));
-        assert(frame->this_reg->reg == ++last_reg);
+        ++last_reg;
+        assert(frame->this_reg->reg == last_reg);
         frame->this_reg->tmp = 0;
         constant->this_reg = (uint8_t)frame->this_reg->reg;
     }
@@ -5439,7 +5443,8 @@ static int gen_function(KOS_COMP_UNIT      *program,
             assert( ! scope->ellipsis->reg);
             TRY(gen_reg(program, &scope->ellipsis->reg));
             scope->ellipsis->reg->tmp = 0;
-            assert(scope->ellipsis->reg->reg == ++last_reg);
+            ++last_reg;
+            assert(scope->ellipsis->reg->reg == last_reg);
             constant->ellipsis_reg = (uint8_t)scope->ellipsis->reg->reg;
         }
     }
@@ -5457,7 +5462,8 @@ static int gen_function(KOS_COMP_UNIT      *program,
         if (needs_super_ctor) {
             TRY(gen_reg(program, &frame->base_ctor_reg));
             frame->base_ctor_reg->tmp = 0;
-            assert(frame->base_ctor_reg->reg == ++last_reg);
+            ++last_reg;
+            assert(frame->base_ctor_reg->reg == last_reg);
             args.bind_reg = (uint8_t)frame->base_ctor_reg->reg;
             ++args.num_binds;
         }
@@ -5466,7 +5472,8 @@ static int gen_function(KOS_COMP_UNIT      *program,
         if (frame->uses_base_proto) {
             TRY(gen_reg(program, &frame->base_proto_reg));
             frame->base_proto_reg->tmp = 0;
-            assert(frame->base_proto_reg->reg == ++last_reg);
+            ++last_reg;
+            assert(frame->base_proto_reg->reg == last_reg);
             if (args.bind_reg == KOS_NO_REG)
                 args.bind_reg = (uint8_t)frame->base_proto_reg->reg;
             ++args.num_binds;
