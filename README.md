@@ -118,13 +118,16 @@ This program prints the first 1000 prime numbers:
         }
     }
 
-    print("Prime numbers:")
+    public fun main
+    {
+        print("Prime numbers:")
 
-    var count = 0
+        var count = 0
 
-    for var value in primes(7920) {
-        print("    \(value)")
-        count += 1
+        for var value in primes(7920) {
+            print("    \(value)")
+            count += 1
+        }
+
+        print("Printed \(count) primes")
     }
-
-    print("Printed \(count) primes")

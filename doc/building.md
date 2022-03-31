@@ -65,25 +65,21 @@ driven by GNU Make, which can be obtained with MSYS2 or Cygwin.
 Before you can compile Kos on Windows, you need to install:
 
 * Visual Studio, in particular the Visual C++ compiler (cl.exe)
-* MSYS2 or Cygwin
+* [MSYS2](http://www.msys2.org) or [Cygwin](http://www.cygwin.com)
 
 Find the startup script which you use to start MSYS2 or Cygwin (e.g. msys.bat
 or cygwin.bat), edit it and add the following line(s) near the beginning of
 the script:
 
-* For 64-bit toolchain, add:
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
 
-        call "%VC140COMNTOOLS%VCVarsQueryRegistry.bat" 64bit
-        call "%VCINSTALLDIR%vcvarsall.bat" amd64
+If you have a different version of Visual Studio, you will need to adjust the
+above path to match the actual location of the `vcvarsall.bat` script.
 
-* For 32-bit toolchain, add:
+After setting up the environment like above, run MSYS2 or Cygwin bash
+prompt and then run `make`.
 
-        call "%VC140COMNTOOLS%vcvars32.bat"
-
-Note: Examine your environment to find the right variable pointing to
-Common Tools directory, VC140COMNTOOLS is right for Visual Studio 2015.
-
-When installing Kos on Windows, `destdir` defaults to `C:\Program Files`
+When installing Kos on Windows from sources, `destdir` defaults to `C:\Program Files`
 directory, Kos executable is installed in `C:\Program Files\Kos` and
 modules are installed in `C:\Program Files\Kos\modules`.
 
