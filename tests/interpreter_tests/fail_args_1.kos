@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-# Copyright (c) 2014-2021 Chris Dragan
+# Copyright (c) 2014-2022 Chris Dragan
 
 public fun many(a000, a001, a002, a003, a004, a005, a006, a007, a008, a009, a00A, a00B, a00C, a00D, a00E, a00F,
                 a010, a011, a012, a013, a014, a015, a016, a017, a018, a019, a01A, a01B, a01C, a01D, a01E, a01F,
