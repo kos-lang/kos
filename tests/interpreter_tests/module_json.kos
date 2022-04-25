@@ -3,6 +3,7 @@
 
 import json
 import test_tools.expect_fail
+import base.buffer
 
 do {
     assert json.parse("42") == 42
@@ -10,6 +11,7 @@ do {
     assert json.parse("true") == true
     assert json.parse("false") == false
     assert typeof json.parse("null") == "void"
+    assert json.parse("\"\"") == ""
     assert json.parse("\"kos\"") == "kos"
     assert json.parse("[]") == []
 }
@@ -40,4 +42,55 @@ do {
     expect_fail(() => json.parse("- 1"))
     expect_fail(() => json.parse("1-"))
     expect_fail(() => json.parse("void"))
+}
+
+do {
+    const it = json.parse_array("[]")
+    assert typeof it == "function"
+    expect_fail(it)
+}
+
+do {
+    const it = json.parse_array("[1]")
+    assert typeof it == "function"
+    assert it() == 1
+    expect_fail(it)
+}
+
+do {
+    const it = json.parse_array("[ 10 , true , {} ]")
+    assert typeof it == "function"
+    assert it() == 10
+    assert it() == true
+    const o = it()
+    assert typeof o == "object"
+    assert o.count() == 0
+    expect_fail(it)
+}
+
+do {
+    assert (typeof json.parse_array("0")) == "function"
+    expect_fail(json.parse_array("0"))
+    expect_fail(json.parse_array("true"))
+    expect_fail(json.parse_array("null"))
+    expect_fail(json.parse_array("\"\""))
+    expect_fail(json.parse_array("void"))
+    expect_fail(json.parse_array("{}"))
+}
+
+do {
+    assert json.dump(10) == "10"
+    assert json.dump(-0.5) == "-0.5"
+    assert json.dump(true) == "true"
+    assert json.dump(void) == "null"
+    assert json.dump("") == "\"\""
+    assert json.dump("xyz") == "\"xyz\""
+    assert json.dump([]) == "[]"
+    assert json.dump([8, "x"]) == "[8,\"x\"]"
+    assert json.dump({}) == "{}"
+    assert json.dump({ab:8}) == "{\"ab\":8}"
+
+    expect_fail(() => json.dump(buffer()))
+    expect_fail(() => json.dump(buffer))
+    expect_fail(() => json.dump(expect_fail))
 }
