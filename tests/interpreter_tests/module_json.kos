@@ -1,0 +1,43 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2014-2022 Chris Dragan
+
+import json
+import test_tools.expect_fail
+
+do {
+    assert json.parse("42") == 42
+    assert json.parse("-128.5") == -128.5
+    assert json.parse("true") == true
+    assert json.parse("false") == false
+    assert typeof json.parse("null") == "void"
+    assert json.parse("\"kos\"") == "kos"
+    assert json.parse("[]") == []
+}
+
+do {
+    const a = json.parse("  [  8  ]  ")
+    assert typeof a == "array"
+    assert a.size == 1
+    assert a[0] == 8
+}
+
+do {
+    const o = json.parse("{}")
+    assert typeof o == "object"
+    assert o.count() == 0
+}
+
+do {
+    const o = json.parse("   {   \"x\" : []  }   ")
+    assert typeof o == "object"
+    assert o.count() == 1
+    assert "x" in o
+    assert o.x == []
+}
+
+do {
+    expect_fail(() => json.parse("-"))
+    expect_fail(() => json.parse("- 1"))
+    expect_fail(() => json.parse("1-"))
+    expect_fail(() => json.parse("void"))
+}

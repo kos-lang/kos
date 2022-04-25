@@ -216,7 +216,7 @@ types.
 
     PLACEHOLDER_LITERAL ::= "_"
 
-The following keywords are currently reserved - `get`, `static` and `set`.
+The following keywords are currently reserved - `get`, `match`, `static` and `set`.
 
 The main difference between keywords and non-keyword literals is that keywords
 cannot be used as variable names.  However, keywords can still be used as

@@ -177,6 +177,10 @@ Table of Contents
     * [iproduct()](#iproduct)
     * [product()](#product)
     * [reverse()](#reverse)
+  * [json](#json)
+    * [dump()](#dump)
+    * [parse()](#parse)
+    * [parse\_array()](#parse_array)
   * [kos](#kos)
     * [collect\_garbage()](#collect_garbage)
     * [execute()](#execute)
@@ -3852,6 +3856,92 @@ Examples:
     [3, 2, 1, 0]
     > iter.reverse("language")
     "egaugnal"
+
+json
+====
+
+dump()
+------
+
+    dump(object)
+
+Converts a Kos object to JSON string.
+
+`object` is of one of the following types:
+
+- boolean
+- integer
+- float
+- string
+- array, the type of each element must be on this list
+- object, dumped shallow, the type of each value must be on this list
+- instantiated generator, the type of each value produced by the generator must
+  be on this list, the list of values produced by the generator is converted to JSON array
+
+The return value is a string containing compact JSON-formatted data.
+
+Example:
+
+    > dump(6.5)
+    "6.5"
+    > dump([true, {}])
+    "[true,{}]"
+    > dump(range(3))
+    "[0,1,2]"
+
+parse()
+-------
+
+    parse(json)
+
+Parses JSON-formatted data.
+
+`json` argument can be:
+
+- A string containing JSON-formatted data.
+- A buffer containing JSON-formatted data.  The buffer must contain an UTF-8 character
+  sequence, which can be converted to string.
+- A generator of strings, which concatenated together make a JSON-formatted data.
+  JSON tokens do not span across subsequent strings, the beginning and the end
+  of each string from the generatoris a parsing boundary for the tokens.
+
+The input JSON-formatted data is a single JSON object of one of the following supported
+types: null, boolean, number, string, array or object (unordered map with string keys).
+
+Returns the object parsed from the JSON-formatted data.
+
+Examples:
+
+    > json.parse("[null , {\"hello\" : true }]")
+    [void, {"hello": true}]
+    > json.parse("34.5")
+    34.5
+
+parse_array()
+-------------
+
+    parse_array(json)
+
+A generator, which produces subsequent elements of an array parsed from a JSON text.
+
+`json` argument can be:
+
+- A string containing JSON-formatted data.
+- A buffer containing JSON-formatted data.  The buffer must contain an UTF-8 character
+  sequence, which can be converted to string.
+- A generator of strings, which concatenated together make a JSON-formatted data.
+  JSON tokens do not span across subsequent strings, the beginning and the end
+  of each string from the generatoris a parsing boundary for the tokens.
+
+The input must be a JSON array and the generator yields subsequent parsed elements
+of that array.
+
+Example:
+
+    > for const elem in parse_array("[1, 2, 3]") { print(elem) }
+    1
+    2
+    3
 
 kos
 ===

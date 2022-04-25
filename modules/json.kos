@@ -1,0 +1,395 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2014-2022 Chris Dragan
+
+import kos
+import base: array, generator, number, string
+
+const separator_map = {
+    "{": void,
+    "}": void,
+    "[": void,
+    "]": void,
+    ",": void,
+    ":": void
+}
+
+const keyword_map = {
+    "true":  true,
+    "false": false,
+    "null":  void
+}
+
+fun bad_token(token, desc = void)
+{
+    if ! ("token" in token) {
+        throw token
+    }
+    if desc {
+        desc = desc + ", but got \(token.token)"
+    }
+    else {
+        desc = "invalid JSON token: \(token.token)"
+    }
+    throw "\(token.line):\(token.column): \(desc)"
+}
+
+fun tokenize(text)
+{
+    const lexer = kos.raw_lexer(text, true)
+
+    var had_minus = false
+
+    for const token in lexer {
+        if had_minus && token.type != kos.token_numeric {
+            bad_token(token)
+        }
+
+        switch token.type {
+
+            case kos.token_comment, kos.token_whitespace, kos.token_eol {
+                # Ignore whitespace
+                continue
+            }
+
+            case kos.token_separator {
+                if token.token in separator_map {
+                    yield token
+                }
+                else {
+                    bad_token(token)
+                }
+            }
+
+            case kos.token_operator {
+                if token.op == kos.op_sub {
+                    had_minus = true
+                }
+                else {
+                    bad_token(token)
+                }
+            }
+
+            case kos.token_keyword, kos.token_identifier {
+                if token.token in keyword_map {
+                    token.value = keyword_map[token.token]
+                    yield token
+                }
+                else {
+                    bad_token(token)
+                }
+            }
+
+            case kos.token_numeric {
+                token.value = number(token.token)
+                if had_minus {
+                    token.value = -token.value
+                    had_minus = false
+                }
+                yield token
+            }
+
+            case kos.token_string {
+                token.value = string(token.token[1:-1])
+                yield token
+            }
+
+            default {
+                bad_token(token)
+            }
+        }
+    }
+
+    if had_minus {
+        throw "trailing '-' at the end of file"
+    }
+}
+
+class json_lexer {
+    constructor(text) {
+        this.lexer  = tokenize(text)
+        this.peeked = void
+    }
+
+    fun next {
+        const peeked = this.peeked
+
+        if peeked {
+            this.peeked = void
+            return peeked
+        }
+
+        return this.lexer()
+    }
+
+    fun peek {
+        if ! this.peeked {
+            this.peeked = this.lexer()
+        }
+
+        return this.peeked
+    }
+
+    fun drain_whitespace {
+        if this.peeked {
+            bad_token(this.peeked)
+        }
+
+        for const token in this.lexer {
+            bad_token(token)
+        }
+    }
+}
+
+var parse_value = void
+
+fun parse_array_value(lexer)
+{
+    loop {
+
+        var token = lexer.peek()
+
+        if ! ("value" in token) {
+            if token.token == "]" {
+                lexer.next()
+                break
+            }
+            else if token.token == "," {
+                lexer.next()
+                continue
+            }
+        }
+
+        yield parse_value(lexer)
+
+        token = lexer.next()
+
+        if "value" in token {
+            bad_token(token, "expected ',' or ']'")
+        }
+
+        if token.token == "]" {
+            break
+        }
+        else if token.token != "," {
+            bad_token(token, "expected ',' or ']'")
+        }
+    }
+}
+
+fun parse_object(lexer)
+{
+    const obj = { }
+
+    loop {
+
+        var token = lexer.next()
+
+        if ! ("value" in token) {
+            if token.token == "}" {
+                break
+            }
+            else if token.token == "," {
+                continue
+            }
+
+            bad_token(token, "expected string or ',' or '}'")
+        }
+
+        const key = token.value
+
+        if typeof key != "string" {
+            bad_token(token, "expected string or ',' or '}'")
+        }
+
+        token = lexer.next()
+
+        if ("value" in token) || token.token != ":" {
+            bad_token(token, "expected ':'")
+        }
+
+        obj[key] = parse_value(lexer)
+
+        token = lexer.next()
+
+        if "value" in token {
+            bad_token(token, "expected ',' or '}'")
+        }
+
+        if token.token == "}" {
+            break
+        }
+        else if token.token != "," {
+            bad_token(token, "expected ',' or '}'")
+        }
+    }
+
+    return obj
+}
+
+parse_value = fun(lexer)
+{
+    const token = lexer.next()
+
+    if "value" in token {
+        return token.value
+    }
+
+    if token.token == "[" {
+        return array(parse_array_value(lexer))
+    }
+    else if token.token == "{" {
+        return parse_object(lexer)
+    }
+    else {
+        bad_token(token)
+    }
+}
+
+/* @item json parse()
+ *
+ *     parse(json)
+ *
+ * Parses JSON-formatted data.
+ *
+ * `json` argument can be:
+ *
+ * - A string containing JSON-formatted data.
+ * - A buffer containing JSON-formatted data.  The buffer must contain an UTF-8 character
+ *   sequence, which can be converted to string.
+ * - A generator of strings, which concatenated together make a JSON-formatted data.
+ *   JSON tokens do not span across subsequent strings, the beginning and the end
+ *   of each string from the generatoris a parsing boundary for the tokens.
+ *
+ * The input JSON-formatted data is a single JSON object of one of the following supported
+ * types: null, boolean, number, string, array or object (unordered map with string keys).
+ *
+ * Returns the object parsed from the JSON-formatted data.
+ *
+ * Examples:
+ *
+ *     > json.parse("[null , {\"hello\" : true }]")
+ *     [void, {"hello": true}]
+ *     > json.parse("34.5")
+ *     34.5
+ */
+public
+fun parse(json)
+{
+    const lexer = json_lexer(json)
+
+    const ret = parse_value(lexer)
+
+    lexer.drain_whitespace()
+
+    return ret
+}
+
+/* @item json parse_array()
+ *
+ *     parse_array(json)
+ *
+ * A generator, which produces subsequent elements of an array parsed from a JSON text.
+ *
+ * `json` argument can be:
+ *
+ * - A string containing JSON-formatted data.
+ * - A buffer containing JSON-formatted data.  The buffer must contain an UTF-8 character
+ *   sequence, which can be converted to string.
+ * - A generator of strings, which concatenated together make a JSON-formatted data.
+ *   JSON tokens do not span across subsequent strings, the beginning and the end
+ *   of each string from the generatoris a parsing boundary for the tokens.
+ *
+ * The input must be a JSON array and the generator yields subsequent parsed elements
+ * of that array.
+ *
+ * Example:
+ *
+ *     > for const elem in parse_array("[1, 2, 3]") { print(elem) }
+ *     1
+ *     2
+ *     3
+ */
+public
+fun parse_array(json)
+{
+    const lexer = json_lexer(json)
+
+    const token = lexer.next()
+
+    if ("value" in token) || (token.token != "[") {
+        bad_token(token)
+    }
+
+    for const token in parse_array_value(lexer) {
+        yield token
+    }
+
+    lexer.drain_whitespace()
+}
+
+/* @item json dump()
+ *
+ *     dump(object)
+ *
+ * Converts a Kos object to JSON string.
+ *
+ * `object` is of one of the following types:
+ *
+ * - boolean
+ * - integer
+ * - float
+ * - string
+ * - array, the type of each element must be on this list
+ * - object, dumped shallow, the type of each value must be on this list
+ * - instantiated generator, the type of each value produced by the generator must
+ *   be on this list, the list of values produced by the generator is converted to JSON array
+ *
+ * The return value is a string containing compact JSON-formatted data.
+ *
+ * Example:
+ *
+ *     > dump(6.5)
+ *     "6.5"
+ *     > dump([true, {}])
+ *     "[true,{}]"
+ *     > dump(range(3))
+ *     "[0,1,2]"
+ */
+public
+fun dump(object)
+{
+    switch typeof object {
+        case "integer", "float", "boolean" {
+            return "\(object)"
+        }
+
+        case "void" {
+            return "null"
+        }
+
+        case "string" {
+            return "\"\(object)\""
+        }
+
+        case "array" {
+            return "[\( object.map(dump) -> ",".join )]"
+        }
+
+        case "object" {
+            return "{\( object.map(kv => "\( dump(kv[0]) ):\( dump(kv[1]) )") -> ",".join )}"
+        }
+
+        case "function" {
+            if object instanceof generator {
+                return "[\( object.map(dump) -> ",".join )]"
+            }
+            else {
+                fallthrough
+            }
+        }
+
+        default {
+            throw "Cannot dump \(typeof object) to JSON"
+        }
+    }
+}

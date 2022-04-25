@@ -132,14 +132,6 @@ class create_docs {
     }
 }
 
-const docs = create_docs()
-
-for const arg in args[1:] {
-    with const f = io.open(arg, io.ro) {
-        docs.scan_file(arg, f)
-    }
-}
-
 fun make_toc_name(name)
 {
     return string(name.map(fun(c) {
@@ -160,36 +152,47 @@ fun make_link(name)
     })...)
 }
 
-# Print TOC
-print("Table of Contents")
-print("=================")
-print("<!--ts-->")
-print("  * [Table of Contents](#table-of-contents)")
-for const topic, items in sort(x => x[0], docs) {
-    print("  * [\(make_toc_name(topic))](#\(make_link(topic)))")
-    for const item, contents in sort(x => x[0], items) {
-        const lead = item.scan(".") == -1 ? "" : "  "
-        print("\(lead)    * [\(make_toc_name(item))](#\(make_link(item)))")
-    }
-}
-print("<!--te-->")
+public fun main(script, args...)
+{
+    const docs = create_docs()
 
-# Print module documentation
-for const topic, items in sort(x => x[0], docs) {
-    print(topic)
-    print("=".repeat(topic.size))
-    print()
-    for const item, contents in sort(x => x[0], items) {
-        print(item)
-        print("-".repeat(item.size))
-        print()
-        var last_empty = false
-        for const line in contents {
-            print(line)
-            last_empty = line.size == 0
+    for const arg in args {
+        with const f = io.open(arg, io.ro) {
+            docs.scan_file(arg, f)
         }
-        if ! last_empty {
+    }
+
+    # Print TOC
+    print("Table of Contents")
+    print("=================")
+    print("<!--ts-->")
+    print("  * [Table of Contents](#table-of-contents)")
+    for const topic, items in sort(x => x[0], docs) {
+        print("  * [\(make_toc_name(topic))](#\(make_link(topic)))")
+        for const item, contents in sort(x => x[0], items) {
+            const lead = item.scan(".") == -1 ? "" : "  "
+            print("\(lead)    * [\(make_toc_name(item))](#\(make_link(item)))")
+        }
+    }
+    print("<!--te-->")
+
+    # Print module documentation
+    for const topic, items in sort(x => x[0], docs) {
+        print(topic)
+        print("=".repeat(topic.size))
+        print()
+        for const item, contents in sort(x => x[0], items) {
+            print(item)
+            print("-".repeat(item.size))
             print()
+            var last_empty = false
+            for const line in contents {
+                print(line)
+                last_empty = line.size == 0
+            }
+            if ! last_empty {
+                print()
+            }
         }
     }
 }
