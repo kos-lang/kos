@@ -399,11 +399,12 @@ typedef struct KOS_FUNCTION_S {
     KOS_FUNCTION_OPTS    opts;
     KOS_ATOMIC(uint32_t) state;
     uint32_t             instr_offs;
+    KOS_OBJ_ID           bytecode; /* Buffer storage with bytecode */
     KOS_OBJ_ID           module;
     KOS_OBJ_ID           name;
-    KOS_OBJ_ID           closures; /* Bound closures */
-    KOS_OBJ_ID           defaults; /* Bound default values for arguments */
-    KOS_OBJ_ID           arg_map;  /* Maps argument names to indexes */
+    KOS_OBJ_ID           closures; /* Array with bound closures */
+    KOS_OBJ_ID           defaults; /* Array with bound default values for arguments */
+    KOS_OBJ_ID           arg_map;  /* Object which maps argument names to indexes */
     KOS_FUNCTION_HANDLER handler;
     KOS_OBJ_ID           generator_stack_frame;
 } KOS_FUNCTION;
@@ -413,11 +414,12 @@ typedef struct KOS_CLASS_S {
     KOS_FUNCTION_OPTS      opts;
     uint32_t               dummy;
     uint32_t               instr_offs;
+    KOS_OBJ_ID             bytecode; /* Buffer storage with bytecode */
     KOS_OBJ_ID             module;
     KOS_OBJ_ID             name;
-    KOS_OBJ_ID             closures; /* Bound closures */
-    KOS_OBJ_ID             defaults; /* Bound default values for arguments */
-    KOS_OBJ_ID             arg_map;  /* Maps argument names to indexes */
+    KOS_OBJ_ID             closures; /* Array with bound closures */
+    KOS_OBJ_ID             defaults; /* Array with bound default values for arguments */
+    KOS_OBJ_ID             arg_map;  /* Object which maps argument names to indexes */
     KOS_FUNCTION_HANDLER   handler;
     KOS_ATOMIC(KOS_OBJ_ID) prototype;
     KOS_ATOMIC(KOS_OBJ_ID) props;

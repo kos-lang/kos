@@ -1055,6 +1055,45 @@ cleanup:
     return error;
 }
 
+static int store_bytecode(KOS_COMP_FUNCTION *func_constant,
+                          const char        *bytecode,
+                          size_t             bytecode_size,
+                          const char        *addr2line,
+                          size_t             addr2line_size,
+                          uint32_t           addr2line_offs)
+{
+    struct KOS_COMP_ADDR_TO_LINE_S *ptr;
+    struct KOS_COMP_ADDR_TO_LINE_S *end;
+    char                           *new_addr2line;
+    int                             error;
+
+    /* Ignore trailing offset beyond the end of the function */
+    if (addr2line_size) {
+        ptr = (struct KOS_COMP_ADDR_TO_LINE_S *)(addr2line + addr2line_size);
+        --ptr;
+        if (ptr->offs == addr2line_offs + bytecode_size)
+            addr2line_size -= sizeof(struct KOS_COMP_ADDR_TO_LINE_S);
+    }
+
+    TRY(KOS_vector_resize(&func_constant->bytecode, bytecode_size + addr2line_size));
+    func_constant->bytecode_size = bytecode_size;
+
+    memcpy(func_constant->bytecode.buffer, bytecode, bytecode_size);
+
+    new_addr2line = func_constant->bytecode.buffer + bytecode_size;
+    memcpy(new_addr2line, addr2line, addr2line_size);
+
+    /* Update addr2line offsets for this function by removing old function offset */
+    ptr = (struct KOS_COMP_ADDR_TO_LINE_S *)new_addr2line;
+    end = (struct KOS_COMP_ADDR_TO_LINE_S *)(new_addr2line + addr2line_size);
+
+    for ( ; ptr < end; ptr++)
+        ptr->offs -= addr2line_offs;
+
+cleanup:
+    return error;
+}
+
 static int append_frame(KOS_COMP_UNIT     *program,
                         KOS_COMP_FUNCTION *func_constant,
                         int                fun_start_offs,
@@ -1066,6 +1105,13 @@ static int append_frame(KOS_COMP_UNIT     *program,
     const size_t fun_new_offs = program->code_buf.size;
     const size_t a2l_size     = program->addr2line_gen_buf.size - addr2line_start_offs;
     size_t       a2l_new_offs = program->addr2line_buf.size;
+
+    TRY(store_bytecode(func_constant,
+                       program->code_gen_buf.buffer + fun_start_offs,
+                       fun_size,
+                       program->addr2line_gen_buf.buffer + addr2line_start_offs,
+                       a2l_size,
+                       fun_start_offs));
 
     TRY(KOS_vector_resize(&program->code_buf, fun_new_offs + fun_size));
 
@@ -1165,6 +1211,8 @@ static KOS_COMP_FUNCTION *alloc_func_constant(KOS_COMP_UNIT *program,
         constant->this_reg       = KOS_NO_REG;
         constant->bind_reg       = KOS_NO_REG;
         constant->num_named_args = num_named_args;
+
+        KOS_vector_init(&constant->bytecode);
     }
 
     return constant;

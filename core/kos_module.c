@@ -701,6 +701,8 @@ static int alloc_constants(KOS_CONTEXT    ctx,
                                          TO_SMALL_INT((int64_t)arg_idx)));
                 }
 
+                KOS_vector_destroy(&func_const->bytecode);
+
                 if (func_const->flags & KOS_COMP_FUN_GENERATOR)
                     OBJPTR(FUNCTION, obj.o)->state = KOS_GEN_INIT;
                 break;

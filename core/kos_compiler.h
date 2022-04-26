@@ -201,6 +201,10 @@ typedef struct KOS_COMP_FUNCTION_S {
     uint8_t        bind_reg;            /* First bound register */
 
     uint8_t        num_named_args;
+
+    KOS_VECTOR     bytecode;            /* Bytecode generated for the function */
+    uint32_t       bytecode_size;       /* Size of bytecode, address to line translation is stored after bytecode */
+
     uint32_t       arg_name_str_idx[1]; /* Array of constant indexes containing argument names */
 } KOS_COMP_FUNCTION;
 
