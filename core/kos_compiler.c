@@ -520,8 +520,8 @@ static int constants_compare_node(KOS_RED_BLACK_NODE *a,
         }
 
         case KOS_COMP_CONST_FUNCTION:
-            return ((const KOS_COMP_FUNCTION *)const_a)->offset
-                 < ((const KOS_COMP_FUNCTION *)const_b)->offset
+            return ((const KOS_COMP_FUNCTION *)const_a)->bytecode_offset
+                 < ((const KOS_COMP_FUNCTION *)const_b)->bytecode_offset
                  ? -1 : 0;
 
         case KOS_COMP_CONST_PROTOTYPE:
@@ -1055,45 +1055,6 @@ cleanup:
     return error;
 }
 
-static int store_bytecode(KOS_COMP_FUNCTION *func_constant,
-                          const char        *bytecode,
-                          size_t             bytecode_size,
-                          const char        *addr2line,
-                          size_t             addr2line_size,
-                          uint32_t           addr2line_offs)
-{
-    struct KOS_COMP_ADDR_TO_LINE_S *ptr;
-    struct KOS_COMP_ADDR_TO_LINE_S *end;
-    char                           *new_addr2line;
-    int                             error;
-
-    /* Ignore trailing offset beyond the end of the function */
-    if (addr2line_size) {
-        ptr = (struct KOS_COMP_ADDR_TO_LINE_S *)(addr2line + addr2line_size);
-        --ptr;
-        if (ptr->offs == addr2line_offs + bytecode_size)
-            addr2line_size -= sizeof(struct KOS_COMP_ADDR_TO_LINE_S);
-    }
-
-    TRY(KOS_vector_resize(&func_constant->bytecode, bytecode_size + addr2line_size));
-    func_constant->bytecode_size = bytecode_size;
-
-    memcpy(func_constant->bytecode.buffer, bytecode, bytecode_size);
-
-    new_addr2line = func_constant->bytecode.buffer + bytecode_size;
-    memcpy(new_addr2line, addr2line, addr2line_size);
-
-    /* Update addr2line offsets for this function by removing old function offset */
-    ptr = (struct KOS_COMP_ADDR_TO_LINE_S *)new_addr2line;
-    end = (struct KOS_COMP_ADDR_TO_LINE_S *)(new_addr2line + addr2line_size);
-
-    for ( ; ptr < end; ptr++)
-        ptr->offs -= addr2line_offs;
-
-cleanup:
-    return error;
-}
-
 static int append_frame(KOS_COMP_UNIT     *program,
                         KOS_COMP_FUNCTION *func_constant,
                         int                fun_start_offs,
@@ -1103,28 +1064,27 @@ static int append_frame(KOS_COMP_UNIT     *program,
     const size_t fun_end_offs = (size_t)program->cur_offs;
     const size_t fun_size     = fun_end_offs - fun_start_offs;
     const size_t fun_new_offs = program->code_buf.size;
-    const size_t a2l_size     = program->addr2line_gen_buf.size - addr2line_start_offs;
-    size_t       a2l_new_offs = program->addr2line_buf.size;
+    const size_t a2l_new_offs = program->addr2line_buf.size;
+    size_t       a2l_size;
 
-    TRY(store_bytecode(func_constant,
-                       program->code_gen_buf.buffer + fun_start_offs,
-                       fun_size,
-                       program->addr2line_gen_buf.buffer + addr2line_start_offs,
-                       a2l_size,
-                       fun_start_offs));
-
-    TRY(KOS_vector_resize(&program->code_buf, fun_new_offs + fun_size));
-
-    if (a2l_new_offs) {
+    /* Remove last address-to-line entry if it points beyond the end of the function */
+    if (program->addr2line_gen_buf.size) {
+        const size_t cur_a2l_size = program->addr2line_gen_buf.size;
 
         struct KOS_COMP_ADDR_TO_LINE_S *last_ptr =
-            (struct KOS_COMP_ADDR_TO_LINE_S *)
-                (program->addr2line_buf.buffer + a2l_new_offs);
+            (struct KOS_COMP_ADDR_TO_LINE_S *)(program->addr2line_gen_buf.buffer + cur_a2l_size);
+
         --last_ptr;
 
-        if (last_ptr->offs == fun_new_offs)
-            a2l_new_offs -= sizeof(struct KOS_COMP_ADDR_TO_LINE_S);
+        if (last_ptr->offs == fun_end_offs)
+            TRY(KOS_vector_resize(&program->addr2line_gen_buf,
+                                  cur_a2l_size - sizeof(struct KOS_COMP_ADDR_TO_LINE_S)));
     }
+
+    a2l_size = program->addr2line_gen_buf.size - addr2line_start_offs;
+    assert( ! (a2l_size % sizeof(struct KOS_COMP_ADDR_TO_LINE_S)));
+
+    TRY(KOS_vector_resize(&program->code_buf, fun_new_offs + fun_size));
 
     TRY(KOS_vector_resize(&program->addr2line_buf, a2l_new_offs + a2l_size));
 
@@ -1135,15 +1095,19 @@ static int append_frame(KOS_COMP_UNIT     *program,
            program->code_gen_buf.buffer + fun_start_offs,
            fun_size);
 
+    func_constant->bytecode_offset = (uint32_t)fun_new_offs;
+    func_constant->bytecode_size   = (uint32_t)fun_size;
+
     TRY(KOS_vector_resize(&program->code_gen_buf, (size_t)fun_start_offs));
 
     program->cur_offs = fun_start_offs;
 
-    program->cur_frame->constant->offset = (uint32_t)fun_new_offs;
-
     memcpy(program->addr2line_buf.buffer + a2l_new_offs,
            program->addr2line_gen_buf.buffer + addr2line_start_offs,
            a2l_size);
+
+    func_constant->addr2line_offset = (uint32_t)a2l_new_offs;
+    func_constant->addr2line_size   = (uint32_t)a2l_size;
 
     TRY(KOS_vector_resize(&program->addr2line_gen_buf, addr2line_start_offs));
 
@@ -1156,6 +1120,7 @@ static int append_frame(KOS_COMP_UNIT     *program,
             (struct KOS_COMP_ADDR_TO_LINE_S *)
                 (program->addr2line_buf.buffer + program->addr2line_buf.size);
 
+        /* TODO just make them function-relative by subtracting fun_start_offs */
         const uint32_t delta = (uint32_t)(fun_new_offs - fun_start_offs);
 
         for ( ; ptr < end; ptr++)
@@ -1211,8 +1176,6 @@ static KOS_COMP_FUNCTION *alloc_func_constant(KOS_COMP_UNIT *program,
         constant->this_reg       = KOS_NO_REG;
         constant->bind_reg       = KOS_NO_REG;
         constant->num_named_args = num_named_args;
-
-        KOS_vector_init(&constant->bytecode);
     }
 
     return constant;

@@ -180,7 +180,10 @@ typedef struct KOS_COMP_STRING_S {
 
 typedef struct KOS_COMP_FUNCTION_S {
     KOS_COMP_CONST header;
-    uint32_t       offset;              /* Function entry point offset in the module */
+    uint32_t       bytecode_offset;     /* Offset in the buffer where bytecode is generated */
+    uint32_t       bytecode_size;       /* Size of bytecode */
+    uint32_t       addr2line_offset;    /* Offset in the buffer where address-to-line translation is stored */
+    uint32_t       addr2line_size;      /* Size of address-to-line translation in bytes */
     uint32_t       name_str_idx;        /* Index of constant string with function's name */
     uint8_t        flags;               /* KOS_COMP_FUN_* flags */
     uint8_t        num_regs;            /* Number of registers used by the function */
@@ -201,9 +204,6 @@ typedef struct KOS_COMP_FUNCTION_S {
     uint8_t        bind_reg;            /* First bound register */
 
     uint8_t        num_named_args;
-
-    KOS_VECTOR     bytecode;            /* Bytecode generated for the function */
-    uint32_t       bytecode_size;       /* Size of bytecode, address to line translation is stored after bytecode */
 
     uint32_t       arg_name_str_idx[1]; /* Array of constant indexes containing argument names */
 } KOS_COMP_FUNCTION;

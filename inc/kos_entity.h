@@ -399,13 +399,14 @@ typedef struct KOS_FUNCTION_S {
     KOS_FUNCTION_OPTS    opts;
     KOS_ATOMIC(uint32_t) state;
     uint32_t             instr_offs;
+    uint32_t             bytecode_size; /* Bytecode size, address-to-line located after bytecode */
     KOS_OBJ_ID           bytecode; /* Buffer storage with bytecode */
     KOS_OBJ_ID           module;
-    KOS_OBJ_ID           name;
+    KOS_OBJ_ID           name;     /* Function name */
     KOS_OBJ_ID           closures; /* Array with bound closures */
     KOS_OBJ_ID           defaults; /* Array with bound default values for arguments */
     KOS_OBJ_ID           arg_map;  /* Object which maps argument names to indexes */
-    KOS_FUNCTION_HANDLER handler;
+    KOS_FUNCTION_HANDLER handler;  /* TODO store this in bytecode member */
     KOS_OBJ_ID           generator_stack_frame;
 } KOS_FUNCTION;
 
@@ -414,13 +415,14 @@ typedef struct KOS_CLASS_S {
     KOS_FUNCTION_OPTS      opts;
     uint32_t               dummy;
     uint32_t               instr_offs;
+    uint32_t               bytecode_size; /* Bytecode size, address-to-line located after bytecode */
     KOS_OBJ_ID             bytecode; /* Buffer storage with bytecode */
     KOS_OBJ_ID             module;
-    KOS_OBJ_ID             name;
+    KOS_OBJ_ID             name;     /* Function name */
     KOS_OBJ_ID             closures; /* Array with bound closures */
     KOS_OBJ_ID             defaults; /* Array with bound default values for arguments */
     KOS_OBJ_ID             arg_map;  /* Object which maps argument names to indexes */
-    KOS_FUNCTION_HANDLER   handler;
+    KOS_FUNCTION_HANDLER   handler;  /* TODO store this in bytecode member */
     KOS_ATOMIC(KOS_OBJ_ID) prototype;
     KOS_ATOMIC(KOS_OBJ_ID) props;
 } KOS_CLASS;
@@ -465,7 +467,7 @@ typedef struct KOS_MODULE_S {
     uint32_t               num_line_addrs;
     uint32_t               num_func_addrs;
     uint32_t               bytecode_size;
-    uint32_t               main_idx;     /* Index of constant with main function */
+    uint32_t               main_idx;     /* Index of constant with global scope "function" */
 } KOS_MODULE;
 
 typedef struct KOS_DYNAMIC_PROP_S {
