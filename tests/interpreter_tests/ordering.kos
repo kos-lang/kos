@@ -184,3 +184,20 @@ do {
     a = a == void || a
     assert a == 10
 }
+
+# Order of assignment, right-hand-side first
+do {
+    const order = test_order()
+    const obj = { }
+
+    fun ret_obj(x, o)
+    {
+        o.a = order(x)
+        return o
+    }
+
+    ret_obj(2, obj).b = order(1)
+
+    assert "a" in obj
+    assert "b" in obj
+}
