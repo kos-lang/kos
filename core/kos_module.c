@@ -710,8 +710,11 @@ static int alloc_constants(KOS_CONTEXT    ctx,
                 OBJPTR(FUNCTION, obj.o)->instr_offs = OBJPTR(MODULE, module.o)->bytecode_size + func_const->bytecode_offset;
                 OBJPTR(FUNCTION, obj.o)->module     = module.o;
 
-                OBJPTR(FUNCTION, obj.o)->bytecode = alloc_bytecode(ctx, program, func_const);
-                TRY_OBJID(OBJPTR(FUNCTION, obj.o)->bytecode);
+                {
+                    const KOS_OBJ_ID bytecode = alloc_bytecode(ctx, program, func_const);
+                    TRY_OBJID(bytecode);
+                    OBJPTR(FUNCTION, obj.o)->bytecode = bytecode;
+                }
 
                 OBJPTR(FUNCTION, obj.o)->bytecode_size = func_const->bytecode_offset;
 
