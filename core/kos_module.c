@@ -608,7 +608,7 @@ static KOS_OBJ_ID alloc_bytecode(KOS_CONTEXT        ctx,
         }
     }
 
-    return OBJID(OPAQUE, bytecode);
+    return OBJID(OPAQUE, (KOS_OPAQUE *)bytecode);
 }
 
 static uint32_t count_constants(KOS_COMP_UNIT *program)
