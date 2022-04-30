@@ -77,6 +77,8 @@ KOS_OBJ_ID KOS_new_function(KOS_CONTEXT ctx)
         func->opts.this_reg     = KOS_NO_REG;
         func->opts.bind_reg     = KOS_NO_REG;
 
+        func->bytecode_size         = 0;
+        func->bytecode              = KOS_BADPTR;
         func->module                = KOS_BADPTR;
         func->name                  = KOS_STR_EMPTY;
         func->closures              = KOS_VOID;
@@ -116,14 +118,16 @@ KOS_OBJ_ID kos_copy_function(KOS_CONTEXT ctx,
 
         KOS_atomic_write_relaxed_u32(dest->state, KOS_atomic_read_relaxed_u32(src->state));
 
-        dest->opts       = src->opts;
-        dest->instr_offs = src->instr_offs;
-        dest->module     = src->module;
-        dest->name       = src->name;
-        dest->closures   = src->closures;
-        dest->defaults   = src->defaults;
-        dest->arg_map    = src->arg_map;
-        dest->handler    = src->handler;
+        dest->opts          = src->opts;
+        dest->instr_offs    = src->instr_offs;
+        dest->bytecode_size = src->bytecode_size;
+        dest->bytecode      = src->bytecode;
+        dest->module        = src->module;
+        dest->name          = src->name;
+        dest->closures      = src->closures;
+        dest->defaults      = src->defaults;
+        dest->arg_map       = src->arg_map;
+        dest->handler       = src->handler;
     }
 
     KOS_destroy_top_local(ctx, &obj);
@@ -211,14 +215,16 @@ KOS_OBJ_ID KOS_new_class(KOS_CONTEXT ctx, KOS_OBJ_ID proto_obj)
         OBJPTR(CLASS, func.o)->opts.this_reg     = KOS_NO_REG;
         OBJPTR(CLASS, func.o)->opts.bind_reg     = KOS_NO_REG;
 
-        OBJPTR(CLASS, func.o)->dummy      = KOS_CTOR;
-        OBJPTR(CLASS, func.o)->module     = KOS_BADPTR;
-        OBJPTR(CLASS, func.o)->name       = KOS_STR_EMPTY;
-        OBJPTR(CLASS, func.o)->closures   = KOS_VOID;
-        OBJPTR(CLASS, func.o)->defaults   = KOS_VOID;
-        OBJPTR(CLASS, func.o)->arg_map    = KOS_VOID;
-        OBJPTR(CLASS, func.o)->handler    = KOS_NULL;
-        OBJPTR(CLASS, func.o)->instr_offs = ~0U;
+        OBJPTR(CLASS, func.o)->dummy         = KOS_CTOR;
+        OBJPTR(CLASS, func.o)->bytecode_size = 0;
+        OBJPTR(CLASS, func.o)->bytecode      = KOS_BADPTR;
+        OBJPTR(CLASS, func.o)->module        = KOS_BADPTR;
+        OBJPTR(CLASS, func.o)->name          = KOS_STR_EMPTY;
+        OBJPTR(CLASS, func.o)->closures      = KOS_VOID;
+        OBJPTR(CLASS, func.o)->defaults      = KOS_VOID;
+        OBJPTR(CLASS, func.o)->arg_map       = KOS_VOID;
+        OBJPTR(CLASS, func.o)->handler       = KOS_NULL;
+        OBJPTR(CLASS, func.o)->instr_offs    = ~0U;
         KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, func.o)->prototype, proto.o);
         KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, func.o)->props,     KOS_BADPTR);
 

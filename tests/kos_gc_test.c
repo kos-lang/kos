@@ -721,32 +721,42 @@ static int verify_function(KOS_OBJ_ID obj_id)
     TEST(OBJPTR(FUNCTION, obj_id)->instr_offs    == 0);
     TEST(KOS_atomic_read_relaxed_u32(OBJPTR(FUNCTION, obj_id)->state) == 0);
 
-    v = OBJPTR(FUNCTION, obj_id)->module;
+    v = OBJPTR(FUNCTION, obj_id)->bytecode;
     TEST( ! IS_BAD_PTR(v));
     TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
     TEST(OBJPTR(INTEGER, v)->value == 48);
 
-    v = OBJPTR(FUNCTION, obj_id)->closures;
+    v = OBJPTR(FUNCTION, obj_id)->module;
     TEST( ! IS_BAD_PTR(v));
     TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
     TEST(OBJPTR(INTEGER, v)->value == 49);
 
-    v = OBJPTR(FUNCTION, obj_id)->defaults;
+    v = OBJPTR(FUNCTION, obj_id)->name;
     TEST( ! IS_BAD_PTR(v));
     TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
     TEST(OBJPTR(INTEGER, v)->value == 50);
+
+    v = OBJPTR(FUNCTION, obj_id)->closures;
+    TEST( ! IS_BAD_PTR(v));
+    TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
+    TEST(OBJPTR(INTEGER, v)->value == 51);
+
+    v = OBJPTR(FUNCTION, obj_id)->defaults;
+    TEST( ! IS_BAD_PTR(v));
+    TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
+    TEST(OBJPTR(INTEGER, v)->value == 52);
 
     v = OBJPTR(FUNCTION, obj_id)->arg_map;
     TEST( ! IS_BAD_PTR(v));
     TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
-    TEST(OBJPTR(INTEGER, v)->value == 50);
-
-    TEST(OBJPTR(FUNCTION, obj_id)->handler == &handler);
+    TEST(OBJPTR(INTEGER, v)->value == 53);
 
     v = OBJPTR(FUNCTION, obj_id)->generator_stack_frame;
     TEST( ! IS_BAD_PTR(v));
     TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
-    TEST(OBJPTR(INTEGER, v)->value == 51);
+    TEST(OBJPTR(INTEGER, v)->value == 54);
+
+    TEST(OBJPTR(FUNCTION, obj_id)->handler == &handler);
 
     return 0;
 }
@@ -756,9 +766,12 @@ static KOS_OBJ_ID alloc_function(KOS_CONTEXT  ctx,
                                  uint32_t    *total_size,
                                  VERIFY_FUNC *verify)
 {
-    KOS_OBJ_ID  obj_id[5];
-    OBJECT_DESC desc[5] = {
+    KOS_OBJ_ID  obj_id[8];
+    OBJECT_DESC desc[8] = {
         { OBJ_FUNCTION, (uint32_t)sizeof(KOS_FUNCTION) },
+        { OBJ_INTEGER,  (uint32_t)sizeof(KOS_INTEGER)  },
+        { OBJ_INTEGER,  (uint32_t)sizeof(KOS_INTEGER)  },
+        { OBJ_INTEGER,  (uint32_t)sizeof(KOS_INTEGER)  },
         { OBJ_INTEGER,  (uint32_t)sizeof(KOS_INTEGER)  },
         { OBJ_INTEGER,  (uint32_t)sizeof(KOS_INTEGER)  },
         { OBJ_INTEGER,  (uint32_t)sizeof(KOS_INTEGER)  },
@@ -774,17 +787,21 @@ static KOS_OBJ_ID alloc_function(KOS_CONTEXT  ctx,
     OBJPTR(FUNCTION, obj_id[0])->opts.args_reg = 3;
     OBJPTR(FUNCTION, obj_id[0])->instr_offs    = 0;
     OBJPTR(FUNCTION, obj_id[0])->handler       = &handler;
-    OBJPTR(FUNCTION, obj_id[0])->module        = obj_id[1];
-    OBJPTR(FUNCTION, obj_id[0])->name          = obj_id[1];
-    OBJPTR(FUNCTION, obj_id[0])->closures      = obj_id[2];
-    OBJPTR(FUNCTION, obj_id[0])->defaults      = obj_id[3];
-    OBJPTR(FUNCTION, obj_id[0])->arg_map       = obj_id[3];
-    OBJPTR(FUNCTION, obj_id[0])->generator_stack_frame = obj_id[4];
+    OBJPTR(FUNCTION, obj_id[0])->bytecode      = obj_id[1];
+    OBJPTR(FUNCTION, obj_id[0])->module        = obj_id[2];
+    OBJPTR(FUNCTION, obj_id[0])->name          = obj_id[3];
+    OBJPTR(FUNCTION, obj_id[0])->closures      = obj_id[4];
+    OBJPTR(FUNCTION, obj_id[0])->defaults      = obj_id[5];
+    OBJPTR(FUNCTION, obj_id[0])->arg_map       = obj_id[6];
+    OBJPTR(FUNCTION, obj_id[0])->generator_stack_frame = obj_id[7];
 
     OBJPTR(INTEGER, obj_id[1])->value = 48;
     OBJPTR(INTEGER, obj_id[2])->value = 49;
     OBJPTR(INTEGER, obj_id[3])->value = 50;
     OBJPTR(INTEGER, obj_id[4])->value = 51;
+    OBJPTR(INTEGER, obj_id[5])->value = 52;
+    OBJPTR(INTEGER, obj_id[6])->value = 53;
+    OBJPTR(INTEGER, obj_id[7])->value = 54;
 
     *num_objs   = NELEMS(obj_id);
     *total_size = get_obj_sizes(obj_id, NELEMS(obj_id));
@@ -803,32 +820,42 @@ static int verify_class(KOS_OBJ_ID obj_id)
     TEST(OBJPTR(CLASS, obj_id)->opts.args_reg == 3);
     TEST(OBJPTR(CLASS, obj_id)->instr_offs    == 0);
 
-    v = OBJPTR(CLASS, obj_id)->module;
+    v = OBJPTR(FUNCTION, obj_id)->bytecode;
     TEST( ! IS_BAD_PTR(v));
     TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
     TEST(OBJPTR(INTEGER, v)->value == 52);
 
-    v = OBJPTR(CLASS, obj_id)->closures;
+    v = OBJPTR(FUNCTION, obj_id)->module;
     TEST( ! IS_BAD_PTR(v));
     TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
     TEST(OBJPTR(INTEGER, v)->value == 53);
 
-    v = OBJPTR(CLASS, obj_id)->defaults;
+    v = OBJPTR(FUNCTION, obj_id)->name;
     TEST( ! IS_BAD_PTR(v));
     TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
     TEST(OBJPTR(INTEGER, v)->value == 54);
 
-    v = OBJPTR(CLASS, obj_id)->arg_map;
+    v = OBJPTR(FUNCTION, obj_id)->closures;
     TEST( ! IS_BAD_PTR(v));
     TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
-    TEST(OBJPTR(INTEGER, v)->value == 54);
+    TEST(OBJPTR(INTEGER, v)->value == 55);
+
+    v = OBJPTR(FUNCTION, obj_id)->defaults;
+    TEST( ! IS_BAD_PTR(v));
+    TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
+    TEST(OBJPTR(INTEGER, v)->value == 56);
+
+    v = OBJPTR(FUNCTION, obj_id)->arg_map;
+    TEST( ! IS_BAD_PTR(v));
+    TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
+    TEST(OBJPTR(INTEGER, v)->value == 57);
 
     TEST(OBJPTR(CLASS, obj_id)->handler == &handler);
 
     v = KOS_atomic_read_relaxed_obj(OBJPTR(CLASS, obj_id)->prototype);
     TEST( ! IS_BAD_PTR(v));
     TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
-    TEST(OBJPTR(INTEGER, v)->value == 55);
+    TEST(OBJPTR(INTEGER, v)->value == 58);
 
     v = KOS_atomic_read_relaxed_obj(OBJPTR(CLASS, obj_id)->props);
     TEST( ! IS_BAD_PTR(v));
@@ -849,9 +876,12 @@ static KOS_OBJ_ID alloc_class(KOS_CONTEXT  ctx,
                               uint32_t    *total_size,
                               VERIFY_FUNC *verify)
 {
-    KOS_OBJ_ID  obj_id[6];
-    OBJECT_DESC desc[6] = {
+    KOS_OBJ_ID  obj_id[9];
+    OBJECT_DESC desc[9] = {
         { OBJ_CLASS,          (uint32_t)sizeof(KOS_CLASS)          },
+        { OBJ_INTEGER,        (uint32_t)sizeof(KOS_INTEGER)        },
+        { OBJ_INTEGER,        (uint32_t)sizeof(KOS_INTEGER)        },
+        { OBJ_INTEGER,        (uint32_t)sizeof(KOS_INTEGER)        },
         { OBJ_INTEGER,        (uint32_t)sizeof(KOS_INTEGER)        },
         { OBJ_INTEGER,        (uint32_t)sizeof(KOS_INTEGER)        },
         { OBJ_INTEGER,        (uint32_t)sizeof(KOS_INTEGER)        },
@@ -867,26 +897,30 @@ static KOS_OBJ_ID alloc_class(KOS_CONTEXT  ctx,
     OBJPTR(CLASS, obj_id[0])->opts.args_reg = 3;
     OBJPTR(CLASS, obj_id[0])->instr_offs    = 0;
     OBJPTR(CLASS, obj_id[0])->handler       = &handler;
-    OBJPTR(CLASS, obj_id[0])->module        = obj_id[1];
-    OBJPTR(CLASS, obj_id[0])->name          = obj_id[1];
-    OBJPTR(CLASS, obj_id[0])->closures      = obj_id[2];
-    OBJPTR(CLASS, obj_id[0])->defaults      = obj_id[3];
-    OBJPTR(CLASS, obj_id[0])->arg_map       = obj_id[3];
-    KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, obj_id[0])->prototype, obj_id[4]);
-    KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, obj_id[0])->props,     obj_id[5]);
+    OBJPTR(CLASS, obj_id[0])->bytecode      = obj_id[1];
+    OBJPTR(CLASS, obj_id[0])->module        = obj_id[2];
+    OBJPTR(CLASS, obj_id[0])->name          = obj_id[3];
+    OBJPTR(CLASS, obj_id[0])->closures      = obj_id[4];
+    OBJPTR(CLASS, obj_id[0])->defaults      = obj_id[5];
+    OBJPTR(CLASS, obj_id[0])->arg_map       = obj_id[6];
+    KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, obj_id[0])->prototype, obj_id[7]);
+    KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, obj_id[0])->props,     obj_id[8]);
 
     OBJPTR(INTEGER, obj_id[1])->value = 52;
     OBJPTR(INTEGER, obj_id[2])->value = 53;
     OBJPTR(INTEGER, obj_id[3])->value = 54;
     OBJPTR(INTEGER, obj_id[4])->value = 55;
+    OBJPTR(INTEGER, obj_id[5])->value = 56;
+    OBJPTR(INTEGER, obj_id[6])->value = 57;
+    OBJPTR(INTEGER, obj_id[7])->value = 58;
 
-    KOS_atomic_write_relaxed_u32(OBJPTR(OBJECT_STORAGE, obj_id[5])->capacity,       1);
-    KOS_atomic_write_relaxed_u32(OBJPTR(OBJECT_STORAGE, obj_id[5])->num_slots_used, 0);
-    KOS_atomic_write_relaxed_u32(OBJPTR(OBJECT_STORAGE, obj_id[5])->num_slots_open, 0);
-    KOS_atomic_write_relaxed_u32(OBJPTR(OBJECT_STORAGE, obj_id[5])->active_copies,  0);
-    KOS_atomic_write_relaxed_ptr(OBJPTR(OBJECT_STORAGE, obj_id[5])->new_prop_table, KOS_BADPTR);
-    KOS_atomic_write_relaxed_ptr(OBJPTR(OBJECT_STORAGE, obj_id[5])->items[0].key,   KOS_BADPTR);
-    KOS_atomic_write_relaxed_ptr(OBJPTR(OBJECT_STORAGE, obj_id[5])->items[0].value, KOS_BADPTR);
+    KOS_atomic_write_relaxed_u32(OBJPTR(OBJECT_STORAGE, obj_id[8])->capacity,       1);
+    KOS_atomic_write_relaxed_u32(OBJPTR(OBJECT_STORAGE, obj_id[8])->num_slots_used, 0);
+    KOS_atomic_write_relaxed_u32(OBJPTR(OBJECT_STORAGE, obj_id[8])->num_slots_open, 0);
+    KOS_atomic_write_relaxed_u32(OBJPTR(OBJECT_STORAGE, obj_id[8])->active_copies,  0);
+    KOS_atomic_write_relaxed_ptr(OBJPTR(OBJECT_STORAGE, obj_id[8])->new_prop_table, KOS_BADPTR);
+    KOS_atomic_write_relaxed_ptr(OBJPTR(OBJECT_STORAGE, obj_id[8])->items[0].key,   KOS_BADPTR);
+    KOS_atomic_write_relaxed_ptr(OBJPTR(OBJECT_STORAGE, obj_id[8])->items[0].value, KOS_BADPTR);
 
     *num_objs   = NELEMS(obj_id);
     *total_size = get_obj_sizes(obj_id, NELEMS(obj_id));
