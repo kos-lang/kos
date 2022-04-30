@@ -399,7 +399,6 @@ typedef struct KOS_FUNCTION_S {
     KOS_FUNCTION_OPTS    opts;
     KOS_ATOMIC(uint32_t) state;
     uint32_t             instr_offs;
-    uint32_t             bytecode_size; /* Bytecode size, address-to-line located after bytecode */
     KOS_OBJ_ID           bytecode; /* Buffer storage with bytecode */
     KOS_OBJ_ID           module;
     KOS_OBJ_ID           name;     /* Function name */
@@ -415,7 +414,6 @@ typedef struct KOS_CLASS_S {
     KOS_FUNCTION_OPTS      opts;
     uint32_t               dummy;
     uint32_t               instr_offs;
-    uint32_t               bytecode_size; /* Bytecode size, address-to-line located after bytecode */
     KOS_OBJ_ID             bytecode; /* Buffer storage with bytecode */
     KOS_OBJ_ID             module;
     KOS_OBJ_ID             name;     /* Function name */
@@ -426,6 +424,14 @@ typedef struct KOS_CLASS_S {
     KOS_ATOMIC(KOS_OBJ_ID) prototype;
     KOS_ATOMIC(KOS_OBJ_ID) props;
 } KOS_CLASS;
+
+typedef struct KOS_BYTECODE_S {
+    KOS_OBJ_HEADER         header;
+    uint32_t               bytecode_size;    /* Bytecode size in bytes */
+    uint32_t               addr2line_offset; /* Offset to addr2line in bytecode array */
+    uint32_t               addr2line_size;   /* Addr2line size in bytes */
+    uint8_t                bytecode[1];      /* Bytecode followed by KOS_LINE_ADDR structs */
+} KOS_BYTECODE;
 
 enum KOS_MODULE_FLAGS_E {
     KOS_MODULE_OWN_BYTECODE   = 1,

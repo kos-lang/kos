@@ -585,30 +585,30 @@ static KOS_OBJ_ID alloc_bytecode(KOS_CONTEXT        ctx,
     const uint32_t aligned_bytecode_size = KOS_align_up(func_const->bytecode_size,
                                                         (uint32_t)sizeof(struct KOS_COMP_ADDR_TO_LINE_S));
     const uint32_t total_size = aligned_bytecode_size + func_const->addr2line_size;
-    const uint32_t real_size  = (uint32_t)sizeof(KOS_BUFFER_STORAGE) + total_size - 1;
+    const uint32_t real_size  = (uint32_t)sizeof(KOS_BYTECODE) + total_size - 1;
 
-    KOS_BUFFER_STORAGE *const data = (KOS_BUFFER_STORAGE *)
-        kos_alloc_object(ctx, KOS_ALLOC_IMMOVABLE, OBJ_BUFFER_STORAGE, real_size);
+    KOS_BYTECODE *const bytecode = (KOS_BYTECODE *)
+        kos_alloc_object(ctx, KOS_ALLOC_IMMOVABLE, OBJ_OPAQUE, real_size);
 
-    if (data) {
-        data->ptr   = &data->buf[0];
-        data->flags = 0;
-        KOS_atomic_write_release_u32(data->capacity, total_size);
+    if (bytecode) {
+        bytecode->bytecode_size    = func_const->bytecode_size;
+        bytecode->addr2line_offset = aligned_bytecode_size;
+        bytecode->addr2line_size   = func_const->addr2line_size;
 
         assert(func_const->bytecode_offset + func_const->bytecode_size <= program->code_buf.size);
-        memcpy(data->buf,
+        memcpy(bytecode->bytecode,
                &program->code_buf.buffer[func_const->bytecode_offset],
                func_const->bytecode_size);
 
         if (func_const->addr2line_size) {
             assert(func_const->addr2line_offset + func_const->addr2line_size <= program->addr2line_buf.size);
-            memcpy(&data->buf[aligned_bytecode_size],
+            memcpy(&bytecode->bytecode[aligned_bytecode_size],
                    &program->addr2line_buf.buffer[func_const->addr2line_offset],
                    func_const->addr2line_size);
         }
     }
 
-    return OBJID(BUFFER_STORAGE, data);
+    return OBJID(OPAQUE, bytecode);
 }
 
 static uint32_t count_constants(KOS_COMP_UNIT *program)
@@ -715,8 +715,6 @@ static int alloc_constants(KOS_CONTEXT    ctx,
                     TRY_OBJID(bytecode);
                     OBJPTR(FUNCTION, obj.o)->bytecode = bytecode;
                 }
-
-                OBJPTR(FUNCTION, obj.o)->bytecode_size = func_const->bytecode_offset;
 
                 name = KOS_array_read(ctx, OBJPTR(MODULE, module.o)->constants, (int)func_const->name_str_idx);
                 TRY_OBJID(name);
