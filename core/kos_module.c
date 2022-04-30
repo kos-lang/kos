@@ -594,18 +594,18 @@ static KOS_OBJ_ID alloc_bytecode(KOS_CONTEXT        ctx,
         data->ptr   = &data->buf[0];
         data->flags = 0;
         KOS_atomic_write_release_u32(data->capacity, total_size);
-    }
 
-    assert(func_const->bytecode_offset + func_const->bytecode_size <= program->code_buf.size);
-    memcpy(data->buf,
-           &program->code_buf.buffer[func_const->bytecode_offset],
-           func_const->bytecode_size);
+        assert(func_const->bytecode_offset + func_const->bytecode_size <= program->code_buf.size);
+        memcpy(data->buf,
+               &program->code_buf.buffer[func_const->bytecode_offset],
+               func_const->bytecode_size);
 
-    if (func_const->addr2line_size) {
-        assert(func_const->addr2line_offset + func_const->addr2line_size <= program->addr2line_buf.size);
-        memcpy(&data->buf[aligned_bytecode_size],
-               &program->addr2line_buf.buffer[func_const->addr2line_offset],
-               func_const->addr2line_size);
+        if (func_const->addr2line_size) {
+            assert(func_const->addr2line_offset + func_const->addr2line_size <= program->addr2line_buf.size);
+            memcpy(&data->buf[aligned_bytecode_size],
+                   &program->addr2line_buf.buffer[func_const->addr2line_offset],
+                   func_const->addr2line_size);
+        }
     }
 
     return OBJID(BUFFER_STORAGE, data);
