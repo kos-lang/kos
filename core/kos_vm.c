@@ -1340,20 +1340,13 @@ const KOS_BYTECODE *get_bytecode_objptr(KOS_STACK_FRAME *stack_frame)
     return (const KOS_BYTECODE *)OBJPTR(OPAQUE, bytecode_obj);
 }
 
-static int64_t load_instr_offs(KOS_STACK_FRAME *stack_frame)
-{
-    const KOS_OBJ_ID instr_offs = KOS_atomic_read_relaxed_obj(stack_frame->instr_offs);
-
-    assert(IS_SMALL_INT(instr_offs));
-
-    return GET_SMALL_INT(instr_offs);
-}
-
+#ifndef NDEBUG
 static uint32_t get_bytecode_size(KOS_STACK_FRAME *stack_frame)
 {
     const KOS_BYTECODE *const bytecode_ptr = get_bytecode_objptr(stack_frame);
     return bytecode_ptr->bytecode_size;
 }
+#endif
 
 static const uint8_t *get_bytecode_at_offs(KOS_STACK_FRAME *stack_frame, uint32_t offs)
 {
@@ -1363,7 +1356,16 @@ static const uint8_t *get_bytecode_at_offs(KOS_STACK_FRAME *stack_frame, uint32_
 
 static const uint8_t *get_bytecode(KOS_STACK_FRAME *stack_frame)
 {
-    return get_bytecode_at_offs(stack_frame, load_instr_offs(stack_frame));
+    const KOS_OBJ_ID instr_offs_id = KOS_atomic_read_relaxed_obj(stack_frame->instr_offs);
+    int64_t          instr_offs;
+
+    assert(IS_SMALL_INT(instr_offs_id));
+
+    instr_offs = GET_SMALL_INT(instr_offs_id);
+
+    assert(instr_offs >= 0 && instr_offs < get_bytecode_size(stack_frame));
+
+    return get_bytecode_at_offs(stack_frame, (uint32_t)instr_offs);
 }
 
 static uint32_t get_instr_offs(KOS_STACK_FRAME *stack_frame, const uint8_t *bytecode)
