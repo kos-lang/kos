@@ -37,6 +37,10 @@ _KOS_fix_index
 _KOS_format_exception
 _KOS_free
 _KOS_free_aligned
+_KOS_function_addr_to_line
+_KOS_function_get_code_size
+_KOS_function_get_def_line
+_KOS_function_get_num_instr
 _KOS_get_absolute_path
 _KOS_get_env
 _KOS_get_file_name
@@ -84,11 +88,8 @@ _KOS_module_add_constructor
 _KOS_module_add_function
 _KOS_module_add_global
 _KOS_module_add_member_function
-_KOS_module_addr_to_func_line
-_KOS_module_addr_to_line
-_KOS_module_func_get_code_size
-_KOS_module_func_get_num_instr
 _KOS_module_get_global
+_KOS_module_run_function
 _KOS_modules_init
 _KOS_new_array
 _KOS_new_buffer

@@ -4661,13 +4661,9 @@ static KOS_OBJ_ID get_function_line(KOS_CONTEXT ctx,
 
     if (type == OBJ_FUNCTION || type == OBJ_CLASS) {
 
-        KOS_FUNCTION *func = OBJPTR(FUNCTION, this_obj);
-        unsigned      line = 0U;
+        const uint32_t def_line = KOS_function_get_def_line(this_obj);
 
-        if ( ! IS_BAD_PTR(func->module) && func->instr_offs != ~0U)
-            line = KOS_module_addr_to_func_line(OBJPTR(MODULE, func->module),
-                                                func->instr_offs);
-        ret = TO_SMALL_INT((int64_t)line);
+        ret = TO_SMALL_INT((int64_t)def_line);
     }
     else
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_function));
@@ -4701,43 +4697,6 @@ static KOS_OBJ_ID get_function_name(KOS_CONTEXT ctx,
     return ret;
 }
 
-/* @item base function.prototype.offset
- *
- *     function.prototype.offset
- *
- * Read-only offset of function's bytecode.
- *
- * Zero, if this is a built-in function.
- *
- * Example:
- *
- *     > count.offset
- *     2973
- */
-static KOS_OBJ_ID get_function_offs(KOS_CONTEXT ctx,
-                                    KOS_OBJ_ID  this_obj,
-                                    KOS_OBJ_ID  args_obj)
-{
-    KOS_OBJ_ID     ret  = KOS_BADPTR;
-    const KOS_TYPE type = GET_OBJ_TYPE(this_obj);
-
-    if (type == OBJ_FUNCTION || type == OBJ_CLASS) {
-
-        KOS_FUNCTION *func = OBJPTR(FUNCTION, this_obj);
-
-        uint32_t offs = func->instr_offs;
-
-        if (offs == ~0U)
-            offs = 0;
-
-        ret = KOS_new_int(ctx, offs);
-    }
-    else
-        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_function));
-
-    return ret;
-}
-
 /* @item base function.prototype.instructions
  *
  *     function.prototype.instructions
@@ -4760,12 +4719,7 @@ static KOS_OBJ_ID get_instructions(KOS_CONTEXT ctx,
 
     if (type == OBJ_FUNCTION || type == OBJ_CLASS) {
 
-        KOS_FUNCTION *func      = OBJPTR(FUNCTION, this_obj);
-        uint32_t      num_instr = 0;
-
-        if ( ! IS_BAD_PTR(func->module))
-            num_instr = KOS_module_func_get_num_instr(OBJPTR(MODULE, func->module),
-                                                      func->instr_offs);
+        const uint32_t num_instr = KOS_function_get_num_instr(this_obj);
 
         ret = KOS_new_int(ctx, (int64_t)num_instr);
     }
@@ -4797,12 +4751,7 @@ static KOS_OBJ_ID get_code_size(KOS_CONTEXT ctx,
 
     if (type == OBJ_FUNCTION || type == OBJ_CLASS) {
 
-        KOS_FUNCTION *func      = OBJPTR(FUNCTION, this_obj);
-        uint32_t      code_size = 0;
-
-        if ( ! IS_BAD_PTR(func->module))
-            code_size = KOS_module_func_get_code_size(OBJPTR(MODULE, func->module),
-                                                      func->instr_offs);
+        const uint32_t code_size = KOS_function_get_code_size(this_obj);
 
         ret = KOS_new_int(ctx, (int64_t)code_size);
     }
@@ -5001,7 +4950,6 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(function),  "instructions", get_instructions,  KOS_NULL);
     TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(function),  "line",         get_function_line, KOS_NULL);
     TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(function),  "name",         get_function_name, KOS_NULL);
-    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(function),  "offset",       get_function_offs, KOS_NULL);
     TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(function),  "registers",    get_registers,     KOS_NULL);
     TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(function),  "size",         get_code_size,     KOS_NULL);
 

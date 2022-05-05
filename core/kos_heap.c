@@ -395,13 +395,6 @@ static void finalize_object(KOS_CONTEXT     ctx,
 
             if (obj->finalize)
                 obj->finalize();
-
-            if ((obj->flags & KOS_MODULE_OWN_BYTECODE))
-                KOS_free((void *)obj->bytecode);
-            if ((obj->flags & KOS_MODULE_OWN_LINE_ADDRS))
-                KOS_free((void *)obj->line_addrs);
-            if ((obj->flags & KOS_MODULE_OWN_FUNC_ADDRS))
-                KOS_free((void *)obj->func_addrs);
         }
 
         default:

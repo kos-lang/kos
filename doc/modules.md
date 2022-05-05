@@ -57,7 +57,6 @@ Table of Contents
       * [function.prototype.instructions](#functionprototypeinstructions)
       * [function.prototype.line](#functionprototypeline)
       * [function.prototype.name](#functionprototypename)
-      * [function.prototype.offset](#functionprototypeoffset)
       * [function.prototype.registers](#functionprototyperegisters)
       * [function.prototype.size](#functionprototypesize)
     * [generator()](#generator)
@@ -1530,20 +1529,6 @@ Example:
 
     > count.name
     "count"
-
-function.prototype.offset
--------------------------
-
-    function.prototype.offset
-
-Read-only offset of function's bytecode.
-
-Zero, if this is a built-in function.
-
-Example:
-
-    > count.offset
-    2973
 
 function.prototype.registers
 ----------------------------

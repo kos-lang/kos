@@ -85,7 +85,6 @@ KOS_OBJ_ID KOS_new_function(KOS_CONTEXT ctx)
         func->arg_map               = KOS_VOID;
         func->handler               = KOS_NULL;
         func->generator_stack_frame = KOS_BADPTR;
-        func->instr_offs            = ~0U;
 
         KOS_atomic_write_relaxed_u32(func->state, KOS_FUN);
     }
@@ -118,7 +117,6 @@ KOS_OBJ_ID kos_copy_function(KOS_CONTEXT ctx,
         KOS_atomic_write_relaxed_u32(dest->state, KOS_atomic_read_relaxed_u32(src->state));
 
         dest->opts       = src->opts;
-        dest->instr_offs = src->instr_offs;
         dest->bytecode   = src->bytecode;
         dest->module     = src->module;
         dest->name       = src->name;
@@ -221,7 +219,6 @@ KOS_OBJ_ID KOS_new_class(KOS_CONTEXT ctx, KOS_OBJ_ID proto_obj)
         OBJPTR(CLASS, func.o)->defaults   = KOS_VOID;
         OBJPTR(CLASS, func.o)->arg_map    = KOS_VOID;
         OBJPTR(CLASS, func.o)->handler    = KOS_NULL;
-        OBJPTR(CLASS, func.o)->instr_offs = ~0U;
         KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, func.o)->prototype, proto.o);
         KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, func.o)->props,     KOS_BADPTR);
 
@@ -363,6 +360,82 @@ KOS_OBJ_ID KOS_new_builtin_class(KOS_CONTEXT          ctx,
     }
 
     return KOS_destroy_top_locals(ctx, &name, &func);
+}
+
+unsigned KOS_function_addr_to_line(KOS_OBJ_ID func_obj,
+                                   uint32_t   offs)
+{
+    KOS_OBJ_ID bytecode_obj;
+    unsigned   ret = 0;
+
+    assert( ! IS_BAD_PTR(func_obj));
+    bytecode_obj = OBJPTR(FUNCTION, func_obj)->bytecode;
+    if ( ! IS_SMALL_INT(bytecode_obj) && ! IS_BAD_PTR(bytecode_obj)) {
+
+        KOS_BYTECODE *const bytecode = (KOS_BYTECODE *)OBJPTR(OPAQUE, bytecode_obj);
+
+        if (bytecode->addr2line_size > 0) {
+
+            const KOS_LINE_ADDR *ptr = (const KOS_LINE_ADDR *)&bytecode->bytecode[bytecode->addr2line_offset];
+            const KOS_LINE_ADDR *end = (const KOS_LINE_ADDR *)&bytecode->bytecode[bytecode->addr2line_offset +
+                                                                                  bytecode->addr2line_size];
+
+            while (ptr < end && offs > ptr->offs)
+                ptr++;
+
+            if (ptr >= end || offs < ptr->offs)
+                ptr--;
+
+            if (ptr < end) {
+
+                assert(ptr >= (const KOS_LINE_ADDR *)&bytecode->bytecode[bytecode->addr2line_offset]);
+                assert(offs >= ptr->offs);
+
+                ret = ptr->line;
+            }
+        }
+    }
+
+    return ret;
+}
+
+uint32_t KOS_function_get_def_line(KOS_OBJ_ID func_obj)
+{
+    KOS_OBJ_ID bytecode_obj;
+    uint32_t   def_line = 0;
+
+    assert( ! IS_BAD_PTR(func_obj));
+    bytecode_obj = OBJPTR(FUNCTION, func_obj)->bytecode;
+    if ( ! IS_SMALL_INT(bytecode_obj) && ! IS_BAD_PTR(bytecode_obj))
+        def_line = ((KOS_BYTECODE *)OBJPTR(OPAQUE, bytecode_obj))->def_line;
+
+    return def_line;
+}
+
+uint32_t KOS_function_get_num_instr(KOS_OBJ_ID func_obj)
+{
+    KOS_OBJ_ID bytecode_obj;
+    uint32_t   num_instr = 0;
+
+    assert( ! IS_BAD_PTR(func_obj));
+    bytecode_obj = OBJPTR(FUNCTION, func_obj)->bytecode;
+    if ( ! IS_SMALL_INT(bytecode_obj) && ! IS_BAD_PTR(bytecode_obj))
+        num_instr = ((KOS_BYTECODE *)OBJPTR(OPAQUE, bytecode_obj))->num_instr;
+
+    return num_instr;
+}
+
+uint32_t KOS_function_get_code_size(KOS_OBJ_ID func_obj)
+{
+    KOS_OBJ_ID bytecode_obj;
+    uint32_t   bytecode_size = 0;
+
+    assert( ! IS_BAD_PTR(func_obj));
+    bytecode_obj = OBJPTR(FUNCTION, func_obj)->bytecode;
+    if ( ! IS_SMALL_INT(bytecode_obj) && ! IS_BAD_PTR(bytecode_obj))
+        bytecode_size = ((KOS_BYTECODE *)OBJPTR(OPAQUE, bytecode_obj))->bytecode_size;
+
+    return bytecode_size;
 }
 
 KOS_OBJ_ID KOS_new_dynamic_prop(KOS_CONTEXT ctx)

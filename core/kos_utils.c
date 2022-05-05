@@ -1028,8 +1028,8 @@ static int vector_append_function(KOS_CONTEXT ctx,
         len = (unsigned)snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%" PRIX64 ">",
                                  (uint64_t)(uintptr_t)func->handler);
     else
-        len = (unsigned)snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%X>",
-                                 (unsigned)func->instr_offs);
+        len = (unsigned)snprintf(cstr_ptr, sizeof(cstr_ptr), " @ %u>",
+                                 KOS_function_get_def_line(obj_id));
 
     TRY(KOS_append_cstr(ctx, cstr_vec, cstr_ptr, KOS_min(len, (unsigned)(sizeof(cstr_ptr) - 1))));
 
@@ -1070,8 +1070,8 @@ static KOS_OBJ_ID function_to_str(KOS_CONTEXT ctx,
         snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%" PRIx64 ">",
                  (uint64_t)(uintptr_t)OBJPTR(FUNCTION, func.o)->handler);
     else
-        snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%x>",
-                 (unsigned)OBJPTR(FUNCTION, func.o)->instr_offs);
+        snprintf(cstr_ptr, sizeof(cstr_ptr), " @ %u>",
+                 KOS_function_get_def_line(func.o));
 
     strings[2].o = KOS_new_cstring(ctx, cstr_ptr);
     TRY_OBJID(strings[2].o);

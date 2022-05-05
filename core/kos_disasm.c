@@ -3,6 +3,8 @@
  */
 
 #include "kos_disasm.h"
+#include "../inc/kos_entity.h"
+#include "../inc/kos_error.h"
 #include "../inc/kos_memory.h"
 #include "kos_compiler.h"
 #include <assert.h>
@@ -375,41 +377,23 @@ static const char *const str_instr[] = {
     "CANCEL"
 };
 
-void kos_disassemble(const char                           *filename,
-                     uint32_t                              offs,
-                     const uint8_t                        *bytecode,
-                     uint32_t                              size,
-                     const struct KOS_COMP_ADDR_TO_LINE_S *line_addrs,
-                     uint32_t                              num_line_addrs,
-                     const char                    *const *func_names,
-                     const struct KOS_COMP_ADDR_TO_FUNC_S *func_addrs,
-                     uint32_t                              num_func_addrs,
-                     KOS_PRINT_CONST                       print_const,
-                     KOS_PRINT_FUNC                        print_func,
-                     void                                 *print_cookie)
+int kos_disassemble(const char                   *filename,
+                    const uint8_t                *bytecode,
+                    uint32_t                      size,
+                    const struct KOS_LINE_ADDR_S *line_addr,
+                    const struct KOS_LINE_ADDR_S *line_addr_end,
+                    KOS_PRINT_CONST               print_const,
+                    void                         *print_cookie)
 {
-    const struct KOS_COMP_ADDR_TO_LINE_S *line_addrs_end  = line_addrs + num_line_addrs;
-    const struct KOS_COMP_ADDR_TO_FUNC_S *func_addrs_end  = func_addrs + num_func_addrs;
-    KOS_VECTOR                            const_buf;
-    const size_t                          max_const_chars = 32;
+    KOS_VECTOR   const_buf;
+    uint32_t     offs            = 0;
+    const size_t max_const_chars = 32;
 
     KOS_vector_init(&const_buf);
 
     if (KOS_vector_reserve(&const_buf, 128)) {
-        printf("Error: Failed to allocate buffer\n");
         KOS_vector_destroy(&const_buf);
-        return;
-    }
-
-    bytecode += offs;
-    size     -= offs;
-
-    while (line_addrs < line_addrs_end && line_addrs->offs < offs)
-        ++line_addrs;
-
-    while (func_addrs < func_addrs_end && func_addrs->offs < offs) {
-        ++func_addrs;
-        ++func_names;
+        return KOS_ERROR_OUT_OF_MEMORY;
     }
 
     while (size) {
@@ -430,29 +414,14 @@ void kos_disassemble(const char                           *filename,
 
         assert((unsigned)(opcode - INSTR_BREAKPOINT) <= sizeof(str_instr)/sizeof(str_instr[0]));
 
-        assert(line_addrs == line_addrs_end ||
-               offs <= line_addrs->offs);
-        assert(func_addrs == func_addrs_end ||
-               offs <= func_addrs->offs);
+        assert(line_addr == line_addr_end ||
+               offs <= line_addr->offs);
 
-        if (func_addrs < func_addrs_end &&
-            offs == func_addrs->offs) {
+        if (line_addr < line_addr_end &&
+            offs == line_addr->offs) {
 
-            const char *const name = func_names ? *(func_names++) : "fun";
-
-            printf("\n");
-            printf("-- %s() --\n", name);
-
-            if (print_func)
-                print_func(print_cookie, func_addrs->fun_idx);
-
-            ++func_addrs;
-        }
-        if (line_addrs < line_addrs_end &&
-            offs == line_addrs->offs) {
-
-            printf("@%s:%u:\n", filename, line_addrs->line);
-            ++line_addrs;
+            printf("@%s:%u:\n", filename, line_addr->line);
+            ++line_addr;
         }
 
         str_opcode   = str_instr[opcode - INSTR_BREAKPOINT];
@@ -508,16 +477,23 @@ void kos_disassemble(const char                           *filename,
 
         if (has_constant && print_const) {
             static const char header[] = " # ";
+            int               error;
+
             memcpy(const_buf.buffer, header, sizeof(header));
             const_buf.size = sizeof(header);
-            if ( ! print_const(print_cookie, &const_buf, constant)) {
-                const_str = const_buf.buffer;
-                if (const_buf.size > max_const_chars + 1) {
-                    static const char dotdotdot[] = "...";
-                    memcpy(const_buf.buffer + max_const_chars + 1 - sizeof(dotdotdot),
-                           dotdotdot,
-                           sizeof(dotdotdot));
-                }
+            error = print_const(print_cookie, &const_buf, constant);
+
+            if (error) {
+                KOS_vector_destroy(&const_buf);
+                return error;
+            }
+
+            const_str = const_buf.buffer;
+            if (const_buf.size > max_const_chars + 1) {
+                static const char dotdotdot[] = "...";
+                memcpy(const_buf.buffer + max_const_chars + 1 - sizeof(dotdotdot),
+                       dotdotdot,
+                       sizeof(dotdotdot));
             }
         }
 
@@ -542,4 +518,6 @@ void kos_disassemble(const char                           *filename,
     fflush(stdout);
 
     KOS_vector_destroy(&const_buf);
+
+    return KOS_SUCCESS;
 }

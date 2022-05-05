@@ -578,37 +578,209 @@ cleanup:
     return error;
 }
 
+typedef struct KOS_PRINT_CONST_COOKIE_S {
+    KOS_CONTEXT ctx;
+    KOS_OBJ_ID  constants;
+} KOS_PRINT_CONST_COOKIE;
+
+static int print_const(void       *cookie,
+                       KOS_VECTOR *cstr_buf,
+                       uint32_t    const_index)
+{
+    KOS_PRINT_CONST_COOKIE *data = (KOS_PRINT_CONST_COOKIE *)cookie;
+    KOS_OBJ_ID              constant;
+    int                     error;
+
+    constant = KOS_array_read(data->ctx, data->constants, const_index);
+
+    if (IS_BAD_PTR(constant)) {
+        KOS_clear_exception(data->ctx);
+        return KOS_ERROR_INVALID_NUMBER;
+    }
+
+    error = KOS_object_to_string_or_cstr_vec(data->ctx,
+                                             constant,
+                                             KOS_QUOTE_STRINGS,
+                                             KOS_NULL,
+                                             cstr_buf);
+
+    if (error) {
+        KOS_clear_exception(data->ctx);
+        return KOS_ERROR_INVALID_NUMBER;
+    }
+
+    return KOS_SUCCESS;
+}
+
+static const char *lalign(const char *tag)
+{
+    static const char align[] = "            ";
+
+    const size_t tag_len    = strlen(tag);
+    const size_t max_align  = sizeof(align) - 1U;
+    const size_t align_size = (tag_len > max_align) ? 0U : (max_align - tag_len);
+
+    return &align[max_align - align_size];
+}
+
+static void print_regs(unsigned reg_idx, unsigned num_regs, const char *tag)
+{
+    if (reg_idx == KOS_NO_REG || ! num_regs)
+        return;
+
+    assert(num_regs <= KOS_NO_REG);
+
+    if (num_regs == 1)
+        printf("# %s%s : r%u\n", tag, lalign(tag), reg_idx);
+    else
+        printf("# %s%s : r%u..r%u\n", tag, lalign(tag), reg_idx, reg_idx + num_regs - 1);
+}
+
+static int disassemble_func(KOS_CONTEXT ctx, KOS_OBJ_ID func_obj)
+{
+    KOS_VECTOR             module_path_cstr;
+    KOS_VECTOR             module_name_cstr;
+    KOS_VECTOR             func_name_cstr;
+    KOS_LOCAL              func;
+    KOS_PRINT_CONST_COOKIE print_cookie;
+    const char            *filename;
+    const KOS_BYTECODE    *bytecode;
+    KOS_OBJ_ID             bytecode_obj;
+    KOS_OBJ_ID             module;
+    KOS_FUNCTION_STATE     state;
+    unsigned               num_args;
+    int                    error;
+    static const char      divider[]  =
+                "==============================================================================";
+
+    KOS_init_local_with(ctx, &func, func_obj);
+    KOS_vector_init(&module_path_cstr);
+    KOS_vector_init(&module_name_cstr);
+    KOS_vector_init(&func_name_cstr);
+
+    assert( ! IS_BAD_PTR(func.o));
+    bytecode_obj = OBJPTR(FUNCTION, func.o)->bytecode;
+
+    assert( ! IS_SMALL_INT(bytecode_obj));
+    assert( ! IS_BAD_PTR(bytecode_obj));
+    bytecode = (const KOS_BYTECODE *)OBJPTR(OPAQUE, bytecode_obj);
+
+    module = OBJPTR(FUNCTION, func.o)->module;
+    assert( ! IS_BAD_PTR(module));
+
+    TRY(KOS_string_to_cstr_vec(ctx, OBJPTR(MODULE, module)->name, &module_name_cstr));
+    TRY(KOS_string_to_cstr_vec(ctx, OBJPTR(FUNCTION, func.o)->name, &func_name_cstr));
+
+    if (GET_OBJ_TYPE(OBJPTR(MODULE, module)->path) == OBJ_STRING &&
+        KOS_get_string_length(OBJPTR(MODULE, module)->path)) {
+
+        TRY(KOS_string_to_cstr_vec(ctx, OBJPTR(MODULE, module)->path, &module_path_cstr));
+        assert(module_path_cstr.size);
+
+        filename = module_path_cstr.buffer + module_path_cstr.size - 1;
+        assert(*filename == 0);
+        while (filename > module_path_cstr.buffer) {
+            if (*filename == KOS_PATH_SEPARATOR) {
+                ++filename;
+                break;
+            }
+            --filename;
+        }
+    }
+    else
+        filename = module_name_cstr.buffer;
+
+    state = (KOS_FUNCTION_STATE)KOS_atomic_read_relaxed_u32(OBJPTR(FUNCTION, func.o)->state);
+    printf("\n%s\nDisassembling %s %s.%s\n%s\n",
+           divider,
+           state == KOS_FUN  ? "function" :
+           state == KOS_CTOR ? "class"    :
+                               "generator",
+           module_name_cstr.buffer,
+           func_name_cstr.buffer,
+           divider);
+
+    printf("# registers    : %u\n", OBJPTR(FUNCTION, func.o)->opts.num_regs);
+    printf("# closure size : %u\n", OBJPTR(FUNCTION, func.o)->opts.closure_size);
+    printf("# minimum args : %u\n", OBJPTR(FUNCTION, func.o)->opts.min_args);
+    printf("# default args : %u\n", OBJPTR(FUNCTION, func.o)->opts.num_def_args);
+
+    num_args = KOS_min((unsigned)OBJPTR(FUNCTION, func.o)->opts.rest_reg,
+                       (unsigned)OBJPTR(FUNCTION, func.o)->opts.args_reg +
+                            (unsigned)OBJPTR(FUNCTION, func.o)->opts.min_args +
+                            (unsigned)OBJPTR(FUNCTION, func.o)->opts.num_def_args);
+
+    print_regs(OBJPTR(FUNCTION, func.o)->opts.args_reg, num_args, "args regs");
+    print_regs(OBJPTR(FUNCTION, func.o)->opts.rest_reg, 1, "rest reg");
+    print_regs(OBJPTR(FUNCTION, func.o)->opts.ellipsis_reg, 1, "ellipsis reg");
+    print_regs(OBJPTR(FUNCTION, func.o)->opts.this_reg, 1, "this reg");
+    print_regs(OBJPTR(FUNCTION, func.o)->opts.bind_reg, OBJPTR(FUNCTION, func.o)->opts.num_binds, "binds regs");
+
+    print_cookie.ctx       = ctx;
+    print_cookie.constants = OBJPTR(MODULE, module)->constants;
+
+    TRY(kos_disassemble(filename,
+                        bytecode->bytecode,
+                        bytecode->bytecode_size,
+                        (const KOS_LINE_ADDR *)&bytecode->bytecode[bytecode->addr2line_offset],
+                        (const KOS_LINE_ADDR *)&bytecode->bytecode[bytecode->addr2line_offset
+                                                                 + bytecode->addr2line_size],
+                        print_const,
+                        &print_cookie));
+
+cleanup:
+    KOS_vector_destroy(&func_name_cstr);
+    KOS_vector_destroy(&module_name_cstr);
+    KOS_vector_destroy(&module_path_cstr);
+    KOS_destroy_top_local(ctx, &func);
+
+    return error;
+}
+
+KOS_OBJ_ID kos_alloc_bytecode(KOS_CONTEXT ctx,
+                              const void *bytecode,
+                              uint32_t    bytecode_size,
+                              const void *addr2line,
+                              uint32_t    addr2line_size)
+{
+    const uint32_t aligned_bytecode_size = KOS_align_up(bytecode_size,
+                                                        (uint32_t)sizeof(struct KOS_COMP_ADDR_TO_LINE_S));
+    const uint32_t total_size = aligned_bytecode_size + addr2line_size;
+    const uint32_t alloc_size = (uint32_t)sizeof(KOS_BYTECODE) + total_size - 1;
+
+    KOS_BYTECODE *const bytecode_obj = (KOS_BYTECODE *)
+        kos_alloc_object(ctx, KOS_ALLOC_IMMOVABLE, OBJ_OPAQUE, alloc_size);
+
+    if (bytecode_obj) {
+        bytecode_obj->bytecode_size    = bytecode_size;
+        bytecode_obj->addr2line_offset = aligned_bytecode_size;
+        bytecode_obj->addr2line_size   = addr2line_size;
+        bytecode_obj->def_line         = 0;
+        bytecode_obj->num_instr        = 0;
+
+        memcpy(bytecode_obj->bytecode, bytecode, bytecode_size);
+
+        if (addr2line_size)
+            memcpy(&bytecode_obj->bytecode[aligned_bytecode_size], addr2line, addr2line_size);
+    }
+
+    return OBJID(OPAQUE, (KOS_OPAQUE *)bytecode_obj);
+}
+
 static KOS_OBJ_ID alloc_bytecode(KOS_CONTEXT        ctx,
                                  KOS_COMP_UNIT     *program,
                                  KOS_COMP_FUNCTION *func_const)
 {
-    const uint32_t aligned_bytecode_size = KOS_align_up(func_const->bytecode_size,
-                                                        (uint32_t)sizeof(struct KOS_COMP_ADDR_TO_LINE_S));
-    const uint32_t total_size = aligned_bytecode_size + func_const->addr2line_size;
-    const uint32_t real_size  = (uint32_t)sizeof(KOS_BYTECODE) + total_size - 1;
-
-    KOS_BYTECODE *const bytecode = (KOS_BYTECODE *)
-        kos_alloc_object(ctx, KOS_ALLOC_IMMOVABLE, OBJ_OPAQUE, real_size);
-
-    if (bytecode) {
-        bytecode->bytecode_size    = func_const->bytecode_size;
-        bytecode->addr2line_offset = aligned_bytecode_size;
-        bytecode->addr2line_size   = func_const->addr2line_size;
-
-        assert(func_const->bytecode_offset + func_const->bytecode_size <= program->code_buf.size);
-        memcpy(bytecode->bytecode,
-               &program->code_buf.buffer[func_const->bytecode_offset],
-               func_const->bytecode_size);
-
-        if (func_const->addr2line_size) {
-            assert(func_const->addr2line_offset + func_const->addr2line_size <= program->addr2line_buf.size);
-            memcpy(&bytecode->bytecode[aligned_bytecode_size],
-                   &program->addr2line_buf.buffer[func_const->addr2line_offset],
-                   func_const->addr2line_size);
-        }
+    assert(func_const->bytecode_offset + func_const->bytecode_size <= program->code_buf.size);
+    if (func_const->addr2line_size) {
+        assert(func_const->addr2line_offset + func_const->addr2line_size <= program->addr2line_buf.size);
     }
 
-    return OBJID(OPAQUE, (KOS_OPAQUE *)bytecode);
+    return kos_alloc_bytecode(ctx,
+                              &program->code_buf.buffer[func_const->bytecode_offset],
+                              func_const->bytecode_size,
+                              &program->addr2line_buf.buffer[func_const->addr2line_offset],
+                              func_const->addr2line_size);
 }
 
 static uint32_t count_constants(KOS_COMP_UNIT *program)
@@ -672,84 +844,102 @@ static int alloc_constants(KOS_CONTEXT    ctx,
                 break;
             }
 
-            case KOS_COMP_CONST_FUNCTION: {
-                KOS_COMP_FUNCTION *func_const = (KOS_COMP_FUNCTION *)constant;
-                KOS_OBJ_ID         name;
-                uint8_t            arg_idx;
-
-                if (func_const->flags & KOS_COMP_FUN_CLASS)
-                    obj.o = KOS_new_class(ctx, KOS_VOID);
-                else
-                    obj.o = KOS_new_function(ctx);
-                TRY_OBJID(obj.o);
-
-                if (func_const->flags & KOS_COMP_FUN_ELLIPSIS) {
-                    assert(func_const->ellipsis_reg != KOS_NO_REG);
-                }
-                else {
-                    assert(func_const->ellipsis_reg == KOS_NO_REG);
-                }
-                if (func_const->flags & KOS_COMP_FUN_CLOSURE) {
-                    assert(func_const->closure_size);
-                }
-                else {
-                    assert( ! func_const->closure_size);
-                }
-
-                OBJPTR(FUNCTION, obj.o)->opts.num_regs     = func_const->num_regs;
-                OBJPTR(FUNCTION, obj.o)->opts.closure_size = func_const->closure_size;
-                OBJPTR(FUNCTION, obj.o)->opts.min_args     = func_const->min_args;
-                OBJPTR(FUNCTION, obj.o)->opts.num_def_args = func_const->num_used_def_args;
-                OBJPTR(FUNCTION, obj.o)->opts.num_binds    = func_const->num_binds;
-                OBJPTR(FUNCTION, obj.o)->opts.args_reg     = func_const->args_reg;
-                OBJPTR(FUNCTION, obj.o)->opts.rest_reg     = func_const->rest_reg;
-                OBJPTR(FUNCTION, obj.o)->opts.ellipsis_reg = func_const->ellipsis_reg;
-                OBJPTR(FUNCTION, obj.o)->opts.this_reg     = func_const->this_reg;
-                OBJPTR(FUNCTION, obj.o)->opts.bind_reg     = func_const->bind_reg;
-
-                OBJPTR(FUNCTION, obj.o)->instr_offs = OBJPTR(MODULE, module.o)->bytecode_size + func_const->bytecode_offset;
-                OBJPTR(FUNCTION, obj.o)->module     = module.o;
-
-                {
-                    const KOS_OBJ_ID bytecode = alloc_bytecode(ctx, program, func_const);
-                    TRY_OBJID(bytecode);
-                    OBJPTR(FUNCTION, obj.o)->bytecode = bytecode;
-                }
-
-                name = KOS_array_read(ctx, OBJPTR(MODULE, module.o)->constants, (int)func_const->name_str_idx);
-                TRY_OBJID(name);
-                assert(GET_OBJ_TYPE(name) == OBJ_STRING);
-                OBJPTR(FUNCTION, obj.o)->name = name;
-
-                if (func_const->num_named_args) {
-                    KOS_OBJ_ID arg_map = KOS_new_object(ctx);
-                    TRY_OBJID(arg_map);
-
-                    OBJPTR(FUNCTION, obj.o)->arg_map = arg_map;
-                }
-
-                for (arg_idx = 0; arg_idx < func_const->num_named_args; arg_idx++) {
-                    const uint32_t str_idx = func_const->arg_name_str_idx[arg_idx];
-
-                    name = KOS_array_read(ctx, OBJPTR(MODULE, module.o)->constants, (int)str_idx);
-                    TRY_OBJID(name);
-                    assert(GET_OBJ_TYPE(name) == OBJ_STRING);
-
-                    TRY(KOS_set_property(ctx,
-                                         OBJPTR(FUNCTION, obj.o)->arg_map,
-                                         name,
-                                         TO_SMALL_INT((int64_t)arg_idx)));
-                }
-
-                if (func_const->flags & KOS_COMP_FUN_GENERATOR)
-                    OBJPTR(FUNCTION, obj.o)->state = KOS_GEN_INIT;
-                break;
-            }
+            /* Functions handled separately in the subsequent loop,
+             * so that all other constants are resolved before disassembly. */
+            case KOS_COMP_CONST_FUNCTION:
+                continue;
 
             case KOS_COMP_CONST_PROTOTYPE:
                 obj.o = KOS_new_object(ctx);
                 break;
         }
+
+        TRY_OBJID(obj.o);
+
+        TRY(KOS_array_write(ctx, OBJPTR(MODULE, module.o)->constants, base_idx + i, obj.o));
+    }
+
+    for (i = 0, constant = program->first_constant; constant; constant = constant->next, ++i) {
+
+        KOS_COMP_FUNCTION *func_const;
+        KOS_OBJ_ID         name;
+        uint8_t            arg_idx;
+
+        if (constant->type != KOS_COMP_CONST_FUNCTION)
+            continue;
+
+        func_const = (KOS_COMP_FUNCTION *)constant;
+
+        if (func_const->flags & KOS_COMP_FUN_CLASS)
+            obj.o = KOS_new_class(ctx, KOS_VOID);
+        else
+            obj.o = KOS_new_function(ctx);
+        TRY_OBJID(obj.o);
+
+        if (func_const->flags & KOS_COMP_FUN_ELLIPSIS) {
+            assert(func_const->ellipsis_reg != KOS_NO_REG);
+        }
+        else {
+            assert(func_const->ellipsis_reg == KOS_NO_REG);
+        }
+        if (func_const->flags & KOS_COMP_FUN_CLOSURE) {
+            assert(func_const->closure_size);
+        }
+        else {
+            assert( ! func_const->closure_size);
+        }
+
+        OBJPTR(FUNCTION, obj.o)->opts.num_regs     = func_const->num_regs;
+        OBJPTR(FUNCTION, obj.o)->opts.closure_size = func_const->closure_size;
+        OBJPTR(FUNCTION, obj.o)->opts.min_args     = func_const->min_args;
+        OBJPTR(FUNCTION, obj.o)->opts.num_def_args = func_const->num_used_def_args;
+        OBJPTR(FUNCTION, obj.o)->opts.num_binds    = func_const->num_binds;
+        OBJPTR(FUNCTION, obj.o)->opts.args_reg     = func_const->args_reg;
+        OBJPTR(FUNCTION, obj.o)->opts.rest_reg     = func_const->rest_reg;
+        OBJPTR(FUNCTION, obj.o)->opts.ellipsis_reg = func_const->ellipsis_reg;
+        OBJPTR(FUNCTION, obj.o)->opts.this_reg     = func_const->this_reg;
+        OBJPTR(FUNCTION, obj.o)->opts.bind_reg     = func_const->bind_reg;
+        OBJPTR(FUNCTION, obj.o)->module            = module.o;
+
+        {
+            const KOS_OBJ_ID bytecode = alloc_bytecode(ctx, program, func_const);
+            TRY_OBJID(bytecode);
+            OBJPTR(FUNCTION, obj.o)->bytecode = bytecode;
+
+            ((KOS_BYTECODE *)OBJPTR(OPAQUE, bytecode))->def_line  = func_const->def_line;
+            ((KOS_BYTECODE *)OBJPTR(OPAQUE, bytecode))->num_instr = func_const->num_instr;
+        }
+
+        name = KOS_array_read(ctx, OBJPTR(MODULE, module.o)->constants, (int)func_const->name_str_idx);
+        TRY_OBJID(name);
+        assert(GET_OBJ_TYPE(name) == OBJ_STRING);
+        OBJPTR(FUNCTION, obj.o)->name = name;
+
+        if (func_const->num_named_args) {
+            KOS_OBJ_ID arg_map = KOS_new_object(ctx);
+            TRY_OBJID(arg_map);
+
+            OBJPTR(FUNCTION, obj.o)->arg_map = arg_map;
+        }
+
+        for (arg_idx = 0; arg_idx < func_const->num_named_args; arg_idx++) {
+            const uint32_t str_idx = func_const->arg_name_str_idx[arg_idx];
+
+            name = KOS_array_read(ctx, OBJPTR(MODULE, module.o)->constants, (int)str_idx);
+            TRY_OBJID(name);
+            assert(GET_OBJ_TYPE(name) == OBJ_STRING);
+
+            TRY(KOS_set_property(ctx,
+                                 OBJPTR(FUNCTION, obj.o)->arg_map,
+                                 name,
+                                 TO_SMALL_INT((int64_t)arg_idx)));
+        }
+
+        if (func_const->flags & KOS_COMP_FUN_GENERATOR)
+            OBJPTR(FUNCTION, obj.o)->state = KOS_GEN_INIT;
+
+        if (ctx->inst->flags & KOS_INST_DISASM)
+            TRY(disassemble_func(ctx, obj.o));
 
         TRY_OBJID(obj.o);
 
@@ -1095,134 +1285,6 @@ cleanup:
     KOS_vector_destroy(&cstr);
 }
 
-static int append_buf(const uint8_t **dest,
-                      uint32_t        dest_size,
-                      const uint8_t  *src,
-                      uint32_t        src_size)
-{
-    uint8_t *new_buf;
-
-    assert(dest);
-    assert(*dest);
-    assert(dest_size);
-    assert(src);
-    assert(src_size);
-
-    new_buf = (uint8_t *)KOS_malloc(dest_size + src_size);
-    if ( ! new_buf)
-        return KOS_ERROR_OUT_OF_MEMORY;
-
-    memcpy(new_buf, *dest, dest_size);
-    memcpy(new_buf + dest_size, src, src_size);
-
-    KOS_free((void *)*dest);
-
-    *dest = new_buf;
-
-    return KOS_SUCCESS;
-}
-
-typedef struct KOS_PRINT_CONST_COOKIE_S {
-    KOS_CONTEXT ctx;
-    KOS_OBJ_ID  constants;
-} KOS_PRINT_CONST_COOKIE;
-
-static int print_const(void       *cookie,
-                       KOS_VECTOR *cstr_buf,
-                       uint32_t    const_index)
-{
-    KOS_PRINT_CONST_COOKIE *data = (KOS_PRINT_CONST_COOKIE *)cookie;
-    KOS_OBJ_ID              constant;
-    int                     error;
-
-    constant = KOS_array_read(data->ctx, data->constants, const_index);
-
-    if (IS_BAD_PTR(constant)) {
-        KOS_clear_exception(data->ctx);
-        return KOS_ERROR_INVALID_NUMBER;
-    }
-
-    error = KOS_object_to_string_or_cstr_vec(data->ctx,
-                                             constant,
-                                             KOS_QUOTE_STRINGS,
-                                             KOS_NULL,
-                                             cstr_buf);
-
-    if (error) {
-        KOS_clear_exception(data->ctx);
-        return KOS_ERROR_INVALID_NUMBER;
-    }
-
-    return KOS_SUCCESS;
-}
-
-static const char *lalign(const char *tag)
-{
-    static const char align[] = "            ";
-
-    const size_t tag_len    = strlen(tag);
-    const size_t max_align  = sizeof(align) - 1U;
-    const size_t align_size = (tag_len > max_align) ? 0U : (max_align - tag_len);
-
-    return &align[max_align - align_size];
-}
-
-static void print_regs(unsigned reg_idx, unsigned num_regs, const char *tag)
-{
-    if (reg_idx == KOS_NO_REG || ! num_regs)
-        return;
-
-    assert(num_regs <= KOS_NO_REG);
-
-    if (num_regs == 1)
-        printf(" - %s%s : r%u\n", tag, lalign(tag), reg_idx);
-    else
-        printf(" - %s%s : r%u..r%u\n", tag, lalign(tag), reg_idx, reg_idx + num_regs - 1);
-}
-
-static int print_func(void *cookie, uint32_t func_index)
-{
-    KOS_PRINT_CONST_COOKIE *data = (KOS_PRINT_CONST_COOKIE *)cookie;
-    KOS_OBJ_ID              func;
-    KOS_TYPE                type;
-    KOS_FUNCTION_STATE      state;
-    unsigned                num_args;
-
-    func = KOS_array_read(data->ctx, data->constants, func_index);
-
-    if (IS_BAD_PTR(func)) {
-        KOS_clear_exception(data->ctx);
-        return KOS_ERROR_INVALID_NUMBER;
-    }
-
-    type = GET_OBJ_TYPE(func);
-    if (type != OBJ_FUNCTION && type != OBJ_CLASS)
-        return KOS_ERROR_INVALID_NUMBER;
-
-    state = (KOS_FUNCTION_STATE)KOS_atomic_read_relaxed_u32(OBJPTR(FUNCTION, func)->state);
-    printf(" - type         : %s\n", state == KOS_FUN  ? "function" :
-                                     state == KOS_CTOR ? "class"    :
-                                                         "generator");
-
-    printf(" - registers    : %u\n", OBJPTR(FUNCTION, func)->opts.num_regs);
-    printf(" - closure size : %u\n", OBJPTR(FUNCTION, func)->opts.closure_size);
-    printf(" - minimum args : %u\n", OBJPTR(FUNCTION, func)->opts.min_args);
-    printf(" - default args : %u\n", OBJPTR(FUNCTION, func)->opts.num_def_args);
-
-    num_args = KOS_min((unsigned)OBJPTR(FUNCTION, func)->opts.rest_reg,
-                       (unsigned)OBJPTR(FUNCTION, func)->opts.args_reg +
-                            (unsigned)OBJPTR(FUNCTION, func)->opts.min_args +
-                            (unsigned)OBJPTR(FUNCTION, func)->opts.num_def_args);
-
-    print_regs(OBJPTR(FUNCTION, func)->opts.args_reg, num_args, "args regs");
-    print_regs(OBJPTR(FUNCTION, func)->opts.rest_reg, 1, "rest reg");
-    print_regs(OBJPTR(FUNCTION, func)->opts.ellipsis_reg, 1, "ellipsis reg");
-    print_regs(OBJPTR(FUNCTION, func)->opts.this_reg, 1, "this reg");
-    print_regs(OBJPTR(FUNCTION, func)->opts.bind_reg, OBJPTR(FUNCTION, func)->opts.num_binds, "binds regs");
-
-    return KOS_SUCCESS;
-}
-
 static int compile_module(KOS_CONTEXT ctx,
                           KOS_OBJ_ID  module_obj,
                           uint16_t    module_idx,
@@ -1241,7 +1303,6 @@ static int compile_module(KOS_CONTEXT ctx,
     KOS_COMP_UNIT       program;
     KOS_LOCAL           module;
     int                 error             = KOS_SUCCESS;
-    const uint32_t      old_bytecode_size = OBJPTR(MODULE, module_obj)->bytecode_size;
     unsigned            num_opt_passes    = 0;
 
     time_0 = KOS_get_time_us();
@@ -1344,217 +1405,15 @@ static int compile_module(KOS_CONTEXT ctx,
     TRY(alloc_constants(ctx, &program, module.o));
     TRY(save_direct_modules(ctx, &program, module.o));
 
-    /* Move compiled program to module */
     {
-        KOS_VECTOR *code_buf     = &program.code_buf;
-        KOS_VECTOR *addr_to_line = &program.addr2line_buf;
-        KOS_VECTOR *addr_to_func = &program.addr2func_buf;
-        KOS_MODULE *module_ptr   = OBJPTR(MODULE, module.o);
         KOS_FRAME  *frame;
-
-        const uint32_t old_num_line_addrs = module_ptr->num_line_addrs;
-        const uint32_t old_num_func_addrs = module_ptr->num_func_addrs;
-
-        /* REPL within the bounds of a module */
-        if (old_bytecode_size) {
-
-            KOS_LINE_ADDR *line_addr;
-            KOS_LINE_ADDR *end_line_addr;
-            KOS_FUNC_ADDR *func_addr;
-            KOS_FUNC_ADDR *end_func_addr;
-
-            assert(module_ptr->bytecode_size);
-            assert(code_buf->size);
-            TRY(append_buf(&module_ptr->bytecode, module_ptr->bytecode_size,
-                           (const uint8_t *)code_buf->buffer, (uint32_t)code_buf->size));
-            module_ptr->bytecode_size += (uint32_t)code_buf->size;
-
-            if (addr_to_line->size) {
-                if (old_num_line_addrs) {
-                    assert(module_ptr->line_addrs);
-                    TRY(append_buf((const uint8_t **)&module_ptr->line_addrs, module_ptr->num_line_addrs * sizeof(KOS_LINE_ADDR),
-                                   (const uint8_t *)addr_to_line->buffer, (uint32_t)addr_to_line->size));
-                    module_ptr->num_line_addrs += (uint32_t)(addr_to_line->size / sizeof(KOS_LINE_ADDR));
-                }
-                else {
-                    assert( ! module_ptr->line_addrs);
-                    module_ptr->line_addrs     = (KOS_LINE_ADDR *)addr_to_line->buffer;
-                    module_ptr->num_line_addrs = (uint32_t)(addr_to_line->size / sizeof(KOS_LINE_ADDR));
-                    module_ptr->flags         |= KOS_MODULE_OWN_LINE_ADDRS;
-                    addr_to_line->buffer       = KOS_NULL;
-                }
-            }
-
-            if (addr_to_func->size) {
-                if (old_num_func_addrs) {
-                    TRY(append_buf((const uint8_t **)&module_ptr->func_addrs, module_ptr->num_func_addrs * sizeof(KOS_FUNC_ADDR),
-                                   (const uint8_t *)addr_to_func->buffer, (uint32_t)addr_to_func->size));
-                    module_ptr->num_func_addrs += (uint32_t)(addr_to_func->size / sizeof(KOS_FUNC_ADDR));
-                }
-                else {
-                    module_ptr->func_addrs     = (KOS_FUNC_ADDR *)addr_to_func->buffer;
-                    module_ptr->num_func_addrs = (uint32_t)(addr_to_func->size / sizeof(KOS_FUNC_ADDR));
-                    module_ptr->flags         |= KOS_MODULE_OWN_FUNC_ADDRS;
-                    addr_to_func->buffer       = KOS_NULL;
-                }
-            }
-
-            line_addr     = (KOS_LINE_ADDR *)module_ptr->line_addrs + old_num_line_addrs;
-            end_line_addr = (KOS_LINE_ADDR *)module_ptr->line_addrs + module_ptr->num_line_addrs;
-            for ( ; line_addr < end_line_addr; ++line_addr)
-                line_addr->offs += old_bytecode_size;
-
-            func_addr     = (KOS_FUNC_ADDR *)module_ptr->func_addrs + old_num_func_addrs;
-            end_func_addr = (KOS_FUNC_ADDR *)module_ptr->func_addrs + module_ptr->num_func_addrs;
-            for ( ; func_addr < end_func_addr; ++func_addr)
-                func_addr->offs += old_bytecode_size;
-        }
-        /* New module */
-        else {
-
-            module_ptr->bytecode      = (uint8_t *)code_buf->buffer;
-            module_ptr->bytecode_size = (uint32_t)code_buf->size;
-            module_ptr->flags        |= KOS_MODULE_OWN_BYTECODE;
-            code_buf->buffer          = KOS_NULL;
-
-            if (addr_to_line->size) {
-                module_ptr->line_addrs     = (KOS_LINE_ADDR *)addr_to_line->buffer;
-                module_ptr->num_line_addrs = (uint32_t)(addr_to_line->size / sizeof(KOS_LINE_ADDR));
-                module_ptr->flags         |= KOS_MODULE_OWN_LINE_ADDRS;
-                addr_to_line->buffer       = KOS_NULL;
-            }
-
-            if (addr_to_func->size) {
-                module_ptr->func_addrs     = (KOS_FUNC_ADDR *)addr_to_func->buffer;
-                module_ptr->num_func_addrs = (uint32_t)(addr_to_func->size / sizeof(KOS_FUNC_ADDR));
-                module_ptr->flags         |= KOS_MODULE_OWN_FUNC_ADDRS;
-                addr_to_func->buffer       = KOS_NULL;
-            }
-        }
 
         /* Get function's constant index corresponding to global scope */
         assert(ast->is_scope);
         frame = (KOS_FRAME *)ast->u.scope;
         assert(frame->scope.has_frame);
 
-        module_ptr->main_idx = frame->constant->header.index;
-    }
-
-    /* Disassemble */
-    if (inst->flags & KOS_INST_DISASM) {
-        KOS_VECTOR         cname;
-        KOS_VECTOR         ptrs;
-        const char *const *func_names = KOS_NULL;
-        size_t             i_filename = 0;
-        const char        *filename   = "";
-        static const char  divider[]  =
-                "==============================================================================";
-        KOS_MODULE        *module_ptr = OBJPTR(MODULE, module.o);
-
-        const KOS_FUNC_ADDR *const func_addrs     = module_ptr->func_addrs;
-        const uint32_t             num_func_addrs = module_ptr->num_func_addrs;
-        KOS_PRINT_CONST_COOKIE     print_cookie;
-
-        KOS_vector_init(&cname);
-        KOS_vector_init(&ptrs);
-
-        error = KOS_string_to_cstr_vec(ctx, module_ptr->name, &cname);
-        printf("\n");
-        printf("%s\n", divider);
-        if (!error) {
-            printf("Disassembling module: %s\n", cname.buffer);
-            printf("%s\n", divider);
-
-            if (GET_OBJ_TYPE(module_ptr->path) == OBJ_STRING
-                && KOS_get_string_length(module_ptr->path) > 0) {
-
-                error = KOS_string_to_cstr_vec(ctx, module_ptr->path, &cname);
-                if (!error) {
-                    size_t i = cname.size - 2;
-                    while (i > 0 && cname.buffer[i-1] != KOS_PATH_SEPARATOR)
-                        --i;
-                    i_filename = i;
-                }
-            }
-            else
-                i_filename = 0;
-        }
-
-        if (!error)
-            error = KOS_vector_resize(&ptrs, num_func_addrs * sizeof(void *));
-        if (!error) {
-            KOS_VECTOR buf;
-            uint32_t   i;
-            size_t     total_size = 0;
-            char      *names      = KOS_NULL;
-
-            KOS_vector_init(&buf);
-
-            for (i = 0; i < num_func_addrs; i++) {
-                const uint32_t   idx = func_addrs[i].str_idx;
-                const KOS_OBJ_ID str = KOS_array_read(ctx, module_ptr->constants, (int)idx);
-                if (IS_BAD_PTR(str)) {
-                    error = KOS_ERROR_EXCEPTION;
-                    break;
-                }
-                error = KOS_string_to_cstr_vec(ctx, str, &buf);
-                if (error)
-                    break;
-                total_size += buf.size;
-            }
-
-            if (!error) {
-                const size_t base = cname.size;
-                error = KOS_vector_resize(&cname, base + total_size);
-                if (!error)
-                    names = cname.buffer + base;
-            }
-
-            if (!error) {
-                const char **func_names_new = (const char **)ptrs.buffer;
-                for (i = 0; i < num_func_addrs; i++) {
-                    const uint32_t   idx = func_addrs[i].str_idx;
-                    const KOS_OBJ_ID str = KOS_array_read(ctx, module_ptr->constants, (int)idx);
-                    if (IS_BAD_PTR(str)) {
-                        error = KOS_ERROR_EXCEPTION;
-                        break;
-                    }
-                    error = KOS_string_to_cstr_vec(ctx, str, &buf);
-                    if (error)
-                        break;
-                    func_names_new[i] = names;
-                    memcpy(names, buf.buffer, buf.size);
-                    names += buf.size;
-                }
-            }
-
-            KOS_vector_destroy(&buf);
-        }
-
-        if (!error) {
-            filename   = &cname.buffer[i_filename];
-            func_names = (const char *const *)ptrs.buffer;
-        }
-
-        print_cookie.ctx       = ctx;
-        print_cookie.constants = module_ptr->constants;
-
-        kos_disassemble(filename,
-                        old_bytecode_size,
-                        module_ptr->bytecode,
-                        module_ptr->bytecode_size,
-                        (struct KOS_COMP_ADDR_TO_LINE_S *)module_ptr->line_addrs,
-                        module_ptr->num_line_addrs,
-                        func_names,
-                        (struct KOS_COMP_ADDR_TO_FUNC_S *)func_addrs,
-                        num_func_addrs,
-                        print_const,
-                        print_func,
-                        &print_cookie);
-
-        KOS_vector_destroy(&ptrs);
-        KOS_vector_destroy(&cname);
-        TRY(error);
+        OBJPTR(MODULE, module.o)->main_idx = frame->constant->header.index;
     }
 
 cleanup:
@@ -2276,102 +2135,4 @@ int KOS_module_add_member_function(KOS_CONTEXT          ctx,
 cleanup:
     KOS_destroy_top_locals(ctx, &name, &module);
     return error;
-}
-
-unsigned KOS_module_addr_to_line(KOS_MODULE *module,
-                                 uint32_t    offs)
-{
-    unsigned ret = 0;
-
-    if (module && offs != ~0U && module->line_addrs) {
-
-        const KOS_LINE_ADDR *ptr = module->line_addrs;
-        const KOS_LINE_ADDR *end = ptr + module->num_line_addrs;
-
-        while (ptr < end && offs > ptr->offs)
-            ptr++;
-
-        if (ptr >= end || offs < ptr->offs)
-            ptr--;
-
-        if (ptr < end) {
-
-            assert(ptr >= module->line_addrs);
-            assert(offs >= ptr->offs);
-
-            ret = ptr->line;
-        }
-    }
-
-    return ret;
-}
-
-static const KOS_FUNC_ADDR *addr_to_func(KOS_MODULE *module,
-                                         uint32_t    offs)
-{
-    const KOS_FUNC_ADDR *ret = KOS_NULL;
-
-    static const KOS_FUNC_ADDR global = {
-        0,
-        1,
-        ~0U,
-        ~0U,
-        0,
-        0
-    };
-
-    if (module && offs != ~0U && module->func_addrs) {
-
-        const KOS_FUNC_ADDR *ptr = module->func_addrs;
-        const KOS_FUNC_ADDR *end = ptr + module->num_func_addrs;
-
-        while (ptr < end && offs > ptr->offs)
-            ptr++;
-
-        if (ptr == end)
-            ptr--;
-        else if (ptr < end && offs < ptr->offs)
-            ptr--;
-
-        if (ptr < module->func_addrs)
-            ret = &global;
-
-        else if (ptr < end) {
-
-            assert(offs >= ptr->offs);
-
-            ret = ptr;
-        }
-    }
-
-    return ret;
-}
-
-unsigned KOS_module_addr_to_func_line(KOS_MODULE *module,
-                                      uint32_t    offs)
-{
-    const KOS_FUNC_ADDR *addr2func = addr_to_func(module, offs);
-
-    unsigned line = 0;
-
-    if (addr2func)
-        line = addr2func->line;
-
-    return line;
-}
-
-uint32_t KOS_module_func_get_num_instr(KOS_MODULE *module,
-                                       uint32_t    offs)
-{
-    const KOS_FUNC_ADDR *addr2func = addr_to_func(module, offs);
-
-    return addr2func ? addr2func->num_instr : 0U;
-}
-
-uint32_t KOS_module_func_get_code_size(KOS_MODULE *module,
-                                       uint32_t    offs)
-{
-    const KOS_FUNC_ADDR *addr2func = addr_to_func(module, offs);
-
-    return addr2func ? addr2func->code_size : 0U;
 }

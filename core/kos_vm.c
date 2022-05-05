@@ -1333,6 +1333,13 @@ KOS_OBJ_ID KOS_get_module(KOS_CONTEXT ctx)
     return get_module(get_current_stack_frame(ctx));
 }
 
+const KOS_BYTECODE *get_bytecode_objptr(KOS_STACK_FRAME *stack_frame)
+{
+    const KOS_OBJ_ID func         = get_current_func(stack_frame);
+    const KOS_OBJ_ID bytecode_obj = OBJPTR(FUNCTION, func)->bytecode;
+    return (const KOS_BYTECODE *)OBJPTR(OPAQUE, bytecode_obj);
+}
+
 static int64_t load_instr_offs(KOS_STACK_FRAME *stack_frame)
 {
     const KOS_OBJ_ID instr_offs = KOS_atomic_read_relaxed_obj(stack_frame->instr_offs);
@@ -1342,11 +1349,33 @@ static int64_t load_instr_offs(KOS_STACK_FRAME *stack_frame)
     return GET_SMALL_INT(instr_offs);
 }
 
-static void store_instr_offs(KOS_STACK_FRAME *stack_frame,
-                             uint32_t         instr_offs)
+static uint32_t get_bytecode_size(KOS_STACK_FRAME *stack_frame)
 {
-    KOS_atomic_write_relaxed_ptr(stack_frame->instr_offs,
-                                 TO_SMALL_INT((int64_t)instr_offs));
+    const KOS_BYTECODE *const bytecode_ptr = get_bytecode_objptr(stack_frame);
+    return bytecode_ptr->bytecode_size;
+}
+
+static const uint8_t *get_bytecode_at_offs(KOS_STACK_FRAME *stack_frame, uint32_t offs)
+{
+    const KOS_BYTECODE *const bytecode_ptr = get_bytecode_objptr(stack_frame);
+    return &bytecode_ptr->bytecode[offs];
+}
+
+static const uint8_t *get_bytecode(KOS_STACK_FRAME *stack_frame)
+{
+    return get_bytecode_at_offs(stack_frame, load_instr_offs(stack_frame));
+}
+
+static uint32_t get_instr_offs(KOS_STACK_FRAME *stack_frame, const uint8_t *bytecode)
+{
+    return (uint32_t)(bytecode - get_bytecode_at_offs(stack_frame, 0));
+}
+
+static void store_instr_offs(KOS_STACK_FRAME *stack_frame,
+                             const uint8_t   *bytecode)
+{
+    const uint32_t instr_offs = get_instr_offs(stack_frame, bytecode);
+    KOS_atomic_write_relaxed_ptr(stack_frame->instr_offs, TO_SMALL_INT((int64_t)instr_offs));
 }
 
 static uint32_t get_catch(KOS_STACK_FRAME *stack_frame,
@@ -1468,13 +1497,14 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
 #endif
 
     stack_frame = get_current_stack_frame(ctx);
-    module      = get_module(stack_frame);
 
     PROF_ZONE_NAME_FUN(get_current_func(stack_frame));
 
+    module = get_module(stack_frame);
     assert( ! IS_BAD_PTR(module));
     assert(OBJPTR(MODULE, module)->inst);
-    bytecode = OBJPTR(MODULE, module)->bytecode + load_instr_offs(stack_frame);
+
+    bytecode = get_bytecode(stack_frame);
 
     assert( ! kos_is_heap_object(module));
     assert( ! kos_is_heap_object(stack));
@@ -1484,7 +1514,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
 #else
     for (;;) {
         assert( ! KOS_is_exception_pending(ctx));
-        assert((uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode) < OBJPTR(MODULE, module)->bytecode_size);
+        assert(get_instr_offs(stack_frame, bytecode) < get_bytecode_size(stack_frame));
 
         KOS_PERF_CNT(instructions);
 
@@ -1884,10 +1914,9 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                     TRY_OBJID(out);
 
                     if (GET_OBJ_TYPE(out) == OBJ_DYNAMIC_PROP) {
-                        store_instr_offs(stack_frame,
-                                         (uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode));
-                        out = OBJPTR(DYNAMIC_PROP, out)->getter;
+                        store_instr_offs(stack_frame, bytecode);
 
+                        out = OBJPTR(DYNAMIC_PROP, out)->getter;
                         out = KOS_call_function(ctx, out, src, KOS_EMPTY_ARRAY);
 
                         assert(ctx->regs_idx == regs_idx);
@@ -2035,10 +2064,9 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 TRY_OBJID(out);
 
                 if (GET_OBJ_TYPE(out) == OBJ_DYNAMIC_PROP) {
-                    store_instr_offs(stack_frame,
-                                     (uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode));
-                    out = OBJPTR(DYNAMIC_PROP, out)->getter;
+                    store_instr_offs(stack_frame, bytecode);
 
+                    out = OBJPTR(DYNAMIC_PROP, out)->getter;
                     out = KOS_call_function(ctx, out, obj, KOS_EMPTY_ARRAY);
                     TRY_OBJID(out);
 
@@ -2095,10 +2123,9 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                         KOS_clear_exception(ctx);
 
                         assert( ! IS_BAD_PTR(setter.o) && GET_OBJ_TYPE(setter.o) == OBJ_DYNAMIC_PROP);
-                        store_instr_offs(stack_frame,
-                                         (uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode));
-                        setter.o = OBJPTR(DYNAMIC_PROP, setter.o)->setter;
+                        store_instr_offs(stack_frame, bytecode);
 
+                        setter.o = OBJPTR(DYNAMIC_PROP, setter.o)->setter;
                         if (IS_BAD_PTR(setter.o))
                             /* TODO print property name */
                             RAISE_EXCEPTION_STR(str_err_no_setter);
@@ -2188,10 +2215,9 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                     KOS_clear_exception(ctx);
 
                     assert( ! IS_BAD_PTR(setter.o) && GET_OBJ_TYPE(setter.o) == OBJ_DYNAMIC_PROP);
-                    store_instr_offs(stack_frame,
-                                     (uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode));
-                    setter.o = OBJPTR(DYNAMIC_PROP, setter.o)->setter;
+                    store_instr_offs(stack_frame, bytecode);
 
+                    setter.o = OBJPTR(DYNAMIC_PROP, setter.o)->setter;
                     if (IS_BAD_PTR(setter.o))
                         /* TODO print property name */
                         RAISE_EXCEPTION_STR(str_err_no_setter);
@@ -3133,8 +3159,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 if (GET_OBJ_TYPE(iter.o) != OBJ_ITERATOR)
                     RAISE_EXCEPTION_STR(str_err_not_callable);
 
-                store_instr_offs(stack_frame,
-                                 (uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode));
+                store_instr_offs(stack_frame, bytecode);
 
                 KOS_init_local_with(ctx, &iter, iter.o);
 
@@ -3184,7 +3209,8 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                         assert(OBJPTR(MODULE, module)->inst);
                         assert( ! kos_is_heap_object(module));
                         assert( ! kos_is_heap_object(stack));
-                        bytecode = OBJPTR(MODULE, module)->bytecode + load_instr_offs(stack_frame);
+
+                        bytecode    = get_bytecode(stack_frame);
 
                         KOS_destroy_top_locals(ctx, &func, &iter);
 
@@ -3222,8 +3248,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                             KOS_init_local_with(ctx, &iter,       iter.o);
                             KOS_init_local_with(ctx, &saved_pair, pair);
 
-                            store_instr_offs(stack_frame,
-                                    (uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode));
+                            store_instr_offs(stack_frame, bytecode);
 
                             value = OBJPTR(DYNAMIC_PROP, value)->getter;
 
@@ -3391,8 +3416,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                     args.o = read_reg(stack_frame, rargs);
                 }
 
-                store_instr_offs(stack_frame,
-                                 (uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode));
+                store_instr_offs(stack_frame, bytecode);
 
                 switch (GET_OBJ_TYPE(func.o)) {
 
@@ -3454,7 +3478,8 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                         assert(OBJPTR(MODULE, module)->inst);
                         assert( ! kos_is_heap_object(module));
                         assert( ! kos_is_heap_object(stack));
-                        bytecode = OBJPTR(MODULE, module)->bytecode + load_instr_offs(stack_frame);
+
+                        bytecode    = get_bytecode(stack_frame);
 
                         KOS_destroy_top_locals(ctx, &func, &args);
 
@@ -3587,12 +3612,12 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
             BEGIN_INSTRUCTION(CATCH): { /* <r.dest>, <delta.int32> */
                 PROF_ZONE_N(INSTR, "CATCH")
                 const int32_t  rel_offs = (int32_t)load_32(bytecode+2);
-                const uint32_t offset   = (uint32_t)((bytecode + 6 + rel_offs) - OBJPTR(MODULE, module)->bytecode);
+                const uint32_t offset   = get_instr_offs(stack_frame, bytecode) + 6 + rel_offs;
 
                 rdest = bytecode[1];
 
                 assert(rdest  < num_regs);
-                assert(offset < OBJPTR(MODULE, module)->bytecode_size);
+                assert(offset < get_bytecode_size(stack_frame));
 
                 set_catch(stack_frame, offset, (uint8_t)rdest);
 
@@ -3636,8 +3661,7 @@ cleanup:
 
                 assert(KOS_is_exception_pending(ctx));
 
-                store_instr_offs(stack_frame,
-                                 (uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode));
+                store_instr_offs(stack_frame, bytecode);
 
                 kos_wrap_exception(ctx);
 
@@ -3655,7 +3679,7 @@ cleanup:
                 assert(catch_reg < num_regs);
                 write_reg(stack_frame, catch_reg, KOS_get_exception(ctx));
 
-                bytecode = OBJPTR(MODULE, module)->bytecode + catch_offs;
+                bytecode = get_bytecode_at_offs(stack_frame, catch_offs);
 
                 clear_catch(stack_frame);
                 KOS_clear_exception(ctx);
@@ -3663,8 +3687,7 @@ cleanup:
             }
 
 handle_return:
-            store_instr_offs(stack_frame,
-                             (uint32_t)(bytecode - OBJPTR(MODULE, module)->bytecode));
+            store_instr_offs(stack_frame, bytecode);
 
             if (depth) {
                 PROF_ZONE_N(INSTR, "return")
@@ -3710,7 +3733,7 @@ handle_return:
                 assert(OBJPTR(MODULE, module)->inst);
                 assert( ! kos_is_heap_object(module));
                 assert( ! kos_is_heap_object(stack));
-                bytecode = OBJPTR(MODULE, module)->bytecode + load_instr_offs(stack_frame);
+                bytecode    = get_bytecode(stack_frame);
 
                 if (error &&
                     (call_instr == INSTR_NEXT_JUMP) &&

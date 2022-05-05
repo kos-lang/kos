@@ -718,7 +718,6 @@ static int verify_function(KOS_OBJ_ID obj_id)
     TEST(OBJPTR(FUNCTION, obj_id)->opts.min_args == 1);
     TEST(OBJPTR(FUNCTION, obj_id)->opts.num_regs == 2);
     TEST(OBJPTR(FUNCTION, obj_id)->opts.args_reg == 3);
-    TEST(OBJPTR(FUNCTION, obj_id)->instr_offs    == 0);
     TEST(KOS_atomic_read_relaxed_u32(OBJPTR(FUNCTION, obj_id)->state) == 0);
 
     v = OBJPTR(FUNCTION, obj_id)->bytecode;
@@ -785,7 +784,6 @@ static KOS_OBJ_ID alloc_function(KOS_CONTEXT  ctx,
     OBJPTR(FUNCTION, obj_id[0])->opts.min_args = 1;
     OBJPTR(FUNCTION, obj_id[0])->opts.num_regs = 2;
     OBJPTR(FUNCTION, obj_id[0])->opts.args_reg = 3;
-    OBJPTR(FUNCTION, obj_id[0])->instr_offs    = 0;
     OBJPTR(FUNCTION, obj_id[0])->handler       = &handler;
     OBJPTR(FUNCTION, obj_id[0])->bytecode      = obj_id[1];
     OBJPTR(FUNCTION, obj_id[0])->module        = obj_id[2];
@@ -818,7 +816,6 @@ static int verify_class(KOS_OBJ_ID obj_id)
     TEST(OBJPTR(CLASS, obj_id)->opts.min_args == 1);
     TEST(OBJPTR(CLASS, obj_id)->opts.num_regs == 2);
     TEST(OBJPTR(CLASS, obj_id)->opts.args_reg == 3);
-    TEST(OBJPTR(CLASS, obj_id)->instr_offs    == 0);
 
     v = OBJPTR(FUNCTION, obj_id)->bytecode;
     TEST( ! IS_BAD_PTR(v));
@@ -895,7 +892,6 @@ static KOS_OBJ_ID alloc_class(KOS_CONTEXT  ctx,
     OBJPTR(CLASS, obj_id[0])->opts.min_args = 1;
     OBJPTR(CLASS, obj_id[0])->opts.num_regs = 2;
     OBJPTR(CLASS, obj_id[0])->opts.args_reg = 3;
-    OBJPTR(CLASS, obj_id[0])->instr_offs    = 0;
     OBJPTR(CLASS, obj_id[0])->handler       = &handler;
     OBJPTR(CLASS, obj_id[0])->bytecode      = obj_id[1];
     OBJPTR(CLASS, obj_id[0])->module        = obj_id[2];
@@ -1169,14 +1165,7 @@ static KOS_OBJ_ID alloc_module(KOS_CONTEXT  ctx,
     OBJPTR(MODULE, obj_id[0])->module_names   = obj_id[6];
     OBJPTR(MODULE, obj_id[0])->priv           = obj_id[6];
     OBJPTR(MODULE, obj_id[0])->finalize       = KOS_NULL;
-    OBJPTR(MODULE, obj_id[0])->flags          = 0;
     OBJPTR(MODULE, obj_id[0])->inst           = KOS_NULL;
-    OBJPTR(MODULE, obj_id[0])->bytecode       = KOS_NULL;
-    OBJPTR(MODULE, obj_id[0])->line_addrs     = KOS_NULL;
-    OBJPTR(MODULE, obj_id[0])->func_addrs     = KOS_NULL;
-    OBJPTR(MODULE, obj_id[0])->num_line_addrs = 0;
-    OBJPTR(MODULE, obj_id[0])->num_func_addrs = 0;
-    OBJPTR(MODULE, obj_id[0])->bytecode_size  = 0;
     OBJPTR(MODULE, obj_id[0])->main_idx       = 0;
 
     OBJPTR(INTEGER, obj_id[1])->value = 63;

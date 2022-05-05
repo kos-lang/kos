@@ -244,7 +244,6 @@ static void setup_init_module(KOS_MODULE *init_module)
 
     assert(kos_get_object_type(init_module->header) == OBJ_MODULE);
 
-    init_module->flags          = 0;
     init_module->name           = KOS_CONST_ID(str_init);
     init_module->path           = KOS_STR_EMPTY;
     init_module->inst           = KOS_NULL;
@@ -254,12 +253,6 @@ static void setup_init_module(KOS_MODULE *init_module)
     init_module->module_names   = KOS_BADPTR;
     init_module->priv           = KOS_BADPTR;
     init_module->finalize       = KOS_NULL;
-    init_module->bytecode       = KOS_NULL;
-    init_module->line_addrs     = KOS_NULL;
-    init_module->func_addrs     = KOS_NULL;
-    init_module->num_line_addrs = 0;
-    init_module->num_func_addrs = 0;
-    init_module->bytecode_size  = 0;
 }
 
 struct KOS_CONST_MODULE_S {
@@ -472,17 +465,6 @@ void KOS_instance_destroy(KOS_INSTANCE *inst)
                     memset(&OBJPTR(MODULE, module_obj)->finalize, 0, sizeof(KOS_MODULE_FINALIZE));
                 }
             }
-
-            if ((OBJPTR(MODULE, module_obj)->flags & KOS_MODULE_OWN_BYTECODE))
-                KOS_free((void *)OBJPTR(MODULE, module_obj)->bytecode);
-            if ((OBJPTR(MODULE, module_obj)->flags & KOS_MODULE_OWN_LINE_ADDRS))
-                KOS_free((void *)OBJPTR(MODULE, module_obj)->line_addrs);
-            if ((OBJPTR(MODULE, module_obj)->flags & KOS_MODULE_OWN_FUNC_ADDRS))
-                KOS_free((void *)OBJPTR(MODULE, module_obj)->func_addrs);
-
-            OBJPTR(MODULE, module_obj)->flags &= ~(KOS_MODULE_OWN_BYTECODE |
-                                                   KOS_MODULE_OWN_LINE_ADDRS |
-                                                   KOS_MODULE_OWN_FUNC_ADDRS);
         }
         else {
             /* failed e.g. during compilation */

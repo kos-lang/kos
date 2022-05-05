@@ -100,22 +100,6 @@ int KOS_module_add_member_function(KOS_CONTEXT          ctx,
                                    const KOS_CONVERT   *args,
                                    KOS_FUNCTION_STATE   gen_state);
 
-KOS_API
-unsigned KOS_module_addr_to_line(KOS_MODULE *module,
-                                 uint32_t    offs);
-
-KOS_API
-unsigned KOS_module_addr_to_func_line(KOS_MODULE *module,
-                                      uint32_t    offs);
-
-KOS_API
-uint32_t KOS_module_func_get_num_instr(KOS_MODULE *module,
-                                       uint32_t    offs);
-
-KOS_API
-uint32_t KOS_module_func_get_code_size(KOS_MODULE *module,
-                                       uint32_t    offs);
-
 #ifdef __cplusplus
 }
 #endif

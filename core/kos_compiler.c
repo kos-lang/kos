@@ -1088,9 +1088,6 @@ static int append_frame(KOS_COMP_UNIT     *program,
 
     TRY(KOS_vector_resize(&program->addr2line_buf, a2l_new_offs + a2l_size));
 
-    TRY(KOS_vector_resize(&program->addr2func_buf,
-                          program->addr2func_buf.size + sizeof(struct KOS_COMP_ADDR_TO_FUNC_S)));
-
     memcpy(program->code_buf.buffer + fun_new_offs,
            program->code_gen_buf.buffer + fun_start_offs,
            fun_size);
@@ -1108,6 +1105,10 @@ static int append_frame(KOS_COMP_UNIT     *program,
 
     func_constant->addr2line_offset = (uint32_t)a2l_new_offs;
     func_constant->addr2line_size   = (uint32_t)a2l_size;
+    func_constant->num_instr        = program->cur_frame->num_instr;
+    func_constant->def_line         = 1;
+    if (program->cur_frame->fun_token)
+        func_constant->def_line = program->cur_frame->fun_token->line;
 
     TRY(KOS_vector_resize(&program->addr2line_gen_buf, addr2line_start_offs));
 
@@ -1120,29 +1121,8 @@ static int append_frame(KOS_COMP_UNIT     *program,
             (struct KOS_COMP_ADDR_TO_LINE_S *)
                 (program->addr2line_buf.buffer + program->addr2line_buf.size);
 
-        /* TODO just make them function-relative by subtracting fun_start_offs */
-        const uint32_t delta = (uint32_t)(fun_new_offs - fun_start_offs);
-
         for ( ; ptr < end; ptr++)
-            ptr->offs += delta;
-    }
-
-    {
-        KOS_VECTOR *buf = &program->addr2func_buf;
-
-        struct KOS_COMP_ADDR_TO_FUNC_S *ptr =
-            (struct KOS_COMP_ADDR_TO_FUNC_S *)
-                (buf->buffer + buf->size - sizeof(struct KOS_COMP_ADDR_TO_FUNC_S));
-
-        ptr->offs      = (uint32_t)fun_new_offs;
-        if (program->cur_frame->fun_token)
-            ptr->line  = program->cur_frame->fun_token->line;
-        else
-            ptr->line  = 1;
-        ptr->str_idx   = func_constant->name_str_idx;
-        ptr->fun_idx   = func_constant->header.index;
-        ptr->num_instr = program->cur_frame->num_instr;
-        ptr->code_size = (uint32_t)fun_size;
+            ptr->offs -= fun_start_offs;
     }
 
 cleanup:
@@ -6155,7 +6135,6 @@ void kos_compiler_init(KOS_COMP_UNIT *program,
     KOS_vector_init(&program->code_gen_buf);
     KOS_vector_init(&program->addr2line_buf);
     KOS_vector_init(&program->addr2line_gen_buf);
-    KOS_vector_init(&program->addr2func_buf);
 }
 
 int kos_compiler_compile(KOS_COMP_UNIT *program,
@@ -6173,7 +6152,6 @@ int kos_compiler_compile(KOS_COMP_UNIT *program,
     TRY(KOS_vector_reserve(&program->code_gen_buf,      1024));
     TRY(KOS_vector_reserve(&program->addr2line_buf,     1024));
     TRY(KOS_vector_reserve(&program->addr2line_gen_buf, 256));
-    TRY(KOS_vector_reserve(&program->addr2func_buf,     256));
 
     TRY(kos_compiler_process_vars(program, ast));
 
@@ -6208,7 +6186,6 @@ void kos_compiler_destroy(KOS_COMP_UNIT *program)
     KOS_vector_destroy(&program->code_buf);
     KOS_vector_destroy(&program->addr2line_gen_buf);
     KOS_vector_destroy(&program->addr2line_buf);
-    KOS_vector_destroy(&program->addr2func_buf);
 
     KOS_mempool_destroy(&program->allocator);
 }

@@ -246,10 +246,8 @@ int main(void)
         }
 
         for (j = 0; j < NUM_OBJECTS; j++) {
-            if (alloc[i].type == OBJ_MODULE) {
-                ((KOS_MODULE *)objects[j])->flags    = 0;
+            if (alloc[i].type == OBJ_MODULE)
                 ((KOS_MODULE *)objects[j])->finalize = KOS_NULL;
-            }
         }
 
         KOS_instance_destroy(&inst);

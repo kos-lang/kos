@@ -185,6 +185,8 @@ typedef struct KOS_COMP_FUNCTION_S {
     uint32_t       addr2line_offset;    /* Offset in the buffer where address-to-line translation is stored */
     uint32_t       addr2line_size;      /* Size of address-to-line translation in bytes */
     uint32_t       name_str_idx;        /* Index of constant string with function's name */
+    uint32_t       def_line;            /* First line in source code where the function is defined */
+    uint32_t       num_instr;           /* Number of instructions in the function */
     uint8_t        flags;               /* KOS_COMP_FUN_* flags */
     uint8_t        num_regs;            /* Number of registers used by the function */
     uint8_t        closure_size;        /* Number of registers preserved for a closure */
@@ -220,15 +222,6 @@ typedef struct KOS_PRE_GLOBAL_S {
 struct KOS_COMP_ADDR_TO_LINE_S {
     uint32_t offs;
     uint32_t line;
-};
-
-struct KOS_COMP_ADDR_TO_FUNC_S {
-    uint32_t offs;
-    uint32_t line;
-    uint32_t str_idx;
-    uint32_t fun_idx;
-    uint32_t num_instr;
-    uint32_t code_size;
 };
 
 enum KOS_IMPORT_TYPE_E {
@@ -273,7 +266,6 @@ typedef struct KOS_COMP_UNIT_S {
 
     KOS_VECTOR           addr2line_buf;
     KOS_VECTOR           addr2line_gen_buf;
-    KOS_VECTOR           addr2func_buf;
 } KOS_COMP_UNIT;
 
 void kos_compiler_init(KOS_COMP_UNIT *program,

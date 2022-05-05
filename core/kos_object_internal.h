@@ -292,6 +292,12 @@ void kos_wrap_exception(KOS_CONTEXT ctx);
 KOS_OBJ_ID kos_copy_function(KOS_CONTEXT ctx,
                              KOS_OBJ_ID  obj_id);
 
+KOS_OBJ_ID kos_alloc_bytecode(KOS_CONTEXT ctx,
+                              const void *bytecode,
+                              uint32_t    bytecode_size,
+                              const void *addr2line,
+                              uint32_t    addr2line_size);
+
 /*==========================================================================*/
 /* KOS_MODULE                                                               */
 /*==========================================================================*/

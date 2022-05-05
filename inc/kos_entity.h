@@ -398,7 +398,6 @@ typedef struct KOS_FUNCTION_S {
     KOS_OBJ_HEADER       header;
     KOS_FUNCTION_OPTS    opts;
     KOS_ATOMIC(uint32_t) state;
-    uint32_t             instr_offs;
     KOS_OBJ_ID           bytecode; /* Buffer storage with bytecode */
     KOS_OBJ_ID           module;
     KOS_OBJ_ID           name;     /* Function name */
@@ -413,7 +412,6 @@ typedef struct KOS_CLASS_S {
     KOS_OBJ_HEADER         header;
     KOS_FUNCTION_OPTS      opts;
     uint32_t               dummy;
-    uint32_t               instr_offs;
     KOS_OBJ_ID             bytecode; /* Buffer storage with bytecode */
     KOS_OBJ_ID             module;
     KOS_OBJ_ID             name;     /* Function name */
@@ -427,37 +425,23 @@ typedef struct KOS_CLASS_S {
 
 typedef struct KOS_BYTECODE_S {
     KOS_OBJ_HEADER         header;
-    uint32_t               bytecode_size;    /* Bytecode size in bytes */
-    uint32_t               addr2line_offset; /* Offset to addr2line in bytecode array */
-    uint32_t               addr2line_size;   /* Addr2line size in bytes */
-    uint8_t                bytecode[1];      /* Bytecode followed by KOS_LINE_ADDR structs */
+    uint32_t               bytecode_size;    /* Bytecode size in bytes                                  */
+    uint32_t               addr2line_offset; /* Offset to addr2line in bytecode array                   */
+    uint32_t               addr2line_size;   /* Addr2line size in bytes                                 */
+    uint32_t               def_line;         /* First line in source code where the function is defined */
+    uint32_t               num_instr;        /* Number of instructions in the function                  */
+    uint8_t                bytecode[1];      /* Bytecode followed by KOS_LINE_ADDR structs              */
 } KOS_BYTECODE;
-
-enum KOS_MODULE_FLAGS_E {
-    KOS_MODULE_OWN_BYTECODE   = 1,
-    KOS_MODULE_OWN_LINE_ADDRS = 2,
-    KOS_MODULE_OWN_FUNC_ADDRS = 4
-};
 
 typedef struct KOS_LINE_ADDR_S {
     uint32_t offs;
     uint32_t line;
 } KOS_LINE_ADDR;
 
-typedef struct KOS_FUNC_ADDR_S {
-    uint32_t offs;      /* Offset of the function's bytecode in the module         */
-    uint32_t line;      /* First line in source code where the function is defined */
-    uint32_t str_idx;   /* Index of module constant containing function name       */
-    uint32_t fun_idx;   /* Index of module constant containing function object     */
-    uint32_t num_instr; /* Number of instructions in the function                  */
-    uint32_t code_size; /* Number of bytes used by the function's bytecode         */
-} KOS_FUNC_ADDR;
-
 typedef void (*KOS_MODULE_FINALIZE)(void);
 
 typedef struct KOS_MODULE_S {
     KOS_OBJ_HEADER         header;
-    uint8_t                flags;
     KOS_OBJ_ID             name;
     KOS_OBJ_ID             path;
     KOS_INSTANCE          *inst;
@@ -467,12 +451,6 @@ typedef struct KOS_MODULE_S {
     KOS_OBJ_ID             module_names; /* Map of directly referenced modules to their indices, for REPL */
     KOS_ATOMIC(KOS_OBJ_ID) priv;
     KOS_MODULE_FINALIZE    finalize;     /* Function to call when unloading the module */
-    const uint8_t         *bytecode;
-    const KOS_LINE_ADDR   *line_addrs;
-    const KOS_FUNC_ADDR   *func_addrs;
-    uint32_t               num_line_addrs;
-    uint32_t               num_func_addrs;
-    uint32_t               bytecode_size;
     uint32_t               main_idx;     /* Index of constant with global scope "function" */
 } KOS_MODULE;
 
@@ -572,6 +550,20 @@ KOS_API
 KOS_OBJ_ID KOS_get_named_arg(KOS_CONTEXT ctx,
                              KOS_OBJ_ID  func_obj,
                              uint32_t    i);
+
+KOS_API
+unsigned KOS_function_addr_to_line(KOS_OBJ_ID func_obj,
+                                   uint32_t   offs);
+
+KOS_API
+uint32_t KOS_function_get_def_line(KOS_OBJ_ID func_obj);
+
+KOS_API
+uint32_t KOS_function_get_num_instr(KOS_OBJ_ID func_obj);
+
+KOS_API
+uint32_t KOS_function_get_code_size(KOS_OBJ_ID func_obj);
+
 #ifdef __cplusplus
 }
 #endif

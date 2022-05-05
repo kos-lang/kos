@@ -38,6 +38,10 @@
     KOS_format_exception;
     KOS_free;
     KOS_free_aligned;
+    KOS_function_addr_to_line;
+    KOS_function_get_code_size;
+    KOS_function_get_def_line;
+    KOS_function_get_num_instr;
     KOS_get_absolute_path;
     KOS_get_env;
     KOS_get_file_name;
@@ -85,11 +89,8 @@
     KOS_module_add_function;
     KOS_module_add_global;
     KOS_module_add_member_function;
-    KOS_module_addr_to_func_line;
-    KOS_module_addr_to_line;
-    KOS_module_func_get_code_size;
-    KOS_module_func_get_num_instr;
     KOS_module_get_global;
+    KOS_module_run_function;
     KOS_modules_init;
     KOS_new_array;
     KOS_new_buffer;

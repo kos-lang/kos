@@ -54,7 +54,9 @@ static KOS_FUNCTION_OPTS create_func_opts(uint8_t num_regs, uint8_t num_args)
 
 static KOS_OBJ_ID create_func_obj(KOS_CONTEXT              ctx,
                                   enum CREATE_FUNC_E       create,
-                                  uint32_t                 offset,
+                                  const uint8_t           *bytecode,
+                                  uint32_t                 bytecode_size,
+                                  uint32_t                 offs,
                                   const KOS_FUNCTION_OPTS *opts)
 {
     KOS_OBJ_ID    obj_id;
@@ -64,18 +66,17 @@ static KOS_OBJ_ID create_func_obj(KOS_CONTEXT              ctx,
         obj_id = KOS_new_class(ctx, KOS_VOID);
         if (IS_BAD_PTR(obj_id))
             return KOS_BADPTR;
-        func   = (KOS_FUNCTION *)OBJPTR(CLASS, obj_id);
+        func = (KOS_FUNCTION *)OBJPTR(CLASS, obj_id);
     }
     else {
         obj_id = KOS_new_function(ctx);
         if (IS_BAD_PTR(obj_id))
             return KOS_BADPTR;
-        func   = OBJPTR(FUNCTION, obj_id);
+        func = OBJPTR(FUNCTION, obj_id);
     }
 
-    func->opts       = *opts;
-    func->instr_offs = offset;
-    func->module     = ctx->inst->modules.init_module;
+    func->opts   = *opts;
+    func->module = ctx->inst->modules.init_module;
 
     if (create == CREATE_CLASS && func->opts.this_reg == KOS_NO_REG) {
         if (func->opts.rest_reg != KOS_NO_REG)
@@ -89,28 +90,38 @@ static KOS_OBJ_ID create_func_obj(KOS_CONTEXT              ctx,
     if (create == CREATE_GEN)
         func->state = KOS_GEN_INIT;
 
+    func->bytecode = kos_alloc_bytecode(ctx, &bytecode[offs], bytecode_size - offs, KOS_NULL, 0);
+    if (IS_BAD_PTR(func->bytecode))
+        return KOS_BADPTR;
+
     return obj_id;
 }
 
 static KOS_OBJ_ID create_func(KOS_CONTEXT              ctx,
-                              uint32_t                 offset,
+                              const uint8_t           *bytecode,
+                              uint32_t                 bytecode_size,
+                              uint32_t                 offs,
                               const KOS_FUNCTION_OPTS *opts)
 {
-    return create_func_obj(ctx, CREATE_FUNC, offset, opts);
+    return create_func_obj(ctx, CREATE_FUNC, bytecode, bytecode_size, offs, opts);
 }
 
 static KOS_OBJ_ID create_gen(KOS_CONTEXT              ctx,
-                             uint32_t                 offset,
+                             const uint8_t           *bytecode,
+                             uint32_t                 bytecode_size,
+                             uint32_t                 offs,
                              const KOS_FUNCTION_OPTS *opts)
 {
-    return create_func_obj(ctx, CREATE_GEN, offset, opts);
+    return create_func_obj(ctx, CREATE_GEN, bytecode, bytecode_size, offs, opts);
 }
 
 static KOS_OBJ_ID create_class(KOS_CONTEXT              ctx,
-                               uint32_t                 offset,
+                               const uint8_t           *bytecode,
+                               uint32_t                 bytecode_size,
+                               uint32_t                 offs,
                                const KOS_FUNCTION_OPTS *opts)
 {
-    return create_func_obj(ctx, CREATE_CLASS, offset, opts);
+    return create_func_obj(ctx, CREATE_CLASS, bytecode, bytecode_size, offs, opts);
 }
 
 static KOS_OBJ_ID run_code(KOS_INSTANCE  *inst,
@@ -132,8 +143,6 @@ static KOS_OBJ_ID run_code(KOS_INSTANCE  *inst,
 
     module->inst          = inst;
     module->constants     = KOS_new_array(ctx, num_constants + 1);
-    module->bytecode      = bytecode;
-    module->bytecode_size = bytecode_size;
     module->main_idx      = num_constants;
 
     if (IS_BAD_PTR(module->constants))
@@ -153,7 +162,7 @@ static KOS_OBJ_ID run_code(KOS_INSTANCE  *inst,
 
         opts.closure_size = (uint8_t)closure_size;
 
-        func_obj = create_func_obj(ctx, CREATE_FUNC, 0, &opts);
+        func_obj = create_func_obj(ctx, CREATE_FUNC, bytecode, bytecode_size, 0, &opts);
 
         if (IS_BAD_PTR(func_obj))
             error = KOS_ERROR_EXCEPTION;
@@ -665,7 +674,7 @@ int main(void)
             INSTR_RETURN,      0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(2, 1);
-        KOS_OBJ_ID        func = create_func(ctx, 5, &opts);
+        KOS_OBJ_ID        func = create_func(ctx, &code[0], sizeof(code), 5, &opts);
 
         KOS_OBJ_ID ret = run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, &func, 1);
         TEST_NO_EXCEPTION();
@@ -692,7 +701,7 @@ int main(void)
             INSTR_RETURN,      0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(2, 1);
-        KOS_OBJ_ID        func = create_func(ctx, 35, &opts);
+        KOS_OBJ_ID        func = create_func(ctx, &code[0], sizeof(code), 35, &opts);
 
         KOS_OBJ_ID ret = run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, &func, 1);
         TEST_NO_EXCEPTION();
@@ -720,7 +729,7 @@ int main(void)
         KOS_OBJ_ID        ret;
 
         opts.this_reg = 0;
-        func = create_func(ctx, 5, &opts);
+        func = create_func(ctx, &code[0], sizeof(code), 5, &opts);
 
         ret = run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, &func, 1);
         TEST_NO_EXCEPTION();
@@ -744,7 +753,7 @@ int main(void)
             INSTR_RETURN,     0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(2, 1);
-        KOS_OBJ_ID        func = create_func(ctx, 5, &opts);
+        KOS_OBJ_ID        func = create_func(ctx, &code[0], sizeof(code), 5, &opts);
 
         KOS_OBJ_ID ret = run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, &func, 1);
         TEST_NO_EXCEPTION();
@@ -768,7 +777,7 @@ int main(void)
             INSTR_RETURN,     0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(1, 0);
-        KOS_OBJ_ID        func = create_func(ctx, 5, &opts);
+        KOS_OBJ_ID        func = create_func(ctx, &code[0], sizeof(code), 5, &opts);
 
         KOS_OBJ_ID ret = run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, &func, 1);
         TEST_NO_EXCEPTION();
@@ -791,7 +800,7 @@ int main(void)
             INSTR_RETURN,     0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(2, 1);
-        KOS_OBJ_ID        func = create_func(ctx, 5, &opts);
+        KOS_OBJ_ID        func = create_func(ctx, &code[0], sizeof(code), 5, &opts);
 
         KOS_OBJ_ID ret = run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, &func, 1);
         TEST_NO_EXCEPTION();
@@ -814,7 +823,7 @@ int main(void)
             INSTR_RETURN,     0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(1, 0);
-        KOS_OBJ_ID        func = create_func(ctx, 5, &opts);
+        KOS_OBJ_ID        func = create_func(ctx, &code[0], sizeof(code), 5, &opts);
 
         KOS_OBJ_ID ret = run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, &func, 1);
         TEST_NO_EXCEPTION();
@@ -836,7 +845,7 @@ int main(void)
             INSTR_RETURN,      0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(1, 0);
-        KOS_OBJ_ID        func = create_func(ctx, 13, &opts);
+        KOS_OBJ_ID        func = create_func(ctx, &code[0], sizeof(code), 13, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, &func, 1) == TO_SMALL_INT(43));
         TEST_NO_EXCEPTION();
@@ -865,11 +874,11 @@ int main(void)
 
         opts = create_func_opts(2, 0);
         opts.this_reg = 1;
-        constants[0] = create_func(ctx, 23, &opts);
+        constants[0] = create_func(ctx, &code[0], sizeof(code), 23, &opts);
 
         opts = create_func_opts(2, 0);
         opts.this_reg = 0;
-        constants[1] = create_func(ctx, 30, &opts);
+        constants[1] = create_func(ctx, &code[0], sizeof(code), 30, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, constants, 2) == TO_SMALL_INT(235));
         TEST_NO_EXCEPTION();
@@ -910,7 +919,7 @@ int main(void)
         constants[0] = KOS_new_const_ascii_cstring(ctx, str);
 
         opts = create_func_opts(2, 1);
-        constants[1] = create_func(ctx, 5, &opts);
+        constants[1] = create_func(ctx, &code[0], sizeof(code), 5, &opts);
 
         TEST(!IS_BAD_PTR(constants[0]));
         TEST(!IS_BAD_PTR(constants[1]));
@@ -934,7 +943,7 @@ int main(void)
             INSTR_RETURN,      0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(2, 10);
-        KOS_OBJ_ID        func = create_func(ctx, 5, &opts);
+        KOS_OBJ_ID        func = create_func(ctx, &code[0], sizeof(code), 5, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, &func, 1) == KOS_BADPTR);
         TEST_EXCEPTION();
@@ -953,7 +962,7 @@ int main(void)
             INSTR_RETURN,      0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(2, 1);
-        KOS_OBJ_ID        func = create_func(ctx, 5, &opts);
+        KOS_OBJ_ID        func = create_func(ctx, &code[0], sizeof(code), 5, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 1, 0, &func, 1) == KOS_BADPTR);
         TEST_EXCEPTION();
@@ -984,7 +993,7 @@ int main(void)
         constants[1] = TO_SMALL_INT(0xC0DEU);
 
         opts = create_func_opts(2, 1);
-        constants[2] = create_class(ctx, 5, &opts);
+        constants[2] = create_class(ctx, &code[0], sizeof(code), 5, &opts);
 
         constants[3] = KOS_new_object(ctx); /* prototype */
 
@@ -1031,7 +1040,7 @@ int main(void)
         constants[1] = TO_SMALL_INT(0xC0DEU);
 
         opts = create_func_opts(2, 1);
-        constants[2] = create_class(ctx, 5, &opts);
+        constants[2] = create_class(ctx, &code[0], sizeof(code), 5, &opts);
 
         constants[3] = KOS_new_object(ctx); /* prototype */
 
@@ -1081,7 +1090,7 @@ int main(void)
         constants[1] = TO_SMALL_INT(0xC0DEU);
 
         opts = create_func_opts(2, 1);
-        constants[2] = create_class(ctx, 5, &opts);
+        constants[2] = create_class(ctx, &code[0], sizeof(code), 5, &opts);
 
         constants[3] = KOS_new_object(ctx); /* prototype */
 
@@ -1122,7 +1131,7 @@ int main(void)
         KOS_OBJ_ID constants[2];
 
         opts = create_func_opts(1, 0);
-        constants[0] = create_class(ctx, 5, &opts);
+        constants[0] = create_class(ctx, &code[0], sizeof(code), 5, &opts);
 
         constants[1] = KOS_new_object(ctx); /* prototype */
 
@@ -1163,7 +1172,7 @@ int main(void)
         KOS_OBJ_ID constants[2];
 
         opts = create_func_opts(1, 0);
-        constants[0] = create_class(ctx, 5, &opts);
+        constants[0] = create_class(ctx, &code[0], sizeof(code), 5, &opts);
 
         constants[1] = KOS_new_object(ctx); /* prototype */
 
@@ -1205,12 +1214,12 @@ int main(void)
         KOS_OBJ_ID constants[4];
 
         opts = create_func_opts(1, 0);
-        constants[0] = create_class(ctx, 5, &opts);
+        constants[0] = create_class(ctx, &code[0], sizeof(code), 5, &opts);
 
         constants[1] = KOS_new_object(ctx); /* prototype */
 
         opts = create_func_opts(1, 0);
-        constants[2] = create_class(ctx, 7, &opts);
+        constants[2] = create_class(ctx, &code[0], sizeof(code), 7, &opts);
 
         constants[3] = KOS_new_object(ctx); /* prototype */
 
@@ -1231,7 +1240,7 @@ int main(void)
         KOS_OBJ_ID constants[2];
 
         opts = create_func_opts(1, 0);
-        constants[0] = create_class(ctx, 0, &opts);
+        constants[0] = create_class(ctx, &code[0], sizeof(code), 0, &opts);
 
         constants[1] = TO_SMALL_INT(42); /* prototype */
 
@@ -1250,7 +1259,7 @@ int main(void)
             INSTR_RETURN,      0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(1, 0);
-        KOS_OBJ_ID        func = create_gen(ctx, 3, &opts);
+        KOS_OBJ_ID        func = create_gen(ctx, &code[0], sizeof(code), 3, &opts);
 
         KOS_OBJ_ID ret = run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, &func, 1);
         TEST_NO_EXCEPTION();
@@ -1283,7 +1292,7 @@ int main(void)
 
         opts = create_func_opts(1, 0);
         opts.this_reg = 0;
-        constants[1] = create_gen(ctx, 19, &opts);
+        constants[1] = create_gen(ctx, &code[0], sizeof(code), 19, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, constants, 2) == TO_SMALL_INT(0xCAFEU));
         TEST_NO_EXCEPTION();
@@ -1302,7 +1311,7 @@ int main(void)
             INSTR_YIELD,       0, 0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(1, 0);
-        KOS_OBJ_ID        func = create_gen(ctx, 15, &opts);
+        KOS_OBJ_ID        func = create_gen(ctx, &code[0], sizeof(code), 15, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 1, 0, &func, 1) == TO_SMALL_INT(42));
         TEST_NO_EXCEPTION();
@@ -1327,7 +1336,7 @@ int main(void)
         KOS_OBJ_ID        func;
 
         opts.this_reg = 0;
-        func = create_gen(ctx, 24, &opts);
+        func = create_gen(ctx, &code[0], sizeof(code), 24, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 4, 0, &func, 1) == KOS_VOID);
         TEST_NO_EXCEPTION();
@@ -1394,7 +1403,7 @@ int main(void)
             INSTR_THROW,         2
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(1, 0);
-        KOS_OBJ_ID        func = create_gen(ctx, 5, &opts);
+        KOS_OBJ_ID        func = create_gen(ctx, &code[0], sizeof(code), 5, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, &func, 1) == TO_SMALL_INT(3 + 4 + 5));
         TEST_NO_EXCEPTION();
@@ -1413,7 +1422,7 @@ int main(void)
             INSTR_YIELD,       1, 1
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(3, 2);
-        KOS_OBJ_ID        func = create_gen(ctx, 16, &opts);
+        KOS_OBJ_ID        func = create_gen(ctx, &code[0], sizeof(code), 16, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, &func, 1) == KOS_BADPTR);
         TEST_EXCEPTION();
@@ -1432,7 +1441,7 @@ int main(void)
             INSTR_YIELD,       1, 1
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(2, 0);
-        KOS_OBJ_ID        func = create_gen(ctx, 15, &opts);
+        KOS_OBJ_ID        func = create_gen(ctx, &code[0], sizeof(code), 15, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, &func, 1) == KOS_BADPTR);
         TEST_EXCEPTION();
@@ -1454,7 +1463,7 @@ int main(void)
         KOS_OBJ_ID        func;
 
         opts.this_reg = 1;
-        func = create_gen(ctx, 19, &opts);
+        func = create_gen(ctx, &code[0], sizeof(code), 19, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, &func, 1) == TO_SMALL_INT(120));
         TEST_NO_EXCEPTION();
@@ -1492,7 +1501,7 @@ int main(void)
         KOS_OBJ_ID        ret;
 
         opts.this_reg = 0;
-        func = create_gen(ctx, 66, &opts);
+        func = create_gen(ctx, &code[0], sizeof(code), 66, &opts);
 
         ret = run_code(&inst, ctx, &code[0], sizeof(code), 5, 0, &func, 1);
         TEST_NO_EXCEPTION();
@@ -1521,7 +1530,7 @@ int main(void)
         KOS_OBJ_ID        func;
 
         opts.this_reg = 0;
-        func = create_gen(ctx, 24, &opts);
+        func = create_gen(ctx, &code[0], sizeof(code), 24, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, &func, 1) == KOS_BADPTR);
         TEST_EXCEPTION();
@@ -1547,7 +1556,7 @@ int main(void)
         KOS_OBJ_ID        func;
 
         opts.this_reg = 0;
-        func = create_gen(ctx, 30, &opts);
+        func = create_gen(ctx, &code[0], sizeof(code), 30, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, &func, 1) == KOS_BADPTR);
         TEST_EXCEPTION();
@@ -1571,7 +1580,7 @@ int main(void)
         KOS_OBJ_ID        func;
 
         opts.this_reg = 0;
-        func = create_gen(ctx, 16, &opts);
+        func = create_gen(ctx, &code[0], sizeof(code), 16, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, &func, 1) == KOS_BADPTR);
         TEST_EXCEPTION();
@@ -1590,7 +1599,7 @@ int main(void)
             INSTR_RETURN,      0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(1, 0);
-        KOS_OBJ_ID        func = create_func(ctx, 14, &opts);
+        KOS_OBJ_ID        func = create_func(ctx, &code[0], sizeof(code), 14, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, &func, 1) == KOS_BADPTR);
         TEST_EXCEPTION();
@@ -1628,7 +1637,7 @@ int main(void)
             INSTR_RETURN,      0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(1, 0);
-        KOS_OBJ_ID        func = create_func(ctx, 14, &opts);
+        KOS_OBJ_ID        func = create_func(ctx, &code[0], sizeof(code), 14, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, &func, 1) == TO_SMALL_INT(42));
         TEST_NO_EXCEPTION();
@@ -1657,7 +1666,7 @@ int main(void)
         KOS_OBJ_ID        func;
 
         opts.this_reg = 2;
-        func = create_func(ctx, 21, &opts);
+        func = create_func(ctx, &code[0], sizeof(code), 21, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 4, 0, &func, 1) == TO_SMALL_INT(143));
         TEST_NO_EXCEPTION();
@@ -1681,7 +1690,7 @@ int main(void)
             INSTR_RETURN,        0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(3, 2);
-        KOS_OBJ_ID        func = create_func(ctx, 17, &opts);
+        KOS_OBJ_ID        func = create_func(ctx, &code[0], sizeof(code), 17, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, &func, 1) == TO_SMALL_INT(140));
         TEST_NO_EXCEPTION();
@@ -1769,7 +1778,7 @@ int main(void)
             INSTR_RETURN,      1
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(2, 0);
-        KOS_OBJ_ID        func = create_func(ctx, 21, &opts);
+        KOS_OBJ_ID        func = create_func(ctx, &code[0], sizeof(code), 21, &opts);
 
         KOS_OBJ_ID obj = run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, &func, 1);
         TEST_NO_EXCEPTION();
@@ -1827,13 +1836,13 @@ int main(void)
         constants[0] = KOS_STR_VALUE;
 
         opts = create_func_opts(3, 0);
-        constants[1] = create_func(ctx,  37, &opts);
+        constants[1] = create_func(ctx, &code[0], sizeof(code),  37, &opts);
 
         opts = create_func_opts(3, 0);
-        constants[2] = create_func(ctx,  76, &opts);
+        constants[2] = create_func(ctx, &code[0], sizeof(code),  76, &opts);
 
         opts = create_func_opts(2, 0);
-        constants[3] = create_func(ctx, 115, &opts);
+        constants[3] = create_func(ctx, &code[0], sizeof(code), 115, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, constants, 4) == TO_SMALL_INT(4));
         TEST_NO_EXCEPTION();
@@ -1874,12 +1883,12 @@ int main(void)
         opts.closure_size = 1;
         opts.bind_reg     = 1;
         opts.num_binds    = 1;
-        constants[0] = create_func(ctx, 22, &opts);
+        constants[0] = create_func(ctx, &code[0], sizeof(code), 22, &opts);
 
         opts = create_func_opts(3, 0);
         opts.bind_reg  = 1;
         opts.num_binds = 2;
-        constants[1] = create_func(ctx, 37, &opts);
+        constants[1] = create_func(ctx, &code[0], sizeof(code), 37, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 2, 1, constants, 2) == TO_SMALL_INT(41));
         TEST_NO_EXCEPTION();
@@ -1922,7 +1931,7 @@ int main(void)
         opts = create_func_opts(4, 0);
         opts.bind_reg  = 1;
         opts.num_binds = 2;
-        constants[1] = create_gen(ctx, 52, &opts);
+        constants[1] = create_gen(ctx, &code[0], sizeof(code), 52, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 5, 1, constants, 2) == TO_SMALL_INT(-300));
         TEST_NO_EXCEPTION();
@@ -2038,14 +2047,14 @@ int main(void)
         opts.closure_size = 1;
         opts.bind_reg     = 4;
         opts.num_binds    = 2;
-        constants[4] = create_func(ctx,  92, &opts);
+        constants[4] = create_func(ctx, &code[0], sizeof(code),  92, &opts);
 
         opts = create_func_opts(107, 3);
         opts.args_reg  = 98;
         opts.this_reg  = 101;
         opts.bind_reg  = 102;
         opts.num_binds = 5;
-        constants[5] = create_func(ctx, 144, &opts);
+        constants[5] = create_func(ctx, &code[0], sizeof(code), 144, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 6, 6, constants, 6) == TO_SMALL_INT(0x69055));
         TEST_NO_EXCEPTION();
@@ -2090,12 +2099,12 @@ int main(void)
         opts.args_reg     = 0;
         opts.num_def_args = 3;
         opts.closure_size = 3;
-        constants[0] = create_func(ctx, 43, &opts);
+        constants[0] = create_func(ctx, &code[0], sizeof(code), 43, &opts);
 
         opts = create_func_opts(3, 0);
         opts.bind_reg  = 1;
         opts.num_binds = 1;
-        constants[1] = create_func(ctx, 53, &opts);
+        constants[1] = create_func(ctx, &code[0], sizeof(code), 53, &opts);
 
         ret = run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, constants, 2);
         TEST( ! IS_BAD_PTR(ret));
@@ -2147,12 +2156,12 @@ int main(void)
         opts.args_reg     = 1;
         opts.num_def_args = 3;
         opts.closure_size = 5;
-        constants[0] = create_func(ctx, 49, &opts);
+        constants[0] = create_func(ctx, &code[0], sizeof(code), 49, &opts);
 
         opts = create_func_opts(3, 0);
         opts.bind_reg  = 1;
         opts.num_binds = 1;
-        constants[1] = create_func(ctx, 61, &opts);
+        constants[1] = create_func(ctx, &code[0], sizeof(code), 61, &opts);
 
         ret = run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, constants, 2);
         TEST( ! IS_BAD_PTR(ret));
@@ -2224,7 +2233,7 @@ int main(void)
         KOS_OBJ_ID constants[3];
 
         opts = create_func_opts(5, 2);
-        constants[0] = create_func(ctx,  8, &opts);
+        constants[0] = create_func(ctx, &code[0], sizeof(code),  8, &opts);
 
         opts = create_func_opts(KOS_MAX_ARGS_IN_REGS + 5 + 3, 16);
         opts.args_reg     = 5;
@@ -2233,12 +2242,12 @@ int main(void)
         opts.ellipsis_reg = KOS_MAX_ARGS_IN_REGS + 5;
         opts.this_reg     = KOS_MAX_ARGS_IN_REGS + 5 + 1;
         opts.closure_size = KOS_MAX_ARGS_IN_REGS + 5 + 2;
-        constants[1] = create_func(ctx, 70, &opts);
+        constants[1] = create_func(ctx, &code[0], sizeof(code), 70, &opts);
 
         opts = create_func_opts(3, 0);
         opts.bind_reg  = 1;
         opts.num_binds = 1;
-        constants[2] = create_func(ctx, 90, &opts);
+        constants[2] = create_func(ctx, &code[0], sizeof(code), 90, &opts);
 
         ret = run_code(&inst, ctx, &code[0], sizeof(code), 5, 0, constants, 3);
         TEST( ! IS_BAD_PTR(ret));
@@ -2327,7 +2336,7 @@ int main(void)
         KOS_OBJ_ID constants[3];
 
         opts = create_func_opts(5, 2);
-        constants[0] = create_func(ctx,  8, &opts);
+        constants[0] = create_func(ctx, &code[0], sizeof(code),  8, &opts);
 
         opts = create_func_opts(KOS_MAX_ARGS_IN_REGS + 3, KOS_MAX_ARGS_IN_REGS);
         opts.num_def_args = 5;
@@ -2335,12 +2344,12 @@ int main(void)
         opts.ellipsis_reg = KOS_MAX_ARGS_IN_REGS;
         opts.this_reg     = KOS_MAX_ARGS_IN_REGS + 1;
         opts.closure_size = KOS_MAX_ARGS_IN_REGS + 2;
-        constants[1] = create_func(ctx, 70, &opts);
+        constants[1] = create_func(ctx, &code[0], sizeof(code), 70, &opts);
 
         opts = create_func_opts(3, 0);
         opts.bind_reg  = 1;
         opts.num_binds = 1;
-        constants[2] = create_func(ctx, 80, &opts);
+        constants[2] = create_func(ctx, &code[0], sizeof(code), 80, &opts);
 
         ret = run_code(&inst, ctx, &code[0], sizeof(code), 5, 0, constants, 3);
         TEST( ! IS_BAD_PTR(ret));

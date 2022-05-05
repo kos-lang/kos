@@ -270,7 +270,7 @@ int kos_stack_push(KOS_CONTEXT ctx,
     KOS_atomic_write_relaxed_u32(new_stack->size,         base_idx + room);
     KOS_atomic_write_relaxed_ptr(stack_frame->func_obj,   func.o);
     KOS_atomic_write_relaxed_ptr(stack_frame->catch_info, TO_SMALL_INT((int64_t)catch_init));
-    KOS_atomic_write_relaxed_ptr(stack_frame->instr_offs, TO_SMALL_INT((int64_t)OBJPTR(FUNCTION, func.o)->instr_offs));
+    KOS_atomic_write_relaxed_ptr(stack_frame->instr_offs, TO_SMALL_INT(0));
     KOS_atomic_write_relaxed_ptr(new_stack->buf[base_idx + 3 + num_regs],
                                                           TO_SMALL_INT(reg_init));
     ctx->regs_idx = base_idx + 3;
@@ -528,11 +528,9 @@ static int dump_stack(KOS_OBJ_ID stack,
     KOS_DUMP_CONTEXT       *dump_ctx    = (KOS_DUMP_CONTEXT *)cookie;
     KOS_CONTEXT             ctx         = dump_ctx->ctx;
     KOS_STACK_FRAME        *stack_frame = (KOS_STACK_FRAME *)&OBJPTR(STACK, stack)->buf[frame_idx];
-    KOS_FUNCTION           *func        = OBJPTR(FUNCTION, KOS_atomic_read_relaxed_obj(stack_frame->func_obj));
+    KOS_OBJ_ID              func        = KOS_atomic_read_relaxed_obj(stack_frame->func_obj);
     const uint32_t          instr_offs  = get_instr_offs(stack_frame);
-    const unsigned          line        = KOS_module_addr_to_line(IS_BAD_PTR(func->module)
-                                                                      ? KOS_NULL : OBJPTR(MODULE, func->module),
-                                                                  instr_offs);
+    const unsigned          line        = KOS_function_addr_to_line(func, instr_offs);
     int                     error       = KOS_SUCCESS;
     KOS_LOCAL               module;
     KOS_LOCAL               func_name;
@@ -540,8 +538,8 @@ static int dump_stack(KOS_OBJ_ID stack,
     KOS_LOCAL               module_path;
     KOS_LOCAL               frame_desc;
 
-    KOS_init_local_with(ctx, &module,      func->module);
-    KOS_init_local_with(ctx, &func_name,   func->name);
+    KOS_init_local_with(ctx, &module,      OBJPTR(FUNCTION, func)->module);
+    KOS_init_local_with(ctx, &func_name,   OBJPTR(FUNCTION, func)->name);
     KOS_init_local_with(ctx, &module_name, KOS_CONST_ID(str_xbuiltinx));
     KOS_init_local_with(ctx, &module_path, KOS_CONST_ID(str_xbuiltinx));
     KOS_init_local_with(ctx, &frame_desc,  KOS_new_object(ctx));

@@ -325,11 +325,7 @@ static int test_instr(KOS_CONTEXT           ctx,
     module->name          = KOS_CONST_ID(str_module_name);
     module->path          = KOS_STR_EMPTY;
     module->inst          = ctx->inst;
-    module->bytecode      = &code[0];
-    module->bytecode_size = words;
     module->main_idx      = num_constants;
-    module->line_addrs    = 0;
-    module->func_addrs    = 0;
     module->global_names  = KOS_BADPTR;
     module->globals       = KOS_BADPTR;
     module->module_names  = KOS_BADPTR;
@@ -340,14 +336,21 @@ static int test_instr(KOS_CONTEXT           ctx,
         if (IS_BAD_PTR(func_obj))
             error = KOS_ERROR_EXCEPTION;
         else {
+            KOS_OBJ_ID bytecode;
+
             if (KOS_array_write(ctx, constants, num_constants++, func_obj)) {
                 printf("Failed: Unable to allocate constants!\n");
                 return KOS_ERROR_EXCEPTION;
             }
 
             OBJPTR(FUNCTION, func_obj)->opts.num_regs = regs;
-            OBJPTR(FUNCTION, func_obj)->instr_offs    = 0;
             OBJPTR(FUNCTION, func_obj)->module        = OBJID(MODULE, module);
+
+            bytecode = kos_alloc_bytecode(ctx, &code[0], words, KOS_NULL, 0);
+            if (IS_BAD_PTR(bytecode))
+                error = KOS_ERROR_EXCEPTION;
+            else
+                OBJPTR(FUNCTION, func_obj)->bytecode = bytecode;
         }
     }
 
