@@ -2152,7 +2152,7 @@ static void update_child_ptr(KOS_OBJ_ID *obj_id_ptr)
 
         KOS_OBJ_ID new_obj = ((KOS_OBJ_HEADER *)((intptr_t)obj_id - 1))->size_and_type;
 
-#ifdef CONFIG_MAD_GC
+#if defined(CONFIG_MAD_GC) && ! defined(NDEBUG)
         const struct KOS_MARK_LOC_S mark_loc = get_mark_location(obj_id);
         const uint32_t              color    = get_marking(&mark_loc);
 
