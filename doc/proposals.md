@@ -24,7 +24,6 @@
 
 * Optimizations:
 
-    - Add compile-time resolution for range() (e.g. using special instruction).
     - Find line where a variable is no longer used, release register.
     - Don't reload constants if they are already in registers.
     - Hoist constants outside of loops.  Reuse constants.
@@ -43,8 +42,6 @@
 
 * ? Callstack from shallow is missing built-in function
 
-* ? Now that we handle x... - throw error if too many args are provided!
-
 * Reduce need for passing module objects, e.g. when creating builtin dyn props
 
 * Allow referencing module objects from the language, add a way to extract list of modules
@@ -57,7 +54,7 @@
 
 * Add way to list modules and globals in modules, manipulate globals
 
-* Comparison operators for arrays and objects
+* ? Comparison operators for objects
 
 * ? Add match expression
 
