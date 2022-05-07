@@ -4944,7 +4944,7 @@ static KOS_OBJ_ID module_constructor(KOS_CONTEXT ctx,
                                      KOS_OBJ_ID  args_obj)
 {
     KOS_LOCAL  name;
-    KOS_OBJ_ID obj;
+    KOS_OBJ_ID obj   = KOS_BADPTR;
     int        error = KOS_SUCCESS;
 
     assert(GET_OBJ_TYPE(args_obj) == OBJ_ARRAY);
