@@ -80,10 +80,10 @@ KOS_DECLARE_STATIC_CONST_STRING(str_values,                       "values");
 
 #define TRY_CREATE_CONSTRUCTOR(name, module, args)         \
 do {                                                       \
-    KOS_DECLARE_STATIC_CONST_STRING(str_name, #name);      \
+    KOS_DECLARE_STATIC_CONST_STRING(str_ctr_##name, #name);\
     TRY(create_class(ctx,                                  \
                      module,                               \
-                     KOS_CONST_ID(str_name),               \
+                     KOS_CONST_ID(str_ctr_##name),         \
                      name##_constructor,                   \
                      (args),                               \
                      ctx->inst->prototypes.name##_proto)); \
