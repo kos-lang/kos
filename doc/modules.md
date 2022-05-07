@@ -56,6 +56,7 @@ Table of Contents
       * [function.prototype.async()](#functionprototypeasync)
       * [function.prototype.instructions](#functionprototypeinstructions)
       * [function.prototype.line](#functionprototypeline)
+      * [function.prototype.module](#functionprototypemodule)
       * [function.prototype.name](#functionprototypename)
       * [function.prototype.registers](#functionprototyperegisters)
       * [function.prototype.size](#functionprototypesize)
@@ -72,6 +73,9 @@ Table of Contents
     * [last()](#last)
     * [map()](#map)
     * [method()](#method)
+    * [module()](#module)
+      * [module.prototype.name](#moduleprototypename)
+      * [module.prototype.path](#moduleprototypepath)
     * [number()](#number)
     * [object()](#object)
       * [object.prototype.all()](#objectprototypeall)
@@ -1518,6 +1522,18 @@ function.prototype.line
 
 Read-only line at which the function was defined in the source code.
 
+function.prototype.module
+-------------------------
+
+    function.prototype.module
+
+Read-only module to which the function belongs.
+
+Example:
+
+    > count.module.name
+    "base"
+
 function.prototype.name
 -----------------------
 
@@ -1864,6 +1880,32 @@ Example:
     1
     > my_array
     [10, 20]
+
+module()
+--------
+
+    module(name)
+
+Module object class.
+
+Returns module object of a module with the given name.
+The module must have been already imported with the `import` statement.
+
+The prototype of `module.prototype` is `object.prototype`.
+
+module.prototype.name
+---------------------
+
+    module.prototype.name
+
+Read-only name of the module (string).
+
+module.prototype.path
+---------------------
+
+    module.prototype.path
+
+Read-only path of the module (string).
 
 number()
 --------

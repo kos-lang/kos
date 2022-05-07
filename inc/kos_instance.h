@@ -208,6 +208,7 @@ struct KOS_PROTOTYPES_S {
     KOS_OBJ_ID exception_proto;
     KOS_OBJ_ID generator_end_proto;
     KOS_OBJ_ID thread_proto;
+    KOS_OBJ_ID module_proto;
 };
 
 struct KOS_MODULE_MGMT_S {

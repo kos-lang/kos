@@ -26,18 +26,18 @@ typedef enum KOS_ENTITY_TYPE_E {
     OBJ_BUFFER         = 16,
     OBJ_FUNCTION       = 18,
     OBJ_CLASS          = 20,
+    OBJ_MODULE         = 22,
 
-    OBJ_LAST_TYPE      = OBJ_CLASS, /* Last type exposed to the language */
+    OBJ_LAST_TYPE      = OBJ_MODULE, /* Last type exposed to the language */
 
     /* Internal types */
-    OBJ_OPAQUE         = 22, /* Contains binary user data, contents not recognized by GC */
-    OBJ_HUGE_TRACKER   = 24,
-    OBJ_OBJECT_STORAGE = 26,
-    OBJ_ARRAY_STORAGE  = 28,
-    OBJ_BUFFER_STORAGE = 30,
-    OBJ_DYNAMIC_PROP   = 32,
-    OBJ_ITERATOR       = 34,
-    OBJ_MODULE         = 36,
+    OBJ_OPAQUE         = 24, /* Contains binary user data, contents not recognized by GC */
+    OBJ_HUGE_TRACKER   = 26,
+    OBJ_OBJECT_STORAGE = 28,
+    OBJ_ARRAY_STORAGE  = 30,
+    OBJ_BUFFER_STORAGE = 32,
+    OBJ_DYNAMIC_PROP   = 34,
+    OBJ_ITERATOR       = 36,
     OBJ_STACK          = 38,
 
     /* Just the last valid object id, not a real object type */

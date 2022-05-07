@@ -167,6 +167,7 @@ Here is how to obtain access to prototypes of individual types:
     const buffer_prototype   = base.buffer.prototype;
     const function_prototype = base.function.prototype;
     const object_prototype   = base.object.prototype;
+    const module_prototype   = base.module.prototype;
 
 `base.object.prototype` is an indirect prototype for all types of objects.
 The prototype of `base.object.prototype` is `void`.

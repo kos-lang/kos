@@ -49,6 +49,7 @@ KOS_DECLARE_STATIC_CONST_STRING(str_err_not_buffer,               "object is not
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_class,                "object is not a class");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_function,             "object is not a function");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_generator,            "object is not a generator");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_module,               "object is not a module");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_string,               "object is not a string");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_thread,               "object is not a thread");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_object_arg_not_iterable,  "argument passed to object class is not iterable");
@@ -64,6 +65,7 @@ KOS_DECLARE_STATIC_CONST_STRING(str_gen_running,                  "running");
 KOS_DECLARE_STATIC_CONST_STRING(str_inclusive,                    "inclusive");
 KOS_DECLARE_STATIC_CONST_STRING(str_key,                          "key");
 KOS_DECLARE_STATIC_CONST_STRING(str_keys,                         "keys");
+KOS_DECLARE_STATIC_CONST_STRING(str_name,                         "name");
 KOS_DECLARE_STATIC_CONST_STRING(str_new_value,                    "new_value");
 KOS_DECLARE_STATIC_CONST_STRING(str_obj,                          "obj");
 KOS_DECLARE_STATIC_CONST_STRING(str_old_value,                    "old_value");
@@ -255,7 +257,7 @@ static KOS_OBJ_ID deep(KOS_CONTEXT ctx,
 
 static int create_class(KOS_CONTEXT          ctx,
                         KOS_OBJ_ID           module_obj,
-                        KOS_OBJ_ID           str_name,
+                        KOS_OBJ_ID           class_name,
                         KOS_FUNCTION_HANDLER constructor,
                         const KOS_CONVERT   *args,
                         KOS_OBJ_ID           prototype)
@@ -268,7 +270,7 @@ static int create_class(KOS_CONTEXT          ctx,
     KOS_init_local_with(ctx, &module, module_obj);
     KOS_init_local_with(ctx, &proto,  prototype);
 
-    func_obj = KOS_new_builtin_class(ctx, str_name, constructor, args);
+    func_obj = KOS_new_builtin_class(ctx, class_name, constructor, args);
     TRY_OBJID(func_obj);
 
     OBJPTR(CLASS, func_obj)->prototype = proto.o;
@@ -276,7 +278,7 @@ static int create_class(KOS_CONTEXT          ctx,
 
     TRY(KOS_module_add_global(ctx,
                               module.o,
-                              str_name,
+                              class_name,
                               func_obj,
                               KOS_NULL));
 
@@ -2757,6 +2759,7 @@ static const char* get_type_str(KOS_OBJ_ID obj_id)
         case OBJ_BUFFER:    return "buffer";
         case OBJ_FUNCTION:  return "function";
         case OBJ_CLASS:     return "class";
+        case OBJ_MODULE:    return "module";
         default:            return "unknown";
     }
 }
@@ -4671,6 +4674,32 @@ static KOS_OBJ_ID get_function_line(KOS_CONTEXT ctx,
     return ret;
 }
 
+/* @item base function.prototype.module
+ *
+ *     function.prototype.module
+ *
+ * Read-only module to which the function belongs.
+ *
+ * Example:
+ *
+ *     > count.module.name
+ *     "base"
+ */
+static KOS_OBJ_ID get_function_module(KOS_CONTEXT ctx,
+                                      KOS_OBJ_ID  this_obj,
+                                      KOS_OBJ_ID  args_obj)
+{
+    KOS_OBJ_ID     ret  = KOS_BADPTR;
+    const KOS_TYPE type = GET_OBJ_TYPE(this_obj);
+
+    if (type == OBJ_FUNCTION || type == OBJ_CLASS)
+        ret = OBJPTR(FUNCTION, this_obj)->module;
+    else
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_function));
+
+    return ret;
+}
+
 /* @item base function.prototype.name
  *
  *     function.prototype.name
@@ -4894,6 +4923,107 @@ static KOS_OBJ_ID print_exception(KOS_CONTEXT ctx,
     return error ? KOS_BADPTR : self.o;
 }
 
+/* @item base module()
+ *
+ *     module(name)
+ *
+ * Module object class.
+ *
+ * Returns module object of a module with the given name.
+ * The module must have been already imported with the `import` statement.
+ *
+ * The prototype of `module.prototype` is `object.prototype`.
+ */
+static const KOS_CONVERT module_args[2] = {
+    KOS_DEFINE_MANDATORY_ARG(str_name),
+    KOS_DEFINE_TAIL_ARG()
+};
+
+static KOS_OBJ_ID module_constructor(KOS_CONTEXT ctx,
+                                     KOS_OBJ_ID  this_obj,
+                                     KOS_OBJ_ID  args_obj)
+{
+    KOS_LOCAL  name;
+    KOS_OBJ_ID obj;
+    int        error = KOS_SUCCESS;
+
+    assert(GET_OBJ_TYPE(args_obj) == OBJ_ARRAY);
+    assert(KOS_get_array_size(args_obj) >= 1);
+
+    KOS_init_local(ctx, &name);
+
+    name.o = KOS_array_read(ctx, args_obj, 0);
+    TRY_OBJID(name.o);
+
+    if (GET_OBJ_TYPE(name.o) != OBJ_STRING)
+        RAISE_EXCEPTION_STR(str_err_not_string);
+
+    obj = KOS_get_property_shallow(ctx, ctx->inst->modules.module_names, name.o);
+    if (IS_BAD_PTR(obj) || ! IS_SMALL_INT(obj)) {
+        KOS_clear_exception(ctx);
+        RAISE_EXCEPTION_STR(str_err_not_module);
+    }
+
+    obj = KOS_array_read(ctx, ctx->inst->modules.modules, GET_SMALL_INT(obj));
+    if (IS_BAD_PTR(obj)) {
+        KOS_clear_exception(ctx);
+        RAISE_EXCEPTION_STR(str_err_not_module);
+    }
+
+cleanup:
+    KOS_destroy_top_local(ctx, &name);
+
+    return error ? KOS_BADPTR : obj;
+}
+
+/* @item base module.prototype.name
+ *
+ *     module.prototype.name
+ *
+ * Read-only name of the module (string).
+ */
+static KOS_OBJ_ID get_module_name(KOS_CONTEXT ctx,
+                                  KOS_OBJ_ID  this_obj,
+                                  KOS_OBJ_ID  args_obj)
+{
+    KOS_OBJ_ID ret;
+
+    assert( ! IS_BAD_PTR(this_obj));
+
+    if (GET_OBJ_TYPE(this_obj) == OBJ_MODULE)
+        ret = OBJPTR(MODULE, this_obj)->name;
+    else {
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_module));
+        ret = KOS_BADPTR;
+    }
+
+    return ret;
+}
+
+/* @item base module.prototype.path
+ *
+ *     module.prototype.path
+ *
+ * Read-only path of the module (string).
+ */
+static KOS_OBJ_ID get_module_path(KOS_CONTEXT ctx,
+                                  KOS_OBJ_ID  this_obj,
+                                  KOS_OBJ_ID  args_obj)
+{
+    KOS_OBJ_ID ret;
+
+    assert( ! IS_BAD_PTR(this_obj));
+
+    if (GET_OBJ_TYPE(this_obj) == OBJ_MODULE)
+        ret = OBJPTR(MODULE, this_obj)->path;
+    else {
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_module));
+        ret = KOS_BADPTR;
+    }
+
+    return ret;
+}
+
 int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 {
     int       error = KOS_SUCCESS;
@@ -4922,54 +5052,59 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_CREATE_CONSTRUCTOR(object,        module.o, object_args);
     TRY_CREATE_CONSTRUCTOR(string,        module.o, KOS_NULL);
     TRY_CREATE_CONSTRUCTOR(thread,        module.o, KOS_NULL);
+    TRY_CREATE_CONSTRUCTOR(module,        module.o, module_args);
 
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(array),     "cas",          array_cas,         array_cas_args);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(array),     "insert_array", insert_array,      insert_array_args);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(array),     "fill",         fill,              fill_args);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(array),     "pop",          pop,               pop_args);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(array),     "push",         push,              KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(array),     "reserve",      reserve,           reserve_args);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(array),     "resize",       resize,            resize_array_args);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(array),     "slice",        slice,             slice_args);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(array),     "sort",         sort,              sort_args);
-    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(array),     "size",         get_array_size,    KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(array),     "cas",          array_cas,           array_cas_args);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(array),     "insert_array", insert_array,        insert_array_args);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(array),     "fill",         fill,                fill_args);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(array),     "pop",          pop,                 pop_args);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(array),     "push",         push,                KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(array),     "reserve",      reserve,             reserve_args);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(array),     "resize",       resize,              resize_array_args);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(array),     "slice",        slice,               slice_args);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(array),     "sort",         sort,                sort_args);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(array),     "size",         get_array_size,      KOS_NULL);
 
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(buffer),    "copy_buffer",  copy_buffer,       copy_buffer_args);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(buffer),    "fill",         fill,              fill_args);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(buffer),    "pack",         pack,              pack_args);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(buffer),    "reserve",      reserve,           reserve_args);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(buffer),    "resize",       resize,            resize_buffer_args);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(buffer),    "slice",        slice,             slice_args);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(buffer),    "unpack",       unpack,            unpack_args);
-    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(buffer),    "size",         get_buffer_size,   KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(buffer),    "copy_buffer",  copy_buffer,         copy_buffer_args);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(buffer),    "fill",         fill,                fill_args);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(buffer),    "pack",         pack,                pack_args);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(buffer),    "reserve",      reserve,             reserve_args);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(buffer),    "resize",       resize,              resize_buffer_args);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(buffer),    "slice",        slice,               slice_args);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(buffer),    "unpack",       unpack,              unpack_args);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(buffer),    "size",         get_buffer_size,     KOS_NULL);
 
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(exception), "print",        print_exception,   KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(exception), "print",        print_exception,     KOS_NULL);
 
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(function),  "apply",        apply,             apply_args);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(function),  "async",        async,             apply_args);
-    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(function),  "instructions", get_instructions,  KOS_NULL);
-    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(function),  "line",         get_function_line, KOS_NULL);
-    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(function),  "name",         get_function_name, KOS_NULL);
-    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(function),  "registers",    get_registers,     KOS_NULL);
-    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(function),  "size",         get_code_size,     KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(function),  "apply",        apply,               apply_args);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(function),  "async",        async,               apply_args);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(function),  "instructions", get_instructions,    KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(function),  "line",         get_function_line,   KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(function),  "module",       get_function_module, KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(function),  "name",         get_function_name,   KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(function),  "registers",    get_registers,       KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(function),  "size",         get_code_size,       KOS_NULL);
 
-    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(generator), "state",        get_gen_state,     KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(generator), "state",        get_gen_state,       KOS_NULL);
 
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "ends_with",    ends_with,         ends_with_args);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "find",         find,              find_args);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "code",         code,              code_args);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "lowercase",    lowercase,         KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "repeat",       repeat,            repeat_args);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "rfind",        rfind,             rfind_args);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "rscan",        rscan,             rscan_args);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "reverse",      reverse,           KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "scan",         scan,              scan_args);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "slice",        slice,             slice_args);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "starts_with",  starts_with,       ends_with_args);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "uppercase",    uppercase,         KOS_NULL);
-    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(string),    "size",         get_string_size,   KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "ends_with",    ends_with,           ends_with_args);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "find",         find,                find_args);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "code",         code,                code_args);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "lowercase",    lowercase,           KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "repeat",       repeat,              repeat_args);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "rfind",        rfind,               rfind_args);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "rscan",        rscan,               rscan_args);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "reverse",      reverse,             KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "scan",         scan,                scan_args);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "slice",        slice,               slice_args);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "starts_with",  starts_with,         ends_with_args);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "uppercase",    uppercase,           KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(string),    "size",         get_string_size,     KOS_NULL);
 
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(thread),    "wait",         wait,              KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(thread),    "wait",         wait,                KOS_NULL);
+
+    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(module),    "name",         get_module_name,     KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(module),    "path",         get_module_path,     KOS_NULL);
 
 cleanup:
     KOS_destroy_top_local(ctx, &module);

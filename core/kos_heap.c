@@ -1850,6 +1850,7 @@ static int mark_roots(KOS_CONTEXT ctx, KOS_MARK_CONTEXT *mark_ctx)
     TRY(mark_object_black(mark_ctx, inst->prototypes.exception_proto));
     TRY(mark_object_black(mark_ctx, inst->prototypes.generator_end_proto));
     TRY(mark_object_black(mark_ctx, inst->prototypes.thread_proto));
+    TRY(mark_object_black(mark_ctx, inst->prototypes.module_proto));
 
     TRY(mark_object_black(mark_ctx, inst->modules.init_module));
     TRY(mark_object_black(mark_ctx, inst->modules.search_paths));
@@ -2448,6 +2449,7 @@ static void update_after_evacuation(KOS_CONTEXT ctx)
     update_child_ptr(&inst->prototypes.exception_proto);
     update_child_ptr(&inst->prototypes.generator_end_proto);
     update_child_ptr(&inst->prototypes.thread_proto);
+    update_child_ptr(&inst->prototypes.module_proto);
 
     update_child_ptr(&inst->modules.init_module);
     update_child_ptr(&inst->modules.search_paths);

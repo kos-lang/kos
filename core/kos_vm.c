@@ -2744,8 +2744,9 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 KOS_DECLARE_STATIC_CONST_STRING(str_array,   "array");
                 KOS_DECLARE_STATIC_CONST_STRING(str_buffer,  "buffer");
                 KOS_DECLARE_STATIC_CONST_STRING(str_class,   "class");
+                KOS_DECLARE_STATIC_CONST_STRING(str_module,  "module");
 
-                static const KOS_OBJ_ID obj_type_map[11] = {
+                static const KOS_OBJ_ID obj_type_map[12] = {
                     KOS_CONST_ID(str_integer),
                     KOS_CONST_ID(str_integer),
                     KOS_CONST_ID(str_float),
@@ -2756,7 +2757,8 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                     KOS_CONST_ID(str_array),
                     KOS_CONST_ID(str_buffer),
                     KOS_STR_FUNCTION,
-                    KOS_CONST_ID(str_class)
+                    KOS_CONST_ID(str_class),
+                    KOS_CONST_ID(str_module)
                 };
 
                 assert(rsrc < num_regs);

@@ -46,6 +46,8 @@ static const char str_err_cannot_expand[]  = "cannot expand object";
 static const char str_err_invalid_string[] = "invalid string";
 static const char str_err_not_number[]     = "object is not a number";
 static const char str_function_open[]      = "<function ";
+static const char str_module_open[]        = "<module ";
+static const char str_module_close[]       = ">";
 static const char str_object_close[]       = "}";
 static const char str_object_colon[]       = ": ";
 static const char str_object_open[]        = "{";
@@ -1084,6 +1086,48 @@ cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
+static int vector_append_module(KOS_CONTEXT ctx,
+                                KOS_VECTOR *cstr_vec,
+                                KOS_OBJ_ID  obj_id)
+{
+    int error = KOS_SUCCESS;
+
+    assert(GET_OBJ_TYPE(obj_id) == OBJ_MODULE);
+
+    TRY(KOS_append_cstr(ctx, cstr_vec, str_module_open, sizeof(str_module_open) - 1));
+
+    TRY(vector_append_str(ctx, cstr_vec, OBJPTR(MODULE, obj_id)->name, KOS_DONT_QUOTE));
+
+    TRY(KOS_append_cstr(ctx, cstr_vec, str_module_close, sizeof(str_module_close) - 1));
+
+cleanup:
+    return error;
+}
+
+static KOS_OBJ_ID module_to_str(KOS_CONTEXT ctx,
+                                  KOS_OBJ_ID  obj_id)
+{
+    KOS_OBJ_ID ret = KOS_BADPTR;
+    KOS_LOCAL  strings[3];
+
+    KOS_DECLARE_STATIC_CONST_STRING(str_open_module,  "<module ");
+    KOS_DECLARE_STATIC_CONST_STRING(str_close_module, ">");
+
+    assert(GET_OBJ_TYPE(obj_id) == OBJ_MODULE);
+
+    KOS_init_local(ctx, &strings[1]);
+
+    strings[0].o = KOS_CONST_ID(str_open_module);
+    strings[1].o = OBJPTR(MODULE, obj_id)->name;
+    strings[2].o = KOS_CONST_ID(str_close_module);
+
+    ret = KOS_string_add_n(ctx, strings, sizeof(strings) / sizeof(strings[0]));
+
+    KOS_destroy_top_local(ctx, &strings[1]);
+
+    return ret;
+}
+
 static int object_to_string_or_cstr_vec(KOS_CONTEXT        ctx,
                                         KOS_OBJ_ID         obj_id,
                                         KOS_QUOTE_STR      quote_str,
@@ -1176,6 +1220,13 @@ static int object_to_string_or_cstr_vec(KOS_CONTEXT        ctx,
                 error = vector_append_function(ctx, cstr_vec, obj_id);
             else if (str)
                 *str = function_to_str(ctx, obj_id);
+            break;
+
+        case OBJ_MODULE:
+            if (cstr_vec)
+                error = vector_append_module(ctx, cstr_vec, obj_id);
+            else if (str)
+                *str = module_to_str(ctx, obj_id);
             break;
     }
 
@@ -1528,6 +1579,8 @@ static KOS_COMPARE_RESULT compare(KOS_OBJ_ID                a,
             case OBJ_FUNCTION:
                 /* fall through */
             case OBJ_CLASS:
+                /* fall through */
+            case OBJ_MODULE:
                 return compare_int((int64_t)(intptr_t)a, (int64_t)(intptr_t)b);
         }
     }

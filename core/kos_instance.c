@@ -293,6 +293,7 @@ static void clear_instance(KOS_INSTANCE *inst)
     inst->prototypes.exception_proto     = KOS_BADPTR;
     inst->prototypes.generator_end_proto = KOS_BADPTR;
     inst->prototypes.thread_proto        = KOS_BADPTR;
+    inst->prototypes.module_proto        = KOS_BADPTR;
     inst->modules.search_paths           = KOS_BADPTR;
     inst->modules.module_names           = KOS_BADPTR;
     inst->modules.modules                = KOS_BADPTR;
@@ -380,6 +381,7 @@ int KOS_instance_init(KOS_INSTANCE *inst,
     TRY_OBJID(inst->prototypes.exception_proto     = KOS_new_object(ctx));
     TRY_OBJID(inst->prototypes.generator_end_proto = KOS_new_object(ctx));
     TRY_OBJID(inst->prototypes.thread_proto        = KOS_new_object(ctx));
+    TRY_OBJID(inst->prototypes.module_proto        = KOS_new_object(ctx));
     TRY_OBJID(inst->modules.module_names           = KOS_new_object(ctx));
     TRY_OBJID(inst->modules.modules                = KOS_new_array(ctx, 0));
     TRY_OBJID(inst->modules.search_paths           = KOS_new_array(ctx, 0));

@@ -970,6 +970,10 @@ KOS_OBJ_ID KOS_get_prototype(KOS_CONTEXT ctx,
             ret = inst->prototypes.class_proto;
             break;
 
+        case OBJ_MODULE:
+            ret = inst->prototypes.module_proto;
+            break;
+
         case OBJ_BOOLEAN:
             ret = inst->prototypes.boolean_proto;
             break;

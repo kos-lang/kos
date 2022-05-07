@@ -1760,3 +1760,38 @@ do {
     expect_fail(() => base.join([], void))
     expect_fail(() => base.join([], {}))
 }
+
+##############################################################################
+# base.module
+
+do {
+    assert typeof base.module           == "class"
+    assert typeof base.module.prototype == "object"
+
+    const m = base.join.module
+    assert typeof m == "module"
+    assert m instanceof base.module
+    assert m.name == "base"
+    assert m.path.ends_with("base.kos")
+
+    assert (fun{}).module.name == "module_base"
+
+    expect_fail(() => base.module())
+
+    const b = base.module("base")
+    assert typeof b == "module"
+    assert b.name == "base"
+    assert "\(b)" == "<module base>"
+
+    const mb = base.module("module_base")
+    assert typeof mb == "module"
+    assert mb.name == "module_base"
+
+    const tt = base.module("test_tools")
+    assert typeof tt == "module"
+    assert tt.name == "test_tools"
+
+    assert base.module("base") == b
+    assert b != mb
+    assert b != tt
+}
