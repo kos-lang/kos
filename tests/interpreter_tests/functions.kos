@@ -2390,6 +2390,20 @@ do {
 
 do {
     expect_fail(()=>base.function.prototype.line)
+
+    fun x { return __line__ }
+    assert x.line == x()
+    assert x.name == "x"
+}
+
+##############################################################################
+# base.function.prototype.module
+
+do {
+    fun x { }
+    assert x.module.name == "functions"
+
+    expect_fail(() => base.functions.prototype.module)
 }
 
 ##############################################################################

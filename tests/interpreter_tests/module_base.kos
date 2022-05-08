@@ -1777,6 +1777,9 @@ do {
     assert (fun{}).module.name == "module_base"
 
     expect_fail(() => base.module())
+    expect_fail(() => base.module(0))
+    expect_fail(() => base.module(void))
+    expect_fail(() => base.module("non-existent"))
 
     const b = base.module("base")
     assert typeof b == "module"
