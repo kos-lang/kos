@@ -4964,7 +4964,7 @@ static KOS_OBJ_ID module_constructor(KOS_CONTEXT ctx,
         RAISE_EXCEPTION_STR(str_err_not_module);
     }
 
-    obj = KOS_array_read(ctx, ctx->inst->modules.modules, GET_SMALL_INT(obj));
+    obj = KOS_array_read(ctx, ctx->inst->modules.modules, (int)GET_SMALL_INT(obj));
     if (IS_BAD_PTR(obj)) {
         KOS_clear_exception(ctx);
         RAISE_EXCEPTION_STR(str_err_not_module);
