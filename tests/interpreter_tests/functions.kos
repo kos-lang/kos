@@ -2403,7 +2403,7 @@ do {
     fun x { }
     assert x.module.name == "functions"
 
-    expect_fail(() => base.functions.prototype.module)
+    expect_fail(() => base.function.prototype.module)
 }
 
 ##############################################################################
