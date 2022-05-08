@@ -1480,6 +1480,21 @@ do {
     assert o.c == -13
 }
 
+# pass object for values to object ctor
+do {
+    const o = base.object("a", { x: 1 })
+    const it = o.iterator()
+    const k, v = it()
+
+    assert k == "a"
+    assert typeof v == "array"
+    assert v.size == 2
+    assert v[0] == "x"
+    assert v[1] == 1
+
+    expect_fail(it)
+}
+
 # throw from generator used to initialize object
 do {
     fun create(num)
@@ -1538,6 +1553,19 @@ do {
         }
         assert ! obj
         assert exc == 1
+    }
+
+    do {
+        var obj = void
+        var exc = void
+        try {
+            obj = base.object(fun { throw "xyz" ; yield void } (), "a")
+        }
+        catch const e {
+            exc = e.value
+        }
+        assert ! obj
+        assert exc == "xyz"
     }
 }
 
