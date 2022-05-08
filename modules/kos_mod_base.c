@@ -3665,98 +3665,31 @@ static KOS_OBJ_ID copy_buffer(KOS_CONTEXT ctx,
     int64_t        src_end    = MAX_INT64;
     KOS_OBJ_ID     src;
 
-    if (num_args > 3) {
+    assert(num_args > 3);
 
-        if (IS_NUMERIC_OBJ(arg))
-            TRY(KOS_get_integer(ctx, arg, &dest_begin));
-        else if (READ_OBJ_TYPE(arg) != OBJ_VOID)
-            RAISE_EXCEPTION_STR(str_err_unsup_operand_types);
+    if (IS_NUMERIC_OBJ(arg))
+        TRY(KOS_get_integer(ctx, arg, &dest_begin));
+    else if (READ_OBJ_TYPE(arg) != OBJ_VOID)
+        RAISE_EXCEPTION_STR(str_err_unsup_operand_types);
 
-        src = KOS_array_read(ctx, args_obj, 1);
-        TRY_OBJID(src);
+    src = KOS_array_read(ctx, args_obj, 1);
+    TRY_OBJID(src);
 
-        arg = KOS_array_read(ctx, args_obj, 2);
-        TRY_OBJID(arg);
+    arg = KOS_array_read(ctx, args_obj, 2);
+    TRY_OBJID(arg);
 
-        if (IS_NUMERIC_OBJ(arg))
-            TRY(KOS_get_integer(ctx, arg, &src_begin));
-        else if (READ_OBJ_TYPE(arg) != OBJ_VOID)
-            RAISE_EXCEPTION_STR(str_err_unsup_operand_types);
+    if (IS_NUMERIC_OBJ(arg))
+        TRY(KOS_get_integer(ctx, arg, &src_begin));
+    else if (READ_OBJ_TYPE(arg) != OBJ_VOID)
+        RAISE_EXCEPTION_STR(str_err_unsup_operand_types);
 
-        arg = KOS_array_read(ctx, args_obj, 3);
-        TRY_OBJID(arg);
+    arg = KOS_array_read(ctx, args_obj, 3);
+    TRY_OBJID(arg);
 
-        if (IS_NUMERIC_OBJ(arg))
-            TRY(KOS_get_integer(ctx, arg, &src_end));
-        else if (READ_OBJ_TYPE(arg) != OBJ_VOID)
-            RAISE_EXCEPTION_STR(str_err_unsup_operand_types);
-    }
-    else if (num_args > 2) {
-
-        int arg_idx = 1;
-
-        if (IS_NUMERIC_OBJ(arg) || READ_OBJ_TYPE(arg) == OBJ_VOID) {
-
-            arg_idx = 2;
-
-            if (IS_NUMERIC_OBJ(arg))
-                TRY(KOS_get_integer(ctx, arg, &dest_begin));
-
-            src = KOS_array_read(ctx, args_obj, 1);
-            TRY_OBJID(src);
-        }
-        else
-            src = arg;
-
-        arg = KOS_array_read(ctx, args_obj, arg_idx);
-        TRY_OBJID(arg);
-
-        if (IS_NUMERIC_OBJ(arg))
-            TRY(KOS_get_integer(ctx, arg, &src_begin));
-        else if (READ_OBJ_TYPE(arg) != OBJ_VOID)
-            RAISE_EXCEPTION_STR(str_err_unsup_operand_types);
-
-        if (arg_idx == 1) {
-
-            arg = KOS_array_read(ctx, args_obj, arg_idx+1);
-            TRY_OBJID(arg);
-
-            if (IS_NUMERIC_OBJ(arg))
-                TRY(KOS_get_integer(ctx, arg, &src_end));
-            else if (READ_OBJ_TYPE(arg) != OBJ_VOID)
-                RAISE_EXCEPTION_STR(str_err_unsup_operand_types);
-        }
-    }
-    else if (num_args > 1) {
-
-        if (IS_NUMERIC_OBJ(arg) || READ_OBJ_TYPE(arg) == OBJ_VOID) {
-
-            if (IS_NUMERIC_OBJ(arg))
-                TRY(KOS_get_integer(ctx, arg, &dest_begin));
-
-            src = KOS_array_read(ctx, args_obj, 1);
-            TRY_OBJID(src);
-        }
-        else {
-
-            src = arg;
-
-            arg = KOS_array_read(ctx, args_obj, 1);
-            TRY_OBJID(arg);
-
-            if (IS_NUMERIC_OBJ(arg))
-                TRY(KOS_get_integer(ctx, arg, &src_begin));
-            else if (READ_OBJ_TYPE(arg) != OBJ_VOID)
-                RAISE_EXCEPTION_STR(str_err_unsup_operand_types);
-        }
-    }
-    else {
-
-        src        = arg;
-        dest_begin = 0;
-        src_begin  = 0;
-        src_end    = MAX_INT64;
-    }
+    if (IS_NUMERIC_OBJ(arg))
+        TRY(KOS_get_integer(ctx, arg, &src_end));
+    else if (READ_OBJ_TYPE(arg) != OBJ_VOID)
+        RAISE_EXCEPTION_STR(str_err_unsup_operand_types);
 
     error = KOS_buffer_copy(ctx, this_obj, dest_begin, src, src_begin, src_end);
 
