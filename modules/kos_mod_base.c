@@ -3657,15 +3657,16 @@ static KOS_OBJ_ID copy_buffer(KOS_CONTEXT ctx,
                               KOS_OBJ_ID  this_obj,
                               KOS_OBJ_ID  args_obj)
 {
-    int            error      = KOS_SUCCESS;
-    const uint32_t num_args   = KOS_get_array_size(args_obj);
-    KOS_OBJ_ID     arg        = KOS_array_read(ctx, args_obj, 0);
-    int64_t        dest_begin = 0;
-    int64_t        src_begin  = 0;
-    int64_t        src_end    = MAX_INT64;
-    KOS_OBJ_ID     src;
+    int64_t    dest_begin = 0;
+    int64_t    src_begin  = 0;
+    int64_t    src_end    = MAX_INT64;
+    KOS_OBJ_ID arg;
+    KOS_OBJ_ID src;
+    int        error      = KOS_SUCCESS;
 
-    assert(num_args > 3);
+    assert(KOS_get_array_size(args_obj) > 3);
+
+    arg = KOS_array_read(ctx, args_obj, 0);
 
     if (IS_NUMERIC_OBJ(arg))
         TRY(KOS_get_integer(ctx, arg, &dest_begin));
