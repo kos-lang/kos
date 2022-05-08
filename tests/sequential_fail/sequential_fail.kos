@@ -88,7 +88,7 @@ do {
 
 do {
     const x = "x"
-    const values = [ 1, 2.0, [x,"y"], buffer([3, 4]), {x:"y"}, ()=>void ];
+    const values = [ 1, base.float(2), [x,"y"], buffer([3, 4]), {x:"y"}, ()=>void ];
     const str = stringify.apply(void, values)
     assert str.starts_with("12.0[\"\((a=>a)(x))\", \"y\"]<03 04>{\"x\": \"y\"}<function ")
 }
