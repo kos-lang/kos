@@ -41,6 +41,7 @@ static int get_num_operands(KOS_BYTECODE_INSTR instr)
         case INSTR_GET_PROTO:           /* fall through */
         case INSTR_GET_GLOBAL:          /* fall through */
         case INSTR_SET_GLOBAL:          /* fall through */
+        case INSTR_GET_MOD:             /* fall through */
         case INSTR_DEL:                 /* fall through */
         case INSTR_DEL_PROP8:           /* fall through */
         case INSTR_NOT:                 /* fall through */
@@ -59,7 +60,7 @@ static int get_num_operands(KOS_BYTECODE_INSTR instr)
         case INSTR_GET:                 /* fall through */
         case INSTR_GET_ELEM:            /* fall through */
         case INSTR_GET_PROP8:           /* fall through */
-        case INSTR_GET_MOD:             /* fall through */
+        case INSTR_GET_MOD_GLOBAL:      /* fall through */
         case INSTR_GET_MOD_ELEM:        /* fall through */
         case INSTR_SET:                 /* fall through */
         case INSTR_SET_ELEM:            /* fall through */
@@ -115,6 +116,8 @@ int kos_get_operand_size(KOS_BYTECODE_INSTR instr, int op)
             /* fall through */
         case INSTR_GET_MOD_ELEM:
             /* fall through */
+        case INSTR_GET_MOD:
+            /* fall through */
         case INSTR_CATCH:
             if (op > 0)
                 return 4;
@@ -131,7 +134,7 @@ int kos_get_operand_size(KOS_BYTECODE_INSTR instr, int op)
                 return 4;
             break;
 
-        case INSTR_GET_MOD:
+        case INSTR_GET_MOD_GLOBAL:
             /* fall through */
         case INSTR_SET_ELEM:
             if (op == 1)
@@ -204,6 +207,8 @@ int kos_is_register(KOS_BYTECODE_INSTR instr, int op)
             /* fall through */
         case INSTR_GET_MOD_ELEM:
             /* fall through */
+        case INSTR_GET_MOD:
+            /* fall through */
         case INSTR_DEL_PROP8:
             /* fall through */
         case INSTR_BIND_SELF:
@@ -220,7 +225,7 @@ int kos_is_register(KOS_BYTECODE_INSTR instr, int op)
         case INSTR_HAS_SH_PROP8:
             return op > 1 ? 0 : 1;
 
-        case INSTR_GET_MOD:
+        case INSTR_GET_MOD_GLOBAL:
             /* fall through */
         case INSTR_SET_ELEM:
             /* fall through */
@@ -324,8 +329,9 @@ static const char *const str_instr[] = {
     "GET.PROP8",
     "GET.PROTO",
     "GET.GLOBAL",
-    "GET.MOD",
+    "GET.MOD.GLOBAL",
     "GET.MOD.ELEM",
+    "GET.MOD",
     "SET",
     "SET.ELEM",
     "SET.PROP8",

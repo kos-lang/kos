@@ -1821,8 +1821,8 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(GET_MOD): { /* <r.dest>, <int32>, <r.glob> */
-                PROF_ZONE_N(INSTR, "GET.MOD")
+            BEGIN_INSTRUCTION(GET_MOD_GLOBAL): { /* <r.dest>, <int32>, <r.glob> */
+                PROF_ZONE_N(INSTR, "GET.MOD.GLOBAL")
                 const int      mod_idx    = (int32_t)load_32(bytecode+2);
                 const unsigned rglob      = bytecode[6];
                 KOS_OBJ_ID     glob_idx;
@@ -1877,6 +1877,28 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 write_reg(stack_frame, rdest, out);
 
                 bytecode += 10;
+                NEXT_INSTRUCTION;
+            }
+
+            BEGIN_INSTRUCTION(GET_MOD): { /* <r.dest>, <int32> */
+                PROF_ZONE_N(INSTR, "GET.MOD")
+                const int  mod_idx    = (int32_t)load_32(bytecode+2);
+                KOS_OBJ_ID module_obj = KOS_array_read(ctx,
+                                                       OBJPTR(MODULE, module)->inst->modules.modules,
+                                                       mod_idx);
+                TRY_OBJID(module_obj);
+
+                rdest = bytecode[1];
+
+                assert( ! IS_SMALL_INT(module_obj));
+                assert(GET_OBJ_TYPE(module_obj) == OBJ_MODULE);
+
+                out = module_obj;
+
+                assert(rdest < num_regs);
+                write_reg(stack_frame, rdest, out);
+
+                bytecode += 6;
                 NEXT_INSTRUCTION;
             }
 

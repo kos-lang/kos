@@ -3,4 +3,4 @@
 
 import base;
 
-const x = base;
+const x = base.name;

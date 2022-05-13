@@ -4864,7 +4864,9 @@ static KOS_OBJ_ID print_exception(KOS_CONTEXT ctx,
  * Module object class.
  *
  * Returns module object of a module with the given name.
- * The module must have been already imported with the `import` statement.
+ *
+ * If the module has already been imported, e.g. with the `import` statement, returns that
+ * module object.  Otherwise imports the module and then returns it.
  *
  * The prototype of `module.prototype` is `object.prototype`.
  */
@@ -4878,13 +4880,15 @@ static KOS_OBJ_ID module_constructor(KOS_CONTEXT ctx,
                                      KOS_OBJ_ID  args_obj)
 {
     KOS_LOCAL  name;
-    KOS_OBJ_ID obj   = KOS_BADPTR;
+    KOS_LOCAL  module;
+    KOS_VECTOR path_cstr;
     int        error = KOS_SUCCESS;
 
     assert(GET_OBJ_TYPE(args_obj) == OBJ_ARRAY);
     assert(KOS_get_array_size(args_obj) >= 1);
 
-    KOS_init_local(ctx, &name);
+    KOS_vector_init(&path_cstr);
+    KOS_init_locals(ctx, &name, &module, kos_end_locals);
 
     name.o = KOS_array_read(ctx, args_obj, 0);
     TRY_OBJID(name.o);
@@ -4892,22 +4896,31 @@ static KOS_OBJ_ID module_constructor(KOS_CONTEXT ctx,
     if (GET_OBJ_TYPE(name.o) != OBJ_STRING)
         RAISE_EXCEPTION_STR(str_err_not_string);
 
-    obj = KOS_get_property_shallow(ctx, ctx->inst->modules.module_names, name.o);
-    if (IS_BAD_PTR(obj) || ! IS_SMALL_INT(obj)) {
+    module.o = KOS_get_property_shallow(ctx, ctx->inst->modules.module_names, name.o);
+    if (IS_BAD_PTR(module.o) || ! IS_SMALL_INT(module.o)) {
         KOS_clear_exception(ctx);
-        RAISE_EXCEPTION_STR(str_err_not_module);
-    }
 
-    obj = KOS_array_read(ctx, ctx->inst->modules.modules, (int)GET_SMALL_INT(obj));
-    if (IS_BAD_PTR(obj)) {
-        KOS_clear_exception(ctx);
-        RAISE_EXCEPTION_STR(str_err_not_module);
+        TRY(KOS_string_to_cstr_vec(ctx, name.o, &path_cstr));
+
+        module.o = KOS_load_module(ctx, path_cstr.buffer, path_cstr.size - 1);
+        TRY_OBJID(module.o);
+
+        TRY_OBJID(KOS_run_module(ctx, module.o));
+    }
+    else {
+
+        module.o = KOS_array_read(ctx, ctx->inst->modules.modules, (int)GET_SMALL_INT(module.o));
+        if (IS_BAD_PTR(module.o)) {
+            KOS_clear_exception(ctx);
+            RAISE_EXCEPTION_STR(str_err_not_module);
+        }
     }
 
 cleanup:
-    KOS_destroy_top_local(ctx, &name);
+    module.o = KOS_destroy_top_locals(ctx, &name, &module);
+    KOS_vector_destroy(&path_cstr);
 
-    return error ? KOS_BADPTR : obj;
+    return error ? KOS_BADPTR : module.o;
 }
 
 /* @item base module.prototype.name

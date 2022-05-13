@@ -1765,6 +1765,11 @@ do {
 # base.module
 
 do {
+    assert typeof base == "module"
+    const base_obj = base
+    assert "name" propertyof base_obj
+    assert base_obj.name == "base"
+
     assert typeof base.module           == "class"
     assert typeof base.module.prototype == "object"
 

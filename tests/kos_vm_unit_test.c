@@ -10,6 +10,7 @@
 #include "../inc/kos_error.h"
 #include "../inc/kos_memory.h"
 #include "../inc/kos_module.h"
+#include "../inc/kos_object.h"
 #include "../inc/kos_string.h"
 #include "../core/kos_object_internal.h"
 #include "../core/kos_misc.h"
@@ -35,7 +36,8 @@ enum VALUE_TYPE_E {
     V_STR1,     /* in/out - string 1, str(optional)            */
     V_STR2,     /* in/out - string 2, str(optional)            */
     V_ARRAY,    /* in/out - array, low(size)                   */
-    V_OBJECT    /* in/out - object                             */
+    V_OBJECT,   /* out    - object                             */
+    V_MODULE,   /* in/out - module                             */
 };
 
 struct INSTR_VALUE_S {
@@ -71,11 +73,15 @@ static int test_instr(KOS_CONTEXT           ctx,
                       struct INSTR_VALUE_S *ret_val,
                       struct INSTR_VALUE_S *args)
 {
+    KOS_DECLARE_CONST_STRING(str_aaa, "aaa");
+    KOS_DECLARE_CONST_STRING(str_bbb, "bbb");
+    KOS_DECLARE_CONST_STRING(str_ccc, "ccc");
+
     uint8_t     code[64]        = { 0 };
     uint32_t    parms[MAX_ARGS] = { 0 };
-    KOS_MODULE *module          = 0;
+    KOS_MODULE *module          = KOS_NULL;
     KOS_OBJ_ID  constants       = KOS_BADPTR;
-    const char *cstrings[]      = { "aaa", "bbb", "ccc" };
+    KOS_OBJ_ID  cstrings[3]     = { KOS_CONST_ID(str_aaa), KOS_CONST_ID(str_bbb), KOS_CONST_ID(str_ccc) };
     KOS_OBJ_ID  strings[3]      = { KOS_BADPTR, KOS_BADPTR, KOS_BADPTR };
     uint8_t     regs            = 0;
     unsigned    words           = 0;
@@ -104,13 +110,34 @@ static int test_instr(KOS_CONTEXT           ctx,
     module->constants = constants;
 
     for (i = 0; i < 3; i++) {
-        KOS_OBJ_ID str = KOS_new_cstring(ctx, cstrings[i]);
-        if (IS_BAD_PTR(str)) {
+        if (KOS_array_write(ctx, constants, num_constants++, cstrings[i])) {
             printf("Failed: Unable to allocate constants!\n");
             return KOS_ERROR_EXCEPTION;
         }
-        if (KOS_array_write(ctx, constants, num_constants++, str)) {
-            printf("Failed: Unable to allocate constants!\n");
+    }
+
+    {
+        KOS_DECLARE_CONST_STRING(str_fortytwo, "fortytwo");
+
+        module->global_names = KOS_new_object(ctx);
+        if (IS_BAD_PTR(module->global_names)) {
+            printf("Failed: Unable to allocate globals map!\n");
+            return KOS_ERROR_EXCEPTION;
+        }
+
+        if (KOS_set_property(ctx, module->global_names, KOS_CONST_ID(str_fortytwo), TO_SMALL_INT(0)) != KOS_SUCCESS) {
+            printf("Failed: Unable to set up global map!\n");
+            return KOS_ERROR_EXCEPTION;
+        }
+
+        module->globals = KOS_new_array(ctx, 1);
+        if (IS_BAD_PTR(module->globals)) {
+            printf("Failed: Unable to allocate globals!\n");
+            return KOS_ERROR_EXCEPTION;
+        }
+
+        if (KOS_array_write(ctx, module->globals, 0, TO_SMALL_INT(42)) != KOS_SUCCESS) {
+            printf("Failed: Unable to set up globals!\n");
             return KOS_ERROR_EXCEPTION;
         }
     }
@@ -226,9 +253,8 @@ static int test_instr(KOS_CONTEXT           ctx,
                 code[words++] = (uint8_t)num_constants;
                 parms[i]      = regs++;
                 {
-                    const int   idx  = (int)args[i].value - V_STR0;
-                    const char* cstr = args[i].str ? args[i].str : cstrings[idx];
-                    KOS_OBJ_ID  str  = KOS_new_cstring(ctx, cstr);
+                    const int  idx = (int)args[i].value - V_STR0;
+                    KOS_OBJ_ID str = args[i].str ? KOS_new_cstring(ctx, args[i].str) : cstrings[idx];
                     if (IS_BAD_PTR(str)) {
                         printf("Failed: Unable to allocate constants!\n");
                         return KOS_ERROR_EXCEPTION;
@@ -326,8 +352,6 @@ static int test_instr(KOS_CONTEXT           ctx,
     module->path          = KOS_STR_EMPTY;
     module->inst          = ctx->inst;
     module->main_idx      = num_constants;
-    module->global_names  = KOS_BADPTR;
-    module->globals       = KOS_BADPTR;
     module->module_names  = KOS_BADPTR;
 
     {
@@ -353,6 +377,9 @@ static int test_instr(KOS_CONTEXT           ctx,
                 OBJPTR(FUNCTION, func_obj)->bytecode = bytecode;
         }
     }
+
+    if ( ! error)
+        error = KOS_array_write(ctx, ctx->inst->modules.modules, 0, OBJID(MODULE, module));
 
     if ( ! error) {
         ret = KOS_run_module(ctx, OBJID(MODULE, module));
@@ -514,6 +541,13 @@ static int test_instr(KOS_CONTEXT           ctx,
             }
             break;
 
+        case V_MODULE:
+            if (ret != OBJID(MODULE, module)) {
+                printf("Failed: line %d: expected module\n", line);
+                error = KOS_ERROR_EXCEPTION;
+            }
+            break;
+
         default:
             assert(!"invalid instruction return value!");
             error = KOS_ERROR_EXCEPTION;
@@ -529,6 +563,9 @@ int main(void)
     KOS_CONTEXT  ctx;
 
     TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
+
+    TEST(KOS_get_array_size(inst.modules.modules) == 0);
+    TEST(KOS_array_push(ctx, inst.modules.modules, KOS_VOID, KOS_NULL) == KOS_SUCCESS);
 
     /*========================================================================*/
     /* LOAD.VOID */
@@ -653,6 +690,29 @@ int main(void)
     TEST_INSTR INSTR_GET_PROTO,  { V_EXCEPT                            }, { { V_STR1                            } }                                        END
     TEST_INSTR INSTR_GET_PROTO,  { V_EXCEPT                            }, { { V_ARRAY, 2                        } }                                        END
     TEST_INSTR INSTR_GET_PROTO,  { V_EXCEPT                            }, { { V_OBJECT                          } }                                        END
+
+    /*========================================================================*/
+    /* GET.MOD.GLOBAL */
+    TEST_INSTR INSTR_GET_MOD_GLOBAL, { V_INTEGER, 42                   }, { { V_IMM, 0                          }, { V_STR0, 0, 0, "fortytwo"          } } END
+    TEST_INSTR INSTR_GET_MOD_GLOBAL, { V_EXCEPT                        }, { { V_IMM, 0                          }, { V_INT32, 0                        } } END
+    TEST_INSTR INSTR_GET_MOD_GLOBAL, { V_EXCEPT                        }, { { V_IMM, 1000                       }, { V_INT32, 0                        } } END
+    TEST_INSTR INSTR_GET_MOD_GLOBAL, { V_EXCEPT                        }, { { V_IMM, 0                          }, { V_INT32, 1000                     } } END
+
+    /*========================================================================*/
+    /* GET.MOD.ELEM */
+    TEST_INSTR INSTR_GET_MOD_ELEM, { V_INTEGER, 42                     }, { { V_IMM, 0                          }, { V_IMM, 0                          } } END
+    TEST_INSTR INSTR_GET_MOD_ELEM, { V_EXCEPT                          }, { { V_IMM, 1000                       }, { V_IMM, 0                          } } END
+    TEST_INSTR INSTR_GET_MOD_ELEM, { V_EXCEPT                          }, { { V_IMM, 0                          }, { V_IMM, 1000                       } } END
+
+    /*========================================================================*/
+    /* GET.MOD */
+    TEST_INSTR INSTR_GET_MOD,    { V_MODULE                            }, { { V_IMM, 0                          } }                                        END
+    TEST_INSTR INSTR_GET_MOD,    { V_EXCEPT                            }, { { V_IMM, 1000                       } }                                        END
+
+    /*========================================================================*/
+    /* GET.GLOBAL */
+    TEST_INSTR INSTR_GET_GLOBAL, { V_INTEGER, 42                       }, { { V_IMM, 0                          } }                                        END
+    TEST_INSTR INSTR_GET_GLOBAL, { V_EXCEPT                            }, { { V_IMM, 1000                       } }                                        END
 
     /*========================================================================*/
     /* HAS.DP */

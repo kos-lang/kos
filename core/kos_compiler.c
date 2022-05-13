@@ -27,7 +27,6 @@ static const char str_err_expected_refinement[]       = "expected .identifier or
 static const char str_err_expected_refinement_ident[] = "expected identifier";
 static const char str_err_invalid_index[]             = "index out of range";
 static const char str_err_invalid_numeric_literal[]   = "invalid numeric literal";
-static const char str_err_module_dereference[]        = "module is not an object";
 static const char str_err_no_such_module_variable[]   = "no such global in module";
 static const char str_err_operand_not_numeric[]       = "operand is not a numeric constant";
 static const char str_err_operand_not_string[]        = "operand is not a string";
@@ -3121,7 +3120,7 @@ static int refinement_module(KOS_COMP_UNIT      *program,
 
         TRY(gen_dest_reg(program, reg, prop));
 
-        TRY(gen_instr3(program, INSTR_GET_MOD, (*reg)->reg, module_var->array_idx, prop->reg));
+        TRY(gen_instr3(program, INSTR_GET_MOD_GLOBAL, (*reg)->reg, module_var->array_idx, prop->reg));
 
         if (*reg != prop)
             free_reg(program, prop);
@@ -4916,9 +4915,7 @@ static int identifier(KOS_COMP_UNIT      *program,
                 break;
 
             case VAR_MODULE:
-                program->error_token = &node->token;
-                program->error_str   = str_err_module_dereference;
-                error                = KOS_ERROR_COMPILE_FAILED;
+                TRY(gen_instr2(program, INSTR_GET_MOD, (*reg)->reg, var->array_idx));
                 break;
 
             default:

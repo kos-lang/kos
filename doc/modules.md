@@ -1889,7 +1889,9 @@ module()
 Module object class.
 
 Returns module object of a module with the given name.
-The module must have been already imported with the `import` statement.
+
+If the module has already been imported, e.g. with the `import` statement, returns that
+module object.  Otherwise imports the module and then returns it.
 
 The prototype of `module.prototype` is `object.prototype`.
 
