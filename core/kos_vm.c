@@ -1413,6 +1413,12 @@ static void clear_catch(KOS_STACK_FRAME *stack_frame)
     KOS_atomic_write_relaxed_ptr(stack_frame->catch_info, TO_SMALL_INT(catch_data));
 }
 
+static uint16_t load_16(const uint8_t *bytecode)
+{
+    return (uint16_t)bytecode[0] +
+           ((uint16_t)bytecode[1] << 8);
+}
+
 static uint32_t load_32(const uint8_t *bytecode)
 {
     return (uint32_t)bytecode[0] +
@@ -1541,9 +1547,9 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(LOAD_CONST): { /* <r.dest>, <uint32> */
+            BEGIN_INSTRUCTION(LOAD_CONST): { /* <r.dest>, <uint16> */
                 PROF_ZONE_N(INSTR, "LOAD.CONST")
-                const uint32_t value = load_32(bytecode+2);
+                const uint32_t value = load_16(bytecode+2);
 
                 rdest = bytecode[1];
 
@@ -1553,7 +1559,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 assert(rdest < num_regs);
                 write_reg(stack_frame, rdest, out);
 
-                bytecode += 6;
+                bytecode += 4;
                 NEXT_INSTRUCTION;
             }
 

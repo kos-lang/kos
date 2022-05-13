@@ -107,7 +107,10 @@ int kos_get_operand_size(KOS_BYTECODE_INSTR instr, int op)
     switch (instr) {
 
         case INSTR_LOAD_CONST:
-            /* fall through */
+            if (op > 0)
+                return 2;
+            break;
+
         case INSTR_LOAD_FUN:
             /* fall through */
         case INSTR_LOAD_ARRAY:
@@ -443,7 +446,7 @@ int kos_disassemble(const char                   *filename,
             int       pr_size;
             char      dis_num[12];
 
-            assert(opsize == 1 || opsize == 4);
+            assert(opsize == 1 || opsize == 2 || opsize == 4);
 
             for (i = 0; i < opsize; i++)
                 value |= (int32_t)((uint32_t)bytecode[instr_size+i] << (8*i));
