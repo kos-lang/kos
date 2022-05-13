@@ -4902,7 +4902,7 @@ static KOS_OBJ_ID module_constructor(KOS_CONTEXT ctx,
 
         TRY(KOS_string_to_cstr_vec(ctx, name.o, &path_cstr));
 
-        module.o = KOS_load_module(ctx, path_cstr.buffer, path_cstr.size - 1);
+        module.o = KOS_load_module(ctx, path_cstr.buffer, (uint32_t)(path_cstr.size - 1));
         TRY_OBJID(module.o);
 
         TRY_OBJID(KOS_run_module(ctx, module.o));

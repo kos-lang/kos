@@ -65,7 +65,7 @@ struct INSTR_DEF_S {
         return 1; \
 }
 
-KOS_DECLARE_CONST_STRING(str_module_name, "kos_vm_unit_test");
+KOS_DECLARE_STATIC_CONST_STRING(str_module_name, "kos_vm_unit_test");
 
 static int test_instr(KOS_CONTEXT           ctx,
                       KOS_BYTECODE_INSTR    instr,
@@ -73,9 +73,9 @@ static int test_instr(KOS_CONTEXT           ctx,
                       struct INSTR_VALUE_S *ret_val,
                       struct INSTR_VALUE_S *args)
 {
-    KOS_DECLARE_CONST_STRING(str_aaa, "aaa");
-    KOS_DECLARE_CONST_STRING(str_bbb, "bbb");
-    KOS_DECLARE_CONST_STRING(str_ccc, "ccc");
+    KOS_DECLARE_STATIC_CONST_STRING(str_aaa, "aaa");
+    KOS_DECLARE_STATIC_CONST_STRING(str_bbb, "bbb");
+    KOS_DECLARE_STATIC_CONST_STRING(str_ccc, "ccc");
 
     uint8_t     code[64]        = { 0 };
     uint32_t    parms[MAX_ARGS] = { 0 };
@@ -117,7 +117,7 @@ static int test_instr(KOS_CONTEXT           ctx,
     }
 
     {
-        KOS_DECLARE_CONST_STRING(str_fortytwo, "fortytwo");
+        KOS_DECLARE_STATIC_CONST_STRING(str_fortytwo, "fortytwo");
 
         module->global_names = KOS_new_object(ctx);
         if (IS_BAD_PTR(module->global_names)) {
