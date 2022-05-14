@@ -3445,6 +3445,91 @@ static int count_contig_arg_siblings(const KOS_AST_NODE *node)
     return count;
 }
 
+static int gen_load_number(KOS_COMP_UNIT      *program,
+                           const KOS_AST_NODE *node,
+                           int32_t             reg,
+                           const KOS_NUMERIC  *numeric)
+{
+    KOS_COMP_CONST *constant;
+
+    if (numeric->type == KOS_INTEGER_VALUE && (uint64_t)((numeric->u.i >> 7) + 1) <= 1U)
+        return gen_instr2(program, INSTR_LOAD_INT8, reg, (int32_t)numeric->u.i);
+
+    constant = (KOS_COMP_CONST *)kos_red_black_find(program->constants,
+                                                    &numeric,
+                                                    numbers_compare_item);
+
+    if ( ! constant) {
+        constant = (KOS_COMP_CONST *)
+            KOS_mempool_alloc(&program->allocator,
+                              KOS_max(sizeof(KOS_COMP_INTEGER),
+                                      sizeof(KOS_COMP_FLOAT)));
+
+        if ( ! constant)
+            return KOS_ERROR_OUT_OF_MEMORY;
+
+        if (numeric->type == KOS_INTEGER_VALUE) {
+            constant->type = KOS_COMP_CONST_INTEGER;
+            ((KOS_COMP_INTEGER *)constant)->value = numeric->u.i;
+        }
+        else {
+            constant->type = KOS_COMP_CONST_FLOAT;
+            ((KOS_COMP_FLOAT *)constant)->value = numeric->u.d;
+        }
+
+        add_constant(program, constant);
+    }
+
+    return gen_load_const(program,
+                          node,
+                          reg,
+                          (int32_t)constant->index);
+}
+
+static int gen_load_array(KOS_COMP_UNIT      *program,
+                          const KOS_AST_NODE *node,
+                          int32_t             operand1,
+                          int32_t             operand2)
+{
+    static const char str_resize[] = "resize";
+
+    KOS_NUMERIC numeric;
+    KOS_TOKEN   token;
+    KOS_REG    *resize_fun = KOS_NULL;
+    KOS_REG    *const_size = KOS_NULL;
+    int         str_idx    = 0;
+    int         error      = KOS_SUCCESS;
+
+    if (operand2 < 256)
+        return gen_instr2(program, INSTR_LOAD_ARRAY, operand1, operand2);
+
+    TRY(gen_instr2(program, INSTR_LOAD_ARRAY, operand1, 0));
+
+    memset(&token, 0, sizeof(token));
+    token.begin  = str_resize;
+    token.length = sizeof(str_resize) - 1;
+    token.type   = TT_IDENTIFIER;
+
+    TRY(gen_str(program, &token, &str_idx));
+
+    TRY(gen_reg(program, &resize_fun));
+    TRY(gen_reg(program, &const_size));
+
+    TRY(gen_get_prop_instr(program, node, resize_fun->reg, operand1, str_idx));
+
+    numeric.type = KOS_INTEGER_VALUE;
+    numeric.u.i  = operand2;
+    TRY(gen_load_number(program, node, const_size->reg, &numeric));
+
+    TRY(gen_instr5(program, INSTR_CALL_N, resize_fun->reg, resize_fun->reg, operand1, const_size->reg, 1));
+
+    free_reg(program, const_size);
+    free_reg(program, resize_fun);
+
+cleanup:
+    return error;
+}
+
 static int gen_array(KOS_COMP_UNIT      *program,
                      const KOS_AST_NODE *node,
                      KOS_REG           **reg)
@@ -3457,10 +3542,7 @@ static int gen_array(KOS_COMP_UNIT      *program,
         *reg = KOS_NULL;
 
     TRY(gen_reg(program, reg));
-    if (num_fixed < 256)
-        TRY(gen_instr2(program, INSTR_LOAD_ARRAY8, (*reg)->reg, num_fixed));
-    else
-        TRY(gen_instr2(program, INSTR_LOAD_ARRAY, (*reg)->reg, num_fixed));
+    TRY(gen_load_array(program, node, (*reg)->reg, num_fixed));
 
     for (i = 0; node; node = node->next, ++i) {
 
@@ -3544,7 +3626,7 @@ static int super_invocation(KOS_COMP_UNIT      *program,
         TRY(gen_args_array(program, node, &args_regs[1]));
     }
     else
-        TRY(gen_instr2(program, INSTR_LOAD_ARRAY8, args_regs[1]->reg, 0));
+        TRY(gen_instr2(program, INSTR_LOAD_ARRAY, args_regs[1]->reg, 0));
 
     memset(&token, 0, sizeof(token));
     token.begin  = str_apply;
@@ -4985,42 +5067,11 @@ static int numeric_literal(KOS_COMP_UNIT      *program,
         program->error_str   = str_err_invalid_numeric_literal;
         error = KOS_ERROR_COMPILE_FAILED;
     }
-    else if (numeric.type == KOS_INTEGER_VALUE &&
-             (uint64_t)((numeric.u.i >> 7) + 1) <= 1U)
-        TRY(gen_instr2(program, INSTR_LOAD_INT8, (*reg)->reg, (int32_t)numeric.u.i));
-    else {
-
-        KOS_COMP_CONST *constant =
-            (KOS_COMP_CONST *)kos_red_black_find(program->constants,
-                                                 &numeric,
-                                                 numbers_compare_item);
-
-        if ( ! constant) {
-            constant = (KOS_COMP_CONST *)
-                KOS_mempool_alloc(&program->allocator,
-                                  KOS_max(sizeof(KOS_COMP_INTEGER),
-                                          sizeof(KOS_COMP_FLOAT)));
-
-            if ( ! constant)
-                RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
-
-            if (numeric.type == KOS_INTEGER_VALUE) {
-                constant->type = KOS_COMP_CONST_INTEGER;
-                ((KOS_COMP_INTEGER *)constant)->value = numeric.u.i;
-            }
-            else {
-                constant->type = KOS_COMP_CONST_FLOAT;
-                ((KOS_COMP_FLOAT *)constant)->value = numeric.u.d;
-            }
-
-            add_constant(program, constant);
-        }
-
-        TRY(gen_load_const(program,
-                           node,
-                           (*reg)->reg,
-                           (int32_t)constant->index));
-    }
+    else
+        error = gen_load_number(program,
+                                node,
+                                (*reg)->reg,
+                                &numeric);
 
 cleanup:
     return error;
@@ -5669,14 +5720,8 @@ static int function_literal(KOS_COMP_UNIT      *program,
         constant->num_used_def_args = (uint8_t)num_used_def_args;
 
         if (num_used_def_args > 0) {
-
-            int opcode;
-
             TRY(gen_reg(program, &defaults_reg));
-
-            opcode = num_used_def_args < 256 ? INSTR_LOAD_ARRAY8 : INSTR_LOAD_ARRAY;
-
-            TRY(gen_instr2(program, opcode, defaults_reg->reg, num_used_def_args));
+            TRY(gen_load_array(program, node, defaults_reg->reg, num_used_def_args));
         }
 
         for (i = 0; node && node->type == NT_ASSIGNMENT; node = node->next, ++i) {

@@ -33,7 +33,6 @@ static int get_num_operands(KOS_BYTECODE_INSTR instr)
         case INSTR_LOAD_INT8:           /* fall through */
         case INSTR_LOAD_FUN8:           /* fall through */
         case INSTR_LOAD_FUN:            /* fall through */
-        case INSTR_LOAD_ARRAY8:         /* fall through */
         case INSTR_LOAD_ARRAY:          /* fall through */
         case INSTR_LOAD_OBJ_PROTO:      /* fall through */
         case INSTR_LOAD_ITER:           /* fall through */
@@ -113,8 +112,6 @@ int kos_get_operand_size(KOS_BYTECODE_INSTR instr, int op)
                 return 2;
             break;
 
-        case INSTR_LOAD_ARRAY:
-            /* fall through */
         case INSTR_GET_GLOBAL:
             /* fall through */
         case INSTR_GET_MOD_ELEM:
@@ -201,8 +198,6 @@ int kos_is_register(KOS_BYTECODE_INSTR instr, int op)
         case INSTR_LOAD_FUN8:
             /* fall through */
         case INSTR_LOAD_FUN:
-            /* fall through */
-        case INSTR_LOAD_ARRAY8:
             /* fall through */
         case INSTR_LOAD_ARRAY:
             /* fall through */
@@ -320,7 +315,6 @@ static const char *const str_instr[] = {
     "LOAD.TRUE",
     "LOAD.FALSE",
     "LOAD.VOID",
-    "LOAD.ARRAY8",
     "LOAD.ARRAY",
     "LOAD.OBJ",
     "LOAD.OBJ.PROTO",

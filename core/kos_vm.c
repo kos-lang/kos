@@ -1666,8 +1666,8 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(LOAD_ARRAY8): { /* <r.dest>, <size.uint8> */
-                PROF_ZONE_N(INSTR, "LOAD.ARRAY8")
+            BEGIN_INSTRUCTION(LOAD_ARRAY): { /* <r.dest>, <size.uint8> */
+                PROF_ZONE_N(INSTR, "LOAD.ARRAY")
                 const uint8_t size = bytecode[2];
 
                 rdest = bytecode[1];
@@ -1679,22 +1679,6 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 write_reg(stack_frame, rdest, out);
 
                 bytecode += 3;
-                NEXT_INSTRUCTION;
-            }
-
-            BEGIN_INSTRUCTION(LOAD_ARRAY): { /* <r.dest>, <size.int32> */
-                PROF_ZONE_N(INSTR, "LOAD.ARRAY")
-                const uint32_t size = load_32(bytecode+2);
-
-                rdest = bytecode[1];
-
-                out = KOS_new_array(ctx, size);
-                TRY_OBJID(out);
-
-                assert(rdest < num_regs);
-                write_reg(stack_frame, rdest, out);
-
-                bytecode += 6;
                 NEXT_INSTRUCTION;
             }
 

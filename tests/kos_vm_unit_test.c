@@ -24,6 +24,7 @@ enum VALUE_TYPE_E {
     V_EXCEPT,   /* out    - instruction generates an exception */
     V_OK,       /* out    - no result, no exception            */
     V_IMM8,     /* in     - immediate 8-bit integer            */
+    V_IMM16,    /* in     - immediate 16-bit integer           */
     V_IMM,      /* in     - immediate 32-bit integer           */
     V_VOID,     /* in/out - void                               */
     V_FALSE,    /* in/out - boolean - false                    */
@@ -153,6 +154,8 @@ static int test_instr(KOS_CONTEXT           ctx,
 
             case V_IMM:
                 /* fall through */
+            case V_IMM16:
+                /* fall through */
             case V_IMM8:
                 parms[i] = args[i].low;
                 break;
@@ -270,10 +273,9 @@ static int test_instr(KOS_CONTEXT           ctx,
             case V_ARRAY:
                 code[words++] = INSTR_LOAD_ARRAY;
                 code[words++] = regs;
+                assert(args[i].low < 256);
                 code[words++] = (uint8_t)args[i].low;
-                code[words++] = (uint8_t)(args[i].low >> 8);
-                code[words++] = (uint8_t)(args[i].low >> 16);
-                code[words++] = (uint8_t)(args[i].low >> 24);
+                //code[words++] = (uint8_t)(args[i].low >> 8);
                 parms[i]      = regs++;
                 break;
 
@@ -329,17 +331,30 @@ static int test_instr(KOS_CONTEXT           ctx,
 
             code[words++] = regs - 1U;
 
-        for (i=0; i < MAX_ARGS; i++) {
-            if (args[i].value == V_NONE)
-                break;
-            if (args[i].value == V_IMM) {
-                code[words++] = (uint8_t)args[i].low;
-                code[words++] = (uint8_t)(args[i].low >> 8);
-                code[words++] = (uint8_t)(args[i].low >> 16);
-                code[words++] = (uint8_t)(args[i].low >> 24);
+        for (i = 0; i < MAX_ARGS; i++) {
+            switch (args[i].value) {
+
+                case V_NONE:
+                    i = MAX_ARGS; /* Last operand, terminate */
+                    break;
+
+                case V_IMM:
+                    code[words++] = (uint8_t)args[i].low;
+                    code[words++] = (uint8_t)(args[i].low >> 8);
+                    code[words++] = (uint8_t)(args[i].low >> 16);
+                    code[words++] = (uint8_t)(args[i].low >> 24);
+                    break;
+
+                case V_IMM16:
+                    assert(args[i].low < 0x10000);
+                    code[words++] = (uint8_t)args[i].low;
+                    code[words++] = (uint8_t)(args[i].low >> 8);
+                    break;
+
+                default:
+                    code[words++] = (uint8_t)parms[i];
+                    break;
             }
-            else
-                code[words++] = (uint8_t)parms[i];
         }
     }
 
@@ -586,14 +601,9 @@ int main(void)
     TEST_INSTR INSTR_LOAD_INT8,  { V_INTEGER, 0xFFFFFF80U, ~0U         }, { { V_IMM8,  0x80                     } }                                        END
 
     /*========================================================================*/
-    /* LOAD.ARRAY8 */
-    TEST_INSTR INSTR_LOAD_ARRAY8,{ V_ARRAY,   0                        }, { { V_IMM8,  0                        } }                                        END
-    TEST_INSTR INSTR_LOAD_ARRAY8,{ V_ARRAY,   255                      }, { { V_IMM8,  255                      } }                                        END
-
-    /*========================================================================*/
     /* LOAD.ARRAY */
-    TEST_INSTR INSTR_LOAD_ARRAY, { V_ARRAY,   0                        }, { { V_IMM,   0                        } }                                        END
-    TEST_INSTR INSTR_LOAD_ARRAY, { V_ARRAY,   10                       }, { { V_IMM,   10                       } }                                        END
+    TEST_INSTR INSTR_LOAD_ARRAY, { V_ARRAY,   0                        }, { { V_IMM8,  0                        } }                                        END
+    TEST_INSTR INSTR_LOAD_ARRAY, { V_ARRAY,   255                      }, { { V_IMM8,  255                      } }                                        END
 
     /*========================================================================*/
     /* LOAD.OBJ */
