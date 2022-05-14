@@ -107,12 +107,12 @@ int kos_get_operand_size(KOS_BYTECODE_INSTR instr, int op)
     switch (instr) {
 
         case INSTR_LOAD_CONST:
+            /* fall through */
+        case INSTR_LOAD_FUN:
             if (op > 0)
                 return 2;
             break;
 
-        case INSTR_LOAD_FUN:
-            /* fall through */
         case INSTR_LOAD_ARRAY:
             /* fall through */
         case INSTR_GET_GLOBAL:

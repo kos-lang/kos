@@ -841,12 +841,13 @@ static int gen_instr5(KOS_COMP_UNIT *program,
     return gen_instr(program, 5, opcode, operand1, operand2, operand3, operand4, operand5);
 }
 
-static int gen_load_const(KOS_COMP_UNIT      *program,
-                          const KOS_AST_NODE *node,
-                          int32_t             operand1,
-                          int32_t             operand2)
+static int gen_instr_load_const(KOS_COMP_UNIT      *program,
+                                const KOS_AST_NODE *node,
+                                int                 opcode,
+                                int32_t             operand1,
+                                int32_t             operand2)
 {
-    int opcode = INSTR_LOAD_CONST;
+    assert((opcode == INSTR_LOAD_CONST) || (opcode == INSTR_LOAD_FUN));
 
     if (operand2 < 0 || operand2 > 0xFFFF) {
         program->error_str   = str_err_too_many_constants;
@@ -854,9 +855,17 @@ static int gen_load_const(KOS_COMP_UNIT      *program,
         return KOS_ERROR_COMPILE_FAILED;
     }
     else if (operand2 < 256)
-        opcode = INSTR_LOAD_CONST8;
+        opcode = (opcode == INSTR_LOAD_CONST) ? INSTR_LOAD_CONST8 : INSTR_LOAD_FUN8;
 
     return gen_instr2(program, opcode, operand1, operand2);
+}
+
+static int gen_load_const(KOS_COMP_UNIT      *program,
+                          const KOS_AST_NODE *node,
+                          int32_t             operand1,
+                          int32_t             operand2)
+{
+    return gen_instr_load_const(program, node, INSTR_LOAD_CONST, operand1, operand2);
 }
 
 static void write_jump_offs(KOS_COMP_UNIT *program,
@@ -5318,8 +5327,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
     /* Choose instruction for loading the function */
     constant->load_instr = (uint8_t)
         (((fun_node->type == NT_CONSTRUCTOR_LITERAL) || frame->num_def_used || (frame->num_binds > frame->num_self_refs))
-             ? (constant->header.index < 256 ? INSTR_LOAD_FUN8 : INSTR_LOAD_FUN)
-             : INSTR_LOAD_CONST);
+             ? INSTR_LOAD_FUN : INSTR_LOAD_CONST);
 
     push_scope(program, node);
 
@@ -5597,16 +5605,11 @@ static int function_literal(KOS_COMP_UNIT      *program,
     assert(constant->this_reg == KOS_NO_REG || frame->num_regs > constant->this_reg);
     TRY(gen_reg(program, reg));
 
-    if (constant->load_instr == INSTR_LOAD_CONST)
-        TRY(gen_load_const(program,
-                           node,
-                           (*reg)->reg,
-                           (int32_t)frame->constant->header.index));
-    else
-        TRY(gen_instr2(program,
-                       constant->load_instr,
-                       (*reg)->reg,
-                       (int32_t)frame->constant->header.index));
+    TRY(gen_instr_load_const(program,
+                             node,
+                             constant->load_instr,
+                             (*reg)->reg,
+                             (int32_t)frame->constant->header.index));
 
     /* Generate BIND instructions in the parent frame */
     if (constant->num_binds) {

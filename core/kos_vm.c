@@ -1592,9 +1592,9 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(LOAD_FUN): { /* <r.dest>, <uint32> */
+            BEGIN_INSTRUCTION(LOAD_FUN): { /* <r.dest>, <uint16> */
                 PROF_ZONE_N(INSTR, "LOAD.FUN")
-                const uint32_t value = load_32(bytecode+2);
+                const uint32_t value = load_16(bytecode+2);
 
                 rdest = bytecode[1];
 
@@ -1616,7 +1616,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 assert(rdest < num_regs);
                 write_reg(stack_frame, rdest, out);
 
-                bytecode += 6;
+                bytecode += 4;
                 NEXT_INSTRUCTION;
             }
 

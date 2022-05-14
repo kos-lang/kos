@@ -1120,7 +1120,7 @@ int main(void)
 
             INSTR_RETURN,     0,
 
-            INSTR_LOAD_FUN,   0, IMM32(0),
+            INSTR_LOAD_FUN,   0, IMM16(0),
             INSTR_LOAD_ARRAY, 1, IMM32(0),
             INSTR_CALL,       1, 0, 1, 1,
 
