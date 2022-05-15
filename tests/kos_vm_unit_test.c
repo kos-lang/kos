@@ -703,21 +703,21 @@ int main(void)
 
     /*========================================================================*/
     /* GET.MOD.GLOBAL */
-    TEST_INSTR INSTR_GET_MOD_GLOBAL, { V_INTEGER, 42                   }, { { V_IMM, 0                          }, { V_STR0, 0, 0, "fortytwo"          } } END
-    TEST_INSTR INSTR_GET_MOD_GLOBAL, { V_EXCEPT                        }, { { V_IMM, 0                          }, { V_INT32, 0                        } } END
-    TEST_INSTR INSTR_GET_MOD_GLOBAL, { V_EXCEPT                        }, { { V_IMM, 1000                       }, { V_INT32, 0                        } } END
-    TEST_INSTR INSTR_GET_MOD_GLOBAL, { V_EXCEPT                        }, { { V_IMM, 0                          }, { V_INT32, 1000                     } } END
+    TEST_INSTR INSTR_GET_MOD_GLOBAL, { V_INTEGER, 42                   }, { { V_IMM16, 0                        }, { V_STR0, 0, 0, "fortytwo"          } } END
+    TEST_INSTR INSTR_GET_MOD_GLOBAL, { V_EXCEPT                        }, { { V_IMM16, 0                        }, { V_INT32, 0                        } } END
+    TEST_INSTR INSTR_GET_MOD_GLOBAL, { V_EXCEPT                        }, { { V_IMM16, 1000                     }, { V_INT32, 0                        } } END
+    TEST_INSTR INSTR_GET_MOD_GLOBAL, { V_EXCEPT                        }, { { V_IMM16, 0                        }, { V_INT32, 1000                     } } END
 
     /*========================================================================*/
     /* GET.MOD.ELEM */
-    TEST_INSTR INSTR_GET_MOD_ELEM, { V_INTEGER, 42                     }, { { V_IMM, 0                          }, { V_IMM, 0                          } } END
-    TEST_INSTR INSTR_GET_MOD_ELEM, { V_EXCEPT                          }, { { V_IMM, 1000                       }, { V_IMM, 0                          } } END
-    TEST_INSTR INSTR_GET_MOD_ELEM, { V_EXCEPT                          }, { { V_IMM, 0                          }, { V_IMM, 1000                       } } END
+    TEST_INSTR INSTR_GET_MOD_ELEM, { V_INTEGER, 42                     }, { { V_IMM16, 0                        }, { V_IMM, 0                          } } END
+    TEST_INSTR INSTR_GET_MOD_ELEM, { V_EXCEPT                          }, { { V_IMM16, 1000                     }, { V_IMM, 0                          } } END
+    TEST_INSTR INSTR_GET_MOD_ELEM, { V_EXCEPT                          }, { { V_IMM16, 0                        }, { V_IMM, 1000                       } } END
 
     /*========================================================================*/
     /* GET.MOD */
-    TEST_INSTR INSTR_GET_MOD,    { V_MODULE                            }, { { V_IMM, 0                          } }                                        END
-    TEST_INSTR INSTR_GET_MOD,    { V_EXCEPT                            }, { { V_IMM, 1000                       } }                                        END
+    TEST_INSTR INSTR_GET_MOD,    { V_MODULE                            }, { { V_IMM16, 0                        } }                                        END
+    TEST_INSTR INSTR_GET_MOD,    { V_EXCEPT                            }, { { V_IMM16, 1000                     } }                                        END
 
     /*========================================================================*/
     /* GET.GLOBAL */

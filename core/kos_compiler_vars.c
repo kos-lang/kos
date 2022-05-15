@@ -15,6 +15,7 @@ static const char str_err_const_assignment[]        = "const variable is not ass
 static const char str_err_module_global_conflict[]  = "unable to import module, a global variable with this name already exists";
 static const char str_err_no_such_module_variable[] = "no such global in module";
 static const char str_err_redefined_var[]           = "redefined variable";
+static const char str_err_too_many_modules[]        = "too many modules imported";
 static const char str_err_undefined_var[]           = "undeclared identifier";
 static const char str_err_unexpected_global_this[]  = "'this' not allowed in global scope";
 static const char str_err_unexpected_yield[]        = "'yield' not allowed in global scope";
@@ -508,6 +509,12 @@ static int import(KOS_COMP_UNIT *program,
                                node->token.begin,
                                node->token.length,
                                &module_idx));
+
+    if (module_idx < 0 || module_idx > 0xFFFF) {
+        program->error_token = &node->token;
+        program->error_str   = str_err_too_many_modules;
+        RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
+    }
 
     if ( ! node->next) {
 

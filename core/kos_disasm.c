@@ -108,20 +108,21 @@ int kos_get_operand_size(KOS_BYTECODE_INSTR instr, int op)
         case INSTR_LOAD_CONST:
             /* fall through */
         case INSTR_LOAD_FUN:
+            /* fall through */
+        case INSTR_GET_MOD:
             if (op > 0)
                 return 2;
             break;
 
         case INSTR_GET_GLOBAL:
             /* fall through */
-        case INSTR_GET_MOD_ELEM:
-            /* fall through */
-        case INSTR_GET_MOD:
-            /* fall through */
         case INSTR_CATCH:
             if (op > 0)
                 return 4;
             break;
+
+        case INSTR_GET_MOD_ELEM:
+            return (op == 0) ? 1 : (op == 1) ? 2 : 4;
 
         case INSTR_SET_GLOBAL:
             /* fall through */
@@ -135,7 +136,10 @@ int kos_get_operand_size(KOS_BYTECODE_INSTR instr, int op)
             break;
 
         case INSTR_GET_MOD_GLOBAL:
-            /* fall through */
+            if (op == 1)
+                return 2;
+            break;
+
         case INSTR_SET_ELEM:
             if (op == 1)
                 return 4;

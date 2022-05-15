@@ -60,11 +60,11 @@ DEFINE_INSTRUCTION(GET_PROP8, 0x91)
 DEFINE_INSTRUCTION(GET_PROTO, 0x92)
 /* GET.GLOBAL <r.dest>, <int32> */
 DEFINE_INSTRUCTION(GET_GLOBAL, 0x93)
-/* GET.MOD.GLOBAL <r.dest>, <int32>, <r.glob> */
+/* GET.MOD.GLOBAL <r.dest>, <uint16>, <r.glob> */
 DEFINE_INSTRUCTION(GET_MOD_GLOBAL, 0x94)
-/* GET.MOD.ELEM <r.dest>, <int32>, <int32> */
+/* GET.MOD.ELEM <r.dest>, <uint16>, <int32> */
 DEFINE_INSTRUCTION(GET_MOD_ELEM, 0x95)
-/* GET.MOD <r.dest>, <int32> */
+/* GET.MOD <r.dest>, <uint16> */
 DEFINE_INSTRUCTION(GET_MOD, 0x96)
 
 /* SET <r.dest>, <r.prop>, <r.src> */

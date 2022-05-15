@@ -1811,10 +1811,10 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(GET_MOD_GLOBAL): { /* <r.dest>, <int32>, <r.glob> */
+            BEGIN_INSTRUCTION(GET_MOD_GLOBAL): { /* <r.dest>, <uint16>, <r.glob> */
                 PROF_ZONE_N(INSTR, "GET.MOD.GLOBAL")
-                const int      mod_idx    = (int32_t)load_32(bytecode+2);
-                const unsigned rglob      = bytecode[6];
+                const int      mod_idx    = (int32_t)load_16(bytecode+2);
+                const unsigned rglob      = bytecode[4];
                 KOS_OBJ_ID     glob_idx;
                 KOS_OBJ_ID     module_obj = KOS_array_read(ctx,
                                                            OBJPTR(MODULE, module)->inst->modules.modules,
@@ -1842,14 +1842,14 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 assert(rdest < num_regs);
                 write_reg(stack_frame, rdest, out);
 
-                bytecode += 7;
+                bytecode += 5;
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(GET_MOD_ELEM): { /* <r.dest>, <int32>, <int32> */
+            BEGIN_INSTRUCTION(GET_MOD_ELEM): { /* <r.dest>, <uint16>, <int32> */
                 PROF_ZONE_N(INSTR, "GET.MOD.ELEM")
-                const int  mod_idx    = (int32_t)load_32(bytecode+2);
-                const int  glob_idx   = (int32_t)load_32(bytecode+6);
+                const int  mod_idx    = (int32_t)load_16(bytecode+2);
+                const int  glob_idx   = (int32_t)load_32(bytecode+4);
                 KOS_OBJ_ID module_obj = KOS_array_read(ctx,
                                                        OBJPTR(MODULE, module)->inst->modules.modules,
                                                        mod_idx);
@@ -1866,13 +1866,13 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 assert(rdest < num_regs);
                 write_reg(stack_frame, rdest, out);
 
-                bytecode += 10;
+                bytecode += 8;
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(GET_MOD): { /* <r.dest>, <int32> */
+            BEGIN_INSTRUCTION(GET_MOD): { /* <r.dest>, <uint16> */
                 PROF_ZONE_N(INSTR, "GET.MOD")
-                const int  mod_idx    = (int32_t)load_32(bytecode+2);
+                const int  mod_idx    = (int32_t)load_16(bytecode+2);
                 KOS_OBJ_ID module_obj = KOS_array_read(ctx,
                                                        OBJPTR(MODULE, module)->inst->modules.modules,
                                                        mod_idx);
@@ -1888,7 +1888,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 assert(rdest < num_regs);
                 write_reg(stack_frame, rdest, out);
 
-                bytecode += 6;
+                bytecode += 4;
                 NEXT_INSTRUCTION;
             }
 
