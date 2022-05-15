@@ -275,7 +275,6 @@ static int test_instr(KOS_CONTEXT           ctx,
                 code[words++] = regs;
                 assert(args[i].low < 256);
                 code[words++] = (uint8_t)args[i].low;
-                //code[words++] = (uint8_t)(args[i].low >> 8);
                 parms[i]      = regs++;
                 break;
 

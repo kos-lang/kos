@@ -3456,7 +3456,7 @@ static int gen_load_number(KOS_COMP_UNIT      *program,
         return gen_instr2(program, INSTR_LOAD_INT8, reg, (int32_t)numeric->u.i);
 
     constant = (KOS_COMP_CONST *)kos_red_black_find(program->constants,
-                                                    &numeric,
+                                                    (void *)numeric,
                                                     numbers_compare_item);
 
     if ( ! constant) {
