@@ -25,7 +25,6 @@ static const char str_err_catch_nesting_too_deep[]    = "too many nesting levels
 static const char str_err_duplicate_property[]        = "duplicate object property";
 static const char str_err_expected_refinement[]       = "expected .identifier or '[' in argument to 'delete'";
 static const char str_err_expected_refinement_ident[] = "expected identifier";
-static const char str_err_invalid_index[]             = "index out of range";
 static const char str_err_invalid_numeric_literal[]   = "invalid numeric literal";
 static const char str_err_no_such_module_variable[]   = "no such global in module";
 static const char str_err_operand_not_numeric[]       = "operand is not a numeric constant";
@@ -737,6 +736,11 @@ static int add_addr2line(KOS_COMP_UNIT   *program,
     return error;
 }
 
+static int is_sint8(int64_t value)
+{
+    return (uint64_t)(value + 128) < 256;
+}
+
 static int gen_instr(KOS_COMP_UNIT *program,
                      int            num_args,
                      ...)
@@ -841,11 +845,11 @@ static int gen_instr5(KOS_COMP_UNIT *program,
     return gen_instr(program, 5, opcode, operand1, operand2, operand3, operand4, operand5);
 }
 
-static int gen_instr_load_const(KOS_COMP_UNIT      *program,
-                                const KOS_AST_NODE *node,
-                                int                 opcode,
-                                int32_t             operand1,
-                                int32_t             operand2)
+static int gen_instr_load(KOS_COMP_UNIT      *program,
+                          const KOS_AST_NODE *node,
+                          int                 opcode,
+                          int32_t             operand1,
+                          int32_t             operand2)
 {
     assert((opcode == INSTR_LOAD_CONST) || (opcode == INSTR_LOAD_FUN));
 
@@ -860,12 +864,124 @@ static int gen_instr_load_const(KOS_COMP_UNIT      *program,
     return gen_instr2(program, opcode, operand1, operand2);
 }
 
-static int gen_load_const(KOS_COMP_UNIT      *program,
-                          const KOS_AST_NODE *node,
-                          int32_t             operand1,
-                          int32_t             operand2)
+static int gen_instr_load_const(KOS_COMP_UNIT      *program,
+                                const KOS_AST_NODE *node,
+                                int32_t             operand1,
+                                int32_t             operand2)
 {
-    return gen_instr_load_const(program, node, INSTR_LOAD_CONST, operand1, operand2);
+    return gen_instr_load(program, node, INSTR_LOAD_CONST, operand1, operand2);
+}
+
+static int gen_load_number(KOS_COMP_UNIT      *program,
+                           const KOS_AST_NODE *node,
+                           int32_t             reg,
+                           const KOS_NUMERIC  *numeric)
+{
+    KOS_COMP_CONST *constant;
+
+    if (numeric->type == KOS_INTEGER_VALUE && is_sint8(numeric->u.i))
+        return gen_instr2(program, INSTR_LOAD_INT8, reg, (int32_t)numeric->u.i);
+
+    constant = (KOS_COMP_CONST *)kos_red_black_find(program->constants,
+                                                    (void *)numeric,
+                                                    numbers_compare_item);
+
+    if ( ! constant) {
+        constant = (KOS_COMP_CONST *)
+            KOS_mempool_alloc(&program->allocator,
+                              KOS_max(sizeof(KOS_COMP_INTEGER),
+                                      sizeof(KOS_COMP_FLOAT)));
+
+        if ( ! constant)
+            return KOS_ERROR_OUT_OF_MEMORY;
+
+        if (numeric->type == KOS_INTEGER_VALUE) {
+            constant->type = KOS_COMP_CONST_INTEGER;
+            ((KOS_COMP_INTEGER *)constant)->value = numeric->u.i;
+        }
+        else {
+            constant->type = KOS_COMP_CONST_FLOAT;
+            ((KOS_COMP_FLOAT *)constant)->value = numeric->u.d;
+        }
+
+        add_constant(program, constant);
+    }
+
+    return gen_instr_load_const(program,
+                                node,
+                                reg,
+                                (int32_t)constant->index);
+}
+
+static int gen_instr_get_elem(KOS_COMP_UNIT      *program,
+                              const KOS_AST_NODE *node,
+                              int                 dest_reg,
+                              int                 cont_reg,
+                              int                 array_idx)
+{
+    KOS_NUMERIC numeric;
+    int         error;
+
+    if (is_sint8(array_idx))
+        return gen_instr3(program, INSTR_GET_ELEM8, dest_reg, cont_reg, array_idx);
+
+    numeric.type = KOS_INTEGER_VALUE;
+    numeric.u.i  = array_idx;
+
+    error = gen_load_number(program, node, dest_reg, &numeric);
+    if (error)
+        return error;
+
+    error = gen_instr3(program, INSTR_GET, dest_reg, cont_reg, dest_reg);
+    if (error)
+        return error;
+
+    return KOS_SUCCESS;
+}
+
+static int gen_instr_set_elem(KOS_COMP_UNIT      *program,
+                              const KOS_AST_NODE *node,
+                              int                 cont_reg,
+                              int                 array_idx,
+                              int                 src_reg)
+{
+    KOS_NUMERIC numeric;
+    KOS_REG    *idx_reg = KOS_NULL;
+    int         error;
+
+    if (is_sint8(array_idx))
+        return gen_instr3(program, INSTR_SET_ELEM8, cont_reg, array_idx, src_reg);
+
+    error = gen_reg(program, &idx_reg);
+    if (error)
+        return error;
+
+    numeric.type = KOS_INTEGER_VALUE;
+    numeric.u.i  = array_idx;
+
+    error = gen_load_number(program, node, idx_reg->reg, &numeric);
+    if (error)
+        return error;
+
+    error = gen_instr3(program, INSTR_SET, cont_reg, idx_reg->reg, src_reg);
+    if (error)
+        return error;
+
+    free_reg(program, idx_reg);
+
+    return KOS_SUCCESS;
+}
+
+static int gen_instr_set_array_var_elem(KOS_COMP_UNIT      *program,
+                                        const KOS_AST_NODE *node,
+                                        const KOS_VAR      *cont_var,
+                                        const KOS_REG      *cont_reg,
+                                        int                 src_reg)
+{
+    if (cont_var->type == VAR_GLOBAL)
+        return gen_instr2(program, INSTR_SET_GLOBAL, cont_var->array_idx, src_reg);
+    else
+        return gen_instr_set_elem(program, node, cont_reg->reg, cont_var->array_idx, src_reg);
 }
 
 static void write_jump_offs(KOS_COMP_UNIT *program,
@@ -1739,10 +1855,10 @@ static int assert_stmt(KOS_COMP_UNIT      *program,
 
     TRY(gen_reg(program, &reg));
 
-    TRY(gen_load_const(program,
-                       node,
-                       reg->reg,
-                       str_idx));
+    TRY(gen_instr_load_const(program,
+                             node,
+                             reg->reg,
+                             str_idx));
 
     TRY(gen_instr1(program, INSTR_THROW, reg->reg));
 
@@ -1939,7 +2055,7 @@ static int gen_get_prop_instr(KOS_COMP_UNIT      *program,
             rprop = tmp->reg;
         }
 
-        TRY(gen_load_const(program, node, rprop, str_idx));
+        TRY(gen_instr_load_const(program, node, rprop, str_idx));
 
         TRY(gen_instr3(program, INSTR_GET, rdest, robj, rprop));
 
@@ -1966,7 +2082,7 @@ static int gen_set_prop_instr(KOS_COMP_UNIT      *program,
 
         TRY(gen_reg(program, &tmp));
 
-        TRY(gen_load_const(program, node, tmp->reg, str_idx));
+        TRY(gen_instr_load_const(program, node, tmp->reg, str_idx));
 
         TRY(gen_instr3(program, INSTR_SET, rdest, tmp->reg, rsrc));
 
@@ -2202,12 +2318,8 @@ static int for_in(KOS_COMP_UNIT      *program,
 
             TRY(gen_instr2(program, INSTR_NEXT, dst_reg->reg, item_reg->reg));
 
-            if (item_var) {
-                if (item_var->type == VAR_GLOBAL)
-                    TRY(gen_instr2(program, INSTR_SET_GLOBAL, item_var->array_idx, dst_reg->reg));
-                else
-                    TRY(gen_instr3(program, INSTR_SET_ELEM, item_cont_reg->reg, item_var->array_idx, dst_reg->reg));
-            }
+            if (item_var)
+                TRY(gen_instr_set_array_var_elem(program, cur_var_node, item_var, item_cont_reg, dst_reg->reg));
 
             free_reg(program, dst_reg);
 
@@ -2219,10 +2331,7 @@ static int for_in(KOS_COMP_UNIT      *program,
         assert( ! item_reg);
         TRY(gen_reg(program, &item_reg));
 
-        if (item_var->type == VAR_GLOBAL)
-            TRY(gen_instr2(program, INSTR_SET_GLOBAL, item_var->array_idx, item_reg->reg));
-        else
-            TRY(gen_instr3(program, INSTR_SET_ELEM, item_cont_reg->reg, item_var->array_idx, item_reg->reg));
+        TRY(gen_instr_set_array_var_elem(program, var_node, item_var, item_cont_reg, item_reg->reg));
     }
 
     node = assg_node->next;
@@ -2273,10 +2382,7 @@ static int for_in(KOS_COMP_UNIT      *program,
 
             TRY(gen_instr1(program, INSTR_LOAD_VOID, dst_reg->reg));
 
-            if (item_var->type == VAR_GLOBAL)
-                TRY(gen_instr2(program, INSTR_SET_GLOBAL, item_var->array_idx, dst_reg->reg));
-            else
-                TRY(gen_instr3(program, INSTR_SET_ELEM, item_cont_reg->reg, item_var->array_idx, dst_reg->reg));
+            TRY(gen_instr_set_array_var_elem(program, cur_var_node, item_var, item_cont_reg, dst_reg->reg));
 
             free_reg(program, dst_reg);
 
@@ -2288,10 +2394,7 @@ static int for_in(KOS_COMP_UNIT      *program,
         assert(item_reg);
         TRY(gen_instr1(program, INSTR_LOAD_VOID, item_reg->reg));
 
-        if (item_var->type == VAR_GLOBAL)
-            TRY(gen_instr2(program, INSTR_SET_GLOBAL, item_var->array_idx, item_reg->reg));
-        else
-            TRY(gen_instr3(program, INSTR_SET_ELEM, item_cont_reg->reg, item_var->array_idx, item_reg->reg));
+        TRY(gen_instr_set_array_var_elem(program, var_node, item_var, item_cont_reg, item_reg->reg));
     }
 
     free_reg(program, item_reg);
@@ -2484,12 +2587,8 @@ static int for_range(KOS_COMP_UNIT      *program,
 
     if ((iter_reg != item_reg) && item_reg)
         TRY(gen_instr2(program, INSTR_MOVE, item_reg->reg, iter_reg->reg));
-    else if (item_var) {
-        if (item_var->type == VAR_GLOBAL)
-            TRY(gen_instr2(program, INSTR_SET_GLOBAL, item_var->array_idx, iter_reg->reg));
-        else
-            TRY(gen_instr3(program, INSTR_SET_ELEM, item_cont_reg->reg, item_var->array_idx, iter_reg->reg));
-    }
+    else if (item_var)
+        TRY(gen_instr_set_array_var_elem(program, var_node, item_var, item_cont_reg, iter_reg->reg));
 
     TRY(gen_reg(program, &reg));
     TRY(gen_instr3(program, INSTR_CMP_LT, reg->reg,
@@ -2506,11 +2605,10 @@ static int for_range(KOS_COMP_UNIT      *program,
     else if (item_var) {
         assert(iter_reg);
         assert(iter_reg->tmp);
+
         TRY(gen_instr1(program, INSTR_LOAD_VOID, iter_reg->reg));
-        if (item_var->type == VAR_GLOBAL)
-            TRY(gen_instr2(program, INSTR_SET_GLOBAL, item_var->array_idx, iter_reg->reg));
-        else
-            TRY(gen_instr3(program, INSTR_SET_ELEM, item_cont_reg->reg, item_var->array_idx, iter_reg->reg));
+
+        TRY(gen_instr_set_array_var_elem(program, var_node, item_var, item_cont_reg, iter_reg->reg));
     }
 
     finish_break_continue(program, next_jump_offs, old_break_offs);
@@ -3239,15 +3337,9 @@ static int refinement_object(KOS_COMP_UNIT      *program,
 
         TRY(gen_get_prop_instr(program, node, (*reg)->reg, obj->reg, str_idx));
     }
-    else if (maybe_int(node, &idx)) {
+    else if (maybe_int(node, &idx) && is_sint8(idx)) {
 
-        if (idx > INT_MAX || idx < INT_MIN) {
-            program->error_token = &node->token;
-            program->error_str   = str_err_invalid_index;
-            RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
-        }
-
-        TRY(gen_instr3(program, INSTR_GET_ELEM, (*reg)->reg, obj->reg, (int)idx));
+        TRY(gen_instr3(program, INSTR_GET_ELEM8, (*reg)->reg, obj->reg, (int)idx));
     }
     else {
 
@@ -3415,18 +3507,6 @@ static int is_var_used(KOS_COMP_UNIT      *program,
     return 0;
 }
 
-static int count_non_expanded_siblings(const KOS_AST_NODE *node)
-{
-    int count = 0;
-
-    while (node && node->type != NT_EXPAND) {
-        ++count;
-        node = node->next;
-    }
-
-    return count;
-}
-
 #define MAX_CONTIG_REGS 4
 
 static int count_contig_arg_siblings(const KOS_AST_NODE *node)
@@ -3443,47 +3523,6 @@ static int count_contig_arg_siblings(const KOS_AST_NODE *node)
     }
 
     return count;
-}
-
-static int gen_load_number(KOS_COMP_UNIT      *program,
-                           const KOS_AST_NODE *node,
-                           int32_t             reg,
-                           const KOS_NUMERIC  *numeric)
-{
-    KOS_COMP_CONST *constant;
-
-    if (numeric->type == KOS_INTEGER_VALUE && (uint64_t)((numeric->u.i >> 7) + 1) <= 1U)
-        return gen_instr2(program, INSTR_LOAD_INT8, reg, (int32_t)numeric->u.i);
-
-    constant = (KOS_COMP_CONST *)kos_red_black_find(program->constants,
-                                                    (void *)numeric,
-                                                    numbers_compare_item);
-
-    if ( ! constant) {
-        constant = (KOS_COMP_CONST *)
-            KOS_mempool_alloc(&program->allocator,
-                              KOS_max(sizeof(KOS_COMP_INTEGER),
-                                      sizeof(KOS_COMP_FLOAT)));
-
-        if ( ! constant)
-            return KOS_ERROR_OUT_OF_MEMORY;
-
-        if (numeric->type == KOS_INTEGER_VALUE) {
-            constant->type = KOS_COMP_CONST_INTEGER;
-            ((KOS_COMP_INTEGER *)constant)->value = numeric->u.i;
-        }
-        else {
-            constant->type = KOS_COMP_CONST_FLOAT;
-            ((KOS_COMP_FLOAT *)constant)->value = numeric->u.d;
-        }
-
-        add_constant(program, constant);
-    }
-
-    return gen_load_const(program,
-                          node,
-                          reg,
-                          (int32_t)constant->index);
 }
 
 static int gen_load_array(KOS_COMP_UNIT      *program,
@@ -3530,13 +3569,25 @@ cleanup:
     return error;
 }
 
+static int estimate_initial_array_size(const KOS_AST_NODE *node)
+{
+    int count = 0;
+
+    while (node && node->type != NT_EXPAND) {
+        ++count;
+        node = node->next;
+    }
+
+    return KOS_min(count, 127);
+}
+
 static int gen_array(KOS_COMP_UNIT      *program,
                      const KOS_AST_NODE *node,
                      KOS_REG           **reg)
 {
     int       error;
     int       i;
-    const int num_fixed = count_non_expanded_siblings(node);
+    const int num_fixed = estimate_initial_array_size(node);
 
     if (is_var_used(program, node, *reg))
         *reg = KOS_NULL;
@@ -3546,23 +3597,24 @@ static int gen_array(KOS_COMP_UNIT      *program,
 
     for (i = 0; node; node = node->next, ++i) {
 
-        KOS_REG  *arg    = KOS_NULL;
-        const int expand = node->type == NT_EXPAND ? 1 : 0;
+        const KOS_AST_NODE *elem_node = node;
+        KOS_REG            *arg       = KOS_NULL;
+        const int           expand    = node->type == NT_EXPAND ? 1 : 0;
 
         if (expand) {
-            assert(node->children);
-            assert( ! node->children->next);
-            assert(node->children->type != NT_EXPAND);
+            elem_node = node->children;
+            assert(elem_node);
+            assert( ! elem_node->next);
+            assert(elem_node->type != NT_EXPAND);
             assert(i >= num_fixed);
-            TRY(visit_node(program, node->children, &arg));
         }
-        else
-            TRY(visit_node(program, node, &arg));
+
+        TRY(visit_node(program, elem_node, &arg));
 
         assert(arg);
 
         if (i < num_fixed)
-            TRY(gen_instr3(program, INSTR_SET_ELEM, (*reg)->reg, i, arg->reg));
+            TRY(gen_instr3(program, INSTR_SET_ELEM8, (*reg)->reg, i, arg->reg));
         else if (expand)
             TRY(gen_instr2(program, INSTR_PUSH_EX, (*reg)->reg, arg->reg));
         else
@@ -3849,14 +3901,15 @@ static int async_op(KOS_COMP_UNIT      *program,
                     const KOS_AST_NODE *node,
                     KOS_REG           **reg)
 {
-    int               error       = KOS_SUCCESS;
-    KOS_REG          *argn[2]     = { KOS_NULL, KOS_NULL };
-    KOS_REG          *fun         = KOS_NULL;
-    KOS_REG          *async       = KOS_NULL;
-    KOS_REG          *obj;
-    int               str_idx;
-    KOS_TOKEN         token;
-    static const char str_async[] = "async";
+    KOS_TOKEN           token;
+    KOS_REG            *argn[2]     = { KOS_NULL, KOS_NULL };
+    KOS_REG            *fun         = KOS_NULL;
+    KOS_REG            *async       = KOS_NULL;
+    KOS_REG            *obj;
+    const KOS_AST_NODE *async_node  = node;
+    int                 str_idx;
+    int                 error       = KOS_SUCCESS;
+    static const char   str_async[] = "async";
 
     node = node->children;
     assert(node);
@@ -3899,7 +3952,7 @@ static int async_op(KOS_COMP_UNIT      *program,
     if ( ! *reg)
         *reg = async;
 
-    TRY(gen_get_prop_instr(program, node, async->reg, fun->reg, str_idx));
+    TRY(gen_get_prop_instr(program, async_node, async->reg, fun->reg, str_idx));
 
     if ( ! obj)
         TRY(gen_instr1(program, INSTR_LOAD_VOID, argn[0]->reg));
@@ -4257,7 +4310,7 @@ static int has_prop(KOS_COMP_UNIT      *program,
             rprop = tmp->reg;
         }
 
-        TRY(gen_load_const(program, node->children->next, rprop, str_idx));
+        TRY(gen_instr_load_const(program, node->children->next, rprop, str_idx));
 
         instr = (instr == INSTR_HAS_DP_PROP8) ? INSTR_HAS_DP : INSTR_HAS_SH;
 
@@ -4311,7 +4364,7 @@ static int delete_op(KOS_COMP_UNIT      *program,
         if (str_idx > 255) {
             TRY(gen_reg(program, reg));
 
-            TRY(gen_load_const(program, node, (*reg)->reg, str_idx));
+            TRY(gen_instr_load_const(program, node, (*reg)->reg, str_idx));
 
             TRY(gen_instr2(program, INSTR_DEL, obj->reg, (*reg)->reg));
         }
@@ -4624,28 +4677,22 @@ static int assign_member(KOS_COMP_UNIT      *program,
 
         TRY(gen_set_prop_instr(program, node, obj->reg, str_idx, src->reg));
     }
-    else if (maybe_int(node, &idx)) {
+    else if (maybe_int(node, &idx) && is_sint8(idx)) {
 
         assert(node->type == NT_NUMERIC_LITERAL);
-
-        if (idx > INT_MAX || idx < INT_MIN) {
-            program->error_token = &node->token;
-            program->error_str   = str_err_invalid_index;
-            RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
-        }
 
         if (assg_op != OT_SET) {
 
             TRY(gen_reg(program, &tmp_reg));
 
-            TRY(gen_instr3(program, INSTR_GET_ELEM, tmp_reg->reg, obj->reg, (int)idx));
+            TRY(gen_instr3(program, INSTR_GET_ELEM8, tmp_reg->reg, obj->reg, (int)idx));
 
             TRY(gen_instr3(program, assign_instr(assg_op), tmp_reg->reg, tmp_reg->reg, src->reg));
 
             src = tmp_reg;
         }
 
-        TRY(gen_instr3(program, INSTR_SET_ELEM, obj->reg, (int)idx, src->reg));
+        TRY(gen_instr3(program, INSTR_SET_ELEM8, obj->reg, (int)idx, src->reg));
     }
     else {
 
@@ -4704,17 +4751,14 @@ static int assign_non_local(KOS_COMP_UNIT      *program,
         if (var->type == VAR_GLOBAL)
             TRY(gen_instr2(program, INSTR_GET_GLOBAL, tmp_reg->reg, var->array_idx));
         else
-            TRY(gen_instr3(program, INSTR_GET_ELEM, tmp_reg->reg, container_reg->reg, var->array_idx));
+            TRY(gen_instr_get_elem(program, node, tmp_reg->reg, container_reg->reg, var->array_idx));
 
         TRY(gen_instr3(program, assign_instr(assg_op), tmp_reg->reg, tmp_reg->reg, src->reg));
 
         src = tmp_reg;
     }
 
-    if (var->type == VAR_GLOBAL)
-        TRY(gen_instr2(program, INSTR_SET_GLOBAL, var->array_idx, src->reg));
-    else
-        TRY(gen_instr3(program, INSTR_SET_ELEM, container_reg->reg, var->array_idx, src->reg));
+    TRY(gen_instr_set_array_var_elem(program, node, var, container_reg, src->reg));
 
     if (tmp_reg)
         free_reg(program, tmp_reg);
@@ -4727,15 +4771,16 @@ static int assign_slice(KOS_COMP_UNIT      *program,
                         const KOS_AST_NODE *node,
                         KOS_REG            *src)
 {
-    int                 error;
-    int                 str_idx;
+    static const char   str_insert[] = "insert";
+    KOS_TOKEN           token;
     const KOS_AST_NODE *obj_node     = KOS_NULL;
+    const KOS_AST_NODE *assg_node    = node;
     KOS_REG            *argn[3]      = { KOS_NULL, KOS_NULL, KOS_NULL };
     KOS_REG            *obj_reg      = KOS_NULL;
     KOS_REG            *func_reg     = KOS_NULL;
     const int           src_reg      = src->reg;
-    static const char   str_insert[] = "insert";
-    KOS_TOKEN           token;
+    int                 error;
+    int                 str_idx;
 
     free_reg(program, src);
 
@@ -4786,7 +4831,7 @@ static int assign_slice(KOS_COMP_UNIT      *program,
 
     TRY(gen_reg(program, &func_reg));
 
-    TRY(gen_get_prop_instr(program, obj_node, func_reg->reg, obj_reg->reg, str_idx));
+    TRY(gen_get_prop_instr(program, assg_node, func_reg->reg, obj_reg->reg, str_idx));
 
     TRY(gen_instr5(program, INSTR_CALL_N, func_reg->reg, func_reg->reg, obj_reg->reg, argn[0]->reg, 3));
 
@@ -4978,17 +5023,18 @@ static int identifier(KOS_COMP_UNIT      *program,
     if (src_reg)
         *reg = src_reg;
     else if (node->is_const_fun) {
-        KOS_FRAME         *fun_frame;
-        KOS_COMP_FUNCTION *constant;
-        KOS_VAR           *var = node->u.var;
+        KOS_FRAME          *fun_frame;
+        KOS_COMP_FUNCTION  *constant;
+        KOS_VAR            *var = node->u.var;
+        const KOS_AST_NODE *var_node;
         assert(node->is_var);
         assert(var);
         assert(var->is_const);
 
-        node = var->value;
-        assert(node->type == NT_FUNCTION_LITERAL);
-        assert(node->is_scope);
-        fun_frame = (KOS_FRAME *)node->u.scope;
+        var_node = var->value;
+        assert(var_node->type == NT_FUNCTION_LITERAL);
+        assert(var_node->is_scope);
+        fun_frame = (KOS_FRAME *)var_node->u.scope;
         assert(fun_frame->scope.has_frame);
 
         constant = fun_frame->constant;
@@ -4998,10 +5044,10 @@ static int identifier(KOS_COMP_UNIT      *program,
 
         TRY(gen_reg(program, reg));
 
-        TRY(gen_load_const(program,
-                           node,
-                           (*reg)->reg,
-                           (int32_t)constant->header.index));
+        TRY(gen_instr_load_const(program,
+                                 node,
+                                 (*reg)->reg,
+                                 (int32_t)constant->header.index));
     }
     else {
 
@@ -5031,7 +5077,7 @@ static int identifier(KOS_COMP_UNIT      *program,
 
             default:
                 assert(container_reg);
-                TRY(gen_instr3(program, INSTR_GET_ELEM, (*reg)->reg, container_reg->reg, var->array_idx));
+                TRY(gen_instr_get_elem(program, node, (*reg)->reg, container_reg->reg, var->array_idx));
                 break;
         }
     }
@@ -5090,10 +5136,10 @@ static int string_literal(KOS_COMP_UNIT      *program,
         error = gen_reg(program, reg);
 
         if (!error)
-            error = gen_load_const(program,
-                                   node,
-                                   (*reg)->reg,
-                                   str_idx);
+            error = gen_instr_load_const(program,
+                                         node,
+                                         (*reg)->reg,
+                                         str_idx);
     }
 
     return error;
@@ -5656,11 +5702,11 @@ static int function_literal(KOS_COMP_UNIT      *program,
     assert(constant->this_reg == KOS_NO_REG || frame->num_regs > constant->this_reg);
     TRY(gen_reg(program, reg));
 
-    TRY(gen_instr_load_const(program,
-                             node,
-                             constant->load_instr,
-                             (*reg)->reg,
-                             (int32_t)frame->constant->header.index));
+    TRY(gen_instr_load(program,
+                       node,
+                       constant->load_instr,
+                       (*reg)->reg,
+                       (int32_t)frame->constant->header.index));
 
     /* Generate BIND instructions in the parent frame */
     if (constant->num_binds) {
@@ -5774,7 +5820,7 @@ static int function_literal(KOS_COMP_UNIT      *program,
             assert(arg);
 
             if (used && defaults_reg)
-                TRY(gen_instr3(program, INSTR_SET_ELEM, defaults_reg->reg, i, arg->reg));
+                TRY(gen_instr_set_elem(program, def_node, defaults_reg->reg, i, arg->reg));
 
             free_reg(program, arg);
         }

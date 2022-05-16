@@ -232,14 +232,14 @@ int main(void)
     }
 
     /************************************************************************/
-    /* SET, GET.ELEM */
+    /* SET, GET.ELEM8 */
     {
         const uint8_t code[] = {
             INSTR_LOAD_ARRAY,  0, 5,
             INSTR_LOAD_INT8,   1, 3,
             INSTR_LOAD_INT8,   2, 10,
             INSTR_SET,         0, 1, 2,
-            INSTR_GET_ELEM,    1, 0, IMM32(-2),
+            INSTR_GET_ELEM8,   1, 0, (uint8_t)(int8_t)-2,
             INSTR_RETURN,      1
         };
 
@@ -248,12 +248,12 @@ int main(void)
     }
 
     /************************************************************************/
-    /* SET.ELEM, GET */
+    /* SET.ELEM8, GET */
     {
         const uint8_t code[] = {
             INSTR_LOAD_ARRAY,  0, 3,
             INSTR_LOAD_INT8,   1, (uint8_t)(int8_t)-8,
-            INSTR_SET_ELEM,    0, IMM32(2), 1,
+            INSTR_SET_ELEM8,   0, 2, 1,
             INSTR_LOAD_INT8,   1, (uint8_t)(int8_t)-1,
             INSTR_GET,         2, 0, 1,
             INSTR_RETURN,      2
@@ -329,14 +329,14 @@ int main(void)
     }
 
     /************************************************************************/
-    /* SET.ELEM - invalid object type */
+    /* SET.ELEM8 - invalid object type */
     {
         static const char prop1[]  = "prop1";
         KOS_OBJ_ID        str_prop = KOS_new_const_ascii_cstring(ctx, prop1);
         const uint8_t code[] = {
             INSTR_LOAD_CONST,   0, IMM16(0),/*"prop1"*/
             INSTR_LOAD_INT8,    1, (uint8_t)(int8_t)-6,
-            INSTR_SET_ELEM,     0, IMM32(0), 1,
+            INSTR_SET_ELEM8,    0, 0, 1,
             INSTR_RETURN,       0
         };
 
@@ -347,14 +347,14 @@ int main(void)
     }
 
     /************************************************************************/
-    /* SET.ELEM - index out of range */
+    /* SET.ELEM8 - index out of range */
     {
         static const char prop1[]  = "prop1";
         KOS_OBJ_ID        str_prop = KOS_new_const_ascii_cstring(ctx, prop1);
         const uint8_t code[] = {
             INSTR_LOAD_ARRAY,   0, 1,
             INSTR_LOAD_CONST,   1, IMM16(0),/*"prop1"*/
-            INSTR_SET_ELEM,     0, IMM32(1), 1,
+            INSTR_SET_ELEM8,    0, 1, 1,
             INSTR_RETURN,       0
         };
 
@@ -365,13 +365,13 @@ int main(void)
     }
 
     /************************************************************************/
-    /* SET.ELEM - invalid index type for array */
+    /* SET.ELEM8 - invalid index type for array */
     {
         static const char prop1[]  = "prop1";
         KOS_OBJ_ID        str_prop = KOS_new_const_ascii_cstring(ctx, prop1);
         const uint8_t code[] = {
             INSTR_LOAD_CONST,   0, IMM16(0),/*"prop1"*/
-            INSTR_SET_ELEM,     0, IMM32(0), 0,
+            INSTR_SET_ELEM8,    0, 0, 0,
             INSTR_RETURN,       0
         };
 
@@ -430,7 +430,7 @@ int main(void)
             INSTR_LOAD_ARRAY,   0, 0,
             INSTR_LOAD_ARRAY,   1, 1,
             INSTR_LOAD_INT8,    2, 10,
-            INSTR_SET_ELEM,     1, IMM32(0), 2,
+            INSTR_SET_ELEM8,    1, 0, 2,
             INSTR_PUSH,         1, 0,
             INSTR_PUSH,         1, 1,
             INSTR_LOAD_CONST,   2, IMM16(0)/*"prop5"*/,
@@ -468,7 +468,7 @@ int main(void)
             INSTR_LOAD_ARRAY,   0, 0,
             INSTR_LOAD_ARRAY,   1, 1,
             INSTR_LOAD_INT8,    2, 10,
-            INSTR_SET_ELEM,     1, IMM32(0), 2,
+            INSTR_SET_ELEM8,    1, 0, 2,
             INSTR_PUSH_EX,      1, 0,
             INSTR_PUSH_EX,      1, 1,
             INSTR_LOAD_CONST,   2, IMM16(0)/*"01"*/,
@@ -669,7 +669,7 @@ int main(void)
             INSTR_LOAD_CONST8, 0, 0,
             INSTR_LOAD_ARRAY,  1, 1,
             INSTR_LOAD_INT8,   2, 42,
-            INSTR_SET_ELEM,    1, IMM32(0), 2,
+            INSTR_SET_ELEM8,   1, 0, 2,
             INSTR_LOAD_VOID,   2,
             INSTR_CALL,        0, 0, 2, 1,
             INSTR_RETURN,      0
@@ -691,7 +691,7 @@ int main(void)
             INSTR_LOAD_CONST,  0, IMM16(0),
             INSTR_LOAD_ARRAY,  1, 1,
             INSTR_LOAD_INT8,   2, 100,
-            INSTR_SET_ELEM,    1, IMM32(0), 2,
+            INSTR_SET_ELEM8,   1, 0, 2,
             INSTR_LOAD_VOID,   2,
             INSTR_CALL,        0, 0, 2, 1,
             INSTR_LOAD_INT8,   1, 2,
@@ -702,7 +702,7 @@ int main(void)
             INSTR_RETURN,      0
         };
         KOS_FUNCTION_OPTS opts = create_func_opts(2, 1);
-        KOS_OBJ_ID        func = create_func(ctx, &code[0], sizeof(code), 33, &opts);
+        KOS_OBJ_ID        func = create_func(ctx, &code[0], sizeof(code), 30, &opts);
 
         KOS_OBJ_ID ret = run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, &func, 1);
         TEST_NO_EXCEPTION();
@@ -1078,7 +1078,7 @@ int main(void)
             INSTR_LOAD_FUN8,   0, 2,
             INSTR_LOAD_ARRAY,  1, 1,             /* create arguments array */
             INSTR_LOAD_CONST,  2, IMM16(1),
-            INSTR_SET_ELEM,    1, IMM32(0), 2,   /* set argument */
+            INSTR_SET_ELEM8,   1, 0, 2,          /* set argument */
             INSTR_CALL,        0, 0, 1, 1,
             INSTR_RETURN,      0
         };
@@ -1349,11 +1349,11 @@ int main(void)
         const uint8_t code[] = {
             INSTR_LOAD_ARRAY,    0, 3,
             INSTR_LOAD_INT8,     1, 3,
-            INSTR_SET_ELEM,      0, IMM32(0), 1,
+            INSTR_SET_ELEM8,     0, 0, 1,
             INSTR_LOAD_INT8,     1, 4,
-            INSTR_SET_ELEM,      0, IMM32(1), 1,
+            INSTR_SET_ELEM8,     0, 1, 1,
             INSTR_LOAD_INT8,     1, 5,
-            INSTR_SET_ELEM,      0, IMM32(2), 1,
+            INSTR_SET_ELEM8,     0, 2, 1,
 
             INSTR_LOAD_ITER,     0, 0,              /* convert to iterator   */
 
@@ -1483,11 +1483,11 @@ int main(void)
             INSTR_LOAD_ARRAY,  2, 1,
             INSTR_ADD,         4, 3, 3,          /* 202 */
             INSTR_LOAD_INT8,   3, 64,
-            INSTR_SET_ELEM,    2, IMM32(0), 3,
+            INSTR_SET_ELEM8,   2, 0, 3,
             INSTR_CALL,        3, 0, 1, 2,       /* yields 65 */
             INSTR_ADD,         4, 4, 3,          /* 267 */
             INSTR_LOAD_INT8,   3, 16,
-            INSTR_SET_ELEM,    2, IMM32(0), 3,
+            INSTR_SET_ELEM8,   2, 0, 3,
             INSTR_CALL,        3, 0, 1, 2,       /* yields 17 */
             INSTR_SUB,         4, 4, 3,          /* 250 */
             INSTR_RETURN,      4,
@@ -1502,7 +1502,7 @@ int main(void)
         KOS_OBJ_ID        ret;
 
         opts.this_reg = 0;
-        func = create_gen(ctx, &code[0], sizeof(code), 66, &opts);
+        func = create_gen(ctx, &code[0], sizeof(code), 60, &opts);
 
         ret = run_code(&inst, ctx, &code[0], sizeof(code), 5, 0, &func, 1);
         TEST_NO_EXCEPTION();
@@ -1869,10 +1869,10 @@ int main(void)
 
             /* reg 1 is register array of the above function */
             /* reg 2 is register array of the main function  */
-            INSTR_GET_ELEM,    0, 1, IMM32(0),
+            INSTR_GET_ELEM8,   0, 1, 0,
             INSTR_LOAD_INT8,   1, 4,
             INSTR_ADD,         0, 0, 1,
-            INSTR_SET_ELEM,    2, IMM32(1), 0,
+            INSTR_SET_ELEM8,   2, 1, 0,
             INSTR_LOAD_VOID,   0,
             INSTR_RETURN,      0
         };
@@ -1908,7 +1908,7 @@ int main(void)
             INSTR_CALL,        0, 0, 1, 2,           /* instantiate generator */
 
             INSTR_LOAD_INT8,   4, (uint8_t)(int8_t)-100,
-            INSTR_SET_ELEM,    3, IMM32(0), 4,
+            INSTR_SET_ELEM8,   3, 0, 4,
             INSTR_LOAD_CONST,  4, IMM16(0),
 
             INSTR_CALL,        0, 0, 1, 2,           /* add 3[0] to 4 */
@@ -1916,10 +1916,10 @@ int main(void)
 
             /* reg 1 is register array of the main function        */
             /* reg 2 is array from register 3 in the main function */
-            INSTR_GET_ELEM,    0, 2, IMM32(0),
-            INSTR_GET_ELEM,    3, 1, IMM32(4),
+            INSTR_GET_ELEM8,   0, 2, 0,
+            INSTR_GET_ELEM8,   3, 1, 4,
             INSTR_ADD,         0, 0, 3,
-            INSTR_SET_ELEM,    1, IMM32(4), 0,
+            INSTR_SET_ELEM8,   1, 4, 0,
             INSTR_LOAD_INT8,   0, 0,
             INSTR_YIELD,       0, 0
         };
@@ -1932,7 +1932,7 @@ int main(void)
         opts = create_func_opts(4, 0);
         opts.bind_reg  = 1;
         opts.num_binds = 2;
-        constants[1] = create_gen(ctx, &code[0], sizeof(code), 44, &opts);
+        constants[1] = create_gen(ctx, &code[0], sizeof(code), 41, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 5, 1, constants, 2) == TO_SMALL_INT(-300));
         TEST_NO_EXCEPTION();
@@ -1973,9 +1973,9 @@ int main(void)
             INSTR_LOAD_CONST,  5, IMM16(0),          /* Read by level 2 */
             INSTR_LOAD_ARRAY,  1, 2,
             INSTR_LOAD_INT8,   0, 9,
-            INSTR_SET_ELEM,    1, IMM32(0), 0,
+            INSTR_SET_ELEM8,   1, 0, 0,
             INSTR_LOAD_CONST,  0, IMM16(1),
-            INSTR_SET_ELEM,    1, IMM32(1), 0,
+            INSTR_SET_ELEM8,   1, 1, 0,
             INSTR_LOAD_INT8,   0, 4,
             INSTR_LOAD_CONST,  2, IMM16(2),
             INSTR_LOAD_FUN8,   3, 4,                 /* Overwritten by this function with level 2 */
@@ -1985,7 +1985,7 @@ int main(void)
             INSTR_LOAD_INT8,   1, 2,
             INSTR_SHL,         0, 0, 1,              /* 0x40 */
             INSTR_LOAD_ARRAY,  1, 3,
-            INSTR_SET_ELEM,    1, IMM32(2), 0,       /* 0x100 */
+            INSTR_SET_ELEM8,   1, 2, 0,       /* 0x100 */
             INSTR_LOAD_INT8,   0, 5,
             INSTR_CALL,        2, 3, 0, 1,
             INSTR_RETURN,      2,
@@ -1997,7 +1997,7 @@ int main(void)
              * 3 - this
              * 4 - global regs
              * 5 - global integer */
-            INSTR_GET_ELEM,    6, 4, IMM32(-2),      /* 3 */
+            INSTR_GET_ELEM8,   6, 4, (uint8_t)(int8_t)-2,      /* 3 */
             INSTR_LOAD_CONST,  0, IMM16(3),
             INSTR_ADD,         3, 3, 1,              /* 4+9 = 13 */
             INSTR_ADD,         3, 3, 6,              /* 13+3 = 0x10 */
@@ -2007,7 +2007,7 @@ int main(void)
             INSTR_BIND_SELF,   6, 2,
             INSTR_BIND,        6, 3, 2,
             INSTR_BIND,        6, 4, 3,
-            INSTR_SET_ELEM,    4, IMM32(-3), 6,
+            INSTR_SET_ELEM8,   4, (uint8_t)(int8_t)-3, 6,
             INSTR_RETURN,      3,
 
             /* Level 2: this inner function starts with:
@@ -2020,15 +2020,15 @@ int main(void)
              * 104 - level 1 regs
              * 105 - level 1 arg 0
              * 106 - level 1 integer */
-            INSTR_MOVE,        0, 100,               /* 0x40 */
-            INSTR_GET_ELEM,    2, 102, IMM32(-1),    /* 0x40000 */
-            INSTR_GET_ELEM,    4, 104, IMM32(-1),    /* 0x1000 */
-            INSTR_OR,          0, 0, 101,            /* 0x40 | 0x5 */
-            INSTR_OR,          0, 0, 2,              /* | 0x40000 */
-            INSTR_OR,          0, 0, 103,            /* | 0x20000 */
-            INSTR_OR,          0, 0, 4,              /* | 0x1000 */
-            INSTR_OR,          0, 0, 105,            /* | 0x8000 */
-            INSTR_OR,          0, 0, 106,            /* | 0x10 */
+            INSTR_MOVE,        0, 100,                      /* 0x40 */
+            INSTR_GET_ELEM8,   2, 102, (uint8_t)(int8_t)-1, /* 0x40000 */
+            INSTR_GET_ELEM8,   4, 104, (uint8_t)(int8_t)-1, /* 0x1000 */
+            INSTR_OR,          0, 0, 101,                   /* 0x40 | 0x5 */
+            INSTR_OR,          0, 0, 2,                     /* | 0x40000 */
+            INSTR_OR,          0, 0, 103,                   /* | 0x20000 */
+            INSTR_OR,          0, 0, 4,                     /* | 0x1000 */
+            INSTR_OR,          0, 0, 105,                   /* | 0x8000 */
+            INSTR_OR,          0, 0, 106,                   /* | 0x10 */
             INSTR_RETURN,      0
         };
 
@@ -2048,14 +2048,14 @@ int main(void)
         opts.closure_size = 1;
         opts.bind_reg     = 4;
         opts.num_binds    = 2;
-        constants[4] = create_func(ctx, &code[0], sizeof(code),  80, &opts);
+        constants[4] = create_func(ctx, &code[0], sizeof(code),  71, &opts);
 
         opts = create_func_opts(107, 3);
         opts.args_reg  = 98;
         opts.this_reg  = 101;
         opts.bind_reg  = 102;
         opts.num_binds = 5;
-        constants[5] = create_func(ctx, &code[0], sizeof(code), 130, &opts);
+        constants[5] = create_func(ctx, &code[0], sizeof(code), 115, &opts);
 
         TEST(run_code(&inst, ctx, &code[0], sizeof(code), 6, 6, constants, 6) == TO_SMALL_INT(0x69055));
         TEST_NO_EXCEPTION();
@@ -2065,17 +2065,17 @@ int main(void)
     /* BIND.DEFAULTS - all default values */
     {
 #define STACK_MOVE(idx) \
-            INSTR_GET_ELEM,      2, 1, IMM32(idx), \
+            INSTR_GET_ELEM8,     2, 1, (uint8_t)(int8_t)idx, \
             INSTR_PUSH,          0, 2
 
         const uint8_t code[] = {
             INSTR_LOAD_ARRAY,    0, 3,
             INSTR_LOAD_INT8,     1, 10,
-            INSTR_SET_ELEM,      0, IMM32(0), 1,
+            INSTR_SET_ELEM8,     0, 0, 1,
             INSTR_LOAD_INT8,     1, 11,
-            INSTR_SET_ELEM,      0, IMM32(1), 1,
+            INSTR_SET_ELEM8,     0, 1, 1,
             INSTR_LOAD_INT8,     1, 12,
-            INSTR_SET_ELEM,      0, IMM32(2), 1,
+            INSTR_SET_ELEM8,     0, 2, 1,
 
             INSTR_LOAD_FUN8,     1, 0,
             INSTR_BIND_DEFAULTS, 1, 0,
@@ -2100,12 +2100,12 @@ int main(void)
         opts.args_reg     = 0;
         opts.num_def_args = 3;
         opts.closure_size = 3;
-        constants[0] = create_func(ctx, &code[0], sizeof(code), 43, &opts);
+        constants[0] = create_func(ctx, &code[0], sizeof(code), 34, &opts);
 
         opts = create_func_opts(3, 0);
         opts.bind_reg  = 1;
         opts.num_binds = 1;
-        constants[1] = create_func(ctx, &code[0], sizeof(code), 53, &opts);
+        constants[1] = create_func(ctx, &code[0], sizeof(code), 44, &opts);
 
         ret = run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, constants, 2);
         TEST( ! IS_BAD_PTR(ret));
@@ -2123,11 +2123,11 @@ int main(void)
         const uint8_t code[] = {
             INSTR_LOAD_ARRAY,    0, 3,
             INSTR_LOAD_INT8,     1, 20,
-            INSTR_SET_ELEM,      0, IMM32(0), 1,
+            INSTR_SET_ELEM8,     0, 0, 1,
             INSTR_LOAD_INT8,     1, 21,
-            INSTR_SET_ELEM,      0, IMM32(1), 1,
+            INSTR_SET_ELEM8,     0, 1, 1,
             INSTR_LOAD_INT8,     1, 22,
-            INSTR_SET_ELEM,      0, IMM32(2), 1,
+            INSTR_SET_ELEM8,     0, 2, 1,
 
             INSTR_LOAD_FUN8,     2, 0,
             INSTR_BIND_DEFAULTS, 2, 0,
@@ -2157,12 +2157,12 @@ int main(void)
         opts.args_reg     = 1;
         opts.num_def_args = 3;
         opts.closure_size = 5;
-        constants[0] = create_func(ctx, &code[0], sizeof(code), 49, &opts);
+        constants[0] = create_func(ctx, &code[0], sizeof(code), 40, &opts);
 
         opts = create_func_opts(3, 0);
         opts.bind_reg  = 1;
         opts.num_binds = 1;
-        constants[1] = create_func(ctx, &code[0], sizeof(code), 61, &opts);
+        constants[1] = create_func(ctx, &code[0], sizeof(code), 52, &opts);
 
         ret = run_code(&inst, ctx, &code[0], sizeof(code), 3, 0, constants, 2);
         TEST( ! IS_BAD_PTR(ret));

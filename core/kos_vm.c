@@ -1946,10 +1946,10 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(GET_ELEM): { /* <r.dest>, <r.src>, <int32> */
-                PROF_ZONE_N(INSTR, "GET.ELEM")
+            BEGIN_INSTRUCTION(GET_ELEM8): { /* <r.dest>, <r.src>, <int8> */
+                PROF_ZONE_N(INSTR, "GET.ELEM8")
                 const unsigned rsrc = bytecode[2];
-                const int32_t  idx  = (int32_t)load_32(bytecode+3);
+                const int32_t  idx  = (int8_t)bytecode[3];
                 KOS_OBJ_ID     src;
                 KOS_TYPE       type;
 
@@ -1976,7 +1976,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 assert(rdest < num_regs);
                 write_reg(stack_frame, rdest, out);
 
-                bytecode += 7;
+                bytecode += 4;
                 NEXT_INSTRUCTION;
             }
 
@@ -2169,10 +2169,10 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(SET_ELEM): { /* <r.dest>, <int32>, <r.src> */
-                PROF_ZONE_N(INSTR, "SET.ELEM")
-                const int32_t  idx  = (int32_t)load_32(bytecode+2);
-                const unsigned rsrc = bytecode[6];
+            BEGIN_INSTRUCTION(SET_ELEM8): { /* <r.dest>, <int8>, <r.src> */
+                PROF_ZONE_N(INSTR, "SET.ELEM8")
+                const int32_t  idx  = (int8_t)bytecode[2];
+                const unsigned rsrc = bytecode[3];
                 KOS_OBJ_ID     dest;
                 KOS_TYPE       type;
 
@@ -2194,7 +2194,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 else
                     RAISE_EXCEPTION_STR(str_err_not_indexable);
 
-                bytecode += 7;
+                bytecode += 4;
                 NEXT_INSTRUCTION;
             }
 

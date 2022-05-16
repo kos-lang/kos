@@ -57,12 +57,12 @@ static int get_num_operands(KOS_BYTECODE_INSTR instr)
             return 2;
 
         case INSTR_GET:                 /* fall through */
-        case INSTR_GET_ELEM:            /* fall through */
+        case INSTR_GET_ELEM8:           /* fall through */
         case INSTR_GET_PROP8:           /* fall through */
         case INSTR_GET_MOD_GLOBAL:      /* fall through */
         case INSTR_GET_MOD_ELEM:        /* fall through */
         case INSTR_SET:                 /* fall through */
-        case INSTR_SET_ELEM:            /* fall through */
+        case INSTR_SET_ELEM8:           /* fall through */
         case INSTR_SET_PROP8:           /* fall through */
         case INSTR_ADD:                 /* fall through */
         case INSTR_SUB:                 /* fall through */
@@ -140,13 +140,6 @@ int kos_get_operand_size(KOS_BYTECODE_INSTR instr, int op)
                 return 2;
             break;
 
-        case INSTR_SET_ELEM:
-            if (op == 1)
-                return 4;
-            break;
-
-        case INSTR_GET_ELEM:
-            /* fall through */
         case INSTR_NEXT_JUMP:
             if (op == 2)
                 return 4;
@@ -218,7 +211,7 @@ int kos_is_register(KOS_BYTECODE_INSTR instr, int op)
         case INSTR_CATCH:
             return op > 0 ? 0 : 1;
 
-        case INSTR_GET_ELEM:
+        case INSTR_GET_ELEM8:
             /* fall through */
         case INSTR_GET_PROP8:
             /* fall through */
@@ -229,7 +222,7 @@ int kos_is_register(KOS_BYTECODE_INSTR instr, int op)
 
         case INSTR_GET_MOD_GLOBAL:
             /* fall through */
-        case INSTR_SET_ELEM:
+        case INSTR_SET_ELEM8:
             /* fall through */
         case INSTR_SET_PROP8:
             /* fall through */
@@ -273,6 +266,15 @@ int kos_is_signed_op(KOS_BYTECODE_INSTR instr, int op)
 
         case INSTR_LOAD_INT8:
             return 1;
+
+        case INSTR_GET_ELEM8:
+            if (op == 2)
+                return 1;
+            break;
+
+        case INSTR_SET_ELEM8:
+            if (op == 1)
+                return 1;
 
         default:
             break;
@@ -325,7 +327,7 @@ static const char *const str_instr[] = {
     "LOAD.ITER",
     "MOVE",
     "GET",
-    "GET.ELEM",
+    "GET.ELEM8",
     "GET.RANGE",
     "GET.PROP8",
     "GET.PROTO",
@@ -334,7 +336,7 @@ static const char *const str_instr[] = {
     "GET.MOD.ELEM",
     "GET.MOD",
     "SET",
-    "SET.ELEM",
+    "SET.ELEM8",
     "SET.PROP8",
     "SET.GLOBAL",
     "PUSH",

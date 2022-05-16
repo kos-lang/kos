@@ -321,7 +321,7 @@ static int test_instr(KOS_CONTEXT           ctx,
         code[words++] = (uint8_t)instr;
 
         if (instr != INSTR_SET       &&
-            instr != INSTR_SET_ELEM  &&
+            instr != INSTR_SET_ELEM8 &&
             instr != INSTR_SET_PROP8 &&
             instr != INSTR_PUSH      &&
             instr != INSTR_PUSH_EX   &&
@@ -645,28 +645,28 @@ int main(void)
     TEST_INSTR INSTR_GET,        { V_EXCEPT                            }, { { V_OBJECT                          }, { V_OBJECT                          } } END
 
     /*========================================================================*/
-    /* GET.ELEM */
+    /* GET.ELEM8 */
     /* string */
-    TEST_INSTR INSTR_GET_ELEM,   { V_STR1,    0, 0,        "b"         }, { { V_STR0,  0, 0,        "bad"       }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_GET_ELEM,   { V_STR1,    0, 0,        "a"         }, { { V_STR0,  0, 0,        "bad"       }, { V_IMM,   1                        } } END
-    TEST_INSTR INSTR_GET_ELEM,   { V_STR1,    0, 0,        "d"         }, { { V_STR0,  0, 0,        "bad"       }, { V_IMM,   2                        } } END
-    TEST_INSTR INSTR_GET_ELEM,   { V_STR1,    0, 0,        "b"         }, { { V_STR0,  0, 0,        "bad"       }, { V_IMM,   (uint32_t)-3             } } END
-    TEST_INSTR INSTR_GET_ELEM,   { V_STR1,    0, 0,        "a"         }, { { V_STR0,  0, 0,        "bad"       }, { V_IMM,   (uint32_t)-2             } } END
-    TEST_INSTR INSTR_GET_ELEM,   { V_STR1,    0, 0,        "d"         }, { { V_STR0,  0, 0,        "bad"       }, { V_IMM,   (uint32_t)-1             } } END
-    TEST_INSTR INSTR_GET_ELEM,   { V_EXCEPT                            }, { { V_STR0,  0, 0,        "bad"       }, { V_IMM,   (uint32_t)-4             } } END
-    TEST_INSTR INSTR_GET_ELEM,   { V_EXCEPT                            }, { { V_STR0,  0, 0,        "bad"       }, { V_IMM,   3                        } } END
+    TEST_INSTR INSTR_GET_ELEM8,  { V_STR1,    0, 0,        "b"         }, { { V_STR0,  0, 0,        "bad"       }, { V_IMM8,   0                       } } END
+    TEST_INSTR INSTR_GET_ELEM8,  { V_STR1,    0, 0,        "a"         }, { { V_STR0,  0, 0,        "bad"       }, { V_IMM8,   1                       } } END
+    TEST_INSTR INSTR_GET_ELEM8,  { V_STR1,    0, 0,        "d"         }, { { V_STR0,  0, 0,        "bad"       }, { V_IMM8,   2                       } } END
+    TEST_INSTR INSTR_GET_ELEM8,  { V_STR1,    0, 0,        "b"         }, { { V_STR0,  0, 0,        "bad"       }, { V_IMM8,   (uint32_t)-3            } } END
+    TEST_INSTR INSTR_GET_ELEM8,  { V_STR1,    0, 0,        "a"         }, { { V_STR0,  0, 0,        "bad"       }, { V_IMM8,   (uint32_t)-2            } } END
+    TEST_INSTR INSTR_GET_ELEM8,  { V_STR1,    0, 0,        "d"         }, { { V_STR0,  0, 0,        "bad"       }, { V_IMM8,   (uint32_t)-1            } } END
+    TEST_INSTR INSTR_GET_ELEM8,  { V_EXCEPT                            }, { { V_STR0,  0, 0,        "bad"       }, { V_IMM8,   (uint32_t)-4            } } END
+    TEST_INSTR INSTR_GET_ELEM8,  { V_EXCEPT                            }, { { V_STR0,  0, 0,        "bad"       }, { V_IMM8,   3                       } } END
     /* array */
-    TEST_INSTR INSTR_GET_ELEM,   { V_VOID                              }, { { V_ARRAY, 10                       }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_GET_ELEM,   { V_VOID                              }, { { V_ARRAY, 10                       }, { V_IMM,   9                        } } END
-    TEST_INSTR INSTR_GET_ELEM,   { V_VOID                              }, { { V_ARRAY, 10                       }, { V_IMM,   (uint32_t)-1             } } END
-    TEST_INSTR INSTR_GET_ELEM,   { V_VOID                              }, { { V_ARRAY, 10                       }, { V_IMM,   (uint32_t)-10            } } END
-    TEST_INSTR INSTR_GET_ELEM,   { V_EXCEPT                            }, { { V_ARRAY, 10                       }, { V_IMM,   (uint32_t)-11            } } END
-    TEST_INSTR INSTR_GET_ELEM,   { V_EXCEPT                            }, { { V_ARRAY, 10                       }, { V_IMM,   10                       } } END
+    TEST_INSTR INSTR_GET_ELEM8,  { V_VOID                              }, { { V_ARRAY, 10                       }, { V_IMM8,   0                       } } END
+    TEST_INSTR INSTR_GET_ELEM8,  { V_VOID                              }, { { V_ARRAY, 10                       }, { V_IMM8,   9                       } } END
+    TEST_INSTR INSTR_GET_ELEM8,  { V_VOID                              }, { { V_ARRAY, 10                       }, { V_IMM8,   (uint32_t)-1            } } END
+    TEST_INSTR INSTR_GET_ELEM8,  { V_VOID                              }, { { V_ARRAY, 10                       }, { V_IMM8,   (uint32_t)-10           } } END
+    TEST_INSTR INSTR_GET_ELEM8,  { V_EXCEPT                            }, { { V_ARRAY, 10                       }, { V_IMM8,   (uint32_t)-11           } } END
+    TEST_INSTR INSTR_GET_ELEM8,  { V_EXCEPT                            }, { { V_ARRAY, 10                       }, { V_IMM8,   10                      } } END
     /* wrong types */
-    TEST_INSTR INSTR_GET_ELEM,   { V_EXCEPT                            }, { { V_VOID                            }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_GET_ELEM,   { V_EXCEPT                            }, { { V_FALSE                           }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_GET_ELEM,   { V_EXCEPT                            }, { { V_INT32, 0,                       }, { V_IMM,   0                        } } END
-    TEST_INSTR INSTR_GET_ELEM,   { V_EXCEPT                            }, { { V_FLOAT, 0,           0x3FF00000U }, { V_IMM,   0                        } } END
+    TEST_INSTR INSTR_GET_ELEM8,  { V_EXCEPT                            }, { { V_VOID                            }, { V_IMM8,   0                       } } END
+    TEST_INSTR INSTR_GET_ELEM8,  { V_EXCEPT                            }, { { V_FALSE                           }, { V_IMM8,   0                       } } END
+    TEST_INSTR INSTR_GET_ELEM8,  { V_EXCEPT                            }, { { V_INT32, 0,                       }, { V_IMM8,   0                       } } END
+    TEST_INSTR INSTR_GET_ELEM8,  { V_EXCEPT                            }, { { V_FLOAT, 0,           0x3FF00000U }, { V_IMM8,   0                       } } END
 
     /*========================================================================*/
     /* GET.RANGE */

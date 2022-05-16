@@ -659,7 +659,11 @@ string.prototype.get = get_value_from_array
  */
 object.prototype.get = fun(key, default_value = void)
 {
-    return (key in this) ? this[key] : default_value
+    if key in this {
+        return this[key]
+    }
+
+    return default_value
 }
 
 /* @item base string.prototype.ljust()
