@@ -1344,7 +1344,7 @@ int main(void)
     }
 
     /************************************************************************/
-    /* LOAD.ITER, NEXT */
+    /* NEW.ITER, NEXT */
     {
         const uint8_t code[] = {
             INSTR_NEW_ARRAY8,    0, 3,
@@ -1355,7 +1355,7 @@ int main(void)
             INSTR_LOAD_INT8,     1, 5,
             INSTR_SET_ELEM8,     0, 2, 1,
 
-            INSTR_LOAD_ITER,     0, 0,              /* convert to iterator   */
+            INSTR_NEW_ITER,      0, 0,              /* convert to iterator   */
 
             INSTR_LOAD_VOID,     1,
             INSTR_NEXT,          1, 0,              /* yields 3 */
@@ -1390,7 +1390,7 @@ int main(void)
 
             INSTR_LOAD_CONST8,   0, 0,
             INSTR_CALL_FUN,      0, 0, 255, 0,      /* instantiate generator */
-            INSTR_LOAD_ITER,     0, 0,              /* convert to iterator   */
+            INSTR_NEW_ITER,      0, 0,              /* convert to iterator   */
 
             INSTR_LOAD_VOID,     1,
             INSTR_NEXT,          1, 0,              /* yields 3 */
@@ -1543,7 +1543,7 @@ int main(void)
         const uint8_t code[] = {
             INSTR_LOAD_CONST8, 0, 0,
             INSTR_CALL_FUN,    0, 0, 0, 0, /* instantiate generator */
-            INSTR_LOAD_ITER,   0, 0,       /* convert to iterator   */
+            INSTR_NEW_ITER,    0, 0,       /* convert to iterator   */
 
             INSTR_NEXT_JUMP,   1, 0, IMM32(10), /* generator ends, does not jump */
             INSTR_NEXT_JUMP,   1, 0, IMM32(3),  /* generator was already ended, throw */
@@ -1569,7 +1569,7 @@ int main(void)
         const uint8_t code[] = {
             INSTR_LOAD_CONST8, 0, 0,
             INSTR_CALL_FUN,    0, 0, 0, 0, /* instantiate generator */
-            INSTR_LOAD_ITER,   0, 0,       /* convert to iterator   */
+            INSTR_NEW_ITER,    0, 0,       /* convert to iterator   */
 
             INSTR_NEXT,        1, 0,
             INSTR_RETURN,      1,
@@ -1611,7 +1611,7 @@ int main(void)
     {
         const uint8_t code[] = {
             INSTR_NEW_ARRAY8,  0, 0,       /* load empty array */
-            INSTR_LOAD_ITER,   0, 0,       /* convert to generator */
+            INSTR_NEW_ITER,    0, 0,       /* convert to generator */
 
             INSTR_LOAD_TRUE,   1,
             INSTR_NEXT_JUMP,   1, 0, IMM32(2),

@@ -35,7 +35,7 @@ static int get_num_operands(KOS_BYTECODE_INSTR instr)
         case INSTR_LOAD_FUN:            /* fall through */
         case INSTR_NEW_ARRAY8:          /* fall through */
         case INSTR_LOAD_OBJ_PROTO:      /* fall through */
-        case INSTR_LOAD_ITER:           /* fall through */
+        case INSTR_NEW_ITER:            /* fall through */
         case INSTR_MOVE:                /* fall through */
         case INSTR_GET_PROTO:           /* fall through */
         case INSTR_GET_GLOBAL:          /* fall through */
@@ -324,7 +324,7 @@ static const char *const str_instr[] = {
     "NEW.ARRAY8",
     "LOAD.OBJ",
     "LOAD.OBJ.PROTO",
-    "LOAD.ITER",
+    "NEW.ITER",
     "MOVE",
     "GET",
     "GET.ELEM8",

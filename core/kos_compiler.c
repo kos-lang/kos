@@ -2258,7 +2258,7 @@ static int for_in(KOS_COMP_UNIT      *program,
 
     TRY(add_addr2line(program, &assg_node->token, KOS_FALSE_VALUE));
 
-    TRY(gen_instr2(program, INSTR_LOAD_ITER, iter_reg->reg, reg->reg));
+    TRY(gen_instr2(program, INSTR_NEW_ITER, iter_reg->reg, reg->reg));
 
     reg = KOS_NULL;
 
@@ -2292,7 +2292,7 @@ static int for_in(KOS_COMP_UNIT      *program,
         assert( ! item_var);
         assert( ! item_cont_reg);
 
-        TRY(gen_instr2(program, INSTR_LOAD_ITER, item_reg->reg, item_reg->reg));
+        TRY(gen_instr2(program, INSTR_NEW_ITER, item_reg->reg, item_reg->reg));
 
         for ( ; cur_var_node; cur_var_node = cur_var_node->next) {
 
@@ -4927,7 +4927,7 @@ static int assignment(KOS_COMP_UNIT      *program,
             TRY(gen_reg(program, &rhs));
         }
 
-        TRY(gen_instr2(program, INSTR_LOAD_ITER, rhs->reg, rsrc->reg));
+        TRY(gen_instr2(program, INSTR_NEW_ITER, rhs->reg, rsrc->reg));
     }
 
     for ( ; node; node = node->next) {

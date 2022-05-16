@@ -35,8 +35,8 @@ DEFINE_INSTRUCTION(NEW_ARRAY8, 0x89)
 DEFINE_INSTRUCTION(LOAD_OBJ, 0x8A)          /* TODO delete this variant */
 /* LOAD.OBJ.PROTO <r.dest>, <r.src> */
 DEFINE_INSTRUCTION(LOAD_OBJ_PROTO, 0x8B)    /* TODO rename to NEW.OBJ, use KOS_NO_REG to indicate no prototype */
-/* LOAD.ITER <r.dest>, <r.src> */
-DEFINE_INSTRUCTION(LOAD_ITER, 0x8C)         /* TODO rename to NEW.ITER */
+/* NEW.ITER <r.dest>, <r.src> */
+DEFINE_INSTRUCTION(NEW_ITER, 0x8C)
 
 /* MOVE <r.dest>, <r.src>
  * Move data from one local variable to another. */
@@ -141,11 +141,11 @@ DEFINE_INSTRUCTION(JUMP_COND, 0xB6)         /* TODO change to int24 or int16 */
 DEFINE_INSTRUCTION(JUMP_NOT_COND, 0xB7)     /* TODO change to int24 or int16 */
 
 /* NEXT.JUMP <r.dest>, <r.func>, <delta.int32> */
-/* Call generator created with LOAD.ITER.
+/* Call generator created with NEW.ITER.
  * If generator yields a value, jump to the specified offset. */
 DEFINE_INSTRUCTION(NEXT_JUMP, 0xB8)         /* TODO change to int24 or int16 */
 /* NEXT <r.dest>, <r.func> */
-/* Call generator created with LOAD.ITER.
+/* Call generator created with NEW.ITER.
  * If generator ends, throw an exception. */
 DEFINE_INSTRUCTION(NEXT, 0xB9)
 

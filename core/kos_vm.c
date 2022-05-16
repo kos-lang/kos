@@ -1714,8 +1714,8 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(LOAD_ITER): { /* <r.dest>, <r.src> */
-                PROF_ZONE_N(INSTR, "LOAD.ITER")
+            BEGIN_INSTRUCTION(NEW_ITER): { /* <r.dest>, <r.src> */
+                PROF_ZONE_N(INSTR, "NEW.ITER")
                 const unsigned rsrc = bytecode[2];
 
                 assert(rsrc < num_regs);
