@@ -326,8 +326,7 @@ static int test_instr(KOS_CONTEXT           ctx,
             instr != INSTR_SET_PROP8 &&
             instr != INSTR_PUSH      &&
             instr != INSTR_PUSH_EX   &&
-            instr != INSTR_DEL       &&
-            instr != INSTR_DEL_PROP8)
+            instr != INSTR_DEL)
 
             code[words++] = regs - 1U;
 
@@ -791,16 +790,6 @@ int main(void)
     TEST_INSTR INSTR_DEL,        { V_EXCEPT                            }, { { V_STR0,  10                       }, { V_INT32, 1                        } } END
     TEST_INSTR INSTR_DEL,        { V_EXCEPT                            }, { { V_OBJECT                          }, { V_ARRAY, 5                        } } END
     TEST_INSTR INSTR_DEL,        { V_EXCEPT                            }, { { V_OBJECT                          }, { V_OBJECT                          } } END
-
-    /*========================================================================*/
-    /* DEL.PROP */
-    TEST_INSTR INSTR_DEL_PROP8,  { V_OK                                }, { { V_VOID                            }, { V_IMM8, 0                         } } END
-    TEST_INSTR INSTR_DEL_PROP8,  { V_OK                                }, { { V_FALSE                           }, { V_IMM8, 0                         } } END
-    TEST_INSTR INSTR_DEL_PROP8,  { V_OK                                }, { { V_INT32, 0,                       }, { V_IMM8, 0                         } } END
-    TEST_INSTR INSTR_DEL_PROP8,  { V_OK                                }, { { V_FLOAT, 0,           0x3FF00000U }, { V_IMM8, 0                         } } END
-    TEST_INSTR INSTR_DEL_PROP8,  { V_OK                                }, { { V_STR1                            }, { V_IMM8, 0                         } } END
-    TEST_INSTR INSTR_DEL_PROP8,  { V_OK                                }, { { V_ARRAY, 10                       }, { V_IMM8, 0                         } } END
-    TEST_INSTR INSTR_DEL_PROP8,  { V_OK                                }, { { V_OBJECT                          }, { V_IMM8, 0                         } } END
 
     /*========================================================================*/
     /* PUSH */

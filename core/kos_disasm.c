@@ -41,7 +41,6 @@ static int get_num_operands(KOS_BYTECODE_INSTR instr)
         case INSTR_SET_GLOBAL:          /* fall through */
         case INSTR_GET_MOD:             /* fall through */
         case INSTR_DEL:                 /* fall through */
-        case INSTR_DEL_PROP8:           /* fall through */
         case INSTR_NOT:                 /* fall through */
         case INSTR_TYPE:                /* fall through */
         case INSTR_JUMP_COND:           /* fall through */
@@ -203,8 +202,6 @@ int kos_is_register(KOS_BYTECODE_INSTR instr, int op)
             /* fall through */
         case INSTR_GET_MOD:
             /* fall through */
-        case INSTR_DEL_PROP8:
-            /* fall through */
         case INSTR_BIND_SELF:
             /* fall through */
         case INSTR_CATCH:
@@ -297,8 +294,6 @@ static int is_constant(KOS_BYTECODE_INSTR instr, int op)
             /* fall through */
         case INSTR_SET_PROP8:
             /* fall through */
-        case INSTR_DEL_PROP8:
-            /* fall through */
         case INSTR_HAS_DP_PROP8:
             /* fall through */
         case INSTR_HAS_SH_PROP8:
@@ -340,7 +335,6 @@ static const char *const str_instr[] = {
     "PUSH",
     "PUSH.EX",
     "DEL",
-    "DEL.PROP8",
     "ADD",
     "SUB",
     "MUL",

@@ -4361,15 +4361,11 @@ static int delete_op(KOS_COMP_UNIT      *program,
         int str_idx;
         TRY(gen_str(program, &node->token, &str_idx));
 
-        if (str_idx > 255) {
-            TRY(gen_reg(program, reg));
+        TRY(gen_reg(program, reg));
 
-            TRY(gen_instr_load_const(program, node, (*reg)->reg, str_idx));
+        TRY(gen_instr_load_const(program, node, (*reg)->reg, str_idx));
 
-            TRY(gen_instr2(program, INSTR_DEL, obj->reg, (*reg)->reg));
-        }
-        else
-            TRY(gen_instr2(program, INSTR_DEL_PROP8, obj->reg, str_idx));
+        TRY(gen_instr2(program, INSTR_DEL, obj->reg, (*reg)->reg));
     }
     else if (node->type == NT_NUMERIC_LITERAL) {
 

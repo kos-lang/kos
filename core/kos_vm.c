@@ -2295,24 +2295,6 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(DEL_PROP8): { /* <r.dest>, <str.idx.uint8> */
-                PROF_ZONE_N(INSTR, "DEL.PROP8")
-                const uint8_t idx = bytecode[2];
-                KOS_OBJ_ID    prop;
-
-                rdest = bytecode[1];
-
-                assert(rdest < num_regs);
-
-                prop = KOS_array_read(ctx, OBJPTR(MODULE, module)->constants, idx);
-                TRY_OBJID(prop);
-
-                TRY(KOS_delete_property(ctx, read_reg(stack_frame, rdest), prop));
-
-                bytecode += 3;
-                NEXT_INSTRUCTION;
-            }
-
             BEGIN_INSTRUCTION(ADD): { /* <r.dest>, <r.src1>, <r.src2> */
                 PROF_ZONE_N(INSTR, "ADD")
                 const unsigned rsrc1 = bytecode[2];

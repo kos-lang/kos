@@ -501,7 +501,7 @@ int main(void)
     }
 
     /************************************************************************/
-    /* DEL.PROP8 */
+    /* DEL */
     {
         static const char prop6[]  = "prop6";
         KOS_OBJ_ID        str_prop = KOS_new_const_ascii_cstring(ctx, prop6);
@@ -509,7 +509,8 @@ int main(void)
             INSTR_NEW_OBJ,      0, 255,
             INSTR_LOAD_INT8,    1, (uint8_t)(int8_t)-10,
             INSTR_SET_PROP8,    0, 0,/*"prop6"*/ 1,
-            INSTR_DEL_PROP8,    0, 0,/*"prop6"*/
+            INSTR_LOAD_CONST8,  1, 0,/*"prop6"*/
+            INSTR_DEL,          0, 1,
             INSTR_HAS_DP_PROP8, 1, 0, 0,/*"prop6"*/
             INSTR_RETURN,       1
         };
@@ -521,20 +522,21 @@ int main(void)
     }
 
     /************************************************************************/
-    /* DEL.PROP8 - delete non-existent property */
+    /* DEL - delete non-existent property */
     {
         static const char prop6[]  = "prop6";
         KOS_OBJ_ID        str_prop = KOS_new_const_ascii_cstring(ctx, prop6);
         const uint8_t code[] = {
             INSTR_NEW_OBJ,      0, 255,
-            INSTR_DEL_PROP8,    0, 0,/*"prop6"*/
+            INSTR_LOAD_CONST8,  1, 0,/*"prop6"*/
+            INSTR_DEL,          0, 1,
             INSTR_HAS_DP_PROP8, 0, 0, 0,/*"prop6"*/
             INSTR_RETURN,       0
         };
 
         TEST(!IS_BAD_PTR(str_prop));
 
-        TEST(run_code(&inst, ctx, &code[0], sizeof(code), 1, 0, &str_prop, 1) == KOS_FALSE);
+        TEST(run_code(&inst, ctx, &code[0], sizeof(code), 2, 0, &str_prop, 1) == KOS_FALSE);
         TEST_NO_EXCEPTION();
     }
 

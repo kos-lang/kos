@@ -77,108 +77,106 @@ DEFINE_INSTRUCTION(PUSH_EX, 0x9B)
 
 /* DEL <r.dest>, <r.prop> */
 DEFINE_INSTRUCTION(DEL, 0x9C)
-/* DEL.PROP8 <r.dest>, <str.idx.uint8> */
-DEFINE_INSTRUCTION(DEL_PROP8, 0x9D)         /* TODO remove this variant, it's used very rarely */
 
 /* ADD <r.dest>, <r.src1>, <r.src2> */
-DEFINE_INSTRUCTION(ADD, 0x9E)
+DEFINE_INSTRUCTION(ADD, 0x9D)
 /* SUB <r.dest>, <r.src1>, <r.src2> */
-DEFINE_INSTRUCTION(SUB, 0x9F)
+DEFINE_INSTRUCTION(SUB, 0x9E)
 /* MUL <r.dest>, <r.src1>, <r.src2> */
-DEFINE_INSTRUCTION(MUL, 0xA0)
+DEFINE_INSTRUCTION(MUL, 0x9F)
 /* DIV <r.dest>, <r.src1>, <r.src2> */
-DEFINE_INSTRUCTION(DIV, 0xA1)
+DEFINE_INSTRUCTION(DIV, 0xA0)
 /* MOD <r.dest>, <r.src1>, <r.src2> */
-DEFINE_INSTRUCTION(MOD, 0xA2)
+DEFINE_INSTRUCTION(MOD, 0xA1)
 /* SHL <r.dest>, <r.src1>, <r.src2> */
-DEFINE_INSTRUCTION(SHL, 0xA3)
+DEFINE_INSTRUCTION(SHL, 0xA2)
 /* SHR <r.dest>, <r.src1>, <r.src2> */
-DEFINE_INSTRUCTION(SHR, 0xA4)
+DEFINE_INSTRUCTION(SHR, 0xA3)
 /* SHRU <r.dest>, <r.src1>, <r.src2> */
-DEFINE_INSTRUCTION(SHRU, 0xA5)
+DEFINE_INSTRUCTION(SHRU, 0xA4)
 /* NOT <r.dest>, <r.src> */
-DEFINE_INSTRUCTION(NOT, 0xA6)
+DEFINE_INSTRUCTION(NOT, 0xA5)
 /* AND <r.dest>, <r.src1>, <r.src2> */
-DEFINE_INSTRUCTION(AND, 0xA7)
+DEFINE_INSTRUCTION(AND, 0xA6)
 /* OR <r.dest>, <r.src1>, <r.src2> */
-DEFINE_INSTRUCTION(OR, 0xA8)
+DEFINE_INSTRUCTION(OR, 0xA7)
 /* XOR <r.dest>, <r.src1>, <r.src2> */
-DEFINE_INSTRUCTION(XOR, 0xA9)
+DEFINE_INSTRUCTION(XOR, 0xA8)
 
 /* TYPE <r.dest>, <r.src> */
-DEFINE_INSTRUCTION(TYPE, 0xAA)
+DEFINE_INSTRUCTION(TYPE, 0xA9)
 
 /* CMP.EQ <r.dest>, <r.src1>, <r.src2> */
-DEFINE_INSTRUCTION(CMP_EQ, 0xAB)
+DEFINE_INSTRUCTION(CMP_EQ, 0xAA)
 /* CMP.NE <r.dest>, <r.src1>, <r.src2> */
-DEFINE_INSTRUCTION(CMP_NE, 0xAC)
+DEFINE_INSTRUCTION(CMP_NE, 0xAB)
 /* CMP.LE <r.dest>, <r.src1>, <r.src2> */
-DEFINE_INSTRUCTION(CMP_LE, 0xAD)
+DEFINE_INSTRUCTION(CMP_LE, 0xAC)
 /* CMP.LT <r.dest>, <r.src1>, <r.src2> */
-DEFINE_INSTRUCTION(CMP_LT, 0xAE)
+DEFINE_INSTRUCTION(CMP_LT, 0xAD)
 
 /* HAS.DP <r.dest>, <r.src>, <r.prop> */
-DEFINE_INSTRUCTION(HAS_DP, 0xAF)
+DEFINE_INSTRUCTION(HAS_DP, 0xAE)
 /* HAS.DP.PROP8 <r.dest>, <r.src>, <str.idx.uint8> */
-DEFINE_INSTRUCTION(HAS_DP_PROP8, 0xB0)      /* TODO change to uint16 or delete this variant */
+DEFINE_INSTRUCTION(HAS_DP_PROP8, 0xAF)      /* TODO change to uint16 or delete this variant */
 /* HAS.SH <r.dest>, <r.src>, <r.prop> */
-DEFINE_INSTRUCTION(HAS_SH, 0xB1)
+DEFINE_INSTRUCTION(HAS_SH, 0xB0)
 /* HAS.SH.PROP8 <r.dest>, <r.src>, <str.idx.uint8> */
-DEFINE_INSTRUCTION(HAS_SH_PROP8, 0xB2)      /* TODO change to uint16 or delete this variant */
+DEFINE_INSTRUCTION(HAS_SH_PROP8, 0xB1)      /* TODO change to uint16 or delete this variant */
 /* INSTANCEOF <r.dest>, <r.src>, <r.func> */
-DEFINE_INSTRUCTION(INSTANCEOF, 0xB3)
+DEFINE_INSTRUCTION(INSTANCEOF, 0xB2)
 
 /* JUMP <delta.int32>
  * Relative, unconditional jump. */
-DEFINE_INSTRUCTION(JUMP, 0xB4)              /* TODO change to int24 or int16 */
+DEFINE_INSTRUCTION(JUMP, 0xB3)              /* TODO change to int24 or int16 */
 /* JUMP.COND <delta.int32>, <r.src>
  * Relative jump, taken only if r.src is truthy. */
-DEFINE_INSTRUCTION(JUMP_COND, 0xB5)         /* TODO change to int24 or int16 */
+DEFINE_INSTRUCTION(JUMP_COND, 0xB4)         /* TODO change to int24 or int16 */
 /* JUMP.NOT.COND <delta.int32>, <r.src>
  * Relative jump, taken only if r.src is falsy. */
-DEFINE_INSTRUCTION(JUMP_NOT_COND, 0xB6)     /* TODO change to int24 or int16 */
+DEFINE_INSTRUCTION(JUMP_NOT_COND, 0xB5)     /* TODO change to int24 or int16 */
 
 /* NEXT.JUMP <r.dest>, <r.func>, <delta.int32> */
 /* Call generator created with NEW.ITER.
  * If generator yields a value, jump to the specified offset. */
-DEFINE_INSTRUCTION(NEXT_JUMP, 0xB7)         /* TODO change to int24 or int16 */
+DEFINE_INSTRUCTION(NEXT_JUMP, 0xB6)         /* TODO change to int24 or int16 */
 /* NEXT <r.dest>, <r.func> */
 /* Call generator created with NEW.ITER.
  * If generator ends, throw an exception. */
-DEFINE_INSTRUCTION(NEXT, 0xB8)
+DEFINE_INSTRUCTION(NEXT, 0xB7)
 
 /* BIND <r.dest>, <slot.idx.uint8>, <r.src>
  * Bind an array to a function (closure). */
-DEFINE_INSTRUCTION(BIND, 0xB9)
+DEFINE_INSTRUCTION(BIND, 0xB8)
 /* BIND.SELF <r.dest>, <slot.idx.uint8> */
-DEFINE_INSTRUCTION(BIND_SELF, 0xBA)
+DEFINE_INSTRUCTION(BIND_SELF, 0xB9)
 /* BIND.DEFAULTS <r.dest>, <r.src>
  * Bind an array to a function as a list of arg default values. */
-DEFINE_INSTRUCTION(BIND_DEFAULTS, 0xBB)
+DEFINE_INSTRUCTION(BIND_DEFAULTS, 0xBA)
 
 /* CALL <r.dest>, <r.func>, <r.this>, <r.args> */
-DEFINE_INSTRUCTION(CALL, 0xBC)
+DEFINE_INSTRUCTION(CALL, 0xBB)
 /* CALL.N <r.dest>, <r.func>, <r.this>, <r.arg1>, <numargs.uint8> */
 /* Arguments are in consecutive registers, r.arg1 ignored if numargs.uint8 is 0. */
-DEFINE_INSTRUCTION(CALL_N, 0xBD)
+DEFINE_INSTRUCTION(CALL_N, 0xBC)
 /* CALL.FUN <r.dest>, <r.func>, <r.arg1>, <numargs.uint8> */
 /* Arguments are in consecutive registers, r.arg1 ignored if numargs.uint8 is 0. */
-DEFINE_INSTRUCTION(CALL_FUN, 0xBE)
+DEFINE_INSTRUCTION(CALL_FUN, 0xBD)
 /* RETURN <r.src> */
-DEFINE_INSTRUCTION(RETURN, 0xBF)
+DEFINE_INSTRUCTION(RETURN, 0xBE)
 /* TAIL.CALL <r.func>, <r.this>, <r.args> */
-DEFINE_INSTRUCTION(TAIL_CALL, 0xC0)
+DEFINE_INSTRUCTION(TAIL_CALL, 0xBF)
 /* TAIL.CALL.N <r.func>, <r.this>, <r.arg1>, <numargs.uint8> */
 /* Arguments are in consecutive registers, r.arg1 ignored if numargs.uint8 is 0. */
-DEFINE_INSTRUCTION(TAIL_CALL_N, 0xC1)
+DEFINE_INSTRUCTION(TAIL_CALL_N, 0xC0)
 /* TAIL.CALL.FUN <r.func>, <r.arg1>, <numargs.uint8> */
 /* Arguments are in consecutive registers, r.arg1 ignored if numargs.uint8 is 0. */
-DEFINE_INSTRUCTION(TAIL_CALL_FUN, 0xC2)
+DEFINE_INSTRUCTION(TAIL_CALL_FUN, 0xC1)
 /* YIELD <r.dest>, <r.src> */
-DEFINE_INSTRUCTION(YIELD, 0xC3)
+DEFINE_INSTRUCTION(YIELD, 0xC2)
 /* THROW <r.src> */
-DEFINE_INSTRUCTION(THROW, 0xC4)
+DEFINE_INSTRUCTION(THROW, 0xC3)
 /* CATCH <r.dest>, <delta.int32> */
-DEFINE_INSTRUCTION(CATCH, 0xC5)             /* TODO change to int24 or int16 */
+DEFINE_INSTRUCTION(CATCH, 0xC4)             /* TODO change to int24 or int16 */
 /* CANCEL */
-DEFINE_INSTRUCTION(CANCEL, 0xC6)
+DEFINE_INSTRUCTION(CANCEL, 0xC5)
