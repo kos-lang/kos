@@ -279,8 +279,9 @@ static int test_instr(KOS_CONTEXT           ctx,
                 break;
 
             case V_OBJECT:
-                code[words++] = INSTR_LOAD_OBJ;
+                code[words++] = INSTR_NEW_OBJ;
                 code[words++] = regs;
+                code[words++] = KOS_NO_REG;
                 parms[i]      = regs++;
                 break;
 
@@ -605,8 +606,8 @@ int main(void)
     TEST_INSTR INSTR_NEW_ARRAY8, { V_ARRAY,   255                      }, { { V_IMM8,  255                      } }                                        END
 
     /*========================================================================*/
-    /* LOAD.OBJ */
-    TEST_INSTR INSTR_LOAD_OBJ,   { V_OBJECT                            }                                                                                   END
+    /* NEW.OBJ */
+    TEST_INSTR INSTR_NEW_OBJ,    { V_OBJECT                            }, { { V_IMM8,  255                      } }                                        END
 
     /*========================================================================*/
     /* THROW */

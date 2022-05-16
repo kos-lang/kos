@@ -1682,27 +1682,17 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(LOAD_OBJ): { /* <r.dest> */
-                PROF_ZONE_N(INSTR, "LOAD.OBJ")
-                rdest = bytecode[1];
-
-                out = KOS_new_object(ctx);
-                TRY_OBJID(out);
-
-                assert(rdest < num_regs);
-                write_reg(stack_frame, rdest, out);
-
-                bytecode += 2;
-                NEXT_INSTRUCTION;
-            }
-
-            BEGIN_INSTRUCTION(LOAD_OBJ_PROTO): { /* <r.dest>, <r.src> */
-                PROF_ZONE_N(INSTR, "LOAD.OBJ.PROTO")
+            BEGIN_INSTRUCTION(NEW_OBJ): { /* <r.dest>, <r.src> */
+                PROF_ZONE_N(INSTR, "NEW.OBJ")
                 const unsigned rsrc = bytecode[2];
 
-                assert(rsrc < num_regs);
+                if (rsrc == KOS_NO_REG)
+                    out = KOS_new_object(ctx);
+                else {
+                    assert(rsrc < num_regs);
 
-                out = KOS_new_object_with_prototype(ctx, read_reg(stack_frame, rsrc));
+                    out = KOS_new_object_with_prototype(ctx, read_reg(stack_frame, rsrc));
+                }
                 TRY_OBJID(out);
 
                 rdest = bytecode[1];

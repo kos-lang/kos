@@ -196,7 +196,7 @@ int main(void)
         static const char prop1[]  = "prop1";
         KOS_OBJ_ID        str_prop = KOS_new_const_ascii_cstring(ctx, prop1);
         const uint8_t code[] = {
-            INSTR_LOAD_OBJ,     0,
+            INSTR_NEW_OBJ,      0, 255,
             INSTR_LOAD_CONST,   1, IMM16(0),/*"prop1"*/
             INSTR_LOAD_INT8,    2, (uint8_t)(int8_t)-6,
             INSTR_SET,          0, 1, 2,
@@ -217,7 +217,7 @@ int main(void)
         static const char prop2[] = "prop2";
         KOS_OBJ_ID        str_prop = KOS_new_const_ascii_cstring(ctx, prop2);
         const uint8_t code[] = {
-            INSTR_LOAD_OBJ,     0,
+            INSTR_NEW_OBJ,      0, 255,
             INSTR_LOAD_INT8,    1, (uint8_t)(int8_t)-7,
             INSTR_SET_PROP8,    0, 0/*"prop2"*/, 1,
             INSTR_LOAD_CONST,   1, IMM16(0),/*"prop2"*/
@@ -285,7 +285,7 @@ int main(void)
     /* SET - invalid index type for object */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_OBJ,  0,
+            INSTR_NEW_OBJ,   0, 255,
             INSTR_LOAD_TRUE, 1,
             INSTR_LOAD_INT8, 2, (uint8_t)(int8_t)-6,
             INSTR_SET,       0, 1, 2,
@@ -300,7 +300,7 @@ int main(void)
     /* SET - invalid index type for object */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_OBJ,   0,
+            INSTR_NEW_OBJ,    0, 255,
             INSTR_LOAD_INT8,  1, 0,
             INSTR_SET,        0, 1, 1,
             INSTR_RETURN,     0
@@ -387,7 +387,7 @@ int main(void)
         static const char prop5[]  = "prop5";
         KOS_OBJ_ID        str_prop = KOS_new_const_ascii_cstring(ctx, prop5);
         const uint8_t code[] = {
-            INSTR_LOAD_OBJ,     0,
+            INSTR_NEW_OBJ,      0, 255,
             INSTR_LOAD_INT8,    1, (uint8_t)(int8_t)-9,
             INSTR_SET_PROP8,    0, 0/*"prop5"*/, 1,
             INSTR_HAS_SH_PROP8, 2, 0, 0/*"prop5"*/,
@@ -406,7 +406,7 @@ int main(void)
         static const char prop5[]  = "prop5";
         KOS_OBJ_ID        str_prop = KOS_new_const_ascii_cstring(ctx, prop5);
         const uint8_t code[] = {
-            INSTR_LOAD_OBJ,     0,
+            INSTR_NEW_OBJ,      0, 255,
             INSTR_LOAD_INT8,    1, (uint8_t)(int8_t)-9,
             INSTR_SET_PROP8,    0, 0/*"prop5"*/, 1,
             INSTR_HAS_DP_PROP8, 2, 0, 0,/*"prop5"*/
@@ -506,7 +506,7 @@ int main(void)
         static const char prop6[]  = "prop6";
         KOS_OBJ_ID        str_prop = KOS_new_const_ascii_cstring(ctx, prop6);
         const uint8_t code[] = {
-            INSTR_LOAD_OBJ,     0,
+            INSTR_NEW_OBJ,      0, 255,
             INSTR_LOAD_INT8,    1, (uint8_t)(int8_t)-10,
             INSTR_SET_PROP8,    0, 0,/*"prop6"*/ 1,
             INSTR_DEL_PROP8,    0, 0,/*"prop6"*/
@@ -526,7 +526,7 @@ int main(void)
         static const char prop6[]  = "prop6";
         KOS_OBJ_ID        str_prop = KOS_new_const_ascii_cstring(ctx, prop6);
         const uint8_t code[] = {
-            INSTR_LOAD_OBJ,     0,
+            INSTR_NEW_OBJ,      0, 255,
             INSTR_DEL_PROP8,    0, 0,/*"prop6"*/
             INSTR_HAS_DP_PROP8, 0, 0, 0,/*"prop6"*/
             INSTR_RETURN,       0
@@ -544,7 +544,7 @@ int main(void)
         static const char prop7[]  = "prop7";
         KOS_OBJ_ID        str_prop = KOS_new_const_ascii_cstring(ctx, prop7);
         const uint8_t code[] = {
-            INSTR_LOAD_OBJ,     0,
+            INSTR_NEW_OBJ,      0, 255,
             INSTR_LOAD_INT8,    1, (uint8_t)(int8_t)-10,
             INSTR_SET_PROP8,    0, 0/*"prop7"*/, 1,
             INSTR_LOAD_CONST,   1, IMM16(0),/*"prop7*/
@@ -565,7 +565,7 @@ int main(void)
         static const char prop7[]  = "prop7";
         KOS_OBJ_ID        str_prop = KOS_new_const_ascii_cstring(ctx, prop7);
         const uint8_t code[] = {
-            INSTR_LOAD_OBJ,     0,
+            INSTR_NEW_OBJ,      0, 255,
             INSTR_LOAD_CONST,   1, IMM16(0),/*"prop7*/
             INSTR_DEL,          0, 1,
             INSTR_HAS_DP_PROP8, 1, 0, 0,/*"prop7"*/

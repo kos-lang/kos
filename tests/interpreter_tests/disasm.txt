@@ -5,7 +5,7 @@
 # default args : 0
 @disasm.kos:7:
 00000000: 82 00 03                          LOAD.CONST8    r0, 3 # "My String"
-00000003: C0 00                             RETURN         r0
+00000003: BF 00                             RETURN         r0
 
 ==============================================================================
 Disassembling function disasm.<global>
@@ -15,12 +15,12 @@ Disassembling function disasm.<global>
 # minimum args : 0
 # default args : 0
 @disasm.kos:3:
-00000000: 95 00 02 00 01 00 00 00           GET.MOD.ELEM   r0, 2, 1
+00000000: 94 00 02 00 01 00 00 00           GET.MOD.ELEM   r0, 2, 1
 00000008: 82 01 00                          LOAD.CONST8    r1, 0 # "x*y{1,2}?"
-0000000B: BF 01 00 01 01                    CALL.FUN       r1, r0, r1, 1
+0000000B: BE 01 00 01 01                    CALL.FUN       r1, r0, r1, 1
 @disasm.kos:5:
 00000010: 82 00 02                          LOAD.CONST8    r0, 2 # <function fun @ 5>
-00000013: C0 00                             RETURN         r0
+00000013: BF 00                             RETURN         r0
 
 ==============================================================================
 Disassembling regular expression: x*y{1,2}?

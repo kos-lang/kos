@@ -22,7 +22,6 @@ static int get_num_operands(KOS_BYTECODE_INSTR instr)
         case INSTR_LOAD_TRUE:           /* fall through */
         case INSTR_LOAD_FALSE:          /* fall through */
         case INSTR_LOAD_VOID:           /* fall through */
-        case INSTR_LOAD_OBJ:            /* fall through */
         case INSTR_JUMP:                /* fall through */
         case INSTR_RETURN:              /* fall through */
         case INSTR_THROW:
@@ -34,7 +33,7 @@ static int get_num_operands(KOS_BYTECODE_INSTR instr)
         case INSTR_LOAD_FUN8:           /* fall through */
         case INSTR_LOAD_FUN:            /* fall through */
         case INSTR_NEW_ARRAY8:          /* fall through */
-        case INSTR_LOAD_OBJ_PROTO:      /* fall through */
+        case INSTR_NEW_OBJ:             /* fall through */
         case INSTR_NEW_ITER:            /* fall through */
         case INSTR_MOVE:                /* fall through */
         case INSTR_GET_PROTO:           /* fall through */
@@ -322,8 +321,7 @@ static const char *const str_instr[] = {
     "LOAD.FALSE",
     "LOAD.VOID",
     "NEW.ARRAY8",
-    "LOAD.OBJ",
-    "LOAD.OBJ.PROTO",
+    "NEW.OBJ",
     "NEW.ITER",
     "MOVE",
     "GET",

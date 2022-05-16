@@ -5888,8 +5888,9 @@ static int object_literal(KOS_COMP_UNIT      *program,
                           KOS_VAR            *class_var,
                           KOS_REG            *prototype)
 {
-    int                 error;
     KOS_RED_BLACK_NODE *prop_str_idcs = KOS_NULL;
+    int                 proto_reg;
+    int                 error;
 
     if (prototype) {
         if ( ! *reg || (*reg == prototype && ! prototype->tmp)) {
@@ -5897,12 +5898,15 @@ static int object_literal(KOS_COMP_UNIT      *program,
             TRY(gen_reg(program, reg));
         }
 
-        TRY(gen_instr2(program, INSTR_LOAD_OBJ_PROTO, (*reg)->reg, prototype->reg));
+        proto_reg = prototype->reg;
     }
     else {
         TRY(gen_reg(program, reg));
-        TRY(gen_instr1(program, INSTR_LOAD_OBJ, (*reg)->reg));
+
+        proto_reg = KOS_NO_REG;
     }
+
+    TRY(gen_instr2(program, INSTR_NEW_OBJ, (*reg)->reg, proto_reg));
 
     assert(*reg);
 
