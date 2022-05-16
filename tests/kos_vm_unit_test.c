@@ -271,7 +271,7 @@ static int test_instr(KOS_CONTEXT           ctx,
                 break;
 
             case V_ARRAY:
-                code[words++] = INSTR_LOAD_ARRAY;
+                code[words++] = INSTR_NEW_ARRAY8;
                 code[words++] = regs;
                 assert(args[i].low < 256);
                 code[words++] = (uint8_t)args[i].low;
@@ -600,9 +600,9 @@ int main(void)
     TEST_INSTR INSTR_LOAD_INT8,  { V_INTEGER, 0xFFFFFF80U, ~0U         }, { { V_IMM8,  0x80                     } }                                        END
 
     /*========================================================================*/
-    /* LOAD.ARRAY */
-    TEST_INSTR INSTR_LOAD_ARRAY, { V_ARRAY,   0                        }, { { V_IMM8,  0                        } }                                        END
-    TEST_INSTR INSTR_LOAD_ARRAY, { V_ARRAY,   255                      }, { { V_IMM8,  255                      } }                                        END
+    /* NEW.ARRAY8 */
+    TEST_INSTR INSTR_NEW_ARRAY8, { V_ARRAY,   0                        }, { { V_IMM8,  0                        } }                                        END
+    TEST_INSTR INSTR_NEW_ARRAY8, { V_ARRAY,   255                      }, { { V_IMM8,  255                      } }                                        END
 
     /*========================================================================*/
     /* LOAD.OBJ */

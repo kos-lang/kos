@@ -3540,9 +3540,9 @@ static int gen_load_array(KOS_COMP_UNIT      *program,
     int         error      = KOS_SUCCESS;
 
     if (operand2 < 256)
-        return gen_instr2(program, INSTR_LOAD_ARRAY, operand1, operand2);
+        return gen_instr2(program, INSTR_NEW_ARRAY8, operand1, operand2);
 
-    TRY(gen_instr2(program, INSTR_LOAD_ARRAY, operand1, 0));
+    TRY(gen_instr2(program, INSTR_NEW_ARRAY8, operand1, 0));
 
     memset(&token, 0, sizeof(token));
     token.begin  = str_resize;
@@ -3678,7 +3678,7 @@ static int super_invocation(KOS_COMP_UNIT      *program,
         TRY(gen_args_array(program, node, &args_regs[1]));
     }
     else
-        TRY(gen_instr2(program, INSTR_LOAD_ARRAY, args_regs[1]->reg, 0));
+        TRY(gen_instr2(program, INSTR_NEW_ARRAY8, args_regs[1]->reg, 0));
 
     memset(&token, 0, sizeof(token));
     token.begin  = str_apply;

@@ -235,7 +235,7 @@ int main(void)
     /* SET, GET.ELEM8 */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_ARRAY,  0, 5,
+            INSTR_NEW_ARRAY8,  0, 5,
             INSTR_LOAD_INT8,   1, 3,
             INSTR_LOAD_INT8,   2, 10,
             INSTR_SET,         0, 1, 2,
@@ -251,7 +251,7 @@ int main(void)
     /* SET.ELEM8, GET */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_ARRAY,  0, 3,
+            INSTR_NEW_ARRAY8,  0, 3,
             INSTR_LOAD_INT8,   1, (uint8_t)(int8_t)-8,
             INSTR_SET_ELEM8,   0, 2, 1,
             INSTR_LOAD_INT8,   1, (uint8_t)(int8_t)-1,
@@ -352,7 +352,7 @@ int main(void)
         static const char prop1[]  = "prop1";
         KOS_OBJ_ID        str_prop = KOS_new_const_ascii_cstring(ctx, prop1);
         const uint8_t code[] = {
-            INSTR_LOAD_ARRAY,   0, 1,
+            INSTR_NEW_ARRAY8,   0, 1,
             INSTR_LOAD_CONST,   1, IMM16(0),/*"prop1"*/
             INSTR_SET_ELEM8,    0, 1, 1,
             INSTR_RETURN,       0
@@ -427,8 +427,8 @@ int main(void)
         KOS_OBJ_ID        ret;
         KOS_OBJ_ID        val;
         const uint8_t code[] = {
-            INSTR_LOAD_ARRAY,   0, 0,
-            INSTR_LOAD_ARRAY,   1, 1,
+            INSTR_NEW_ARRAY8,   0, 0,
+            INSTR_NEW_ARRAY8,   1, 1,
             INSTR_LOAD_INT8,    2, 10,
             INSTR_SET_ELEM8,    1, 0, 2,
             INSTR_PUSH,         1, 0,
@@ -465,8 +465,8 @@ int main(void)
         KOS_OBJ_ID        ret;
         KOS_OBJ_ID        val;
         const uint8_t code[] = {
-            INSTR_LOAD_ARRAY,   0, 0,
-            INSTR_LOAD_ARRAY,   1, 1,
+            INSTR_NEW_ARRAY8,   0, 0,
+            INSTR_NEW_ARRAY8,   1, 1,
             INSTR_LOAD_INT8,    2, 10,
             INSTR_SET_ELEM8,    1, 0, 2,
             INSTR_PUSH_EX,      1, 0,
@@ -667,7 +667,7 @@ int main(void)
             INSTR_RETURN,      0,
 
             INSTR_LOAD_CONST8, 0, 0,
-            INSTR_LOAD_ARRAY,  1, 1,
+            INSTR_NEW_ARRAY8,  1, 1,
             INSTR_LOAD_INT8,   2, 42,
             INSTR_SET_ELEM8,   1, 0, 2,
             INSTR_LOAD_VOID,   2,
@@ -689,7 +689,7 @@ int main(void)
     {
         const uint8_t code[] = {
             INSTR_LOAD_CONST,  0, IMM16(0),
-            INSTR_LOAD_ARRAY,  1, 1,
+            INSTR_NEW_ARRAY8,  1, 1,
             INSTR_LOAD_INT8,   2, 100,
             INSTR_SET_ELEM8,   1, 0, 2,
             INSTR_LOAD_VOID,   2,
@@ -721,7 +721,7 @@ int main(void)
 
             INSTR_LOAD_CONST,  0, IMM16(0),
             INSTR_LOAD_INT8,   1, 121,
-            INSTR_LOAD_ARRAY,  2, 0,
+            INSTR_NEW_ARRAY8,  2, 0,
             INSTR_CALL,        0, 0, 1, 2,
             INSTR_RETURN,      0
         };
@@ -890,7 +890,7 @@ int main(void)
     {
         const uint8_t code[] = {
             INSTR_LOAD_VOID,   0,
-            INSTR_LOAD_ARRAY,  1, 0,
+            INSTR_NEW_ARRAY8,  1, 0,
             INSTR_CALL,        0, 0, 0, 1,
             INSTR_RETURN,      0
         };
@@ -939,7 +939,7 @@ int main(void)
 
             INSTR_LOAD_CONST8, 0, 0,
             INSTR_LOAD_VOID,   1,
-            INSTR_LOAD_ARRAY,  2, 0,
+            INSTR_NEW_ARRAY8,  2, 0,
             INSTR_CALL,        0, 0, 1, 2,
             INSTR_RETURN,      0
         };
@@ -1076,7 +1076,7 @@ int main(void)
             INSTR_RETURN,      1,
 
             INSTR_LOAD_FUN8,   0, 2,
-            INSTR_LOAD_ARRAY,  1, 1,             /* create arguments array */
+            INSTR_NEW_ARRAY8,  1, 1,             /* create arguments array */
             INSTR_LOAD_CONST,  2, IMM16(1),
             INSTR_SET_ELEM8,   1, 0, 2,          /* set argument */
             INSTR_CALL,        0, 0, 1, 1,
@@ -1121,7 +1121,7 @@ int main(void)
             INSTR_RETURN,      0,
 
             INSTR_LOAD_FUN,    0, IMM16(0),
-            INSTR_LOAD_ARRAY,  1, 0,
+            INSTR_NEW_ARRAY8,  1, 0,
             INSTR_CALL,        1, 0, 1, 1,
 
             INSTR_INSTANCEOF,  0, 1, 0,
@@ -1255,7 +1255,7 @@ int main(void)
         const uint8_t code[] = {
             INSTR_LOAD_CONST8, 0, 0,
             INSTR_LOAD_VOID,   1,
-            INSTR_LOAD_ARRAY,  2, 0,
+            INSTR_NEW_ARRAY8,  2, 0,
             INSTR_CALL,        0, 0, 1, 2,
             INSTR_RETURN,      0
         };
@@ -1347,7 +1347,7 @@ int main(void)
     /* LOAD.ITER, NEXT */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_ARRAY,    0, 3,
+            INSTR_NEW_ARRAY8,    0, 3,
             INSTR_LOAD_INT8,     1, 3,
             INSTR_SET_ELEM8,     0, 0, 1,
             INSTR_LOAD_INT8,     1, 4,
@@ -1416,7 +1416,7 @@ int main(void)
         const uint8_t code[] = {
             INSTR_LOAD_CONST8, 0, 0,
             INSTR_LOAD_INT8,   1, 0,
-            INSTR_LOAD_ARRAY,  2, 1,
+            INSTR_NEW_ARRAY8,  2, 1,
             INSTR_CALL,        0, 0, 1, 2, /* instantiate generator */
             INSTR_RETURN,      1,
 
@@ -1476,11 +1476,11 @@ int main(void)
         const uint8_t code[] = {
             INSTR_LOAD_CONST8, 0, 0,
             INSTR_LOAD_INT8,   1, 100,    /* bind initial value, 'this', used by the generator */
-            INSTR_LOAD_ARRAY,  2, 0,
+            INSTR_NEW_ARRAY8,  2, 0,
             INSTR_CALL,        0, 0, 1, 2,       /* instantiate generator */
 
             INSTR_CALL,        3, 0, 1, 2,       /* yields 101 */
-            INSTR_LOAD_ARRAY,  2, 1,
+            INSTR_NEW_ARRAY8,  2, 1,
             INSTR_ADD,         4, 3, 3,          /* 202 */
             INSTR_LOAD_INT8,   3, 64,
             INSTR_SET_ELEM8,   2, 0, 3,
@@ -1610,7 +1610,7 @@ int main(void)
     /* NEXT - set output register to VOID on generator end */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_ARRAY,  0, 0,       /* load empty array */
+            INSTR_NEW_ARRAY8,  0, 0,       /* load empty array */
             INSTR_LOAD_ITER,   0, 0,       /* convert to generator */
 
             INSTR_LOAD_TRUE,   1,
@@ -1627,7 +1627,7 @@ int main(void)
     {
         const uint8_t code[] = {
             INSTR_LOAD_CONST8, 0, 0,
-            INSTR_LOAD_ARRAY,  1, 0,
+            INSTR_NEW_ARRAY8,  1, 0,
             INSTR_TAIL_CALL,   0, 0, 1,
 
             /* unreachable */
@@ -1768,7 +1768,7 @@ int main(void)
         const uint8_t code[] = {
             INSTR_LOAD_CONST8, 0, 0,
             INSTR_LOAD_VOID,   1,
-            INSTR_LOAD_ARRAY,  2, 0,
+            INSTR_NEW_ARRAY8,  2, 0,
             INSTR_CATCH,       1, IMM32(5),
             INSTR_CALL,        0, 0, 1, 2,
             INSTR_RETURN,      1,
@@ -1794,7 +1794,7 @@ int main(void)
         const uint8_t code[] = {
             INSTR_LOAD_CONST8, 0, 1,
             INSTR_LOAD_VOID,   1,
-            INSTR_LOAD_ARRAY,  2, 0,
+            INSTR_NEW_ARRAY8,  2, 0,
             INSTR_CATCH,       0, IMM32(7),
             INSTR_CALL,        0, 0, 1, 2,
             INSTR_RETURN,      1,
@@ -1805,7 +1805,7 @@ int main(void)
 
             INSTR_LOAD_CONST8, 0, 2,
             INSTR_LOAD_VOID,   1,
-            INSTR_LOAD_ARRAY,  2, 0,
+            INSTR_NEW_ARRAY8,  2, 0,
             INSTR_CATCH,       0, IMM32(7),
             INSTR_CALL,        0, 0, 1, 2,
             INSTR_RETURN,      1,
@@ -1817,7 +1817,7 @@ int main(void)
 
             INSTR_LOAD_CONST8, 0, 3,
             INSTR_LOAD_VOID,   1,
-            INSTR_LOAD_ARRAY,  2, 0,
+            INSTR_NEW_ARRAY8,  2, 0,
             INSTR_CATCH,       0, IMM32(7),
             INSTR_CALL,        0, 0, 1, 2,
             INSTR_RETURN,      1,
@@ -1901,8 +1901,8 @@ int main(void)
         const uint8_t code[]   = {
             INSTR_LOAD_CONST8, 0, 1,
             INSTR_LOAD_VOID,   1,
-            INSTR_LOAD_ARRAY,  2, 0,
-            INSTR_LOAD_ARRAY,  3, 1,
+            INSTR_NEW_ARRAY8,  2, 0,
+            INSTR_NEW_ARRAY8,  3, 1,
             INSTR_BIND_SELF,   0, 0,
             INSTR_BIND,        0, 1, 3,
             INSTR_CALL,        0, 0, 1, 2,           /* instantiate generator */
@@ -1943,7 +1943,7 @@ int main(void)
     {
         const uint8_t code[] = {
             INSTR_LOAD_VOID,   0,
-            INSTR_LOAD_ARRAY,  1, 0,
+            INSTR_NEW_ARRAY8,  1, 0,
             INSTR_BIND,        0, 0, 1,
             INSTR_RETURN,      0
         };
@@ -1971,7 +1971,7 @@ int main(void)
         const uint8_t code[] = {
             INSTR_LOAD_INT8,   4, 3,                 /* Read by level 1 */
             INSTR_LOAD_CONST,  5, IMM16(0),          /* Read by level 2 */
-            INSTR_LOAD_ARRAY,  1, 2,
+            INSTR_NEW_ARRAY8,  1, 2,
             INSTR_LOAD_INT8,   0, 9,
             INSTR_SET_ELEM8,   1, 0, 0,
             INSTR_LOAD_CONST,  0, IMM16(1),
@@ -1984,7 +1984,7 @@ int main(void)
             INSTR_CALL,        0, 3, 0, 1,           /* Returns 0x10 */
             INSTR_LOAD_INT8,   1, 2,
             INSTR_SHL,         0, 0, 1,              /* 0x40 */
-            INSTR_LOAD_ARRAY,  1, 3,
+            INSTR_NEW_ARRAY8,  1, 3,
             INSTR_SET_ELEM8,   1, 2, 0,       /* 0x100 */
             INSTR_LOAD_INT8,   0, 5,
             INSTR_CALL,        2, 3, 0, 1,
@@ -2069,7 +2069,7 @@ int main(void)
             INSTR_PUSH,          0, 2
 
         const uint8_t code[] = {
-            INSTR_LOAD_ARRAY,    0, 3,
+            INSTR_NEW_ARRAY8,    0, 3,
             INSTR_LOAD_INT8,     1, 10,
             INSTR_SET_ELEM8,     0, 0, 1,
             INSTR_LOAD_INT8,     1, 11,
@@ -2085,7 +2085,7 @@ int main(void)
             INSTR_BIND_SELF,     3, 0,
             INSTR_TAIL_CALL_FUN, 3, 255, 0,
 
-            INSTR_LOAD_ARRAY,    0, 0,
+            INSTR_NEW_ARRAY8,    0, 0,
             STACK_MOVE(0),
             STACK_MOVE(1),
             STACK_MOVE(2),
@@ -2121,7 +2121,7 @@ int main(void)
     /* BIND.DEFAULTS - some default values */
     {
         const uint8_t code[] = {
-            INSTR_LOAD_ARRAY,    0, 3,
+            INSTR_NEW_ARRAY8,    0, 3,
             INSTR_LOAD_INT8,     1, 20,
             INSTR_SET_ELEM8,     0, 0, 1,
             INSTR_LOAD_INT8,     1, 21,
@@ -2140,7 +2140,7 @@ int main(void)
             INSTR_BIND_SELF,     5, 0,
             INSTR_TAIL_CALL_FUN, 5, 255, 0,
 
-            INSTR_LOAD_ARRAY,    0, 0,
+            INSTR_NEW_ARRAY8,    0, 0,
             STACK_MOVE(0),
             STACK_MOVE(1),
             STACK_MOVE(2),
@@ -2185,7 +2185,7 @@ int main(void)
 
             /* 0 - begin
              * 1 - end */
-            INSTR_LOAD_ARRAY,    2, 0,
+            INSTR_NEW_ARRAY8,    2, 0,
             INSTR_LOAD_INT8,     3, 1,
             INSTR_JUMP,          IMM32(7),
             INSTR_PUSH,          2, 0,
@@ -2213,7 +2213,7 @@ int main(void)
             INSTR_BIND_SELF,     KOS_MAX_ARGS_IN_REGS + 5 + 2, 0,
             INSTR_TAIL_CALL_FUN, KOS_MAX_ARGS_IN_REGS + 5 + 2, 255, 0,
 
-            INSTR_LOAD_ARRAY,    0, 0,
+            INSTR_NEW_ARRAY8,    0, 0,
             STACK_MOVE( 0), STACK_MOVE( 1), STACK_MOVE( 2), STACK_MOVE( 3), STACK_MOVE( 4),
             STACK_MOVE( 5), STACK_MOVE( 6), STACK_MOVE( 7), STACK_MOVE( 8), STACK_MOVE( 9),
             STACK_MOVE(10), STACK_MOVE(11), STACK_MOVE(12), STACK_MOVE(13), STACK_MOVE(14),
@@ -2294,7 +2294,7 @@ int main(void)
 
             /* 0 - begin
              * 1 - end */
-            INSTR_LOAD_ARRAY,    2, 0,
+            INSTR_NEW_ARRAY8,    2, 0,
             INSTR_LOAD_INT8,     3, 1,
             INSTR_JUMP,          IMM32(7),
             INSTR_PUSH,          2, 0,
@@ -2317,7 +2317,7 @@ int main(void)
             INSTR_BIND_SELF,     KOS_MAX_ARGS_IN_REGS + 2, 0,
             INSTR_TAIL_CALL_FUN, KOS_MAX_ARGS_IN_REGS + 2, 255, 0,
 
-            INSTR_LOAD_ARRAY,    0, 0,
+            INSTR_NEW_ARRAY8,    0, 0,
             STACK_MOVE( 0), STACK_MOVE( 1), STACK_MOVE( 2), STACK_MOVE( 3), STACK_MOVE( 4),
             STACK_MOVE( 5), STACK_MOVE( 6), STACK_MOVE( 7), STACK_MOVE( 8), STACK_MOVE( 9),
             STACK_MOVE(10), STACK_MOVE(11), STACK_MOVE(12), STACK_MOVE(13), STACK_MOVE(14),

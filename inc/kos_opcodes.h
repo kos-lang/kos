@@ -29,8 +29,8 @@ DEFINE_INSTRUCTION(LOAD_TRUE, 0x86)
 DEFINE_INSTRUCTION(LOAD_FALSE, 0x87)
 /* LOAD.VOID <r.dest> */
 DEFINE_INSTRUCTION(LOAD_VOID, 0x88)
-/* LOAD.ARRAY <r.dest>, <size.uint8> */
-DEFINE_INSTRUCTION(LOAD_ARRAY, 0x89)        /* TODO rename to NEW.ARRAY8 */
+/* NEW.ARRAY8 <r.dest>, <size.uint8> */
+DEFINE_INSTRUCTION(NEW_ARRAY8, 0x89)
 /* LOAD.OBJ <r.dest> */
 DEFINE_INSTRUCTION(LOAD_OBJ, 0x8A)          /* TODO delete this variant */
 /* LOAD.OBJ.PROTO <r.dest>, <r.src> */

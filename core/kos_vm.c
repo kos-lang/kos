@@ -1666,8 +1666,8 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(LOAD_ARRAY): { /* <r.dest>, <size.uint8> */
-                PROF_ZONE_N(INSTR, "LOAD.ARRAY")
+            BEGIN_INSTRUCTION(NEW_ARRAY8): { /* <r.dest>, <size.uint8> */
+                PROF_ZONE_N(INSTR, "NEW.ARRAY8")
                 const uint8_t size = bytecode[2];
 
                 rdest = bytecode[1];
