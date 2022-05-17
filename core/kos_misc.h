@@ -45,4 +45,15 @@ uint64_t kos_rng_random(struct KOS_RNG *rng);
 uint64_t kos_rng_random_range(struct KOS_RNG *rng, uint64_t max_value);
 void     kos_get_entropy_fallback(uint8_t *bytes, unsigned size);
 
+typedef struct KOS_IMM_S {
+    union {
+        int32_t  svalue;
+        uint32_t uvalue;
+    };
+    int          delta;
+} KOS_IMM;
+
+KOS_IMM kos_load_uimm(const uint8_t *bytecode);
+KOS_IMM kos_load_simm(const uint8_t *bytecode);
+
 #endif

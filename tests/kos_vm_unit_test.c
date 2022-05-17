@@ -576,6 +576,69 @@ int main(void)
     KOS_INSTANCE inst;
     KOS_CONTEXT  ctx;
 
+    {
+        const uint8_t buf[] = { 0x00u };
+        const KOS_IMM imm   = kos_load_uimm(buf);
+        TEST(imm.uvalue == 0);
+        TEST(imm.delta  == 1);
+    }
+
+    {
+        const uint8_t buf[] = { 0x7Fu };
+        const KOS_IMM imm   = kos_load_uimm(buf);
+        TEST(imm.uvalue == 127);
+        TEST(imm.delta  == 1);
+    }
+
+    {
+        const uint8_t buf[] = { 0x80u, 0x01u };
+        const KOS_IMM imm   = kos_load_uimm(buf);
+        TEST(imm.uvalue == 128);
+        TEST(imm.delta  == 2);
+    }
+
+    {
+        const uint8_t buf[] = { 0x00u };
+        const KOS_IMM imm   = kos_load_simm(buf);
+        TEST(imm.svalue == 0);
+        TEST(imm.delta  == 1);
+    }
+
+    {
+        const uint8_t buf[] = { 0x01u };
+        const KOS_IMM imm   = kos_load_simm(buf);
+        TEST(imm.svalue == -1);
+        TEST(imm.delta  == 1);
+    }
+
+    {
+        const uint8_t buf[] = { 0x7Eu };
+        const KOS_IMM imm   = kos_load_simm(buf);
+        TEST(imm.svalue == 63);
+        TEST(imm.delta  == 1);
+    }
+
+    {
+        const uint8_t buf[] = { 0x7Fu };
+        const KOS_IMM imm   = kos_load_simm(buf);
+        TEST(imm.svalue == -64);
+        TEST(imm.delta  == 1);
+    }
+
+    {
+        const uint8_t buf[] = { 0x80u, 0x01u };
+        const KOS_IMM imm   = kos_load_simm(buf);
+        TEST(imm.svalue == 64);
+        TEST(imm.delta  == 2);
+    }
+
+    {
+        const uint8_t buf[] = { 0x81u, 0x01u };
+        const KOS_IMM imm   = kos_load_simm(buf);
+        TEST(imm.svalue == -65);
+        TEST(imm.delta  == 2);
+    }
+
     TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
 
     TEST(KOS_get_array_size(inst.modules.modules) == 0);

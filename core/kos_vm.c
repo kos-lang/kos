@@ -1547,19 +1547,19 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(LOAD_CONST): { /* <r.dest>, <uint16> */
+            BEGIN_INSTRUCTION(LOAD_CONST): { /* <r.dest>, <uimm> */
                 PROF_ZONE_N(INSTR, "LOAD.CONST")
-                const uint32_t value = load_16(bytecode+2);
+                const KOS_IMM imm = kos_load_uimm(bytecode + 2);
 
                 rdest = bytecode[1];
 
-                out = KOS_array_read(ctx, OBJPTR(MODULE, module)->constants, value);
+                out = KOS_array_read(ctx, OBJPTR(MODULE, module)->constants, imm.svalue);
                 TRY_OBJID(out);
 
                 assert(rdest < num_regs);
                 write_reg(stack_frame, rdest, out);
 
-                bytecode += 4;
+                bytecode += 2 + imm.delta;
                 NEXT_INSTRUCTION;
             }
 
@@ -1592,13 +1592,13 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(LOAD_FUN): { /* <r.dest>, <uint16> */
+            BEGIN_INSTRUCTION(LOAD_FUN): { /* <r.dest>, <uimm> */
                 PROF_ZONE_N(INSTR, "LOAD.FUN")
-                const uint32_t value = load_16(bytecode+2);
+                const KOS_IMM imm = kos_load_uimm(bytecode + 2);
 
                 rdest = bytecode[1];
 
-                out = KOS_array_read(ctx, OBJPTR(MODULE, module)->constants, value);
+                out = KOS_array_read(ctx, OBJPTR(MODULE, module)->constants, imm.svalue);
                 TRY_OBJID(out);
 
                 out = kos_copy_function(ctx, out);
@@ -1607,7 +1607,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 if (GET_OBJ_TYPE(out) == OBJ_CLASS) {
                     const KOS_OBJ_ID proto_obj = KOS_array_read(ctx,
                                                                 OBJPTR(MODULE, module)->constants,
-                                                                value + 1);
+                                                                imm.svalue + 1);
                     TRY_OBJID(proto_obj);
 
                     KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, out)->prototype, proto_obj);
@@ -1616,7 +1616,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 assert(rdest < num_regs);
                 write_reg(stack_frame, rdest, out);
 
-                bytecode += 4;
+                bytecode += 2 + imm.delta;
                 NEXT_INSTRUCTION;
             }
 
@@ -1769,7 +1769,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(GET_GLOBAL): { /* <r.dest>, <int32> */
+            BEGIN_INSTRUCTION(GET_GLOBAL): { /* <r.dest>, <int32.glob.idx> */
                 PROF_ZONE_N(INSTR, "GET.GLOBAL")
                 const int32_t  idx = (int32_t)load_32(bytecode+2);
 
@@ -1785,7 +1785,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(SET_GLOBAL): { /* <int32>, <r.src> */
+            BEGIN_INSTRUCTION(SET_GLOBAL): { /* <int32.glob.idx>, <r.src> */
                 PROF_ZONE_N(INSTR, "SET.GLOBAL")
                 const int32_t  idx  = (int32_t)load_32(bytecode+1);
                 const unsigned rsrc = bytecode[5];
@@ -1801,7 +1801,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(GET_MOD_GLOBAL): { /* <r.dest>, <uint16>, <r.glob> */
+            BEGIN_INSTRUCTION(GET_MOD_GLOBAL): { /* <r.dest>, <uint16.mod.idx>, <r.glob> */
                 PROF_ZONE_N(INSTR, "GET.MOD.GLOBAL")
                 const int      mod_idx    = (int32_t)load_16(bytecode+2);
                 const unsigned rglob      = bytecode[4];
@@ -1836,7 +1836,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(GET_MOD_ELEM): { /* <r.dest>, <uint16>, <int32> */
+            BEGIN_INSTRUCTION(GET_MOD_ELEM): { /* <r.dest>, <uint16.mod.idx>, <int32.glob.idx> */
                 PROF_ZONE_N(INSTR, "GET.MOD.ELEM")
                 const int  mod_idx    = (int32_t)load_16(bytecode+2);
                 const int  glob_idx   = (int32_t)load_32(bytecode+4);
@@ -1860,7 +1860,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(GET_MOD): { /* <r.dest>, <uint16> */
+            BEGIN_INSTRUCTION(GET_MOD): { /* <r.dest>, <uint16.mod.idx> */
                 PROF_ZONE_N(INSTR, "GET.MOD")
                 const int  mod_idx    = (int32_t)load_16(bytecode+2);
                 KOS_OBJ_ID module_obj = KOS_array_read(ctx,
@@ -2049,7 +2049,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(GET_PROP8): { /* <r.dest>, <r.src>, <str.idx.uint8> */
+            BEGIN_INSTRUCTION(GET_PROP8): { /* <r.dest>, <r.src>, <uint8.str.idx> */
                 PROF_ZONE_N(INSTR, "GET.PROP8")
                 const unsigned rsrc = bytecode[2];
                 const uint8_t  idx  = bytecode[3];
@@ -2188,7 +2188,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(SET_PROP8): { /* <r.dest>, <str.idx.uint8>, <r.src> */
+            BEGIN_INSTRUCTION(SET_PROP8): { /* <r.dest>, <uint8.str.idx>, <r.src> */
                 PROF_ZONE_N(INSTR, "SET.PROP8")
                 const uint8_t  idx  = bytecode[2];
                 const unsigned rsrc = bytecode[3];
@@ -2882,7 +2882,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(HAS_DP_PROP8): { /* <r.dest>, <r.src>, <str.idx.uint8> */
+            BEGIN_INSTRUCTION(HAS_DP_PROP8): { /* <r.dest>, <r.src>, <uint8.str.idx> */
                 PROF_ZONE_N(INSTR, "HAS.DP.PROP8")
                 const unsigned rsrc  = bytecode[2];
                 const int32_t  idx   = bytecode[3];
@@ -2929,7 +2929,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(HAS_SH_PROP8): { /* <r.dest>, <r.src>, <str.idx.uint8> */
+            BEGIN_INSTRUCTION(HAS_SH_PROP8): { /* <r.dest>, <r.src>, <uint8.str.idx> */
                 PROF_ZONE_N(INSTR, "HAS.SH.PROP8")
                 const unsigned rsrc  = bytecode[2];
                 const uint8_t  idx   = bytecode[3];
@@ -3034,9 +3034,9 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(BIND_SELF): /* <r.dest>, <slot.idx.uint8> */
+            BEGIN_INSTRUCTION(BIND_SELF): /* <r.dest>, <uint8.slot.idx> */
                 /* fall through */
-            BEGIN_INSTRUCTION(BIND): { /* <r.dest>, <slot.idx.uint8>, <r.src> */
+            BEGIN_INSTRUCTION(BIND): { /* <r.dest>, <uint8.slot.idx>, <r.src> */
                 PROF_ZONE_N(INSTR, "BIND")
                 const unsigned idx = bytecode[2];
 

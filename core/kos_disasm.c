@@ -7,6 +7,7 @@
 #include "../inc/kos_error.h"
 #include "../inc/kos_memory.h"
 #include "kos_compiler.h"
+#include "kos_misc.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -106,7 +107,10 @@ int kos_get_operand_size(KOS_BYTECODE_INSTR instr, int op)
         case INSTR_LOAD_CONST:
             /* fall through */
         case INSTR_LOAD_FUN:
-            /* fall through */
+            if (op > 0)
+                return -1;
+            break;
+
         case INSTR_GET_MOD:
             if (op > 0)
                 return 2;
@@ -257,7 +261,8 @@ int kos_is_register(KOS_BYTECODE_INSTR instr, int op)
 int kos_is_signed_op(KOS_BYTECODE_INSTR instr, int op)
 {
     assert( ! kos_is_register(instr, op));
-    assert(kos_get_operand_size(instr, op) == 1);
+    assert(kos_get_operand_size(instr, op) <= 1);
+
     switch (instr) {
 
         case INSTR_LOAD_INT8:
@@ -432,16 +437,32 @@ int kos_disassemble(const char                   *filename,
         dis_size = 0;
 
         for (iop = 0; iop < num_operands; iop++) {
-            const int opsize = kos_get_operand_size((KOS_BYTECODE_INSTR)opcode, iop);
-            int32_t   value  = 0;
-            int       tail   = 0;
-            int       pr_size;
-            char      dis_num[12];
+            int     opsize = kos_get_operand_size((KOS_BYTECODE_INSTR)opcode, iop);
+            int32_t value  = 0;
+            int     tail   = 0;
+            int     pr_size;
+            char    dis_num[12];
 
-            assert(opsize == 1 || opsize == 2 || opsize == 4);
+            assert(opsize == -1 || opsize == 1 || opsize == 2 || opsize == 4);
 
-            for (i = 0; i < opsize; i++)
-                value |= (int32_t)((uint32_t)bytecode[instr_size+i] << (8*i));
+            if (opsize == -1) {
+                KOS_IMM imm;
+
+                assert( ! kos_is_register((KOS_BYTECODE_INSTR)opcode, iop));
+
+                if (kos_is_signed_op((KOS_BYTECODE_INSTR)opcode, iop))
+                    imm = kos_load_simm(bytecode + instr_size);
+                else {
+                    imm = kos_load_uimm(bytecode + instr_size);
+                    assert(imm.svalue >= 0);
+                }
+
+                value  = imm.svalue;
+                opsize = imm.delta;
+            }
+            else
+                for (i = 0; i < opsize; i++)
+                    value |= (int32_t)((uint32_t)bytecode[instr_size + i] << (8 * i));
 
             if (is_constant((KOS_BYTECODE_INSTR)opcode, iop)) {
                 constant     = (uint32_t)value;

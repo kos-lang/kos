@@ -572,7 +572,7 @@ do {
     }
     assert collapse_interpolated_strings_1() == "this is test"
 
-    check(collapse_interpolated_strings_1, { registers: 1, instructions: 2, size: 5 })
+    check(collapse_interpolated_strings_1, { registers: 1, instructions: 2, size: 6 })
 }
 
 #============================================================================#
@@ -584,7 +584,7 @@ do {
     }
     assert collapse_interpolated_strings_2() == "integer void false 0.0 32"
 
-    check(collapse_interpolated_strings_2, { registers: 1, instructions: 2, size: 5 })
+    check(collapse_interpolated_strings_2, { registers: 1, instructions: 2, size: 6 })
 }
 
 #============================================================================#
@@ -637,7 +637,7 @@ do {
 
     assert demote_indep_vars(1)() == 42
 
-    check(demote_indep_vars, { registers: 2, instructions: 4, size: 12 })
+    check(demote_indep_vars, { registers: 2, instructions: 4, size: 13 })
 }
 
 #============================================================================#
@@ -656,7 +656,7 @@ do {
     assert f(52)  == 52
     assert f(-10) == -10
 
-    check(optimize_default_args, { registers: 1, instructions: 2, size: 5 })
+    check(optimize_default_args, { registers: 1, instructions: 2, size: 6 })
     check(f,                     { registers: 1, instructions: 1, size: 2 })
 }
 

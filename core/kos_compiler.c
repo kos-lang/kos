@@ -764,29 +764,49 @@ static int gen_instr(KOS_COMP_UNIT *program,
         for (i = 0; i <= num_args; i++) {
 
             int32_t value = (int32_t)va_arg(args, int32_t);
-            int     size  = 1;
 
-            if (i == 0)
+            if (i == 0) {
+                assert(value >= INSTR_BREAKPOINT && value <= INSTR_CANCEL);
                 instr = (KOS_BYTECODE_INSTR)value;
-            else
-                size = kos_get_operand_size(instr, i-1);
-
-            if (size == 1) {
-                if ( ! kos_is_register(instr, i-1)) {
-                    if (kos_is_signed_op(instr, i-1)) {
-                        assert((uint32_t)(value + 128) < 256U);
-                    }
-                    else {
-                        assert((uint32_t)value < 256U);
-                    }
-                }
                 buf[cur_offs++] = (uint8_t)value;
             }
             else {
-                int ibyte;
-                for (ibyte = 0; ibyte < size; ibyte++) {
+                const int size = kos_get_operand_size(instr, i - 1);
+
+                if (size == -1) {
+                    uint32_t uvalue;
+
+                    assert( ! kos_is_register(instr, i - 1));
+
+                    if (kos_is_signed_op(instr, i - 1))
+                        uvalue = (uint32_t)((value << 1) ^ (value >> 31));
+                    else {
+                        assert(value >= 0);
+                        uvalue = (uint32_t)value;
+                    }
+                    do {
+                        const uint8_t byte = (uint8_t)uvalue;
+                        uvalue >>= 7;
+                        buf[cur_offs++] = byte | (uvalue ? 0x80u : 0u);
+                    } while (uvalue);
+                }
+                else if (size == 1) {
+                    if ( ! kos_is_register(instr, i - 1)) {
+                        if (kos_is_signed_op(instr, i - 1)) {
+                            assert((uint32_t)(value + 128) < 256U);
+                        }
+                        else {
+                            assert((uint32_t)value < 256U);
+                        }
+                    }
                     buf[cur_offs++] = (uint8_t)value;
-                    value >>= 8;
+                }
+                else {
+                    int ibyte;
+                    for (ibyte = 0; ibyte < size; ibyte++) {
+                        buf[cur_offs++] = (uint8_t)value;
+                        value >>= 8;
+                    }
                 }
             }
         }
@@ -801,14 +821,14 @@ static int gen_instr(KOS_COMP_UNIT *program,
 }
 
 static int gen_instr1(KOS_COMP_UNIT *program,
-                      int            opcode,
+                      int32_t        opcode,
                       int32_t        operand1)
 {
     return gen_instr(program, 1, opcode, operand1);
 }
 
 static int gen_instr2(KOS_COMP_UNIT *program,
-                      int            opcode,
+                      int32_t        opcode,
                       int32_t        operand1,
                       int32_t        operand2)
 {
@@ -816,7 +836,7 @@ static int gen_instr2(KOS_COMP_UNIT *program,
 }
 
 static int gen_instr3(KOS_COMP_UNIT *program,
-                      int            opcode,
+                      int32_t        opcode,
                       int32_t        operand1,
                       int32_t        operand2,
                       int32_t        operand3)
@@ -825,7 +845,7 @@ static int gen_instr3(KOS_COMP_UNIT *program,
 }
 
 static int gen_instr4(KOS_COMP_UNIT *program,
-                      int            opcode,
+                      int32_t        opcode,
                       int32_t        operand1,
                       int32_t        operand2,
                       int32_t        operand3,
@@ -835,7 +855,7 @@ static int gen_instr4(KOS_COMP_UNIT *program,
 }
 
 static int gen_instr5(KOS_COMP_UNIT *program,
-                      int            opcode,
+                      int32_t        opcode,
                       int32_t        operand1,
                       int32_t        operand2,
                       int32_t        operand3,
@@ -847,7 +867,7 @@ static int gen_instr5(KOS_COMP_UNIT *program,
 
 static int gen_instr_load(KOS_COMP_UNIT      *program,
                           const KOS_AST_NODE *node,
-                          int                 opcode,
+                          int32_t             opcode,
                           int32_t             operand1,
                           int32_t             operand2)
 {
@@ -858,8 +878,6 @@ static int gen_instr_load(KOS_COMP_UNIT      *program,
         program->error_token = &node->token;
         return KOS_ERROR_COMPILE_FAILED;
     }
-    else if (operand2 < 256)
-        opcode = (opcode == INSTR_LOAD_CONST) ? INSTR_LOAD_CONST8 : INSTR_LOAD_FUN8;
 
     return gen_instr2(program, opcode, operand1, operand2);
 }
@@ -1521,7 +1539,7 @@ static int push_jump_array(KOS_COMP_UNIT *program,
     return KOS_SUCCESS;
 }
 
-static int negate_jump_opcode(int opcode)
+static int32_t negate_jump_opcode(int32_t opcode)
 {
     assert((opcode == INSTR_JUMP_COND) || (opcode == INSTR_JUMP_NOT_COND));
 
@@ -1530,7 +1548,7 @@ static int negate_jump_opcode(int opcode)
 
 static int gen_cond_jump_inner(KOS_COMP_UNIT      *program,
                                const KOS_AST_NODE *node,
-                               int                 opcode,
+                               int32_t             opcode,
                                JUMP_ARRAY         *jump_array,
                                JUMP_ARRAY         *near_jump_array)
 {
@@ -1612,7 +1630,7 @@ cleanup:
 
 static int gen_cond_jump(KOS_COMP_UNIT      *program,
                          const KOS_AST_NODE *node,
-                         int                 opcode,
+                         int32_t             opcode,
                          JUMP_ARRAY         *jump_array)
 {
     JUMP_ARRAY near_jump_array;
@@ -4403,7 +4421,7 @@ static int process_operator(KOS_COMP_UNIT      *program,
     const KOS_KEYWORD_TYPE  kw       = (KOS_KEYWORD_TYPE)node->token.keyword;
     KOS_REG                *reg1     = KOS_NULL;
     KOS_REG                *reg2     = KOS_NULL;
-    int                     opcode   = 0;
+    int32_t                 opcode   = 0;
     int                     operands = 0;
     int                     swap     = 0;
 
@@ -5156,7 +5174,7 @@ static int bool_literal(KOS_COMP_UNIT      *program,
 {
     int error = gen_reg(program, reg);
 
-    const int opcode = node->token.keyword == KW_TRUE ? INSTR_LOAD_TRUE : INSTR_LOAD_FALSE;
+    const int32_t opcode = node->token.keyword == KW_TRUE ? INSTR_LOAD_TRUE : INSTR_LOAD_FALSE;
 
     if (!error)
         error = gen_instr1(program, opcode, (*reg)->reg);

@@ -17,11 +17,11 @@ DEFINE_INSTRUCTION(BREAKPOINT, 0x80)
 DEFINE_INSTRUCTION(LOAD_INT8, 0x81)
 /* LOAD.CONST8 <r.dest>, <uint8> */
 DEFINE_INSTRUCTION(LOAD_CONST8, 0x82)       /* TODO remove this variant */
-/* LOAD.CONST <r.dest>, <uint16> */
+/* LOAD.CONST <r.dest>, <uimm> */
 DEFINE_INSTRUCTION(LOAD_CONST, 0x83)
 /* LOAD.FUN8 <r.dest>, <uint8> */
 DEFINE_INSTRUCTION(LOAD_FUN8, 0x84)         /* TODO remove this variant */
-/* LOAD.FUN <r.dest>, <uint16> */
+/* LOAD.FUN <r.dest>, <uimm> */
 DEFINE_INSTRUCTION(LOAD_FUN, 0x85)
 /* LOAD.TRUE <r.dest> */
 DEFINE_INSTRUCTION(LOAD_TRUE, 0x86)
@@ -46,26 +46,26 @@ DEFINE_INSTRUCTION(GET, 0x8D)
 DEFINE_INSTRUCTION(GET_ELEM8, 0x8E)
 /* GET.RANGE <r.dest>, <r.src>, <r.begin>, <r.end> */
 DEFINE_INSTRUCTION(GET_RANGE, 0x8F)
-/* GET.PROP8 <r.dest>, <r.src>, <str.idx.uint8> */
+/* GET.PROP8 <r.dest>, <r.src>, <uint8.str.idx> */
 DEFINE_INSTRUCTION(GET_PROP8, 0x90)
 /* GET.PROTO <r.dest>, <r.src> */
 DEFINE_INSTRUCTION(GET_PROTO, 0x91)
-/* GET.GLOBAL <r.dest>, <int32> */
+/* GET.GLOBAL <r.dest>, <int32.glob.idx> */
 DEFINE_INSTRUCTION(GET_GLOBAL, 0x92)        /* TODO change to uint24 */
-/* GET.MOD.GLOBAL <r.dest>, <uint16>, <r.glob> */
+/* GET.MOD.GLOBAL <r.dest>, <uint16.mod.idx>, <r.glob> */
 DEFINE_INSTRUCTION(GET_MOD_GLOBAL, 0x93)
-/* GET.MOD.ELEM <r.dest>, <uint16>, <int32> */
+/* GET.MOD.ELEM <r.dest>, <uint16.mod.idx>, <int32.glob.idx> */
 DEFINE_INSTRUCTION(GET_MOD_ELEM, 0x94)      /* TODO change to uint24 */
-/* GET.MOD <r.dest>, <uint16> */
+/* GET.MOD <r.dest>, <uint16.mod.idx> */
 DEFINE_INSTRUCTION(GET_MOD, 0x95)
 
 /* SET <r.dest>, <r.prop>, <r.src> */
 DEFINE_INSTRUCTION(SET, 0x96)
 /* SET.ELEM8 <r.dest>, <int8>, <r.src> */
 DEFINE_INSTRUCTION(SET_ELEM8, 0x97)
-/* SET.PROP8 <r.dest>, <str.idx.uint8>, <r.src> */
+/* SET.PROP8 <r.dest>, <uint8.str.idx>, <r.src> */
 DEFINE_INSTRUCTION(SET_PROP8, 0x98)
-/* SET.GLOBAL <int32>, <r.src> */
+/* SET.GLOBAL <int32.glob.idx>, <r.src> */
 DEFINE_INSTRUCTION(SET_GLOBAL, 0x99)        /* TODO change to uint24 */
 
 /* PUSH <r.dest>, <r.src> */
@@ -117,11 +117,11 @@ DEFINE_INSTRUCTION(CMP_LT, 0xAD)
 
 /* HAS.DP <r.dest>, <r.src>, <r.prop> */
 DEFINE_INSTRUCTION(HAS_DP, 0xAE)
-/* HAS.DP.PROP8 <r.dest>, <r.src>, <str.idx.uint8> */
+/* HAS.DP.PROP8 <r.dest>, <r.src>, <uint8.str.idx> */
 DEFINE_INSTRUCTION(HAS_DP_PROP8, 0xAF)      /* TODO change to uint16 or delete this variant */
 /* HAS.SH <r.dest>, <r.src>, <r.prop> */
 DEFINE_INSTRUCTION(HAS_SH, 0xB0)
-/* HAS.SH.PROP8 <r.dest>, <r.src>, <str.idx.uint8> */
+/* HAS.SH.PROP8 <r.dest>, <r.src>, <uint8.str.idx> */
 DEFINE_INSTRUCTION(HAS_SH_PROP8, 0xB1)      /* TODO change to uint16 or delete this variant */
 /* INSTANCEOF <r.dest>, <r.src>, <r.func> */
 DEFINE_INSTRUCTION(INSTANCEOF, 0xB2)
@@ -145,10 +145,10 @@ DEFINE_INSTRUCTION(NEXT_JUMP, 0xB6)         /* TODO change to int24 or int16 */
  * If generator ends, throw an exception. */
 DEFINE_INSTRUCTION(NEXT, 0xB7)
 
-/* BIND <r.dest>, <slot.idx.uint8>, <r.src>
+/* BIND <r.dest>, <uint8.slot.idx>, <r.src>
  * Bind an array to a function (closure). */
 DEFINE_INSTRUCTION(BIND, 0xB8)
-/* BIND.SELF <r.dest>, <slot.idx.uint8> */
+/* BIND.SELF <r.dest>, <uint8.slot.idx> */
 DEFINE_INSTRUCTION(BIND_SELF, 0xB9)
 /* BIND.DEFAULTS <r.dest>, <r.src>
  * Bind an array to a function as a list of arg default values. */
