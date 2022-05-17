@@ -28,10 +28,8 @@ static int get_num_operands(KOS_BYTECODE_INSTR instr)
         case INSTR_THROW:
             return 1;
 
-        case INSTR_LOAD_CONST8:         /* fall through */
         case INSTR_LOAD_CONST:          /* fall through */
         case INSTR_LOAD_INT8:           /* fall through */
-        case INSTR_LOAD_FUN8:           /* fall through */
         case INSTR_LOAD_FUN:            /* fall through */
         case INSTR_NEW_ARRAY8:          /* fall through */
         case INSTR_NEW_OBJ:             /* fall through */
@@ -188,13 +186,9 @@ int kos_is_register(KOS_BYTECODE_INSTR instr, int op)
 {
     switch (instr) {
 
-        case INSTR_LOAD_CONST8:
-            /* fall through */
-        case INSTR_LOAD_CONST:
-            /* fall through */
         case INSTR_LOAD_INT8:
             /* fall through */
-        case INSTR_LOAD_FUN8:
+        case INSTR_LOAD_CONST:
             /* fall through */
         case INSTR_LOAD_FUN:
             /* fall through */
@@ -287,11 +281,7 @@ static int is_constant(KOS_BYTECODE_INSTR instr, int op)
 {
     switch (instr) {
 
-        case INSTR_LOAD_CONST8:
-            /* fall through */
         case INSTR_LOAD_CONST:
-            /* fall through */
-        case INSTR_LOAD_FUN8:
             /* fall through */
         case INSTR_LOAD_FUN:
             /* fall through */
@@ -313,9 +303,7 @@ static int is_constant(KOS_BYTECODE_INSTR instr, int op)
 static const char *const str_instr[] = {
     "BREAKPOINT",
     "LOAD.INT8",
-    "LOAD.CONST8",
     "LOAD.CONST",
-    "LOAD.FUN8",
     "LOAD.FUN",
     "LOAD.TRUE",
     "LOAD.FALSE",
@@ -454,10 +442,10 @@ int kos_disassemble(const char                   *filename,
                     imm = kos_load_simm(bytecode + instr_size);
                 else {
                     imm = kos_load_uimm(bytecode + instr_size);
-                    assert(imm.svalue >= 0);
+                    assert(imm.value.sv >= 0);
                 }
 
-                value  = imm.svalue;
+                value  = imm.value.sv;
                 opsize = imm.delta;
             }
             else

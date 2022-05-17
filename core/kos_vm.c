@@ -1531,29 +1531,13 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
         switch (instr) {
 #endif
 
-            BEGIN_INSTRUCTION(LOAD_CONST8): { /* <r.dest>, <uint8> */
-                PROF_ZONE_N(INSTR, "LOAD.CONST8")
-                const uint8_t value = bytecode[2];
-
-                rdest = bytecode[1];
-
-                out = KOS_array_read(ctx, OBJPTR(MODULE, module)->constants, value);
-                TRY_OBJID(out);
-
-                assert(rdest < num_regs);
-                write_reg(stack_frame, rdest, out);
-
-                bytecode += 3;
-                NEXT_INSTRUCTION;
-            }
-
             BEGIN_INSTRUCTION(LOAD_CONST): { /* <r.dest>, <uimm> */
                 PROF_ZONE_N(INSTR, "LOAD.CONST")
                 const KOS_IMM imm = kos_load_uimm(bytecode + 2);
 
                 rdest = bytecode[1];
 
-                out = KOS_array_read(ctx, OBJPTR(MODULE, module)->constants, imm.svalue);
+                out = KOS_array_read(ctx, OBJPTR(MODULE, module)->constants, imm.value.sv);
                 TRY_OBJID(out);
 
                 assert(rdest < num_regs);
@@ -1563,42 +1547,13 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(LOAD_FUN8): { /* <r.dest>, <uint8> */
-                PROF_ZONE_N(INSTR, "LOAD.FUN8")
-                const uint8_t value = bytecode[2];
-
-                rdest = bytecode[1];
-
-                out = KOS_array_read(ctx, OBJPTR(MODULE, module)->constants, value);
-                TRY_OBJID(out);
-
-                out = kos_copy_function(ctx, out);
-                TRY_OBJID(out);
-
-                if (GET_OBJ_TYPE(out) == OBJ_CLASS) {
-
-                    const KOS_OBJ_ID proto_obj = KOS_array_read(ctx,
-                                                                OBJPTR(MODULE, module)->constants,
-                                                                (uint32_t)value + 1U);
-                    TRY_OBJID(proto_obj);
-
-                    KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, out)->prototype, proto_obj);
-                }
-
-                assert(rdest < num_regs);
-                write_reg(stack_frame, rdest, out);
-
-                bytecode += 3;
-                NEXT_INSTRUCTION;
-            }
-
             BEGIN_INSTRUCTION(LOAD_FUN): { /* <r.dest>, <uimm> */
                 PROF_ZONE_N(INSTR, "LOAD.FUN")
                 const KOS_IMM imm = kos_load_uimm(bytecode + 2);
 
                 rdest = bytecode[1];
 
-                out = KOS_array_read(ctx, OBJPTR(MODULE, module)->constants, imm.svalue);
+                out = KOS_array_read(ctx, OBJPTR(MODULE, module)->constants, imm.value.sv);
                 TRY_OBJID(out);
 
                 out = kos_copy_function(ctx, out);
@@ -1607,7 +1562,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 if (GET_OBJ_TYPE(out) == OBJ_CLASS) {
                     const KOS_OBJ_ID proto_obj = KOS_array_read(ctx,
                                                                 OBJPTR(MODULE, module)->constants,
-                                                                imm.svalue + 1);
+                                                                imm.value.sv + 1);
                     TRY_OBJID(proto_obj);
 
                     KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, out)->prototype, proto_obj);

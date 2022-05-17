@@ -47,9 +47,9 @@ void     kos_get_entropy_fallback(uint8_t *bytes, unsigned size);
 
 typedef struct KOS_IMM_S {
     union {
-        int32_t  svalue;
-        uint32_t uvalue;
-    };
+        int32_t  sv;
+        uint32_t uv;
+    }            value;
     int          delta;
 } KOS_IMM;
 

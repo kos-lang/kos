@@ -732,13 +732,13 @@ KOS_IMM kos_load_uimm(const uint8_t *bytecode)
     int            bits = 0;
     uint8_t        byte;
 
-    imm.uvalue = 0;
+    imm.value.uv = 0;
 
     do {
         byte = *(cur++);
 
-        imm.uvalue += ((uint32_t)(byte & 0x7Fu)) << bits;
-        bits       += 7;
+        imm.value.uv += ((uint32_t)(byte & 0x7Fu)) << bits;
+        bits         += 7;
     } while (byte > 0x7Fu);
 
     imm.delta = (int)(cur - bytecode);
@@ -750,7 +750,7 @@ KOS_IMM kos_load_simm(const uint8_t *bytecode)
 {
     KOS_IMM imm = kos_load_uimm(bytecode);
 
-    imm.svalue = ((imm.svalue << 31) >> 31) ^ (imm.svalue >> 1);
+    imm.value.sv = ((imm.value.sv << 31) >> 31) ^ (imm.value.sv >> 1);
 
     return imm;
 }

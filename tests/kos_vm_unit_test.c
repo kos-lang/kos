@@ -188,7 +188,8 @@ static int test_instr(KOS_CONTEXT           ctx,
                 else {
                     KOS_OBJ_ID value;
 
-                    code[words++] = INSTR_LOAD_CONST8;
+                    assert(num_constants < 128);
+                    code[words++] = INSTR_LOAD_CONST;
                     code[words++] = regs;
                     code[words++] = (uint8_t)num_constants;
                     parms[i]      = regs++;
@@ -206,7 +207,8 @@ static int test_instr(KOS_CONTEXT           ctx,
                 break;
 
             case V_INT64:
-                code[words++] = INSTR_LOAD_CONST8;
+                assert(num_constants < 128);
+                code[words++] = INSTR_LOAD_CONST;
                 code[words++] = regs;
                 code[words++] = (uint8_t)num_constants;
                 parms[i]      = regs++;
@@ -225,7 +227,8 @@ static int test_instr(KOS_CONTEXT           ctx,
                 break;
 
             case V_FLOAT:
-                code[words++] = INSTR_LOAD_CONST8;
+                assert(num_constants < 128);
+                code[words++] = INSTR_LOAD_CONST;
                 code[words++] = regs;
                 code[words++] = (uint8_t)num_constants;
                 parms[i]      = regs++;
@@ -251,7 +254,8 @@ static int test_instr(KOS_CONTEXT           ctx,
             case V_STR1:
                 /* fall through */
             case V_STR2:
-                code[words++] = INSTR_LOAD_CONST8;
+                assert(num_constants < 128);
+                code[words++] = INSTR_LOAD_CONST;
                 code[words++] = regs;
                 code[words++] = (uint8_t)num_constants;
                 parms[i]      = regs++;
@@ -579,63 +583,63 @@ int main(void)
     {
         const uint8_t buf[] = { 0x00u };
         const KOS_IMM imm   = kos_load_uimm(buf);
-        TEST(imm.uvalue == 0);
+        TEST(imm.value.uv == 0);
         TEST(imm.delta  == 1);
     }
 
     {
         const uint8_t buf[] = { 0x7Fu };
         const KOS_IMM imm   = kos_load_uimm(buf);
-        TEST(imm.uvalue == 127);
+        TEST(imm.value.uv == 127);
         TEST(imm.delta  == 1);
     }
 
     {
         const uint8_t buf[] = { 0x80u, 0x01u };
         const KOS_IMM imm   = kos_load_uimm(buf);
-        TEST(imm.uvalue == 128);
+        TEST(imm.value.uv == 128);
         TEST(imm.delta  == 2);
     }
 
     {
         const uint8_t buf[] = { 0x00u };
         const KOS_IMM imm   = kos_load_simm(buf);
-        TEST(imm.svalue == 0);
+        TEST(imm.value.sv == 0);
         TEST(imm.delta  == 1);
     }
 
     {
         const uint8_t buf[] = { 0x01u };
         const KOS_IMM imm   = kos_load_simm(buf);
-        TEST(imm.svalue == -1);
+        TEST(imm.value.sv == -1);
         TEST(imm.delta  == 1);
     }
 
     {
         const uint8_t buf[] = { 0x7Eu };
         const KOS_IMM imm   = kos_load_simm(buf);
-        TEST(imm.svalue == 63);
+        TEST(imm.value.sv == 63);
         TEST(imm.delta  == 1);
     }
 
     {
         const uint8_t buf[] = { 0x7Fu };
         const KOS_IMM imm   = kos_load_simm(buf);
-        TEST(imm.svalue == -64);
+        TEST(imm.value.sv == -64);
         TEST(imm.delta  == 1);
     }
 
     {
         const uint8_t buf[] = { 0x80u, 0x01u };
         const KOS_IMM imm   = kos_load_simm(buf);
-        TEST(imm.svalue == 64);
+        TEST(imm.value.sv == 64);
         TEST(imm.delta  == 2);
     }
 
     {
         const uint8_t buf[] = { 0x81u, 0x01u };
         const KOS_IMM imm   = kos_load_simm(buf);
-        TEST(imm.svalue == -65);
+        TEST(imm.value.sv == -65);
         TEST(imm.delta  == 2);
     }
 
