@@ -893,3 +893,25 @@ do {
 
     assert deferred() == 1
 }
+
+# complex mix of defer and return, from fuzzer
+do {
+    fun deferred
+    {
+        defer {
+            defer {
+            }
+            defer {
+                defer {
+                    defer {
+                    }
+                    return 1
+                }
+                return 2
+            }
+        }
+        return 3
+    }
+
+    assert deferred() == 1
+}

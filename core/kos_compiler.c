@@ -2976,20 +2976,24 @@ static void update_child_scope_catch(KOS_COMP_UNIT *program)
 
     scope = scope->catch_ref.child_scopes;
 
-    for ( ; scope; scope = scope->catch_ref.next) {
+    while (scope) {
 
-        const int num_catch_offs = scope->catch_ref.num_catch_offs;
-        int       i;
+        KOS_CATCH_REF *catch_ref      = &scope->catch_ref;
+        const int      num_catch_offs = catch_ref->num_catch_offs;
+        int            i;
 
         for (i = 0; i < num_catch_offs; i++) {
-            const uint32_t entry = scope->catch_ref.catch_entry[i];
+            const uint32_t entry = catch_ref->catch_entry[i];
             assert(entry != KOS_NO_JUMP);
             set_jump_target(program, entry, dest_offs);
 
-            scope->catch_ref.catch_entry[i] = KOS_NO_JUMP;
+            catch_ref->catch_entry[i] = KOS_NO_JUMP;
         }
 
-        scope->catch_ref.num_catch_offs = 0;
+        scope = catch_ref->next;
+
+        catch_ref->next           = KOS_NULL;
+        catch_ref->num_catch_offs = 0;
     }
 
     program->scope_stack->catch_ref.child_scopes = KOS_NULL;
