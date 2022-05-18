@@ -99,6 +99,7 @@ runtests()
     [ -n "$fastdispatch" ] && [ "$fastdispatch" = "0" ] && WITH_TOOL=" with slow dispatch"
     [ -n "$deepstack" ] && [ "$deepstack" = "1" ] && WITH_TOOL=" with deep stack"
 
+    local OVERRIDE=""
     if [ -n "$SANITIZER" ]; then
         local CFLAGS
         local LDFLAGS
@@ -111,12 +112,13 @@ runtests()
         export CFLAGS
         export LDFLAGS
         WITH_TOOL="$WITH_TOOL with $SANITIZER sanitizer"
+        OVERRIDE="out_dir_base_rel=Out/debug_asan"
     fi
 
     echo "Testing $MODE as $PRINT_LANG$WITH_TOOL"
     echo "***************************************************************************"
 
-    $MAKE -k -j "$JOBS" test CLANG_VER=$1 CPPLANG_VER=$2 strict=1 --warn-undefined-variables
+    $MAKE -k -j "$JOBS" test CLANG_VER=$1 CPPLANG_VER=$2 strict=1 --warn-undefined-variables $OVERRIDE
 }
 
 # Kill release build after a few minutes in Travis
