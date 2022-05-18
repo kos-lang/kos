@@ -2983,9 +2983,13 @@ static void update_child_scope_catch(KOS_COMP_UNIT *program)
 
         for (i = 0; i < num_catch_offs; i++) {
             const uint32_t entry = scope->catch_ref.catch_entry[i];
-            if (entry != KOS_NO_JUMP)
-                set_jump_target(program, entry, dest_offs);
+            assert(entry != KOS_NO_JUMP);
+            set_jump_target(program, entry, dest_offs);
+
+            scope->catch_ref.catch_entry[i] = KOS_NO_JUMP;
         }
+
+        scope->catch_ref.num_catch_offs = 0;
     }
 
     program->scope_stack->catch_ref.child_scopes = KOS_NULL;
