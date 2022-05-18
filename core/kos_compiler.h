@@ -62,24 +62,26 @@ typedef struct KOS_VAR_S {
     unsigned            has_defaults : 1;
 } KOS_VAR;
 
+#define KOS_NO_JUMP (~0u)
+
 typedef struct KOS_BREAK_OFFS_S {
     struct KOS_BREAK_OFFS_S *next;
-    int                      offs;
+    uint32_t                 entry;
     KOS_NODE_TYPE            type;
 } KOS_BREAK_OFFS;
 
 typedef struct KOS_RETURN_OFFS_S {
     struct KOS_RETURN_OFFS_S *next;
-    int                       offs;
+    uint32_t                  entry;
 } KOS_RETURN_OFFS;
 
 typedef struct KOS_CATCH_REF_S {
-    struct KOS_SCOPE_S *next;           /* Used by child_scopes */
-    struct KOS_SCOPE_S *child_scopes;   /* List of child scopes which need to update catch offset to this scope */
-    KOS_REG            *catch_reg;      /* Exception register used in this scope, or -1 if no catch */
-    int                 finally_active; /* For return statements inside try/catch */
-    int                 num_catch_offs; /* Number of active offsets in catch_offs */
-    int                 catch_offs[25]; /* Catch instructions offsets in this scope, which update catch offsets for the parent scope */
+    struct KOS_SCOPE_S *next;            /* Used by child_scopes */
+    struct KOS_SCOPE_S *child_scopes;    /* List of child scopes which need to update catch offset to this scope */
+    KOS_REG            *catch_reg;       /* Exception register used in this scope, or -1 if no catch */
+    int                 finally_active;  /* For return statements inside try/catch */
+    int                 num_catch_offs;  /* Number of active offsets in catch_offs */
+    uint32_t            catch_entry[25]; /* Catch instructions offsets in this scope, which update catch offsets for the parent scope */
 } KOS_CATCH_REF;
 
 typedef struct KOS_SCOPE_S {
@@ -266,6 +268,8 @@ typedef struct KOS_COMP_UNIT_S {
 
     KOS_VECTOR           addr2line_buf;
     KOS_VECTOR           addr2line_gen_buf;
+
+    KOS_VECTOR           jump_buf;
 } KOS_COMP_UNIT;
 
 void kos_compiler_init(KOS_COMP_UNIT *program,

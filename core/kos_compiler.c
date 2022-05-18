@@ -972,6 +972,53 @@ static int gen_instr_set_array_var_elem(KOS_COMP_UNIT      *program,
         return gen_instr_set_elem(program, node, cont_reg->reg, cont_var->array_idx, src_reg);
 }
 
+typedef struct JUMP_ENTRY_S {
+    int jump_instr_offs;
+    int target_offs;
+} JUMP_ENTRY;
+
+static int add_jump_instr_at_offset(KOS_COMP_UNIT *program, uint32_t *jump_entry, int jump_instr_offs)
+{
+    const size_t item_offs = program->jump_buf.size;
+    const int    error     = KOS_vector_resize(&program->jump_buf, item_offs + sizeof(JUMP_ENTRY));
+
+    if ( ! error) {
+        JUMP_ENTRY *const new_entry = (JUMP_ENTRY *)&program->jump_buf.buffer[item_offs];
+
+        new_entry->jump_instr_offs = jump_instr_offs;
+        new_entry->target_offs     = -1;
+
+        *jump_entry = (uint32_t)item_offs;
+    }
+
+    return error;
+}
+
+static int add_jump_instr(KOS_COMP_UNIT *program, uint32_t *jump_entry)
+{
+    return add_jump_instr_at_offset(program, jump_entry, program->cur_offs);
+}
+
+static void set_jump_target(KOS_COMP_UNIT *program, uint32_t jump_entry, int target_offs)
+{
+    JUMP_ENTRY *const entry = (JUMP_ENTRY *)&program->jump_buf.buffer[jump_entry];
+
+    assert(entry->target_offs == -1);
+
+    entry->target_offs = target_offs;
+}
+
+static int add_jump_instr_with_target(KOS_COMP_UNIT *program, int target_offs)
+{
+    uint32_t  jump_entry = 0;
+    const int error      = add_jump_instr(program, &jump_entry);
+
+    if ( ! error)
+        set_jump_target(program, jump_entry, target_offs);
+
+    return error;
+}
+
 static void write_jump_offs(KOS_COMP_UNIT *program,
                             KOS_VECTOR    *vec,
                             int            jump_instr_offs,
@@ -1021,14 +1068,26 @@ static void write_jump_offs(KOS_COMP_UNIT *program,
     }
 }
 
-static void update_jump_offs(KOS_COMP_UNIT *program,
-                             int            jump_instr_offs,
-                             int            target_offs)
+static int update_jumps(KOS_COMP_UNIT *program, size_t first_jump_entry)
 {
-    assert(jump_instr_offs <  program->cur_offs);
-    assert(target_offs     <= program->cur_offs);
+    const JUMP_ENTRY       *entry = (JUMP_ENTRY *)&program->jump_buf.buffer[first_jump_entry];
+    const JUMP_ENTRY *const end   = (JUMP_ENTRY *)&program->jump_buf.buffer[program->jump_buf.size];
 
-    write_jump_offs(program, &program->code_gen_buf, jump_instr_offs, target_offs);
+    assert(first_jump_entry <= program->jump_buf.size);
+    assert(first_jump_entry % sizeof(JUMP_ENTRY) == 0);
+
+    for ( ; entry < end; ++entry) {
+
+        assert(entry->target_offs >= 0);
+        assert((unsigned)entry->target_offs <= program->code_gen_buf.size);
+        assert((unsigned)entry->jump_instr_offs < program->code_gen_buf.size);
+
+        write_jump_offs(program, &program->code_gen_buf, entry->jump_instr_offs, entry->target_offs);
+    }
+
+    program->jump_buf.size = first_jump_entry;
+
+    return KOS_SUCCESS;
 }
 
 static KOS_SCOPE *push_scope(KOS_COMP_UNIT      *program,
@@ -1189,7 +1248,8 @@ cleanup:
 static int append_frame(KOS_COMP_UNIT     *program,
                         KOS_COMP_FUNCTION *func_constant,
                         int                fun_start_offs,
-                        size_t             addr2line_start_offs)
+                        size_t             addr2line_start_offs,
+                        size_t             jump_buf_offs)
 {
     int          error;
     const size_t fun_end_offs = (size_t)program->cur_offs;
@@ -1197,6 +1257,8 @@ static int append_frame(KOS_COMP_UNIT     *program,
     const size_t fun_new_offs = program->code_buf.size;
     const size_t a2l_new_offs = program->addr2line_buf.size;
     size_t       a2l_size;
+
+    TRY(update_jumps(program, jump_buf_offs));
 
     /* Remove last address-to-line entry if it points beyond the end of the function */
     if (program->addr2line_gen_buf.size) {
@@ -1332,7 +1394,7 @@ static int finish_global_scope(KOS_COMP_UNIT *program,
 
     program->cur_frame->constant = constant;
 
-    TRY(append_frame(program, constant, 0, 0));
+    TRY(append_frame(program, constant, 0, 0, 0));
 
     assert(program->code_gen_buf.size == 0);
 
@@ -1456,17 +1518,17 @@ static int visit_cond_node(KOS_COMP_UNIT      *program,
 }
 
 typedef struct JUMP_ARRAY_S {
-    uint16_t num_jumps;
-    uint16_t capacity;
-    int     *offs;
-    int      tmp[4];
+    uint16_t  num_jumps;
+    uint16_t  capacity;
+    uint32_t *entries;
+    uint32_t  local[4];
 } JUMP_ARRAY;
 
 static void init_jump_array(JUMP_ARRAY *jump_array)
 {
     jump_array->num_jumps = 0;
-    jump_array->capacity  = (uint16_t)(sizeof(jump_array->tmp) / sizeof(jump_array->tmp[0]));
-    jump_array->offs      = &jump_array->tmp[0];
+    jump_array->capacity  = (uint16_t)(sizeof(jump_array->local) / sizeof(jump_array->local[0]));
+    jump_array->entries   = &jump_array->local[0];
 }
 
 static void reset_jump_array(JUMP_ARRAY *jump_array)
@@ -1478,11 +1540,11 @@ static void update_jump_array(KOS_COMP_UNIT *program,
                               JUMP_ARRAY    *jump_array,
                               int            target_offs)
 {
-    int       *offs = jump_array->offs;
-    int *const end  = offs + jump_array->num_jumps;
+    const uint32_t       *entry = jump_array->entries;
+    const uint32_t *const end   = entry + jump_array->num_jumps;
 
-    for (; offs < end; offs++)
-        update_jump_offs(program, *offs, target_offs);
+    for ( ; entry < end; entry++)
+        set_jump_target(program, *entry, target_offs);
 }
 
 static int push_jump_array(KOS_COMP_UNIT *program,
@@ -1490,21 +1552,23 @@ static int push_jump_array(KOS_COMP_UNIT *program,
                            int            offs)
 {
     if (jump_array->num_jumps >= jump_array->capacity) {
-        const uint16_t new_capacity = jump_array->capacity * 2;
-        int     *const new_buf      = (int *)KOS_mempool_alloc(&program->allocator,
-                                                               sizeof(int) * new_capacity);
+        const uint16_t  new_capacity = jump_array->capacity * 2;
+        uint32_t *const new_buf      = (uint32_t *)KOS_mempool_alloc(&program->allocator,
+                                                                     sizeof(uint32_t) * new_capacity);
 
         if ( ! new_buf)
             return KOS_ERROR_OUT_OF_MEMORY;
 
         if (jump_array->num_jumps)
-            memcpy(new_buf, jump_array->offs, sizeof(int) * jump_array->num_jumps);
+            memcpy(new_buf, jump_array->entries, sizeof(int) * jump_array->num_jumps);
 
-        jump_array->offs     = new_buf;
+        jump_array->entries  = new_buf;
         jump_array->capacity = new_capacity;
     }
 
-    jump_array->offs[jump_array->num_jumps++] = offs;
+    add_jump_instr_at_offset(program,
+                             &jump_array->entries[jump_array->num_jumps++],
+                             offs);
 
     return KOS_SUCCESS;
 }
@@ -1523,7 +1587,6 @@ static int gen_cond_jump_inner(KOS_COMP_UNIT      *program,
                                JUMP_ARRAY         *near_jump_array)
 {
     int error     = KOS_SUCCESS;
-    int jump_offs = -1;
     int is_truthy = 0;
     int is_falsy  = 0;
 
@@ -1572,7 +1635,8 @@ static int gen_cond_jump_inner(KOS_COMP_UNIT      *program,
     if ((is_truthy && (opcode == INSTR_JUMP_COND)) ||
         (is_falsy  && (opcode == INSTR_JUMP_NOT_COND))) {
 
-        jump_offs = program->cur_offs;
+        TRY(push_jump_array(program, jump_array, program->cur_offs));
+
         TRY(gen_instr1(program, INSTR_JUMP, 0));
     }
     else if ((is_truthy && (opcode == INSTR_JUMP_NOT_COND)) ||
@@ -1585,14 +1649,12 @@ static int gen_cond_jump_inner(KOS_COMP_UNIT      *program,
 
         TRY(visit_node(program, node, &reg));
 
-        jump_offs = program->cur_offs;
+        TRY(push_jump_array(program, jump_array, program->cur_offs));
+
         TRY(gen_instr2(program, opcode, 0, reg->reg));
 
         free_reg(program, reg);
     }
-
-    if (jump_offs >= 0)
-        TRY(push_jump_array(program, jump_array, jump_offs));
 
 cleanup:
     return error;
@@ -1707,9 +1769,9 @@ static int gen_return(KOS_COMP_UNIT *program,
             TRY(gen_instr2(program, INSTR_MOVE, return_reg, reg));
 
         return_offs->next               = program->cur_frame->return_offs;
-        return_offs->offs               = program->cur_offs;
         program->cur_frame->return_offs = return_offs;
 
+        TRY(add_jump_instr(program, &return_offs->entry));
         TRY(gen_instr1(program, INSTR_JUMP, 0));
     }
     else
@@ -1876,9 +1938,9 @@ static void finish_break_continue(KOS_COMP_UNIT  *program,
             old_break_offs   = break_offs;
         }
         else
-            update_jump_offs(program, break_offs->offs,
-                    break_offs->type != NT_BREAK
-                    ? continue_tgt_offs : break_tgt_offs);
+            set_jump_target(program,
+                            break_offs->entry,
+                            (break_offs->type != NT_BREAK) ? continue_tgt_offs : break_tgt_offs);
 
         break_offs = next;
     }
@@ -1899,7 +1961,7 @@ static void finish_fallthrough(KOS_COMP_UNIT *program)
         KOS_BREAK_OFFS *next = break_offs->next;
 
         if (break_offs->type == NT_FALLTHROUGH)
-            update_jump_offs(program, break_offs->offs, fallthrough_tgt_offs);
+            set_jump_target(program, break_offs->entry, fallthrough_tgt_offs);
         else {
             break_offs->next = *remaining_offs;
             *remaining_offs  = break_offs;
@@ -2191,7 +2253,7 @@ static int for_in(KOS_COMP_UNIT      *program,
                   const KOS_AST_NODE *node)
 {
     int                 error;
-    int                 initial_jump_offs;
+    uint32_t            initial_jump_entry;
     int                 loop_start_offs;
     int                 next_jump_offs;
     const KOS_AST_NODE *var_node;
@@ -2262,7 +2324,7 @@ static int for_in(KOS_COMP_UNIT      *program,
             TRY(gen_reg(program, &item_reg));
     }
 
-    initial_jump_offs = program->cur_offs;
+    TRY(add_jump_instr(program, &initial_jump_entry));
     TRY(gen_instr1(program, INSTR_JUMP, 0));
 
     loop_start_offs = program->cur_offs;
@@ -2329,10 +2391,10 @@ static int for_in(KOS_COMP_UNIT      *program,
     TRY(gen_reg(program, &item_reg));
 
     next_jump_offs = program->cur_offs;
+    TRY(add_jump_instr_with_target(program, loop_start_offs));
     TRY(gen_instr3(program, INSTR_NEXT_JUMP, item_reg->reg, iter_reg->reg, 0));
 
-    update_jump_offs(program, initial_jump_offs, next_jump_offs);
-    update_jump_offs(program, next_jump_offs, loop_start_offs);
+    set_jump_target(program, initial_jump_entry, next_jump_offs);
     finish_break_continue(program, next_jump_offs, old_break_offs);
 
     if (var_node->next) {
@@ -2409,10 +2471,9 @@ static int for_range(KOS_COMP_UNIT      *program,
     KOS_SCOPE          *prev_try_scope = push_try_scope(program);
     KOS_NODE_TYPE       lhs_type;
     int                 decrement      = 0;
-    int                 initial_jump_offs;
+    uint32_t            initial_jump_entry;
     int                 loop_start_offs;
     int                 next_jump_offs;
-    int                 loop_jump_offs;
     int                 error;
 
     program->cur_frame->break_offs = KOS_NULL;
@@ -2549,7 +2610,7 @@ static int for_range(KOS_COMP_UNIT      *program,
         }
     }
 
-    initial_jump_offs = program->cur_offs;
+    TRY(add_jump_instr(program, &initial_jump_entry));
     TRY(gen_instr1(program, INSTR_JUMP, 0));
 
     loop_start_offs = program->cur_offs;
@@ -2566,7 +2627,7 @@ static int for_range(KOS_COMP_UNIT      *program,
     next_jump_offs = program->cur_offs;
     TRY(gen_instr3(program, INSTR_ADD, iter_reg->reg, iter_reg->reg, step_reg->reg));
 
-    update_jump_offs(program, initial_jump_offs, program->cur_offs);
+    set_jump_target(program, initial_jump_entry, program->cur_offs);
 
     if ((iter_reg != item_reg) && item_reg)
         TRY(gen_instr2(program, INSTR_MOVE, item_reg->reg, iter_reg->reg));
@@ -2578,10 +2639,8 @@ static int for_range(KOS_COMP_UNIT      *program,
                    decrement ? end_reg->reg : iter_reg->reg,
                    decrement ? iter_reg->reg : end_reg->reg));
 
-    loop_jump_offs = program->cur_offs;
+    TRY(add_jump_instr_with_target(program, loop_start_offs));
     TRY(gen_instr2(program, INSTR_JUMP_COND, 0, reg->reg));
-
-    update_jump_offs(program, loop_jump_offs, loop_start_offs);
 
     if ((lhs_type == NT_LEFT_HAND_SIDE) && item_reg)
         TRY(gen_instr1(program, INSTR_LOAD_VOID, item_reg->reg));
@@ -2626,16 +2685,15 @@ static int restore_catch(KOS_COMP_UNIT *program,
         KOS_CATCH_REF *cur_catch_ref = &cur_scope->catch_ref;
         int            offs_idx      = cur_catch_ref->num_catch_offs;
 
-        if ((size_t)offs_idx == sizeof(cur_catch_ref->catch_offs) / sizeof(int)) {
+        if ((size_t)offs_idx == sizeof(cur_catch_ref->catch_entry) / sizeof(uint32_t)) {
             program->error_token = &cur_scope->scope_node->token;
             program->error_str   = str_err_catch_nesting_too_deep;
             return KOS_ERROR_COMPILE_FAILED;
         }
 
-        assert(cur_catch_ref->catch_offs[offs_idx] == 0);
+        assert(cur_catch_ref->catch_entry[offs_idx] == KOS_NO_JUMP);
 
-        cur_catch_ref->catch_offs[offs_idx] = program->cur_offs;
-        cur_catch_ref->num_catch_offs       = offs_idx + 1;
+        cur_catch_ref->num_catch_offs = offs_idx + 1;
 
         if (offs_idx == 0) {
             assert(!cur_catch_ref->next);
@@ -2644,7 +2702,9 @@ static int restore_catch(KOS_COMP_UNIT *program,
             outer_scope->catch_ref.child_scopes = cur_scope;
         }
 
-        error = gen_instr2(program, INSTR_CATCH, outer_scope->catch_ref.catch_reg->reg, 0);
+        error = add_jump_instr(program, &cur_catch_ref->catch_entry[offs_idx]);
+        if ( ! error)
+            error = gen_instr2(program, INSTR_CATCH, outer_scope->catch_ref.catch_reg->reg, 0);
     }
     else
         error = gen_instr(program, 0, INSTR_CANCEL);
@@ -2697,7 +2757,7 @@ static int break_continue_fallthrough(KOS_COMP_UNIT      *program,
         pop_scope(program);
     }
 
-    program->cur_frame->break_offs->offs = program->cur_offs;
+    TRY(add_jump_instr(program, &program->cur_frame->break_offs->entry));
     TRY(gen_instr1(program, INSTR_JUMP, 0));
 
 cleanup:
@@ -2705,8 +2765,8 @@ cleanup:
 }
 
 typedef struct KOS_SWITCH_CASE_S {
-    int to_jump_offs;
-    int final_jump_offs;
+    uint32_t to_jump_entry;
+    uint32_t final_jump_entry;
 } KOS_SWITCH_CASE;
 
 static int count_siblings(const KOS_AST_NODE *node)
@@ -2725,14 +2785,14 @@ static int switch_stmt(KOS_COMP_UNIT      *program,
                        const KOS_AST_NODE *node)
 {
     int                 error;
-    KOS_REG            *value_reg       = KOS_NULL;
+    KOS_REG            *value_reg        = KOS_NULL;
     const KOS_AST_NODE *first_case_node;
     int                 num_cases;
     int                 i_case;
-    int                 i_default_case  = -1;
-    int                 final_jump_offs = -1;
-    KOS_SWITCH_CASE    *cases           = KOS_NULL;
-    KOS_BREAK_OFFS     *old_break_offs  = program->cur_frame->break_offs;
+    int                 i_default_case   = -1;
+    uint32_t            final_jump_entry = KOS_NO_JUMP;
+    KOS_SWITCH_CASE    *cases            = KOS_NULL;
+    KOS_BREAK_OFFS     *old_break_offs   = program->cur_frame->break_offs;
 
     program->cur_frame->break_offs = KOS_NULL;
 
@@ -2825,8 +2885,7 @@ static int switch_stmt(KOS_COMP_UNIT      *program,
 
             TRY(gen_instr3(program, INSTR_CMP_EQ, result_reg->reg, value_reg->reg, case_reg->reg));
 
-            cases[i_case].to_jump_offs = program->cur_offs;
-
+            TRY(add_jump_instr(program, &cases[i_case].to_jump_entry));
             TRY(gen_instr2(program, INSTR_JUMP_COND, 0, result_reg->reg));
 
             free_reg(program, case_reg);
@@ -2840,18 +2899,18 @@ static int switch_stmt(KOS_COMP_UNIT      *program,
             assert(node->children->type == NT_EMPTY);
 
             i_default_case = i_case;
-            cases[i_case].to_jump_offs = -1;
+            cases[i_case].to_jump_entry = KOS_NO_JUMP;
         }
     }
 
     free_reg(program, value_reg);
     value_reg = KOS_NULL;
 
-    if (i_default_case >= 0)
-        cases[i_default_case].to_jump_offs = program->cur_offs;
-    else
-        final_jump_offs = program->cur_offs;
+    assert(i_default_case < 0 || cases[i_default_case].to_jump_entry == KOS_NO_JUMP);
 
+    TRY(add_jump_instr(program, (i_default_case >= 0)
+                                ? &cases[i_default_case].to_jump_entry
+                                : &final_jump_entry));
     TRY(gen_instr1(program, INSTR_JUMP, 0));
 
     node = first_case_node;
@@ -2864,14 +2923,14 @@ static int switch_stmt(KOS_COMP_UNIT      *program,
 
         child_node = child_node->next;
 
-        assert(cases[i_case].to_jump_offs > 0);
+        assert(cases[i_case].to_jump_entry != KOS_NO_JUMP);
 
-        update_jump_offs(program, cases[i_case].to_jump_offs, program->cur_offs);
+        set_jump_target(program, cases[i_case].to_jump_entry, program->cur_offs);
 
         if (i_case)
             finish_fallthrough(program);
 
-        cases[i_case].final_jump_offs = -1;
+        cases[i_case].final_jump_entry = KOS_NO_JUMP;
 
         if (child_node->type != NT_FALLTHROUGH) {
 
@@ -2879,8 +2938,7 @@ static int switch_stmt(KOS_COMP_UNIT      *program,
             assert( ! value_reg);
 
             if ( ! child_node->next) {
-                cases[i_case].final_jump_offs = program->cur_offs;
-
+                TRY(add_jump_instr(program, &cases[i_case].final_jump_entry));
                 TRY(gen_instr1(program, INSTR_JUMP, 0));
             }
             else {
@@ -2894,15 +2952,15 @@ static int switch_stmt(KOS_COMP_UNIT      *program,
         }
     }
 
-    if (final_jump_offs >= 0)
-        update_jump_offs(program, final_jump_offs, program->cur_offs);
+    if (final_jump_entry != KOS_NO_JUMP)
+        set_jump_target(program, final_jump_entry, program->cur_offs);
 
     for (i_case = 0; i_case < num_cases; ++i_case) {
 
-        const int offs = cases[i_case].final_jump_offs;
+        const uint32_t entry = cases[i_case].final_jump_entry;
 
-        if (offs >= 0)
-            update_jump_offs(program, offs, program->cur_offs);
+        if (entry != KOS_NO_JUMP)
+            set_jump_target(program, entry, program->cur_offs);
     }
 
     finish_break_continue(program, -1, old_break_offs);
@@ -2924,9 +2982,9 @@ static void update_child_scope_catch(KOS_COMP_UNIT *program)
         int       i;
 
         for (i = 0; i < num_catch_offs; i++) {
-            const int instr_offs = scope->catch_ref.catch_offs[i];
-            if (instr_offs)
-                update_jump_offs(program, instr_offs, dest_offs);
+            const uint32_t entry = scope->catch_ref.catch_entry[i];
+            if (entry != KOS_NO_JUMP)
+                set_jump_target(program, entry, dest_offs);
         }
     }
 
@@ -2936,17 +2994,17 @@ static void update_child_scope_catch(KOS_COMP_UNIT *program)
 static int try_stmt(KOS_COMP_UNIT      *program,
                     const KOS_AST_NODE *node)
 {
-    int                 error;
-    int                 catch_offs;
     KOS_REG            *except_reg     = KOS_NULL;
     KOS_VAR            *except_var     = KOS_NULL;
     KOS_RETURN_OFFS    *return_offs    = program->cur_frame->return_offs;
     KOS_BREAK_OFFS     *old_break_offs = program->cur_frame->break_offs;
-    const KOS_NODE_TYPE node_type      = (KOS_NODE_TYPE)node->type;
     const KOS_AST_NODE *try_node       = node->children;
     const KOS_AST_NODE *catch_node     = KOS_NULL;
     const KOS_AST_NODE *defer_node     = KOS_NULL;
     KOS_SCOPE          *scope;
+    const KOS_NODE_TYPE node_type      = (KOS_NODE_TYPE)node->type;
+    uint32_t            catch_entry;
+    int                 error;
 
     scope = push_scope(program, node);
 
@@ -3009,7 +3067,7 @@ static int try_stmt(KOS_COMP_UNIT      *program,
 
     /* Try section */
 
-    catch_offs = program->cur_offs;
+    TRY(add_jump_instr(program, &catch_entry));
     TRY(gen_instr2(program, INSTR_CATCH, except_reg->reg, 0));
 
     assert(try_node->type == NT_SCOPE);
@@ -3023,16 +3081,16 @@ static int try_stmt(KOS_COMP_UNIT      *program,
 
     if (node_type == NT_TRY_CATCH) {
 
-        int jump_end_offs;
+        uint32_t jump_end_entry;
 
         TRY(restore_parent_scope_catch(program));
 
-        jump_end_offs = program->cur_offs;
+        TRY(add_jump_instr(program, &jump_end_entry));
         TRY(gen_instr1(program, INSTR_JUMP, 0));
 
         update_child_scope_catch(program);
 
-        update_jump_offs(program, catch_offs, program->cur_offs);
+        set_jump_target(program, catch_entry, program->cur_offs);
 
         TRY(restore_parent_scope_catch(program));
 
@@ -3048,15 +3106,15 @@ static int try_stmt(KOS_COMP_UNIT      *program,
 
         except_var->is_active = VAR_INACTIVE;
 
-        update_jump_offs(program, jump_end_offs, program->cur_offs);
+        set_jump_target(program, jump_end_entry, program->cur_offs);
     }
 
     /* Defer section */
 
     else {
 
-        int             skip_throw_offs;
         KOS_BREAK_OFFS *try_break_offs = program->cur_frame->break_offs;
+        uint32_t        skip_throw_entry;
 
         program->cur_frame->break_offs = old_break_offs;
         old_break_offs                 = KOS_NULL;
@@ -3070,14 +3128,13 @@ static int try_stmt(KOS_COMP_UNIT      *program,
 
         update_child_scope_catch(program);
 
-        update_jump_offs(program, catch_offs, program->cur_offs);
+        set_jump_target(program, catch_entry, program->cur_offs);
 
         TRY(restore_parent_scope_catch(program));
 
         TRY(process_scope(program, defer_node));
 
-        skip_throw_offs = program->cur_offs;
-
+        TRY(add_jump_instr(program, &skip_throw_entry));
         TRY(gen_instr2(program, INSTR_JUMP_NOT_COND, 0, except_reg->reg));
 
         TRY(gen_instr1(program, INSTR_THROW, except_reg->reg));
@@ -3115,15 +3172,15 @@ static int try_stmt(KOS_COMP_UNIT      *program,
 
                 for (break_offs = try_break_offs; break_offs; break_offs = break_offs->next)
                     if (break_offs->type == type)
-                        update_jump_offs(program, break_offs->offs, program->cur_offs);
+                        set_jump_target(program, break_offs->entry, program->cur_offs);
 
                 TRY(restore_parent_scope_catch(program));
 
                 TRY(process_scope(program, defer_node));
 
                 TRY(push_break_offs(program, type));
-                program->cur_frame->break_offs->offs = program->cur_offs;
 
+                TRY(add_jump_instr(program, &program->cur_frame->break_offs->entry));
                 TRY(gen_instr1(program, INSTR_JUMP, 0));
             }
         }
@@ -3133,7 +3190,7 @@ static int try_stmt(KOS_COMP_UNIT      *program,
         if (return_offs) {
 
             for ( ; return_offs; return_offs = return_offs->next)
-                update_jump_offs(program, return_offs->offs, program->cur_offs);
+                set_jump_target(program, return_offs->entry, program->cur_offs);
 
             TRY(restore_parent_scope_catch(program));
 
@@ -3142,7 +3199,7 @@ static int try_stmt(KOS_COMP_UNIT      *program,
             TRY(gen_return(program, except_reg->reg));
         }
 
-        update_jump_offs(program, skip_throw_offs, program->cur_offs);
+        set_jump_target(program, skip_throw_entry, program->cur_offs);
     }
 
     if (old_break_offs) {
@@ -4054,10 +4111,10 @@ static int log_not(KOS_COMP_UNIT      *program,
                    const KOS_AST_NODE *node,
                    KOS_REG           **reg)
 {
-    int      error;
-    int      jump_offs;
-    unsigned negated = 0;
     KOS_REG *src     = KOS_NULL;
+    uint32_t jump_entry;
+    unsigned negated = 0;
+    int      error;
 
     node = node->children;
     assert(node);
@@ -4079,12 +4136,12 @@ static int log_not(KOS_COMP_UNIT      *program,
 
     TRY(gen_instr1(program, INSTR_LOAD_FALSE, (*reg)->reg));
 
-    jump_offs = program->cur_offs;
+    TRY(add_jump_instr(program, &jump_entry));
     TRY(gen_instr2(program, negated ? INSTR_JUMP_NOT_COND : INSTR_JUMP_COND, 0, src->reg));
 
     TRY(gen_instr1(program, INSTR_LOAD_TRUE, (*reg)->reg));
 
-    update_jump_offs(program, jump_offs, program->cur_offs);
+    set_jump_target(program, jump_entry, program->cur_offs);
 
     free_reg(program, src);
 
@@ -4096,12 +4153,12 @@ static int log_and_or(KOS_COMP_UNIT      *program,
                       const KOS_AST_NODE *node,
                       KOS_REG           **reg)
 {
+    KOS_REG                *left        = KOS_NULL;
+    KOS_REG                *right       = KOS_NULL;
+    uint32_t                left_entry;
+    uint32_t                right_entry = KOS_NO_JUMP;
+    const KOS_OPERATOR_TYPE op          = (KOS_OPERATOR_TYPE)node->token.op;
     int                     error;
-    int                     left_offs;
-    int                     right_offs = 0;
-    const KOS_OPERATOR_TYPE op         = (KOS_OPERATOR_TYPE)node->token.op;
-    KOS_REG                *left       = KOS_NULL;
-    KOS_REG                *right      = KOS_NULL;
 
     assert(op == OT_LOGAND || op == OT_LOGOR);
 
@@ -4116,8 +4173,7 @@ static int log_and_or(KOS_COMP_UNIT      *program,
     assert(node);
     assert(!node->next);
 
-    left_offs = program->cur_offs;
-
+    TRY(add_jump_instr(program, &left_entry));
     TRY(gen_instr2(program,
                    (op == OT_LOGAND) ? INSTR_JUMP_NOT_COND : INSTR_JUMP_COND,
                    0,
@@ -4146,20 +4202,19 @@ static int log_and_or(KOS_COMP_UNIT      *program,
     }
 
     if (*reg != left && left != right) {
-        right_offs = program->cur_offs;
-
+        TRY(add_jump_instr(program, &right_entry));
         TRY(gen_instr1(program, INSTR_JUMP, 0));
     }
 
-    update_jump_offs(program, left_offs, program->cur_offs);
+    set_jump_target(program, left_entry, program->cur_offs);
 
     if (*reg != left) {
         TRY(gen_instr2(program, INSTR_MOVE, (*reg)->reg, left->reg));
         free_reg(program, left);
     }
 
-    if (right_offs)
-        update_jump_offs(program, right_offs, program->cur_offs);
+    if (right_entry != KOS_NO_JUMP)
+        set_jump_target(program, right_entry, program->cur_offs);
 
 cleanup:
     return error;
@@ -4184,8 +4239,8 @@ static int log_tri(KOS_COMP_UNIT      *program,
     const KOS_AST_NODE *false_node;
     int                 true_node_is_dest;
     int                 false_node_is_dest;
-    int                 final_jump_offs = -1;
-    int                 error           = KOS_SUCCESS;
+    uint32_t            final_jump_entry = KOS_NO_JUMP;
+    int                 error            = KOS_SUCCESS;
 
     cond_node = node->children;
     assert(cond_node);
@@ -4232,7 +4287,7 @@ static int log_tri(KOS_COMP_UNIT      *program,
         }
 
         if ( ! false_node_is_dest) {
-            final_jump_offs = program->cur_offs;
+            TRY(add_jump_instr(program, &final_jump_entry));
             TRY(gen_instr1(program, INSTR_JUMP, 0));
         }
 
@@ -4260,8 +4315,8 @@ static int log_tri(KOS_COMP_UNIT      *program,
     if (true_node_is_dest)
         update_jump_array(program, &jump_array, program->cur_offs);
 
-    if (final_jump_offs >= 0)
-        update_jump_offs(program, final_jump_offs, program->cur_offs);
+    if (final_jump_entry != KOS_NO_JUMP)
+        set_jump_target(program, final_jump_entry, program->cur_offs);
 
 cleanup:
     return error;
@@ -5328,6 +5383,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
     KOS_FRAME *frame;
     KOS_VAR   *var;
     KOS_REG   *scope_reg    = KOS_NULL;
+    size_t     jump_buf_offs;
     int        fun_start_offs;
     size_t     addr2line_start_offs;
     int        last_reg     = -1;
@@ -5586,6 +5642,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
 
     fun_start_offs       = program->cur_offs;
     addr2line_start_offs = program->addr2line_gen_buf.size;
+    jump_buf_offs        = program->jump_buf.size;
 
     TRY(add_addr2line(program, &open_node->token, KOS_TRUE_VALUE));
 
@@ -5629,7 +5686,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
     assert(scope->num_args - constant->min_args == frame->num_def_used);
 
     /* Move the function code to final code_buf */
-    TRY(append_frame(program, constant, fun_start_offs, addr2line_start_offs));
+    TRY(append_frame(program, constant, fun_start_offs, addr2line_start_offs, jump_buf_offs));
 
     pop_scope(program);
 
@@ -6226,6 +6283,7 @@ void kos_compiler_init(KOS_COMP_UNIT *program,
     KOS_vector_init(&program->code_gen_buf);
     KOS_vector_init(&program->addr2line_buf);
     KOS_vector_init(&program->addr2line_gen_buf);
+    KOS_vector_init(&program->jump_buf);
 }
 
 int kos_compiler_compile(KOS_COMP_UNIT *program,
@@ -6243,6 +6301,7 @@ int kos_compiler_compile(KOS_COMP_UNIT *program,
     TRY(KOS_vector_reserve(&program->code_gen_buf,      1024));
     TRY(KOS_vector_reserve(&program->addr2line_buf,     1024));
     TRY(KOS_vector_reserve(&program->addr2line_gen_buf, 256));
+    TRY(KOS_vector_reserve(&program->jump_buf,          16 * sizeof(JUMP_ENTRY)));
 
     TRY(kos_compiler_process_vars(program, ast));
 
@@ -6277,6 +6336,7 @@ void kos_compiler_destroy(KOS_COMP_UNIT *program)
     KOS_vector_destroy(&program->code_buf);
     KOS_vector_destroy(&program->addr2line_gen_buf);
     KOS_vector_destroy(&program->addr2line_buf);
+    KOS_vector_destroy(&program->jump_buf);
 
     KOS_mempool_destroy(&program->allocator);
 }

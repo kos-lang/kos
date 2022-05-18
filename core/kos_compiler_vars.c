@@ -131,44 +131,45 @@ static int push_scope(KOS_COMP_UNIT *program,
                       int            alloc_frame,
                       KOS_AST_NODE  *node)
 {
-    int          error = KOS_SUCCESS;
     const size_t size  = alloc_frame ? sizeof(KOS_FRAME) : sizeof(KOS_SCOPE);
+    int          error = KOS_SUCCESS;
+    size_t       i;
 
     KOS_SCOPE *const scope = (KOS_SCOPE *)KOS_mempool_alloc(&program->allocator, size);
 
     if ( ! scope)
-        error = KOS_ERROR_OUT_OF_MEMORY;
+        return KOS_ERROR_OUT_OF_MEMORY;
 
-    else {
+    memset(scope, 0, size);
 
-        memset(scope, 0, size);
+    for (i = 0; i < sizeof(scope->catch_ref.catch_entry) / sizeof(uint32_t); i++)
+        scope->catch_ref.catch_entry[i] = KOS_NO_JUMP;
 
-        assert(program->scope_stack || alloc_frame);
+    assert(program->scope_stack || alloc_frame);
 
-        if (alloc_frame)
-            scope->has_frame = 1;
+    if (alloc_frame)
+        scope->has_frame = 1;
 
-        node->is_scope       = 1;
-        node->u.scope        = scope;
-        scope->scope_node    = node;
-        scope->parent_scope  = program->scope_stack;
-        program->scope_stack = scope;
+    node->is_scope       = 1;
+    node->u.scope        = scope;
+    scope->scope_node    = node;
+    scope->parent_scope  = program->scope_stack;
+    program->scope_stack = scope;
 
-        if ( ! scope->parent_scope)
-            error = init_global_scope(program);
+    if ( ! scope->parent_scope)
+        error = init_global_scope(program);
 
-        if (alloc_frame) {
-            KOS_FRAME *const frame = (KOS_FRAME *)scope;
+    if (alloc_frame) {
+        KOS_FRAME *const frame = (KOS_FRAME *)scope;
 
-            frame->parent_frame   = program->cur_frame;
-            frame->num_binds_prev = 1; /* Updated during optimization */
-            frame->num_def_used   = 1; /* Updated during optimization */
-            program->cur_frame    = frame;
-            scope->owning_frame   = frame;
-        }
-        else
-            scope->owning_frame = program->cur_frame;
+        frame->parent_frame   = program->cur_frame;
+        frame->num_binds_prev = 1; /* Updated during optimization */
+        frame->num_def_used   = 1; /* Updated during optimization */
+        program->cur_frame    = frame;
+        scope->owning_frame   = frame;
     }
+    else
+        scope->owning_frame = program->cur_frame;
 
     return error;
 }
