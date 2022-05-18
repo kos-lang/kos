@@ -875,43 +875,178 @@ do {
 
 # complex mix of defer and return, from fuzzer
 do {
+    var order = 0
+    fun update(value) {
+        order = (order * 10) + value
+    }
+
     fun deferred {
         defer {
+            update(3)
             defer {
+                update(6)
             }
             defer {
+                update(5)
             }
+            update(4)
             return 1
         }
 
         defer {
+            update(2)
             return 2
         }
 
+        update(1)
         return 3
     }
 
     assert deferred() == 1
+    assert order == 123456
+}
+
+# complex mix of defer, throw and return, from fuzzer
+do {
+    var order = 0
+    fun update(value) {
+        order = (order * 10) + value
+    }
+
+    fun deferred(exception) {
+        defer {
+            update(3)
+            defer {
+                update(6)
+            }
+            defer {
+                update(5)
+            }
+            if exception == 3 { throw 30 }
+            update(4)
+            return 1
+        }
+
+        defer {
+            if exception == 2 { throw 20 }
+            update(2)
+            return 2
+        }
+
+        if exception == 1 { throw 10 }
+        update(1)
+        return 3
+    }
+
+    assert deferred(0) == 1
+    assert order == 123456
+
+    order = 0
+    assert deferred(1) == 1
+    assert order == 23456
+
+    order = 0
+    assert deferred(2) == 1
+    assert order == 13456
+
+    order = 0
+    var exc = void
+    try {
+        assert deferred(3) == 1
+    }
+    catch const e {
+        exc = e.value
+    }
+    assert exc == 30
+    assert order == 12356
 }
 
 # complex mix of defer and return, from fuzzer
 do {
+    var order = 0
+    fun update(value) {
+        order = (order * 10) + value
+    }
+
     fun deferred
     {
         defer {
             defer {
+                update(6)
             }
             defer {
                 defer {
                     defer {
+                        update(5)
                     }
+                    update(4)
                     return 1
                 }
+                update(3)
                 return 2
             }
+            update(2)
         }
+        update(1)
         return 3
     }
 
     assert deferred() == 1
+    assert order == 123456
+}
+
+# complex mix of defer, throw and return, from fuzzer
+do {
+    var order = 0
+    fun update(value) {
+        order = (order * 10) + value
+    }
+
+    fun deferred(exception)
+    {
+        defer {
+            defer {
+                update(6)
+            }
+            defer {
+                defer {
+                    defer {
+                        update(5)
+                    }
+                    if exception == 3 { throw 30 }
+                    update(4)
+                    return 1
+                }
+                if exception == 2 { throw 20 }
+                update(3)
+                return 2
+            }
+            update(2)
+        }
+        if exception == 1 { throw 10 }
+        update(1)
+        return 3
+    }
+
+    assert deferred(0) == 1
+    assert order == 123456
+
+    order = 0
+    assert deferred(1) == 1
+    assert order == 23456
+
+    order = 0
+    assert deferred(2) == 1
+    assert order == 12456
+
+    order = 0
+    var exc = void
+    try {
+        assert deferred(3) == 1
+    }
+    catch const e {
+        exc = e.value
+    }
+    assert exc == 30
+    assert order == 12356
 }
