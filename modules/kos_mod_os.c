@@ -66,6 +66,22 @@
 #   define KOS_SYSNAME "Unknown"
 #endif
 
+#if defined(_M_ARM64) || defined(__aarch64__)
+#   define KOS_ARCH "aarch64"
+#elif defined(_M_ARM) || defined(__arm__) || defined(_ARM) || defined(__arm)
+#   define KOS_ARCH "aarch32"
+#elif defined(__powerpc64__)
+#   define KOS_ARCH "ppc64"
+#elif defined(_M_AMD64) || defined(__x86_64)
+#   define KOS_ARCH "x86_64"
+#elif defined(_M_IX86) || defined(__i386)
+#   define KOS_ARCH "x86"
+#elif defined(__zarch__) || defined(__s390x__) || defined(__SYSC_ZARCH__)
+#   define KOS_ARCH "zarch"
+#else
+#   define KOS_ARCH "Unknown"
+#endif
+
 KOS_DECLARE_STATIC_CONST_STRING(str_args,               "args");
 KOS_DECLARE_STATIC_CONST_STRING(str_cwd,                "cwd");
 KOS_DECLARE_STATIC_CONST_STRING(str_default_value,      "default_value");
@@ -1682,6 +1698,32 @@ KOS_INIT_MODULE(os, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
      *     "Linux"
      */
     TRY_ADD_STRING_CONSTANT( ctx, module.o, "sysname", KOS_SYSNAME);
+
+    /* @item os arch
+     *
+     *     arch
+     *
+     * Constant string representing CPU architecture for which Kos was compiled.
+     *
+     * This may not fully reflect the actual CPU architecture, for example on some Operating
+     * Systems it's possible to run 32-bit binaries on a 64-bit CPU, in such case `arch`
+     * would still represent 32-bit architecture.
+     *
+     * Typical values:
+     *
+     * - "x86" (32-bit x86 architecture)
+     * - "x86_64" (64-bit x86 architecture)
+     * - "aarch32" (32-bit ARM architecture)
+     * - "aarch64" (64-bit ARM architecture)
+     *
+     * On architectures which haven't been tested, this may contain "Unknown".
+     *
+     * Example:
+     *
+     *     > sysname
+     *     "x86_64"
+     */
+    TRY_ADD_STRING_CONSTANT( ctx, module.o, "arch", KOS_ARCH);
 
     /* @item os cpus
      *

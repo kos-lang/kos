@@ -256,6 +256,13 @@ assert os.sysname != "Unknown"
 assert os.sysname.size
 
 ##############################################################################
+# os.arch
+
+assert typeof os.arch == "string"
+assert os.arch != "Unknown"
+assert os.arch.size
+
+##############################################################################
 # os.cpus
 
 assert typeof os.cpus == "integer"
