@@ -18,7 +18,7 @@ fun find_program(name)
     const test_locations = [ ]
 
     for const out_dir in [ "Out", "..\(sep)Out" ] {
-        for const cfg in [ "release", "debug" ] {
+        for const cfg in [ "release", "debug", "debug_asan" ] {
             test_locations.push("\(out_dir)\(sep)\(cfg)\(sep)tests\(sep)kos_\(name)\(ext)")
         }
     }
@@ -101,13 +101,17 @@ if bin_true {
 
     # cwd works for spawning processes
     const last_slash = bin_true.rscan(sep)
+    const bin_dir    = bin_true[:last_slash]
     const local_true = "." + bin_true[last_slash:]
     if ! fs.file_exists(local_true) {
-        os.spawn(program=bin_true, cwd=bin_true[:last_slash], inherit_env=false).wait()
+        os.spawn(program=bin_true, cwd=bin_dir, inherit_env=false).wait()
 
-        # Cannot find the program in cwd
-        expect_fail(() =>
-            os.spawn(program=local_true, env={PATH:bin_true[:last_slash]}, cwd=bin_true[:last_slash], inherit_env=false))
+        if ! bin_dir.starts_with("\(sep)bin") && ! bin_dir.starts_with("\(sep)usr") {
+
+            # Cannot find the program in cwd
+            expect_fail(() =>
+                os.spawn(program=local_true, env={PATH:bin_dir}, cwd=bin_dir, inherit_env=false))
+        }
     }
 
     # On most systems, true is on PATH
