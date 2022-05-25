@@ -108,7 +108,6 @@ static KOS_OBJ_ID create_func(KOS_CONTEXT              ctx,
     return create_func_obj(ctx, CREATE_FUNC, bytecode, bytecode_size, offs, opts);
 }
 
-#ifndef CONFIG_DEEP_STACK
 static KOS_OBJ_ID create_gen(KOS_CONTEXT              ctx,
                              const uint8_t           *bytecode,
                              uint32_t                 bytecode_size,
@@ -117,7 +116,6 @@ static KOS_OBJ_ID create_gen(KOS_CONTEXT              ctx,
 {
     return create_func_obj(ctx, CREATE_GEN, bytecode, bytecode_size, offs, opts);
 }
-#endif
 
 static KOS_OBJ_ID create_class(KOS_CONTEXT              ctx,
                                const uint8_t           *bytecode,
