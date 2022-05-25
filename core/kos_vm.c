@@ -1413,20 +1413,6 @@ static void clear_catch(KOS_STACK_FRAME *stack_frame)
     KOS_atomic_write_relaxed_ptr(stack_frame->catch_info, TO_SMALL_INT(catch_data));
 }
 
-static uint16_t load_16(const uint8_t *bytecode)
-{
-    return (uint16_t)bytecode[0] +
-           ((uint16_t)bytecode[1] << 8);
-}
-
-static uint32_t load_32(const uint8_t *bytecode)
-{
-    return (uint32_t)bytecode[0] +
-           ((uint32_t)bytecode[1] << 8) +
-           ((uint32_t)bytecode[2] << 16) +
-           ((uint32_t)bytecode[3] << 24);
-}
-
 static KOS_OBJ_ID read_reg(KOS_STACK_FRAME *stack_frame, uint32_t reg)
 {
     return KOS_atomic_read_relaxed_obj(stack_frame->regs[reg]);
@@ -1543,7 +1529,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 assert(rdest < num_regs);
                 write_reg(stack_frame, rdest, out);
 
-                bytecode += 2 + imm.delta;
+                bytecode += 2 + imm.size;
                 NEXT_INSTRUCTION;
             }
 
@@ -1571,7 +1557,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 assert(rdest < num_regs);
                 write_reg(stack_frame, rdest, out);
 
-                bytecode += 2 + imm.delta;
+                bytecode += 2 + imm.size;
                 NEXT_INSTRUCTION;
             }
 
@@ -1621,7 +1607,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(NEW_ARRAY8): { /* <r.dest>, <size.uint8> */
+            BEGIN_INSTRUCTION(NEW_ARRAY8): { /* <r.dest>, <uint8.size> */
                 PROF_ZONE_N(INSTR, "NEW.ARRAY8")
                 const uint8_t size = bytecode[2];
 
@@ -1724,46 +1710,46 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(GET_GLOBAL): { /* <r.dest>, <int32.glob.idx> */
+            BEGIN_INSTRUCTION(GET_GLOBAL): { /* <r.dest>, <uimm.glob.idx> */
                 PROF_ZONE_N(INSTR, "GET.GLOBAL")
-                const int32_t  idx = (int32_t)load_32(bytecode+2);
+                const KOS_IMM imm = kos_load_uimm(bytecode + 2);
 
                 rdest = bytecode[1];
 
-                out = KOS_array_read(ctx, OBJPTR(MODULE, module)->globals, idx);
+                out = KOS_array_read(ctx, OBJPTR(MODULE, module)->globals, imm.value.sv);
                 TRY_OBJID(out);
 
                 assert(rdest < num_regs);
                 write_reg(stack_frame, rdest, out);
 
-                bytecode += 6;
+                bytecode += 2 + imm.size;
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(SET_GLOBAL): { /* <int32.glob.idx>, <r.src> */
+            BEGIN_INSTRUCTION(SET_GLOBAL): { /* <uimm.glob.idx>, <r.src> */
                 PROF_ZONE_N(INSTR, "SET.GLOBAL")
-                const int32_t  idx  = (int32_t)load_32(bytecode+1);
-                const unsigned rsrc = bytecode[5];
+                const KOS_IMM  imm  = kos_load_uimm(bytecode + 1);
+                const unsigned rsrc = bytecode[1 + imm.size];
 
                 assert(rsrc < num_regs);
 
                 TRY(KOS_array_write(ctx,
                                     OBJPTR(MODULE, module)->globals,
-                                    idx,
+                                    imm.value.sv,
                                     read_reg(stack_frame, rsrc)));
 
-                bytecode += 6;
+                bytecode += 2 + imm.size;
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(GET_MOD_GLOBAL): { /* <r.dest>, <uint16.mod.idx>, <r.glob> */
+            BEGIN_INSTRUCTION(GET_MOD_GLOBAL): { /* <r.dest>, <uimm.mod.idx>, <r.glob> */
                 PROF_ZONE_N(INSTR, "GET.MOD.GLOBAL")
-                const int      mod_idx    = (int32_t)load_16(bytecode+2);
-                const unsigned rglob      = bytecode[4];
+                const KOS_IMM  mod_idx    = kos_load_uimm(bytecode + 2);
+                const unsigned rglob      = bytecode[2 + mod_idx.size];
                 KOS_OBJ_ID     glob_idx;
                 KOS_OBJ_ID     module_obj = KOS_array_read(ctx,
                                                            OBJPTR(MODULE, module)->inst->modules.modules,
-                                                           mod_idx);
+                                                           mod_idx.value.uv);
                 TRY_OBJID(module_obj);
 
                 assert(rglob < num_regs);
@@ -1787,17 +1773,17 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 assert(rdest < num_regs);
                 write_reg(stack_frame, rdest, out);
 
-                bytecode += 5;
+                bytecode += 3 + mod_idx.size;
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(GET_MOD_ELEM): { /* <r.dest>, <uint16.mod.idx>, <int32.glob.idx> */
+            BEGIN_INSTRUCTION(GET_MOD_ELEM): { /* <r.dest>, <uimm.mod.idx>, <uimm.glob.idx> */
                 PROF_ZONE_N(INSTR, "GET.MOD.ELEM")
-                const int  mod_idx    = (int32_t)load_16(bytecode+2);
-                const int  glob_idx   = (int32_t)load_32(bytecode+4);
-                KOS_OBJ_ID module_obj = KOS_array_read(ctx,
-                                                       OBJPTR(MODULE, module)->inst->modules.modules,
-                                                       mod_idx);
+                const KOS_IMM mod_idx    = kos_load_uimm(bytecode + 2);
+                const KOS_IMM glob_idx   = kos_load_uimm(bytecode + 2 + mod_idx.size);
+                KOS_OBJ_ID    module_obj = KOS_array_read(ctx,
+                                                          OBJPTR(MODULE, module)->inst->modules.modules,
+                                                          mod_idx.value.uv);
                 TRY_OBJID(module_obj);
 
                 rdest = bytecode[1];
@@ -1805,22 +1791,22 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 assert( ! IS_SMALL_INT(module_obj));
                 assert(GET_OBJ_TYPE(module_obj) == OBJ_MODULE);
 
-                out = KOS_array_read(ctx, OBJPTR(MODULE, module_obj)->globals, glob_idx);
+                out = KOS_array_read(ctx, OBJPTR(MODULE, module_obj)->globals, glob_idx.value.uv);
                 TRY_OBJID(out);
 
                 assert(rdest < num_regs);
                 write_reg(stack_frame, rdest, out);
 
-                bytecode += 8;
+                bytecode += 2 + mod_idx.size + glob_idx.size;
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(GET_MOD): { /* <r.dest>, <uint16.mod.idx> */
+            BEGIN_INSTRUCTION(GET_MOD): { /* <r.dest>, <uimm.mod.idx> */
                 PROF_ZONE_N(INSTR, "GET.MOD")
-                const int  mod_idx    = (int32_t)load_16(bytecode+2);
-                KOS_OBJ_ID module_obj = KOS_array_read(ctx,
-                                                       OBJPTR(MODULE, module)->inst->modules.modules,
-                                                       mod_idx);
+                const KOS_IMM mod_idx    = kos_load_uimm(bytecode + 2);
+                KOS_OBJ_ID    module_obj = KOS_array_read(ctx,
+                                                          OBJPTR(MODULE, module)->inst->modules.modules,
+                                                          mod_idx.value.uv);
                 TRY_OBJID(module_obj);
 
                 rdest = bytecode[1];
@@ -1833,7 +1819,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 assert(rdest < num_regs);
                 write_reg(stack_frame, rdest, out);
 
-                bytecode += 4;
+                bytecode += 2 + mod_idx.size;
                 NEXT_INSTRUCTION;
             }
 
@@ -2942,50 +2928,45 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(JUMP): { /* <delta.int32> */
+            BEGIN_INSTRUCTION(JUMP): { /* <simm.delta> */
                 PROF_ZONE_N(INSTR, "JUMP")
-                int delta;
+                const KOS_IMM imm = kos_load_simm(bytecode + 1);
 
                 KOS_help_gc(ctx);
 
-                delta = 5 + (int32_t)load_32(bytecode+1);
-                bytecode += delta;
+                bytecode += 1 + imm.size + imm.value.sv;
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(JUMP_COND): { /* <delta.int32>, <r.src> */
+            BEGIN_INSTRUCTION(JUMP_COND): { /* <simm.delta>, <r.src> */
                 PROF_ZONE_N(INSTR, "JUMP.COND")
-                const int32_t  offs = (int32_t)load_32(bytecode+1);
-                const unsigned rsrc = bytecode[5];
-                int            delta;
+                const KOS_IMM  imm  = kos_load_simm(bytecode + 1);
+                const unsigned rsrc = bytecode[1 + imm.size];
 
                 assert(rsrc < num_regs);
 
                 KOS_help_gc(ctx);
-
-                delta = 6;
 
                 if (kos_is_truthy(read_reg(stack_frame, rsrc)))
-                    delta += offs;
-                bytecode += delta;
+                    bytecode += imm.value.sv;
+
+                bytecode += 2 + imm.size;
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(JUMP_NOT_COND): { /* <delta.int32>, <r.src> */
+            BEGIN_INSTRUCTION(JUMP_NOT_COND): { /* <simm.delta>, <r.src> */
                 PROF_ZONE_N(INSTR, "JUMP.NOT.COND")
-                const int32_t  offs = (int32_t)load_32(bytecode+1);
-                const unsigned rsrc = bytecode[5];
-                int            delta;
+                const KOS_IMM  imm  = kos_load_simm(bytecode + 1);
+                const unsigned rsrc = bytecode[1 + imm.size];
 
                 assert(rsrc < num_regs);
 
                 KOS_help_gc(ctx);
 
-                delta = 6;
-
                 if ( ! kos_is_truthy(read_reg(stack_frame, rsrc)))
-                    delta += offs;
-                bytecode += delta;
+                    bytecode += imm.value.sv;
+
+                bytecode += 2 + imm.size;
                 NEXT_INSTRUCTION;
             }
 
@@ -3086,7 +3067,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
 
             BEGIN_INSTRUCTION(NEXT): /* <r.dest>, <r.func> */
                 /* fall through */
-            BEGIN_INSTRUCTION(NEXT_JUMP): { /* <r.dest>, <r.func>, <delta.int32> */
+            BEGIN_INSTRUCTION(NEXT_JUMP): { /* <r.dest>, <r.func>, <simm.delta> */
                 PROF_ZONE_N(INSTR, "NEXT.JUMP")
                 KOS_LOCAL      iter;
                 int            finished = 0;
@@ -3239,10 +3220,12 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                     bytecode += 3;
                 }
                 else {
+                    const KOS_IMM imm = kos_load_simm(bytecode + 3);
+
                     KOS_help_gc(ctx);
 
-                    bytecode += finished ? 0 : (int32_t)load_32(bytecode + 3);
-                    bytecode += 7;
+                    bytecode += finished ? 0 : imm.value.sv;
+                    bytecode += 3 + imm.size;
                 }
 
                 NEXT_INSTRUCTION;
@@ -3250,13 +3233,13 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
 
             BEGIN_INSTRUCTION(TAIL_CALL): /* <r.func>, <r.this>, <r.args> */
                 /* fall through */
-            BEGIN_INSTRUCTION(TAIL_CALL_N): /* <r.func>, <r.this>, <r.arg1>, <numargs.uint8> */
+            BEGIN_INSTRUCTION(TAIL_CALL_N): /* <r.func>, <r.this>, <r.arg1>, <uint8.numargs> */
                 /* fall through */
-            BEGIN_INSTRUCTION(TAIL_CALL_FUN): /* <r.func>, <r.arg1>, <numargs.uint8> */
+            BEGIN_INSTRUCTION(TAIL_CALL_FUN): /* <r.func>, <r.arg1>, <uint8.numargs> */
                 /* fall through */
-            BEGIN_INSTRUCTION(CALL_N): /* <r.dest>, <r.func>, <r.this>, <r.arg1>, <numargs.uint8> */
+            BEGIN_INSTRUCTION(CALL_N): /* <r.dest>, <r.func>, <r.this>, <r.arg1>, <uint8.numargs> */
                 /* fall through */
-            BEGIN_INSTRUCTION(CALL_FUN): /* <r.dest>, <r.func>, <r.arg1>, <numargs.uint8> */
+            BEGIN_INSTRUCTION(CALL_FUN): /* <r.dest>, <r.func>, <r.arg1>, <uint8.numargs> */
                 /* fall through */
             BEGIN_INSTRUCTION(CALL): { /* <r.dest>, <r.func>, <r.this>, <r.args> */
                 PROF_ZONE_N(INSTR, "CALL")
@@ -3552,10 +3535,10 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 goto handle_return;
             }
 
-            BEGIN_INSTRUCTION(CATCH): { /* <r.dest>, <delta.int32> */
+            BEGIN_INSTRUCTION(CATCH): { /* <r.dest>, <simm.delta> */
                 PROF_ZONE_N(INSTR, "CATCH")
-                const int32_t  rel_offs = (int32_t)load_32(bytecode+2);
-                const uint32_t offset   = get_instr_offs(stack_frame, bytecode) + 6 + rel_offs;
+                const KOS_IMM  imm    = kos_load_simm(bytecode + 2);
+                const uint32_t offset = get_instr_offs(stack_frame, bytecode) + 2 + imm.size + imm.value.sv;
 
                 rdest = bytecode[1];
 
@@ -3564,7 +3547,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
 
                 set_catch(stack_frame, offset, (uint8_t)rdest);
 
-                bytecode += 6;
+                bytecode += 2 + imm.size;
                 NEXT_INSTRUCTION;
             }
 
@@ -3697,14 +3680,16 @@ handle_return:
 
                 switch (call_instr) {
 
-                    case INSTR_NEXT_JUMP:
+                    case INSTR_NEXT_JUMP: {
+                        const KOS_IMM imm = kos_load_simm(bytecode + 3);
                         if (get_func_state(func_obj) != KOS_GEN_DONE)
-                            bytecode += (int32_t)load_32(bytecode + 3);
+                            bytecode += imm.value.sv;
                         else
                             out = KOS_VOID;
 
-                        bytecode += 7;
+                        bytecode += 3 + imm.size;
                         break;
+                    }
 
                     case INSTR_NEXT:
                         if (get_func_state(func_obj) == KOS_GEN_DONE) {

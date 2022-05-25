@@ -740,13 +740,48 @@ static int is_sint8(int64_t value)
     return (uint64_t)(value + 128) < 256;
 }
 
+static void write_uimm(uint8_t *bytecode, int *offs, uint32_t value)
+{
+    do {
+        const uint8_t byte = (uint8_t)value;
+        value >>= 7;
+        bytecode[(*offs)++] = byte | (value ? 0x80u : 0u);
+    } while (value);
+}
+
+static uint32_t encode_signed(int32_t value)
+{
+    return (uint32_t)((value << 1) ^ (value >> 31));
+}
+
+/* Calculates how many bytes are needed to encode a signed immediate operand */
+static uint8_t get_simm_size(int32_t value)
+{
+    const uint32_t uvalue = encode_signed(value);
+
+    return (uvalue <= 0x7Fu)       ? 1 :
+           (uvalue <= 0x3FFFu)     ? 2 :
+           (uvalue <= 0x1FFFFFu)   ? 3 :
+           (uvalue <= 0x0FFFFFFFu) ? 4 :
+                                     5;
+}
+
+static void write_simm(uint8_t *bytecode, int *offs, int32_t value)
+{
+    write_uimm(bytecode, offs, encode_signed(value));
+}
+
 static int gen_instr(KOS_COMP_UNIT *program,
                      int            num_args,
                      ...)
 {
     int cur_offs = program->cur_offs;
-    int error    = KOS_vector_resize(&program->code_gen_buf,
-                                    (size_t)cur_offs + 1 + 4 * num_args); /* Over-estimate */
+    int error;
+
+    assert((size_t)program->cur_offs == program->code_gen_buf.size);
+
+    error = KOS_vector_resize(&program->code_gen_buf,
+                              (size_t)cur_offs + 1 + 5 * num_args); /* Over-estimate */
 
     if (program->code_buf.size + program->code_gen_buf.size > KOS_MAX_CODE_SIZE)
         error = KOS_ERROR_OUT_OF_MEMORY;
@@ -773,21 +808,14 @@ static int gen_instr(KOS_COMP_UNIT *program,
                 const int size = kos_get_operand_size(instr, i - 1);
 
                 if (size == -1) {
-                    uint32_t uvalue;
-
                     assert( ! kos_is_register(instr, i - 1));
 
                     if (kos_is_signed_op(instr, i - 1))
-                        uvalue = (uint32_t)((value << 1) ^ (value >> 31));
+                        write_simm(buf, &cur_offs, value);
                     else {
                         assert(value >= 0);
-                        uvalue = (uint32_t)value;
+                        write_uimm(buf, &cur_offs, (uint32_t)value);
                     }
-                    do {
-                        const uint8_t byte = (uint8_t)uvalue;
-                        uvalue >>= 7;
-                        buf[cur_offs++] = byte | (uvalue ? 0x80u : 0u);
-                    } while (uvalue);
                 }
                 else if (size == 1) {
                     if ( ! kos_is_register(instr, i - 1)) {
@@ -811,7 +839,10 @@ static int gen_instr(KOS_COMP_UNIT *program,
         }
         va_end(args);
 
-        program->cur_offs = cur_offs;
+        assert((size_t)cur_offs <= program->code_gen_buf.size);
+
+        program->cur_offs          = cur_offs;
+        program->code_gen_buf.size = (unsigned int)cur_offs;
 
         ++program->cur_frame->num_instr;
     }
@@ -973,8 +1004,11 @@ static int gen_instr_set_array_var_elem(KOS_COMP_UNIT      *program,
 }
 
 typedef struct JUMP_ENTRY_S {
-    int jump_instr_offs;
-    int target_offs;
+    int     jump_instr_offs;    /* Offset of the jump instruction */
+    int     target_offs;        /* Offset of the jump's target */
+    int     orig_instr_offs;    /* Original offset of the jump instruction before size adjustments */
+    uint8_t instr_base_size;    /* Size of jump instruction, excluding immediate operand */
+    uint8_t imm_size;           /* Size of immediate operand */
 } JUMP_ENTRY;
 
 static int add_jump_instr_at_offset(KOS_COMP_UNIT *program, uint32_t *jump_entry, int jump_instr_offs)
@@ -987,6 +1021,9 @@ static int add_jump_instr_at_offset(KOS_COMP_UNIT *program, uint32_t *jump_entry
 
         new_entry->jump_instr_offs = jump_instr_offs;
         new_entry->target_offs     = -1;
+        new_entry->orig_instr_offs = jump_instr_offs;
+        new_entry->instr_base_size = 0;
+        new_entry->imm_size        = 1; /* Initially offset 0 is written, takes 1 byte */
 
         *jump_entry = (uint32_t)item_offs;
     }
@@ -1019,21 +1056,19 @@ static int add_jump_instr_with_target(KOS_COMP_UNIT *program, int target_offs)
     return error;
 }
 
-static void write_jump_offs(KOS_COMP_UNIT *program,
-                            KOS_VECTOR    *vec,
-                            int            jump_instr_offs,
-                            int            target_offs)
+static int write_jump_offs(KOS_COMP_UNIT *program,
+                           JUMP_ENTRY    *entry)
 {
-    uint8_t *buf;
-    uint8_t *end;
-    uint8_t  opcode;
-    int32_t  jump_offs;
-    int      jump_instr_size;
+    KOS_VECTOR *const vec = &program->code_gen_buf;
+    uint8_t          *buf;
+    uint8_t           packed_imm[5];
+    uint8_t           opcode;
+    int32_t           jump_offs;
+    int               imm_size = 0;
 
-    assert((unsigned)jump_instr_offs <  vec->size);
-    assert((unsigned)target_offs     <= vec->size);
+    assert((unsigned)entry->jump_instr_offs < vec->size);
 
-    buf = (uint8_t *)&vec->buffer[jump_instr_offs];
+    buf = (uint8_t *)&vec->buffer[entry->jump_instr_offs];
 
     opcode = *buf;
 
@@ -1043,46 +1078,173 @@ static void write_jump_offs(KOS_COMP_UNIT *program,
            opcode == INSTR_JUMP_COND ||
            opcode == INSTR_JUMP_NOT_COND);
 
-    switch (opcode) {
+    jump_offs = entry->target_offs - (entry->jump_instr_offs + entry->instr_base_size + entry->imm_size);
 
-        case INSTR_JUMP:
-            jump_instr_size = 5;
-            break;
+    write_simm(packed_imm, &imm_size, jump_offs);
 
-        case INSTR_NEXT_JUMP:
-            jump_instr_size = 7;
-            break;
-
-        default:
-            jump_instr_size = 6;
-            break;
-    }
-
-    jump_offs = target_offs - (jump_instr_offs + jump_instr_size);
+    assert(imm_size == entry->imm_size);
 
     buf += (opcode == INSTR_CATCH) ? 2 : (opcode == INSTR_NEXT_JUMP) ? 3 : 1;
 
-    for (end = buf+4; buf < end; ++buf) {
-        *buf      =   (uint8_t)jump_offs;
-        jump_offs >>= 8;
+    if (imm_size == 1)
+        *buf = packed_imm[0];
+    else {
+        const size_t imm_offs  = (size_t)(buf - (uint8_t *)vec->buffer);
+        const size_t tail_size = (size_t)(((uint8_t *)vec->buffer + vec->size) - (buf + 1));
+        int          error;
+
+        assert((unsigned int)program->cur_offs == vec->size);
+
+        error = KOS_vector_resize(vec, vec->size + (imm_size - 1));
+        if (error)
+            return error;
+
+        memmove(&vec->buffer[imm_offs + imm_size],
+                &vec->buffer[imm_offs + 1],
+                tail_size);
+        memcpy(&vec->buffer[imm_offs], packed_imm, imm_size);
+
+        program->cur_offs = (int)vec->size;
     }
+
+    return KOS_SUCCESS;
 }
 
-static int update_jumps(KOS_COMP_UNIT *program, size_t first_jump_entry)
+static uint8_t update_imm_size(JUMP_ENTRY *const entry)
 {
-    const JUMP_ENTRY       *entry = (JUMP_ENTRY *)&program->jump_buf.buffer[first_jump_entry];
-    const JUMP_ENTRY *const end   = (JUMP_ENTRY *)&program->jump_buf.buffer[program->jump_buf.size];
+    int     jump_offs;
+    uint8_t new_imm_size = entry->imm_size;
+    uint8_t prev_imm_size;
+    uint8_t delta;
+
+    do {
+        int target_offs = entry->target_offs;
+
+        /* Take into account that the target will be moved */
+        if (target_offs > entry->jump_instr_offs)
+            target_offs += new_imm_size - entry->imm_size;
+
+        prev_imm_size = new_imm_size;
+        jump_offs     = target_offs - (entry->jump_instr_offs + entry->instr_base_size + prev_imm_size);
+        new_imm_size  = get_simm_size(jump_offs);
+        assert(new_imm_size >= prev_imm_size);
+    } while (new_imm_size > prev_imm_size);
+
+    delta = new_imm_size - entry->imm_size;
+
+    entry->imm_size = new_imm_size;
+
+    return delta;
+}
+
+static uint8_t update_jump_offsets(JUMP_ENTRY *const begin,
+                                   JUMP_ENTRY *const end,
+                                   JUMP_ENTRY *const cur_entry)
+{
+    const uint8_t delta = update_imm_size(cur_entry);
+
+    if (delta) {
+        JUMP_ENTRY *entry;
+        const int   jump_instr_offs = cur_entry->jump_instr_offs;
+
+        for (entry = begin; entry <= cur_entry; ++entry) {
+            if (entry->target_offs > jump_instr_offs)
+                entry->target_offs += delta;
+        }
+
+        for ( ; entry < end; ++entry) {
+            entry->jump_instr_offs += delta;
+
+            if (entry->target_offs > jump_instr_offs)
+                entry->target_offs += delta;
+        }
+    }
+
+    return delta;
+}
+
+static int update_jumps(KOS_COMP_UNIT *program,
+                        size_t         first_jump_entry,
+                        size_t         addr2line_start_offs)
+{
+    JUMP_ENTRY *const begin = (JUMP_ENTRY *)&program->jump_buf.buffer[first_jump_entry];
+    JUMP_ENTRY *const end   = (JUMP_ENTRY *)&program->jump_buf.buffer[program->jump_buf.size];
+    JUMP_ENTRY       *entry;
+
+    struct KOS_COMP_ADDR_TO_LINE_S *addr2line =
+        (struct KOS_COMP_ADDR_TO_LINE_S *)
+            (program->addr2line_gen_buf.buffer + addr2line_start_offs);
+    struct KOS_COMP_ADDR_TO_LINE_S *const addr2line_end =
+        (struct KOS_COMP_ADDR_TO_LINE_S *)
+            (program->addr2line_gen_buf.buffer + program->addr2line_gen_buf.size);
+
+    uint32_t total_added_bytes = 0;
 
     assert(first_jump_entry <= program->jump_buf.size);
     assert(first_jump_entry % sizeof(JUMP_ENTRY) == 0);
+    assert(program->jump_buf.size % sizeof(JUMP_ENTRY) == 0);
 
-    for ( ; entry < end; ++entry) {
+    /* First pass: calculate instruction sizes and estimate sizes of immediate operands */
+    for (entry = begin; entry < end; ++entry) {
+        const uint8_t opcode = (uint8_t)program->code_gen_buf.buffer[entry->orig_instr_offs];
 
         assert(entry->target_offs >= 0);
-        assert((unsigned)entry->target_offs <= program->code_gen_buf.size);
-        assert((unsigned)entry->jump_instr_offs < program->code_gen_buf.size);
 
-        write_jump_offs(program, &program->code_gen_buf, entry->jump_instr_offs, entry->target_offs);
+        switch (opcode) {
+
+            case INSTR_JUMP:
+                entry->instr_base_size = 1;
+                break;
+
+            case INSTR_NEXT_JUMP:
+                entry->instr_base_size = 3;
+                break;
+
+            default:
+                entry->instr_base_size = 2;
+                break;
+        }
+
+        total_added_bytes += update_jump_offsets(begin, end, entry);
+    }
+
+    /* Subsequent passes: update offsets until sizes of immediate operands stop changing */
+    while (total_added_bytes) {
+
+        total_added_bytes = 0;
+
+        for (entry = begin; entry < end; ++entry)
+            total_added_bytes += update_jump_offsets(begin, end, entry);
+    }
+
+    /* Final pass: write jump offsets and update addr2line mappings */
+    total_added_bytes = 0;
+
+    for (entry = begin; entry < end; ++entry) {
+
+        int     error;
+        uint8_t delta;
+
+        assert(entry->jump_instr_offs <= (int)program->code_gen_buf.size);
+
+        /* Update instruction's immediate operand with the new jump delta */
+        error = write_jump_offs(program, entry);
+        if (error)
+            return error;
+
+        delta = entry->imm_size - 1u;
+
+        /* Update addr2line mappings up to this jump */
+        for ( ; (addr2line < addr2line_end) && (addr2line->offs <= (unsigned int)entry->orig_instr_offs); ++addr2line)
+            addr2line->offs += total_added_bytes;
+
+        total_added_bytes += (unsigned)delta;
+    }
+
+    /* Update remaining addr2line mappings */
+    if (total_added_bytes) {
+        for ( ; addr2line < addr2line_end; ++addr2line)
+            addr2line->offs += total_added_bytes;
     }
 
     program->jump_buf.size = first_jump_entry;
@@ -1252,13 +1414,18 @@ static int append_frame(KOS_COMP_UNIT     *program,
                         size_t             jump_buf_offs)
 {
     int          error;
-    const size_t fun_end_offs = (size_t)program->cur_offs;
-    const size_t fun_size     = fun_end_offs - fun_start_offs;
+    size_t       fun_size;
     const size_t fun_new_offs = program->code_buf.size;
     const size_t a2l_new_offs = program->addr2line_buf.size;
     size_t       a2l_size;
 
-    TRY(update_jumps(program, jump_buf_offs));
+    assert((unsigned int)program->cur_offs == program->code_gen_buf.size);
+
+    TRY(update_jumps(program, jump_buf_offs, addr2line_start_offs));
+
+    assert((unsigned int)program->cur_offs == program->code_gen_buf.size);
+
+    fun_size = program->code_gen_buf.size - fun_start_offs;
 
     /* Remove last address-to-line entry if it points beyond the end of the function */
     if (program->addr2line_gen_buf.size) {
@@ -1269,7 +1436,7 @@ static int append_frame(KOS_COMP_UNIT     *program,
 
         --last_ptr;
 
-        if (last_ptr->offs == fun_end_offs)
+        if (last_ptr->offs == program->code_gen_buf.size)
             TRY(KOS_vector_resize(&program->addr2line_gen_buf,
                                   cur_a2l_size - sizeof(struct KOS_COMP_ADDR_TO_LINE_S)));
     }
@@ -1704,13 +1871,12 @@ static int if_stmt(KOS_COMP_UNIT      *program,
     node = node->next;
     if (node) {
 
-        const int jump_offs = program->cur_offs;
         TRY(gen_instr1(program, INSTR_JUMP, 0));
 
         update_jump_array(program, &jump_array, program->cur_offs);
 
         reset_jump_array(&jump_array);
-        TRY(push_jump_array(program, &jump_array, jump_offs));
+        TRY(push_jump_array(program, &jump_array, program->cur_offs - 2));
 
         TRY(visit_node(program, node, &reg));
         assert(!reg);

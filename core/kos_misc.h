@@ -50,7 +50,7 @@ typedef struct KOS_IMM_S {
         int32_t  sv;
         uint32_t uv;
     }            value;
-    int          delta;
+    int          size;
 } KOS_IMM;
 
 KOS_IMM kos_load_uimm(const uint8_t *bytecode);

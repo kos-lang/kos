@@ -313,10 +313,7 @@ static int test_instr(KOS_CONTEXT           ctx,
         code[words++] = INSTR_LOAD_TRUE;
         code[words++] = regs - 1U;
         code[words++] = (uint8_t)instr;
-        code[words++] = 2; /* delta */
-        code[words++] = 0;
-        code[words++] = 0;
-        code[words++] = 0;
+        code[words++] = 2 << 1; /* delta */
         code[words++] = 0; /* test reg */
         code[words++] = INSTR_LOAD_FALSE;
         code[words++] = regs - 1U;
@@ -584,63 +581,63 @@ int main(void)
         const uint8_t buf[] = { 0x00u };
         const KOS_IMM imm   = kos_load_uimm(buf);
         TEST(imm.value.uv == 0);
-        TEST(imm.delta  == 1);
+        TEST(imm.size     == 1);
     }
 
     {
         const uint8_t buf[] = { 0x7Fu };
         const KOS_IMM imm   = kos_load_uimm(buf);
         TEST(imm.value.uv == 127);
-        TEST(imm.delta  == 1);
+        TEST(imm.size     == 1);
     }
 
     {
         const uint8_t buf[] = { 0x80u, 0x01u };
         const KOS_IMM imm   = kos_load_uimm(buf);
         TEST(imm.value.uv == 128);
-        TEST(imm.delta  == 2);
+        TEST(imm.size     == 2);
     }
 
     {
         const uint8_t buf[] = { 0x00u };
         const KOS_IMM imm   = kos_load_simm(buf);
         TEST(imm.value.sv == 0);
-        TEST(imm.delta  == 1);
+        TEST(imm.size     == 1);
     }
 
     {
         const uint8_t buf[] = { 0x01u };
         const KOS_IMM imm   = kos_load_simm(buf);
         TEST(imm.value.sv == -1);
-        TEST(imm.delta  == 1);
+        TEST(imm.size     == 1);
     }
 
     {
         const uint8_t buf[] = { 0x7Eu };
         const KOS_IMM imm   = kos_load_simm(buf);
         TEST(imm.value.sv == 63);
-        TEST(imm.delta  == 1);
+        TEST(imm.size     == 1);
     }
 
     {
         const uint8_t buf[] = { 0x7Fu };
         const KOS_IMM imm   = kos_load_simm(buf);
         TEST(imm.value.sv == -64);
-        TEST(imm.delta  == 1);
+        TEST(imm.size     == 1);
     }
 
     {
         const uint8_t buf[] = { 0x80u, 0x01u };
         const KOS_IMM imm   = kos_load_simm(buf);
         TEST(imm.value.sv == 64);
-        TEST(imm.delta  == 2);
+        TEST(imm.size     == 2);
     }
 
     {
         const uint8_t buf[] = { 0x81u, 0x01u };
         const KOS_IMM imm   = kos_load_simm(buf);
         TEST(imm.value.sv == -65);
-        TEST(imm.delta  == 2);
+        TEST(imm.size     == 2);
     }
 
     TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
@@ -769,26 +766,26 @@ int main(void)
 
     /*========================================================================*/
     /* GET.MOD.GLOBAL */
-    TEST_INSTR INSTR_GET_MOD_GLOBAL, { V_INTEGER, 42                   }, { { V_IMM16, 0                        }, { V_STR0, 0, 0, "fortytwo"          } } END
-    TEST_INSTR INSTR_GET_MOD_GLOBAL, { V_EXCEPT                        }, { { V_IMM16, 0                        }, { V_INT32, 0                        } } END
-    TEST_INSTR INSTR_GET_MOD_GLOBAL, { V_EXCEPT                        }, { { V_IMM16, 1000                     }, { V_INT32, 0                        } } END
-    TEST_INSTR INSTR_GET_MOD_GLOBAL, { V_EXCEPT                        }, { { V_IMM16, 0                        }, { V_INT32, 1000                     } } END
+    TEST_INSTR INSTR_GET_MOD_GLOBAL, { V_INTEGER, 42                   }, { { V_IMM8, 0                         }, { V_STR0, 0, 0, "fortytwo"          } } END
+    TEST_INSTR INSTR_GET_MOD_GLOBAL, { V_EXCEPT                        }, { { V_IMM8, 0                         }, { V_INT32, 0                        } } END
+    TEST_INSTR INSTR_GET_MOD_GLOBAL, { V_EXCEPT                        }, { { V_IMM8, 127                       }, { V_INT32, 0                        } } END
+    TEST_INSTR INSTR_GET_MOD_GLOBAL, { V_EXCEPT                        }, { { V_IMM8, 0                         }, { V_INT32, 1000                     } } END
 
     /*========================================================================*/
     /* GET.MOD.ELEM */
-    TEST_INSTR INSTR_GET_MOD_ELEM, { V_INTEGER, 42                     }, { { V_IMM16, 0                        }, { V_IMM, 0                          } } END
-    TEST_INSTR INSTR_GET_MOD_ELEM, { V_EXCEPT                          }, { { V_IMM16, 1000                     }, { V_IMM, 0                          } } END
-    TEST_INSTR INSTR_GET_MOD_ELEM, { V_EXCEPT                          }, { { V_IMM16, 0                        }, { V_IMM, 1000                       } } END
+    TEST_INSTR INSTR_GET_MOD_ELEM, { V_INTEGER, 42                     }, { { V_IMM8, 0                         }, { V_IMM8, 0                         } } END
+    TEST_INSTR INSTR_GET_MOD_ELEM, { V_EXCEPT                          }, { { V_IMM8, 127                       }, { V_IMM8, 0                         } } END
+    TEST_INSTR INSTR_GET_MOD_ELEM, { V_EXCEPT                          }, { { V_IMM8, 0                         }, { V_IMM8, 127                       } } END
 
     /*========================================================================*/
     /* GET.MOD */
-    TEST_INSTR INSTR_GET_MOD,    { V_MODULE                            }, { { V_IMM16, 0                        } }                                        END
-    TEST_INSTR INSTR_GET_MOD,    { V_EXCEPT                            }, { { V_IMM16, 1000                     } }                                        END
+    TEST_INSTR INSTR_GET_MOD,    { V_MODULE                            }, { { V_IMM8, 0                         } }                                        END
+    TEST_INSTR INSTR_GET_MOD,    { V_EXCEPT                            }, { { V_IMM8, 127                       } }                                        END
 
     /*========================================================================*/
     /* GET.GLOBAL */
-    TEST_INSTR INSTR_GET_GLOBAL, { V_INTEGER, 42                       }, { { V_IMM, 0                          } }                                        END
-    TEST_INSTR INSTR_GET_GLOBAL, { V_EXCEPT                            }, { { V_IMM, 1000                       } }                                        END
+    TEST_INSTR INSTR_GET_GLOBAL, { V_INTEGER, 42                       }, { { V_IMM8, 0                         } }                                        END
+    TEST_INSTR INSTR_GET_GLOBAL, { V_EXCEPT                            }, { { V_IMM8, 1000                      } }                                        END
 
     /*========================================================================*/
     /* HAS.DP */

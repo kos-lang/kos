@@ -105,24 +105,17 @@ int kos_get_operand_size(KOS_BYTECODE_INSTR instr, int op)
         case INSTR_LOAD_CONST:
             /* fall through */
         case INSTR_LOAD_FUN:
-            if (op > 0)
-                return -1;
-            break;
-
-        case INSTR_GET_MOD:
-            if (op > 0)
-                return 2;
-            break;
-
+            /* fall through */
         case INSTR_GET_GLOBAL:
+            /* fall through */
+        case INSTR_GET_MOD_ELEM:
+            /* fall through */
+        case INSTR_GET_MOD:
             /* fall through */
         case INSTR_CATCH:
             if (op > 0)
-                return 4;
+                return -1;
             break;
-
-        case INSTR_GET_MOD_ELEM:
-            return (op == 0) ? 1 : (op == 1) ? 2 : 4;
 
         case INSTR_SET_GLOBAL:
             /* fall through */
@@ -132,17 +125,17 @@ int kos_get_operand_size(KOS_BYTECODE_INSTR instr, int op)
             /* fall through */
         case INSTR_JUMP_NOT_COND:
             if (op == 0)
-                return 4;
+                return -1;
             break;
 
         case INSTR_GET_MOD_GLOBAL:
             if (op == 1)
-                return 2;
+                return -1;
             break;
 
         case INSTR_NEXT_JUMP:
             if (op == 2)
-                return 4;
+                return -1;
             break;
 
         default:
@@ -259,17 +252,30 @@ int kos_is_signed_op(KOS_BYTECODE_INSTR instr, int op)
 
     switch (instr) {
 
-        case INSTR_LOAD_INT8:
-            return 1;
-
-        case INSTR_GET_ELEM8:
-            if (op == 2)
+        case INSTR_JUMP:
+            /* fall through */
+        case INSTR_JUMP_COND:
+            /* fall through */
+        case INSTR_JUMP_NOT_COND:
+            if (op == 0)
                 return 1;
             break;
 
+        case INSTR_LOAD_INT8:
+            /* fall through */
         case INSTR_SET_ELEM8:
+            /* fall through */
+        case INSTR_CATCH:
             if (op == 1)
                 return 1;
+            break;
+
+        case INSTR_GET_ELEM8:
+            /* fall through */
+        case INSTR_NEXT_JUMP:
+            if (op == 2)
+                return 1;
+            break;
 
         default:
             break;
@@ -446,7 +452,7 @@ int kos_disassemble(const char                   *filename,
                 }
 
                 value  = imm.value.sv;
-                opsize = imm.delta;
+                opsize = imm.size;
             }
             else
                 for (i = 0; i < opsize; i++)

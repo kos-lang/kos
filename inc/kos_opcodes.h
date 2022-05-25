@@ -25,7 +25,7 @@ DEFINE_INSTRUCTION(LOAD_TRUE, 0x84)
 DEFINE_INSTRUCTION(LOAD_FALSE, 0x85)
 /* LOAD.VOID <r.dest> */
 DEFINE_INSTRUCTION(LOAD_VOID, 0x86)
-/* NEW.ARRAY8 <r.dest>, <size.uint8> */
+/* NEW.ARRAY8 <r.dest>, <uint8.size> */
 DEFINE_INSTRUCTION(NEW_ARRAY8, 0x87)
 /* NEW.OBJ <r.dest>, <r.src.proto> */
 DEFINE_INSTRUCTION(NEW_OBJ, 0x88)
@@ -46,13 +46,13 @@ DEFINE_INSTRUCTION(GET_RANGE, 0x8D)
 DEFINE_INSTRUCTION(GET_PROP8, 0x8e)
 /* GET.PROTO <r.dest>, <r.src> */
 DEFINE_INSTRUCTION(GET_PROTO, 0x8f)
-/* GET.GLOBAL <r.dest>, <int32.glob.idx> */
-DEFINE_INSTRUCTION(GET_GLOBAL, 0x90)        /* TODO change to uint24 */
-/* GET.MOD.GLOBAL <r.dest>, <uint16.mod.idx>, <r.glob> */
+/* GET.GLOBAL <r.dest>, <uimm.glob.idx> */
+DEFINE_INSTRUCTION(GET_GLOBAL, 0x90)
+/* GET.MOD.GLOBAL <r.dest>, <uimm.mod.idx>, <r.glob> */
 DEFINE_INSTRUCTION(GET_MOD_GLOBAL, 0x91)
-/* GET.MOD.ELEM <r.dest>, <uint16.mod.idx>, <int32.glob.idx> */
-DEFINE_INSTRUCTION(GET_MOD_ELEM, 0x92)      /* TODO change to uint24 */
-/* GET.MOD <r.dest>, <uint16.mod.idx> */
+/* GET.MOD.ELEM <r.dest>, <uimm.mod.idx>, <uimm.glob.idx> */
+DEFINE_INSTRUCTION(GET_MOD_ELEM, 0x92)
+/* GET.MOD <r.dest>, <uimm.mod.idx> */
 DEFINE_INSTRUCTION(GET_MOD, 0x93)
 
 /* SET <r.dest>, <r.prop>, <r.src> */
@@ -61,8 +61,8 @@ DEFINE_INSTRUCTION(SET, 0x94)
 DEFINE_INSTRUCTION(SET_ELEM8, 0x95)
 /* SET.PROP8 <r.dest>, <uint8.str.idx>, <r.src> */
 DEFINE_INSTRUCTION(SET_PROP8, 0x96)
-/* SET.GLOBAL <int32.glob.idx>, <r.src> */
-DEFINE_INSTRUCTION(SET_GLOBAL, 0x97)        /* TODO change to uint24 */
+/* SET.GLOBAL <uimm.glob.idx>, <r.src> */
+DEFINE_INSTRUCTION(SET_GLOBAL, 0x97)
 
 /* PUSH <r.dest>, <r.src> */
 /* Append r.src to array in r.dest */
@@ -114,28 +114,28 @@ DEFINE_INSTRUCTION(CMP_LT, 0xAB)
 /* HAS.DP <r.dest>, <r.src>, <r.prop> */
 DEFINE_INSTRUCTION(HAS_DP, 0xAC)
 /* HAS.DP.PROP8 <r.dest>, <r.src>, <uint8.str.idx> */
-DEFINE_INSTRUCTION(HAS_DP_PROP8, 0xAD)      /* TODO change to uint16 or delete this variant */
+DEFINE_INSTRUCTION(HAS_DP_PROP8, 0xAD)
 /* HAS.SH <r.dest>, <r.src>, <r.prop> */
 DEFINE_INSTRUCTION(HAS_SH, 0xAE)
 /* HAS.SH.PROP8 <r.dest>, <r.src>, <uint8.str.idx> */
-DEFINE_INSTRUCTION(HAS_SH_PROP8, 0xAF)      /* TODO change to uint16 or delete this variant */
+DEFINE_INSTRUCTION(HAS_SH_PROP8, 0xAF)
 /* INSTANCEOF <r.dest>, <r.src>, <r.func> */
 DEFINE_INSTRUCTION(INSTANCEOF, 0xB0)
 
-/* JUMP <delta.int32>
+/* JUMP <simm.delta>
  * Relative, unconditional jump. */
-DEFINE_INSTRUCTION(JUMP, 0xB1)              /* TODO change to int24 or int16 */
-/* JUMP.COND <delta.int32>, <r.src>
+DEFINE_INSTRUCTION(JUMP, 0xB1)
+/* JUMP.COND <simm.delta>, <r.src>
  * Relative jump, taken only if r.src is truthy. */
-DEFINE_INSTRUCTION(JUMP_COND, 0xB2)         /* TODO change to int24 or int16 */
-/* JUMP.NOT.COND <delta.int32>, <r.src>
+DEFINE_INSTRUCTION(JUMP_COND, 0xB2)
+/* JUMP.NOT.COND <simm.delta>, <r.src>
  * Relative jump, taken only if r.src is falsy. */
-DEFINE_INSTRUCTION(JUMP_NOT_COND, 0xB3)     /* TODO change to int24 or int16 */
+DEFINE_INSTRUCTION(JUMP_NOT_COND, 0xB3)
 
-/* NEXT.JUMP <r.dest>, <r.func>, <delta.int32> */
+/* NEXT.JUMP <r.dest>, <r.func>, <simm.delta> */
 /* Call generator created with NEW.ITER.
  * If generator yields a value, jump to the specified offset. */
-DEFINE_INSTRUCTION(NEXT_JUMP, 0xB4)         /* TODO change to int24 or int16 */
+DEFINE_INSTRUCTION(NEXT_JUMP, 0xB4)
 /* NEXT <r.dest>, <r.func> */
 /* Call generator created with NEW.ITER.
  * If generator ends, throw an exception. */
@@ -152,27 +152,27 @@ DEFINE_INSTRUCTION(BIND_DEFAULTS, 0xB8)
 
 /* CALL <r.dest>, <r.func>, <r.this>, <r.args> */
 DEFINE_INSTRUCTION(CALL, 0xB9)
-/* CALL.N <r.dest>, <r.func>, <r.this>, <r.arg1>, <numargs.uint8> */
-/* Arguments are in consecutive registers, r.arg1 ignored if numargs.uint8 is 0. */
+/* CALL.N <r.dest>, <r.func>, <r.this>, <r.arg1>, <uint8.numargs> */
+/* Arguments are in consecutive registers, r.arg1 ignored if numargs is 0. */
 DEFINE_INSTRUCTION(CALL_N, 0xBA)
-/* CALL.FUN <r.dest>, <r.func>, <r.arg1>, <numargs.uint8> */
-/* Arguments are in consecutive registers, r.arg1 ignored if numargs.uint8 is 0. */
+/* CALL.FUN <r.dest>, <r.func>, <r.arg1>, <uint8.numargs> */
+/* Arguments are in consecutive registers, r.arg1 ignored if numargs is 0. */
 DEFINE_INSTRUCTION(CALL_FUN, 0xBB)
 /* RETURN <r.src> */
 DEFINE_INSTRUCTION(RETURN, 0xBC)
 /* TAIL.CALL <r.func>, <r.this>, <r.args> */
 DEFINE_INSTRUCTION(TAIL_CALL, 0xBD)
-/* TAIL.CALL.N <r.func>, <r.this>, <r.arg1>, <numargs.uint8> */
-/* Arguments are in consecutive registers, r.arg1 ignored if numargs.uint8 is 0. */
+/* TAIL.CALL.N <r.func>, <r.this>, <r.arg1>, <uint8.numargs> */
+/* Arguments are in consecutive registers, r.arg1 ignored if numargs is 0. */
 DEFINE_INSTRUCTION(TAIL_CALL_N, 0xBE)
-/* TAIL.CALL.FUN <r.func>, <r.arg1>, <numargs.uint8> */
-/* Arguments are in consecutive registers, r.arg1 ignored if numargs.uint8 is 0. */
+/* TAIL.CALL.FUN <r.func>, <r.arg1>, <uint8.numargs> */
+/* Arguments are in consecutive registers, r.arg1 ignored if numargs is 0. */
 DEFINE_INSTRUCTION(TAIL_CALL_FUN, 0xBF)
 /* YIELD <r.dest>, <r.src> */
 DEFINE_INSTRUCTION(YIELD, 0xC0)
 /* THROW <r.src> */
 DEFINE_INSTRUCTION(THROW, 0xC1)
-/* CATCH <r.dest>, <delta.int32> */
-DEFINE_INSTRUCTION(CATCH, 0xC2)             /* TODO change to int24 or int16 */
+/* CATCH <r.dest>, <simm.delta> */
+DEFINE_INSTRUCTION(CATCH, 0xC2)
 /* CANCEL */
 DEFINE_INSTRUCTION(CANCEL, 0xC3)

@@ -133,7 +133,7 @@ do {
 
     assert find_lowest([9, 10, -5, 245, -1000, 9000, -1]) == -1000
 
-    check(find_lowest, { registers: 5, instructions: 8, size: 33 })
+    check(find_lowest, { registers: 5, instructions: 8, size: 24 })
 }
 
 #============================================================================#
@@ -156,7 +156,7 @@ do {
 
     assert find_greatest([-100, 90, -5, 400, 10, 15]) == 400
 
-    check(find_greatest, { registers: 6, instructions: 14, size: 56 })
+    check(find_greatest, { registers: 6, instructions: 14, size: 47 })
 }
 
 #============================================================================#
@@ -174,7 +174,7 @@ do {
 
     assert throw_exception(5) == 5
 
-    check(throw_exception, { registers: 3, instructions: 7, size: 21 })
+    check(throw_exception, { registers: 3, instructions: 7, size: 15 })
 }
 
 #============================================================================#
@@ -211,7 +211,7 @@ do {
         assert iter() == 0.5
     }
 
-    check(map, { registers: 5, instructions: 7, size: 27 })
+    check(map, { registers: 5, instructions: 7, size: 21 })
 }
 
 #============================================================================#
@@ -257,7 +257,7 @@ do {
         }
         assert caught == 1
     }
-    check(unreachable_if, { registers: 2, instructions: 6, size: 21 })
+    check(unreachable_if, { registers: 2, instructions: 6, size: 15 })
 }
 
 #============================================================================#
@@ -309,7 +309,7 @@ do {
 
     assert early_break_from_repeat() == 8
 
-    check(early_break_from_repeat, { registers: 1, instructions: 3, size: 10 })
+    check(early_break_from_repeat, { registers: 1, instructions: 3, size: 7 })
 }
 
 #============================================================================#
@@ -327,7 +327,7 @@ do {
     }
     assert unreachable_while(1) == 10
 
-    check(unreachable_while, { registers: 1, instructions: 3, size: 10 })
+    check(unreachable_while, { registers: 1, instructions: 3, size: 7 })
 }
 
 #============================================================================#
@@ -346,7 +346,7 @@ do {
     }
     assert break_inside_while(1) == 102
 
-    check(break_inside_while, { registers: 3, instructions: 8, size: 29 })
+    check(break_inside_while, { registers: 3, instructions: 8, size: 23 })
 }
 
 #============================================================================#
@@ -384,7 +384,7 @@ do {
     }
     assert unreachable_try() == 3
 
-    check(unreachable_try, { registers: 3, instructions: 19, size: 66 })
+    check(unreachable_try, { registers: 3, instructions: 19, size: 45 })
 }
 
 #============================================================================#
@@ -425,7 +425,7 @@ do {
     }
     assert var_to_const_while_true(2) == 13
 
-    check(var_to_const_while_true, { registers: 4, instructions: 8, size: 29 })
+    check(var_to_const_while_true, { registers: 4, instructions: 8, size: 23 })
 }
 
 #============================================================================#
@@ -440,7 +440,7 @@ do {
     }
     assert truthy_while() == 88
 
-    check(truthy_while, { registers: 1, instructions: 3, size: 10 })
+    check(truthy_while, { registers: 1, instructions: 3, size: 7 })
 }
 
 #============================================================================#
@@ -453,7 +453,7 @@ do {
         # TODO optimize-out the trailing return
     }
 
-    check(stuck_forever, { registers: 1, instructions: 3, size: 9 })
+    check(stuck_forever, { registers: 1, instructions: 3, size: 6 })
 }
 
 #============================================================================#
@@ -690,7 +690,7 @@ do {
     assert optimize_switch(2) == 4
     assert optimize_switch(5) == 8
 
-    check(optimize_switch, { registers: 2, instructions: 19, size: 73 })
+    check(optimize_switch, { registers: 2, instructions: 19, size: 55 })
 }
 
 #============================================================================#
@@ -705,7 +705,7 @@ do {
     assert tri_abs_left_identity(-10) == 10
     assert tri_abs_left_identity(0)   == 0
 
-    check(tri_abs_left_identity, { registers: 3, instructions: 7, size: 25 })
+    check(tri_abs_left_identity, { registers: 3, instructions: 7, size: 22 })
 }
 
 #============================================================================#
@@ -720,7 +720,7 @@ do {
     assert tri_abs_right_identity(-10) == 10
     assert tri_abs_right_identity(0)   == 0
 
-    check(tri_abs_right_identity, { registers: 3, instructions: 7, size: 25 })
+    check(tri_abs_right_identity, { registers: 3, instructions: 7, size: 22 })
 }
 
 #============================================================================#
@@ -872,7 +872,7 @@ do {
     assert range_begin_end(5, 7) == 11
     assert range_dec(8, 3) == 18
 
-    check(range_num,       { registers: 6, instructions: 10, size: 37 })
-    check(range_begin_end, { registers: 7, instructions: 10, size: 37 })
-    check(range_dec,       { registers: 7, instructions: 10, size: 37 })
+    check(range_num,       { registers: 6, instructions: 10, size: 31 })
+    check(range_begin_end, { registers: 7, instructions: 10, size: 31 })
+    check(range_dec,       { registers: 7, instructions: 10, size: 31 })
 }
