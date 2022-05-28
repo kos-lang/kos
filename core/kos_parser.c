@@ -26,6 +26,8 @@ static const char str_err_expected_case_statements[]  = "expected statements aft
 static const char str_err_expected_catch[]            = "expected 'catch'";
 static const char str_err_expected_colon[]            = "expected ':'";
 static const char str_err_expected_comma[]            = "expected ','";
+static const char str_err_expected_comma_or_curly[]   = "expected ',' or '}'";
+static const char str_err_expected_comma_or_paren[]   = "expected ',' or ')'";
 static const char str_err_expected_const_or_expr[]    = "expected 'const' or expression";
 static const char str_err_expected_curly_close[]      = "expected '}'";
 static const char str_err_expected_curly_open[]       = "expected '{'";
@@ -907,7 +909,7 @@ static int object_literal(KOS_PARSER *parser, KOS_AST_NODE **ret)
             break;
 
         if (!comma) {
-            parser->error_str = str_err_expected_comma;
+            parser->error_str = str_err_expected_comma_or_curly;
             error = KOS_ERROR_PARSE_FAILED;
             goto cleanup;
         }
@@ -1874,7 +1876,7 @@ static int invocation(KOS_PARSER *parser, KOS_AST_NODE **ret)
                 break;
 
             if (parser->token.sep != ST_COMMA) {
-                parser->error_str = str_err_expected_comma;
+                parser->error_str = str_err_expected_comma_or_paren;
                 RAISE_ERROR(KOS_ERROR_PARSE_FAILED);
             }
         }
