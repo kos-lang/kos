@@ -444,9 +444,47 @@ static int parse_number(struct RE_PARSE_CTX *re_ctx, uint32_t* number)
     return KOS_SUCCESS;
 }
 
+static int parse_class_char_escape_seq(struct RE_PARSE_CTX *re_ctx, uint32_t *out_code)
+{
+    const uint32_t code = peek_next_char(&re_ctx->iter);
+    int            error;
+
+    if (code == END_OF_STR) {
+        KOS_raise_printf(re_ctx->ctx, "error parsing regular expression: "
+                         "expected an escape sequence at position %d but reached end of regular expression",
+                         re_ctx->idx);
+        return KOS_ERROR_EXCEPTION;
+    }
+
+    consume_next_char(re_ctx);
+
+    switch (code) {
+
+        case ']':
+            /* fall through */
+        case '^':
+            /* fall through */
+        case '-':
+            *out_code = code;
+            error = KOS_SUCCESS;
+            break;
+
+        default: {
+            char str_code[6];
+
+            encode_utf8(code, &str_code[0], sizeof(str_code));
+            KOS_raise_printf(re_ctx->ctx, "unsupported escape sequence \\%s at position %d",
+                             str_code, re_ctx->idx);
+            error = KOS_ERROR_EXCEPTION;
+        }
+    }
+
+    return error;
+}
+
 static int parse_class_char(struct RE_PARSE_CTX *re_ctx, uint32_t *out_code)
 {
-    uint32_t code = peek_next_char(&re_ctx->iter);
+    const uint32_t code = peek_next_char(&re_ctx->iter);
 
     if (code == END_OF_STR) {
         KOS_raise_printf(re_ctx->ctx, "error parsing regular expression: "
@@ -457,11 +495,8 @@ static int parse_class_char(struct RE_PARSE_CTX *re_ctx, uint32_t *out_code)
 
     consume_next_char(re_ctx);
 
-    if (code == '\\') {
-        /* TODO */
-        KOS_raise_printf(re_ctx->ctx, "escape sequences in character classes not implemented yet");
-        return KOS_ERROR_EXCEPTION;
-    }
+    if (code == '\\')
+        return parse_class_char_escape_seq(re_ctx, out_code);
 
     *out_code = code;
 

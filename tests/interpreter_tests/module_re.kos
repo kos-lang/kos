@@ -606,3 +606,39 @@ do {
     assert r1.begin == 2
     assert r1.end   == 4
 }
+
+do {
+    const r = re.re("[\]]+")
+
+    const r1 = r.find("ab]]c]d")
+    assert r1.match == "]]"
+    assert r1.begin == 2
+    assert r1.end   == 4
+}
+
+do {
+    const r = re.re("[[-\]]+")
+
+    const r1 = r.find("ab]\\[c]d")
+    assert r1.match == r"]\["
+    assert r1.begin == 2
+    assert r1.end   == 5
+}
+
+do {
+    const r = re.re("[[\-\]]+")
+
+    const r1 = r.find("ab]\\[c]d")
+    assert r1.match == "]"
+    assert r1.begin == 2
+    assert r1.end   == 3
+
+    const r2 = r.find("a-b]\\[c]d")
+    assert r2.match == "-"
+    assert r2.begin == 1
+    assert r2.end   == 2
+}
+
+do {
+    expect_fail(() => re.re(r"[\x]"))
+}
