@@ -109,7 +109,9 @@ if [ "$UNAME" = "Darwin" ]; then
     cp interpreter/macos/uninstall.sh "$PKGDIR"/share/kos
 
     PKGNAME="$PKGNAME-macos"
-    productbuild --root "$PKGDIR" /usr/local --product interpreter/macos/kos.plist "$BUILDDIR"/"$PKGNAME.pkg"
+    pkgbuild --root "$PKGDIR" --install-location /usr/local --identifier com.kos-lang.kos --version "$VERSION" "$BUILDDIR"/kos.pkg
+    sed "s/VERSION/$VERSION/" < interpreter/macos/kos.dist > "$BUILDDIR"/kos.dist
+    productbuild --distribution "$BUILDDIR"/kos.dist --package-path "$BUILDDIR" "$BUILDDIR"/"$PKGNAME.pkg"
     cd "$BUILDDIR"
     shasum -a 256 "$PKGNAME.pkg" | tee "$PKGNAME.pkg.sha"
     cd - >/dev/null

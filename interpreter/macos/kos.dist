@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="1">
+    <title>Kos VERSION</title>
+    <pkg-ref id="com.kos-lang.kos">kos.pkg</pkg-ref>
+    <options customize="never" require-scripts="false" hostArchitectures="arm64,x86_64"/>
+    <domains enable_anywhere="false" enable_currentUserHome="false" enable_localSystem="true"/>
+    <volume-check>
+        <allowed-os-versions>
+            <os-version min="10.10"/>
+        </allowed-os-versions>
+    </volume-check>
+    <choices-outline>
+        <line choice="default"/>
+    </choices-outline>
+    <choice id="default" title="Kos">
+        <pkg-ref id="com.kos-lang.kos"/>
+    </choice>
+</installer-gui-script>

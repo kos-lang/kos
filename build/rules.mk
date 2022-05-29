@@ -245,7 +245,7 @@ ifeq ($(UNAME), Darwin)
         ifeq ($(target), arm64)
             APPLE_FLAGS ?= -arch arm64 -mmacosx-version-min=11.0
         else
-            APPLE_FLAGS ?= -mmacosx-version-min=10.9
+            APPLE_FLAGS ?= -mmacosx-version-min=10.10
         endif
     endif
     CFLAGS  += $(APPLE_FLAGS)
