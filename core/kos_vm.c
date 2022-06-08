@@ -1829,24 +1829,25 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 const unsigned rprop = bytecode[3];
                 KOS_OBJ_ID     src;
                 KOS_OBJ_ID     prop;
+                KOS_TYPE       type;
 
                 assert(rsrc  < num_regs);
                 assert(rprop < num_regs);
 
                 rdest = bytecode[1];
                 src   = read_reg(stack_frame, rsrc);
+                type  = GET_OBJ_TYPE(src);
                 prop  = read_reg(stack_frame, rprop);
 
+                /* Get an element using numeric index */
                 if (IS_NUMERIC_OBJ(prop)) {
-                    KOS_TYPE type;
-                    int64_t  idx;
+                    int64_t idx;
 
                     TRY(KOS_get_integer(ctx, prop, &idx));
 
                     if (idx > INT_MAX || idx < INT_MIN)
                         RAISE_EXCEPTION_STR(str_err_invalid_index);
 
-                    type = GET_OBJ_TYPE(src);
                     if (type == OBJ_STRING)
                         out = KOS_string_get_char(ctx, src, (int)idx);
                     else if (type == OBJ_BUFFER)
@@ -1854,17 +1855,56 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                     else
                         out = KOS_array_read(ctx, src, (int)idx);
                 }
+                /* Get property by name */
                 else {
-                    out = KOS_get_property(ctx, src, prop);
-                    TRY_OBJID(out);
+                    out = KOS_BADPTR;
 
-                    if (GET_OBJ_TYPE(out) == OBJ_DYNAMIC_PROP) {
-                        store_instr_offs(stack_frame, bytecode);
+                    /* Get exported element from a module object */
+                    if (type == OBJ_MODULE) {
+                        KOS_LOCAL  mod;
+                        KOS_LOCAL  prop_name;
+                        KOS_OBJ_ID glob_idx;
 
-                        out = OBJPTR(DYNAMIC_PROP, out)->getter;
-                        out = KOS_call_function(ctx, out, src, KOS_EMPTY_ARRAY);
+                        error = KOS_SUCCESS;
 
-                        assert(ctx->regs_idx == regs_idx);
+                        KOS_init_local_with(ctx, &mod,       src);
+                        KOS_init_local_with(ctx, &prop_name, prop);
+
+                        glob_idx = KOS_get_property_shallow(ctx,
+                                                            OBJPTR(MODULE, mod.o)->global_names,
+                                                            prop_name.o);
+                        if ( ! IS_BAD_PTR(glob_idx)) {
+                            assert(IS_SMALL_INT(glob_idx));
+
+                            out = KOS_array_read(ctx, OBJPTR(MODULE, mod.o)->globals,
+                                                 (int)GET_SMALL_INT(glob_idx));
+                            if (IS_BAD_PTR(out))
+                                error = KOS_ERROR_EXCEPTION;
+                        }
+                        else
+                            KOS_clear_exception(ctx);
+
+                        prop = KOS_destroy_top_local(ctx, &prop_name);
+                        src  = KOS_destroy_top_local(ctx, &mod);
+
+                        if (error)
+                            goto cleanup;
+                    }
+
+                    /* Handle regular object or module object's prototypes */
+                    if (IS_BAD_PTR(out)) {
+
+                        out = KOS_get_property(ctx, src, prop);
+                        TRY_OBJID(out);
+
+                        if (GET_OBJ_TYPE(out) == OBJ_DYNAMIC_PROP) {
+                            store_instr_offs(stack_frame, bytecode);
+
+                            out = OBJPTR(DYNAMIC_PROP, out)->getter;
+                            out = KOS_call_function(ctx, out, src, KOS_EMPTY_ARRAY);
+
+                            assert(ctx->regs_idx == regs_idx);
+                        }
                     }
                 }
 
@@ -2005,17 +2045,55 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 TRY_OBJID(prop);
 
                 obj = read_reg(stack_frame, rsrc);
-                out = KOS_get_property(ctx, obj, prop);
-                TRY_OBJID(out);
+                out = KOS_BADPTR;
 
-                if (GET_OBJ_TYPE(out) == OBJ_DYNAMIC_PROP) {
-                    store_instr_offs(stack_frame, bytecode);
+                /* Get exported element from a module object */
+                if (GET_OBJ_TYPE(obj) == OBJ_MODULE) {
+                    KOS_LOCAL  mod;
+                    KOS_LOCAL  prop_name;
+                    KOS_OBJ_ID glob_idx;
 
-                    out = OBJPTR(DYNAMIC_PROP, out)->getter;
-                    out = KOS_call_function(ctx, out, obj, KOS_EMPTY_ARRAY);
+                    error = KOS_SUCCESS;
+
+                    KOS_init_local_with(ctx, &mod,       obj);
+                    KOS_init_local_with(ctx, &prop_name, prop);
+
+                    glob_idx = KOS_get_property_shallow(ctx,
+                                                        OBJPTR(MODULE, mod.o)->global_names,
+                                                        prop_name.o);
+                    if ( ! IS_BAD_PTR(glob_idx)) {
+                        assert(IS_SMALL_INT(glob_idx));
+
+                        out = KOS_array_read(ctx, OBJPTR(MODULE, mod.o)->globals,
+                                             (int)GET_SMALL_INT(glob_idx));
+                        if (IS_BAD_PTR(out))
+                            error = KOS_ERROR_EXCEPTION;
+                    }
+                    else
+                        KOS_clear_exception(ctx);
+
+                    prop = KOS_destroy_top_local(ctx, &prop_name);
+                    obj  = KOS_destroy_top_local(ctx, &mod);
+
+                    if (error)
+                        goto cleanup;
+                }
+
+                /* Handle regular object or module object's prototypes */
+                if (IS_BAD_PTR(out)) {
+
+                    out = KOS_get_property(ctx, obj, prop);
                     TRY_OBJID(out);
 
-                    assert(ctx->regs_idx == regs_idx);
+                    if (GET_OBJ_TYPE(out) == OBJ_DYNAMIC_PROP) {
+                        store_instr_offs(stack_frame, bytecode);
+
+                        out = OBJPTR(DYNAMIC_PROP, out)->getter;
+                        out = KOS_call_function(ctx, out, obj, KOS_EMPTY_ARRAY);
+                        TRY_OBJID(out);
+
+                        assert(ctx->regs_idx == regs_idx);
+                    }
                 }
 
                 assert(rdest < num_regs);

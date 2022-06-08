@@ -1803,3 +1803,27 @@ do {
     assert b != mb
     assert b != tt
 }
+
+do {
+    const truthy = expect_fail(fun { throw void }) == void
+
+    const b = truthy ? base.module("base") : void
+    assert typeof b == "module"
+    assert b.name == "base"
+
+    assert typeof b.get == "function"
+    assert b.get == ({}).get
+    assert b[truthy ? "get" : void] == ({}).get
+
+    assert typeof b.count == "function"
+    assert b.count != ({}).count
+    assert typeof b[truthy ? "count" : void] == "function"
+    assert b[truthy ? "count" : void] != ({}).count
+
+    assert typeof b.hex == "function"
+    assert b.hex(32) == "0x20"
+    assert b[truthy ? "hex" : void](33) == "0x21"
+
+    expect_fail(() => b.non_existent)
+    expect_fail(() => b[truthy ? "non_existent" : "count"])
+}
