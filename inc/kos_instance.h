@@ -386,6 +386,7 @@ typedef struct KOS_GC_STATS_S {
     unsigned num_objs_freed;
     unsigned num_objs_finalized;
     unsigned num_pages_kept;
+    unsigned num_pages_dropped;
     unsigned num_pages_freed;
     unsigned size_evacuated;
     unsigned size_freed;
@@ -406,7 +407,8 @@ typedef struct KOS_GC_STATS_S {
 
 #define KOS_GC_STATS_INIT(val) \
     { (val), (val), (val), (val), (val), (val), (val), (val), (val), (val), \
-      (val), (val), (val), (val), (val), (val), (val), (val), (val), (val) }
+      (val), (val), (val), (val), (val), (val), (val), (val), (val), (val), \
+      (val) }
 
 KOS_API
 int KOS_collect_garbage(KOS_CONTEXT   ctx,

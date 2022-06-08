@@ -360,6 +360,7 @@ KOS_DECLARE_STATIC_CONST_STRING(str_num_objs_evacuated,     "num_objs_evacuated"
 KOS_DECLARE_STATIC_CONST_STRING(str_num_objs_freed,         "num_objs_freed");
 KOS_DECLARE_STATIC_CONST_STRING(str_num_objs_finalized,     "num_objs_finalized");
 KOS_DECLARE_STATIC_CONST_STRING(str_num_pages_kept,         "num_pages_kept");
+KOS_DECLARE_STATIC_CONST_STRING(str_num_pages_dropped,      "num_pages_dropped");
 KOS_DECLARE_STATIC_CONST_STRING(str_num_pages_freed,        "num_pages_freed");
 KOS_DECLARE_STATIC_CONST_STRING(str_size_evacuated,         "size_evacuated");
 KOS_DECLARE_STATIC_CONST_STRING(str_size_freed,             "size_freed");
@@ -377,11 +378,12 @@ KOS_DECLARE_STATIC_CONST_STRING(str_time_update_us,         "time_update_us");
 KOS_DECLARE_STATIC_CONST_STRING(str_time_finish_us,         "time_finish_us");
 KOS_DECLARE_STATIC_CONST_STRING(str_time_total_us,          "time_total_us");
 
-static const KOS_CONVERT conv_gc_stats[21] = {
+static const KOS_CONVERT conv_gc_stats[22] = {
     { KOS_CONST_ID(str_num_objs_evacuated),     KOS_BADPTR, offsetof(KOS_GC_STATS, num_objs_evacuated),     0, KOS_NATIVE_UINT32 },
     { KOS_CONST_ID(str_num_objs_freed),         KOS_BADPTR, offsetof(KOS_GC_STATS, num_objs_freed),         0, KOS_NATIVE_UINT32 },
     { KOS_CONST_ID(str_num_objs_finalized),     KOS_BADPTR, offsetof(KOS_GC_STATS, num_objs_finalized),     0, KOS_NATIVE_UINT32 },
     { KOS_CONST_ID(str_num_pages_kept),         KOS_BADPTR, offsetof(KOS_GC_STATS, num_pages_kept),         0, KOS_NATIVE_UINT32 },
+    { KOS_CONST_ID(str_num_pages_dropped),      KOS_BADPTR, offsetof(KOS_GC_STATS, num_pages_dropped),      0, KOS_NATIVE_UINT32 },
     { KOS_CONST_ID(str_num_pages_freed),        KOS_BADPTR, offsetof(KOS_GC_STATS, num_pages_freed),        0, KOS_NATIVE_UINT32 },
     { KOS_CONST_ID(str_size_evacuated),         KOS_BADPTR, offsetof(KOS_GC_STATS, size_evacuated),         0, KOS_NATIVE_UINT32 },
     { KOS_CONST_ID(str_size_freed),             KOS_BADPTR, offsetof(KOS_GC_STATS, size_freed),             0, KOS_NATIVE_UINT32 },

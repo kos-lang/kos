@@ -176,8 +176,8 @@ static void push_mark_group(KOS_MARK_GROUP_STACK *stack,
     const uint32_t end = idx;
 
     do {
-        if (KOS_atomic_cas_weak_ptr(stack->slots[idx], (KOS_MARK_GROUP *)KOS_NULL, group)) {
-            (void)KOS_atomic_cas_weak_u32(stack->slot_idx, end, (idx + 1U) & MARK_GROUP_MASK);
+        if (KOS_atomic_cas_strong_ptr(stack->slots[idx], (KOS_MARK_GROUP *)KOS_NULL, group)) {
+            (void)KOS_atomic_cas_strong_u32(stack->slot_idx, end, (idx + 1U) & MARK_GROUP_MASK);
             return;
         }
 
@@ -201,8 +201,8 @@ static KOS_MARK_GROUP *pop_mark_group(KOS_MARK_GROUP_STACK *stack)
     do {
         group = (KOS_MARK_GROUP *)KOS_atomic_read_relaxed_ptr(stack->slots[idx]);
 
-        if (group && KOS_atomic_cas_weak_ptr(stack->slots[idx], group, (KOS_MARK_GROUP *)KOS_NULL)) {
-            (void)KOS_atomic_cas_weak_u32(stack->slot_idx, ((end + 1U) & MARK_GROUP_MASK), idx);
+        if (group && KOS_atomic_cas_strong_ptr(stack->slots[idx], group, (KOS_MARK_GROUP *)KOS_NULL)) {
+            (void)KOS_atomic_cas_strong_u32(stack->slot_idx, ((end + 1U) & MARK_GROUP_MASK), idx);
             return group;
         }
 
@@ -1420,18 +1420,18 @@ static uint32_t get_marking(const struct KOS_MARK_LOC_S *mark_loc)
 static uint32_t set_mark_state_loc(struct KOS_MARK_LOC_S mark_loc,
                                    enum KOS_MARK_STATE_E state)
 {
-    const uint32_t mask  = (uint32_t)state << mark_loc.mask_idx;
-    uint32_t       value = KOS_atomic_read_relaxed_u32(*mark_loc.bitmap);
+    const uint32_t mask = (uint32_t)state << mark_loc.mask_idx;
+    uint32_t       value;
 
-    while ( ! (value & mask)) {
-
-        if (KOS_atomic_cas_weak_u32(*mark_loc.bitmap, value, value | mask))
-            return 1;
-
+    do {
         value = KOS_atomic_read_relaxed_u32(*mark_loc.bitmap);
-    }
 
-    return 0;
+        if (value & mask)
+            return 0;
+
+    } while ( ! KOS_atomic_cas_weak_u32(*mark_loc.bitmap, value, value | mask));
+
+    return 1;
 }
 
 static void clear_page_mark_state(KOS_PAGE *page, uint32_t size)
@@ -2673,6 +2673,8 @@ static int evacuate(KOS_CONTEXT              ctx,
          * early before the end of evacuation when the heap is full. */
         if ( ! num_evac) {
             gc_trace(("GC ctx=%p -- drop page %p\n", (void *)ctx, (void *)page));
+
+            ++stats.num_pages_dropped;
 
             KOS_atomic_write_relaxed_u32(page->num_allocated, 0);
 
