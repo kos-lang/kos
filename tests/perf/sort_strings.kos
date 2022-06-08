@@ -4,19 +4,22 @@ import random.rand_integer
 import base.print
 import base.string
 import base.range
+import datetime.now
+
+const start = now()
 
 const a = []
 
 const str_codes = []
-str_codes.reserve(10)
+const str_len   = 9
+str_codes.resize(str_len)
 
 for const i in range(100000) {
 
     var r = rand_integer(0, 0x7FFF_FFFF_FFFF_FFFF)
 
-    str_codes.resize(0)
-    while r {
-        str_codes.push((r & 0x3F) + 0x20)
+    for const j in range(str_len) {
+        str_codes[j] = (r & 0x3F) + 0x20
         r >>= 7
     }
 
