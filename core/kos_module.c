@@ -938,13 +938,24 @@ static int alloc_constants(KOS_CONTEXT    ctx,
         if (func_const->flags & KOS_COMP_FUN_GENERATOR)
             OBJPTR(FUNCTION, obj.o)->state = KOS_GEN_INIT;
 
-        if (ctx->inst->flags & KOS_INST_DISASM)
-            TRY(disassemble_func(ctx, obj.o));
-
         TRY_OBJID(obj.o);
 
         TRY(KOS_array_write(ctx, OBJPTR(MODULE, module.o)->constants, base_idx + i, obj.o));
     }
+
+    if (ctx->inst->flags & KOS_INST_DISASM) {
+        for (i = 0, constant = program->first_constant; constant; constant = constant->next, ++i) {
+
+            if (constant->type != KOS_COMP_CONST_FUNCTION)
+                continue;
+
+            obj.o = KOS_array_read(ctx, OBJPTR(MODULE, module.o)->constants, base_idx + i);
+            TRY_OBJID(obj.o);
+
+            TRY(disassemble_func(ctx, obj.o));
+        }
+    }
+
 
 cleanup:
     KOS_destroy_top_locals(ctx, &obj, &module);
