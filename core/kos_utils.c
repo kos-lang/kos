@@ -98,7 +98,8 @@ const char *KOS_get_type_name(KOS_TYPE type)
         "array",
         "buffer",
         "function",
-        "class"
+        "class",
+        "module"
     };
 
     assert(type <= OBJ_LAST_TYPE);
