@@ -1781,25 +1781,31 @@ do {
 
     assert (fun{}).module.name == "module_base"
 
+    expect_fail(() => base.module.load())
+    expect_fail(() => base.module.load(0))
+    expect_fail(() => base.module.load(void))
+    expect_fail(() => base.module.load("non-existent"))
+
     expect_fail(() => base.module())
     expect_fail(() => base.module(0))
     expect_fail(() => base.module(void))
     expect_fail(() => base.module("non-existent"))
+    expect_fail(() => base.module("base"))
 
-    const b = base.module("base")
+    const b = base.module.load("base")
     assert typeof b == "module"
     assert b.name == "base"
     assert "\(b)" == "<module base>"
 
-    const mb = base.module("module_base")
+    const mb = base.module.load("module_base")
     assert typeof mb == "module"
     assert mb.name == "module_base"
 
-    const tt = base.module("test_tools")
+    const tt = base.module.load("test_tools")
     assert typeof tt == "module"
     assert tt.name == "test_tools"
 
-    assert base.module("base") == b
+    assert base.module.load("base") == b
     assert b != mb
     assert b != tt
 }
@@ -1807,7 +1813,7 @@ do {
 do {
     const truthy = expect_fail(fun { throw void }) == void
 
-    const b = truthy ? base.module("base") : void
+    const b = truthy ? base.module.load("base") : void
     assert typeof b == "module"
     assert b.name == "base"
 

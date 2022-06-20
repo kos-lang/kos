@@ -5,17 +5,17 @@ import base
 
 public fun main
 {
-    const mod_base = base.module("base")
+    const mod_base = base.module.load("base")
     assert typeof mod_base == "module"
     assert mod_base.name == "base"
 
-    const mod_test_tools = base.module("test_tools")
+    const mod_test_tools = base.module.load("test_tools")
     assert typeof mod_test_tools == "module"
     assert mod_test_tools.name == "test_tools"
 
     var exc = void
     try {
-        base.module("non existent")
+        base.module.load("non existent")
     }
     catch const e {
         exc = e.value

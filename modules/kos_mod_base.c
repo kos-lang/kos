@@ -56,6 +56,7 @@ KOS_DECLARE_STATIC_CONST_STRING(str_err_object_arg_not_iterable,  "argument pass
 KOS_DECLARE_STATIC_CONST_STRING(str_err_too_many_repeats,         "invalid string repeat count");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_unsup_operand_types,      "unsupported operand types");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_use_async,                "use async to launch threads");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_use_load,                 "use module.load() to import modules");
 KOS_DECLARE_STATIC_CONST_STRING(str_format,                       "format");
 KOS_DECLARE_STATIC_CONST_STRING(str_gen_active,                   "active");
 KOS_DECLARE_STATIC_CONST_STRING(str_gen_done,                     "done");
@@ -4859,25 +4860,46 @@ static KOS_OBJ_ID print_exception(KOS_CONTEXT ctx,
 
 /* @item base module()
  *
- *     module(name)
+ *     module()
  *
  * Module object class.
  *
- * Returns module object of a module with the given name.
+ * Module objects are obtained by calling `module.load()`.
  *
- * If the module has already been imported, e.g. with the `import` statement, returns that
- * module object.  Otherwise imports the module and then returns it.
+ * The purpose of this class is to be used with the `instanceof`
+ * operator to detect thread objects.
+ *
+ * Calling this class directly throws an exception.
  *
  * The prototype of `module.prototype` is `object.prototype`.
  */
-static const KOS_CONVERT module_args[2] = {
+static KOS_OBJ_ID module_constructor(KOS_CONTEXT ctx,
+                                     KOS_OBJ_ID  this_obj,
+                                     KOS_OBJ_ID  args_obj)
+{
+    KOS_raise_exception(ctx, KOS_CONST_ID(str_err_use_load));
+    return KOS_BADPTR;
+}
+
+/* @item base module.load()
+ *
+ *     module.load(name)
+ *
+ * Imports a module or returns existing module if it's already been imported.
+ *
+ * Returns module object.
+ *
+ * If the module has already been imported, e.g. with the `import` statement, returns that
+ * module object.  Otherwise imports the module and then returns it.
+ */
+static const KOS_CONVERT module_load_args[2] = {
     KOS_DEFINE_MANDATORY_ARG(str_name),
     KOS_DEFINE_TAIL_ARG()
 };
 
-static KOS_OBJ_ID module_constructor(KOS_CONTEXT ctx,
-                                     KOS_OBJ_ID  this_obj,
-                                     KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID module_load(KOS_CONTEXT ctx,
+                              KOS_OBJ_ID  this_obj,
+                              KOS_OBJ_ID  args_obj)
 {
     KOS_LOCAL  name;
     KOS_LOCAL  module;
@@ -4999,7 +5021,7 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_CREATE_CONSTRUCTOR(object,        module.o, object_args);
     TRY_CREATE_CONSTRUCTOR(string,        module.o, KOS_NULL);
     TRY_CREATE_CONSTRUCTOR(thread,        module.o, KOS_NULL);
-    TRY_CREATE_CONSTRUCTOR(module,        module.o, module_args);
+    TRY_CREATE_CONSTRUCTOR(module,        module.o, KOS_NULL);
 
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(array),     "cas",          array_cas,           array_cas_args);
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(array),     "insert_array", insert_array,        insert_array_args);
@@ -5050,6 +5072,7 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(thread),    "wait",         wait,                KOS_NULL);
 
+    TRY_ADD_STATIC_FUNCTION( ctx, module.o, "module",         "load",         module_load,         module_load_args);
     TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(module),    "name",         get_module_name,     KOS_NULL);
     TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(module),    "path",         get_module_path,     KOS_NULL);
 

@@ -100,6 +100,15 @@ int KOS_module_add_member_function(KOS_CONTEXT          ctx,
                                    const KOS_CONVERT   *args,
                                    KOS_FUNCTION_STATE   gen_state);
 
+KOS_API
+int KOS_module_add_static_function(KOS_CONTEXT          ctx,
+                                   KOS_OBJ_ID           module_obj,
+                                   KOS_OBJ_ID           class_name,
+                                   KOS_OBJ_ID           str_name,
+                                   KOS_FUNCTION_HANDLER handler,
+                                   const KOS_CONVERT   *args,
+                                   KOS_FUNCTION_STATE   gen_state);
+
 #ifdef __cplusplus
 }
 #endif
@@ -150,6 +159,14 @@ do {                                                                            
     KOS_DECLARE_STATIC_CONST_STRING(XstrNAME, name);                             \
     TRY(KOS_set_builtin_dynamic_property((ctx), (proto), KOS_CONST_ID(XstrNAME), \
                                          (module), (getter), (setter)));         \
+} while (0)
+
+#define TRY_ADD_STATIC_FUNCTION(ctx, module, class_name, func_name, handler, args)            \
+do {                                                                                          \
+    KOS_DECLARE_STATIC_CONST_STRING(XstrCLASS, class_name);                                   \
+    KOS_DECLARE_STATIC_CONST_STRING(XstrNAME,  func_name);                                    \
+    TRY(KOS_module_add_static_function((ctx), (module), KOS_CONST_ID(XstrCLASS),              \
+                                       KOS_CONST_ID(XstrNAME), (handler), (args), KOS_FUN));  \
 } while (0)
 
 #define TRY_ADD_INTEGER_CONSTANT(ctx, module, name, value)             \
