@@ -89,6 +89,7 @@ EXPORTS
     KOS_module_add_function
     KOS_module_add_global
     KOS_module_add_member_function
+    KOS_module_add_static_function
     KOS_module_get_global
     KOS_module_run_function
     KOS_modules_init

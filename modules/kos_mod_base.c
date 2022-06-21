@@ -27,6 +27,7 @@ KOS_DECLARE_STATIC_CONST_STRING(str_array,                        "array");
 KOS_DECLARE_STATIC_CONST_STRING(str_begin,                        "begin");
 KOS_DECLARE_STATIC_CONST_STRING(str_chars,                        "chars");
 KOS_DECLARE_STATIC_CONST_STRING(str_count,                        "count");
+KOS_DECLARE_STATIC_CONST_STRING(str_default_value,                "default_value");
 KOS_DECLARE_STATIC_CONST_STRING(str_end,                          "end");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_already_joined,           "thread already joined");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_args_not_array,           "function arguments are not an array");
@@ -4881,6 +4882,57 @@ static KOS_OBJ_ID module_constructor(KOS_CONTEXT ctx,
     return KOS_BADPTR;
 }
 
+/* @item base module.prototype.get()
+ *
+ *     module.prototype.get(name, default_value = void)
+ *
+ * Retrieves public global by `name` from a module.
+ *
+ * If the global does not exist, returns `default_value`.
+ *
+ * Example:
+ *
+ *     > module.load("base").get("args")
+ *     ["script.kos"]
+ */
+static const KOS_CONVERT module_global_args[3] = {
+    KOS_DEFINE_MANDATORY_ARG(str_name),
+    KOS_DEFINE_OPTIONAL_ARG( str_default_value, KOS_VOID),
+    KOS_DEFINE_TAIL_ARG()
+};
+
+static KOS_OBJ_ID get_module_global(KOS_CONTEXT ctx,
+                                    KOS_OBJ_ID  this_obj,
+                                    KOS_OBJ_ID  args_obj)
+{
+    KOS_LOCAL  this_;
+    KOS_LOCAL  args;
+    KOS_OBJ_ID name_obj;
+    KOS_OBJ_ID ret   = KOS_BADPTR;
+    int        error = KOS_SUCCESS;
+
+    assert(KOS_get_array_size(args_obj) >= 2);
+
+    KOS_init_local_with(ctx, &this_, this_obj);
+    KOS_init_local_with(ctx, &args,  args_obj);
+
+    name_obj = KOS_array_read(ctx, args.o, 0);
+    TRY_OBJID(name_obj);
+
+    if (KOS_module_get_global(ctx, this_.o, name_obj, &ret, KOS_NULL) != KOS_SUCCESS) {
+
+        KOS_clear_exception(ctx);
+
+        ret = KOS_array_read(ctx, args.o, 1);
+        TRY_OBJID(ret);
+    }
+
+cleanup:
+    KOS_destroy_top_locals(ctx, &args, &this_);
+
+    return error ? KOS_BADPTR : ret;
+}
+
 /* @item base module.load()
  *
  *     module.load(name)
@@ -4943,6 +4995,58 @@ cleanup:
     KOS_vector_destroy(&path_cstr);
 
     return error ? KOS_BADPTR : module.o;
+}
+
+/* @item base module.prototype.exports
+ *
+ *     module.prototype.exports
+ *
+ * An object with keys being names of public globals and values being
+ * indices of these globals.
+ *
+ * The indices of the globals are valid only for the current run of Kos
+ * and can change in subsequent runs.
+ *
+ * Example:
+ *
+ *     > module.load("base").exports
+ *     { "integer": 1, "string": 2, ... }
+ */
+static KOS_OBJ_ID get_module_exports(KOS_CONTEXT ctx,
+                                     KOS_OBJ_ID  this_obj,
+                                     KOS_OBJ_ID  args_obj)
+{
+    KOS_LOCAL ret;
+    KOS_LOCAL iter;
+    int       error = KOS_SUCCESS;
+
+    assert( ! IS_BAD_PTR(this_obj));
+
+    KOS_init_locals(ctx, &iter, &ret, kos_end_locals);
+
+    if (GET_OBJ_TYPE(this_obj) != OBJ_MODULE)
+        RAISE_EXCEPTION_STR(str_err_not_module);
+
+    iter.o = KOS_new_iterator(ctx, OBJPTR(MODULE, this_obj)->global_names, KOS_SHALLOW);
+    TRY_OBJID(iter.o);
+
+    ret.o = KOS_new_object(ctx);
+    TRY_OBJID(ret.o);
+
+    while ( ! KOS_iterator_next(ctx, iter.o)) {
+        const KOS_OBJ_ID key   = KOS_get_walk_key(iter.o);
+        const KOS_OBJ_ID value = KOS_get_walk_value(iter.o);
+
+        TRY(KOS_set_property(ctx, ret.o, key, value));
+    }
+
+    if (KOS_is_exception_pending(ctx))
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+
+cleanup:
+    ret.o = KOS_destroy_top_locals(ctx, &iter, &ret);
+
+    return error ? KOS_BADPTR : ret.o;
 }
 
 /* @item base module.prototype.name
@@ -5056,6 +5160,12 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 
     TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(generator), "state",        get_gen_state,       KOS_NULL);
 
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(module),    "get",          get_module_global,   module_global_args);
+    TRY_ADD_STATIC_FUNCTION( ctx, module.o, "module",         "load",         module_load,         module_load_args);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(module),    "exports",      get_module_exports,  KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(module),    "name",         get_module_name,     KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(module),    "path",         get_module_path,     KOS_NULL);
+
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "ends_with",    ends_with,           ends_with_args);
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "find",         find,                find_args);
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "code",         code,                code_args);
@@ -5071,10 +5181,6 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(string),    "size",         get_string_size,     KOS_NULL);
 
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(thread),    "wait",         wait,                KOS_NULL);
-
-    TRY_ADD_STATIC_FUNCTION( ctx, module.o, "module",         "load",         module_load,         module_load_args);
-    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(module),    "name",         get_module_name,     KOS_NULL);
-    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(module),    "path",         get_module_path,     KOS_NULL);
 
 cleanup:
     KOS_destroy_top_local(ctx, &module);

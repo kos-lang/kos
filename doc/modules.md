@@ -74,6 +74,9 @@ Table of Contents
     * [map()](#map)
     * [method()](#method)
     * [module()](#module)
+      * [module.load()](#moduleload)
+      * [module.prototype.exports](#moduleprototypeexports)
+      * [module.prototype.get()](#moduleprototypeget)
       * [module.prototype.name](#moduleprototypename)
       * [module.prototype.path](#moduleprototypepath)
     * [number()](#number)
@@ -217,6 +220,7 @@ Table of Contents
     * [sqrt()](#sqrt)
     * [tan()](#tan)
   * [os](#os)
+    * [arch](#arch)
     * [cpus](#cpus)
     * [getenv()](#getenv)
     * [getloadavg()](#getloadavg)
@@ -1884,16 +1888,60 @@ Example:
 module()
 --------
 
-    module(name)
+    module()
 
 Module object class.
 
-Returns module object of a module with the given name.
+Module objects are obtained by calling `module.load()`.
+
+The purpose of this class is to be used with the `instanceof`
+operator to detect thread objects.
+
+Calling this class directly throws an exception.
+
+The prototype of `module.prototype` is `object.prototype`.
+
+module.load()
+-------------
+
+    module.load(name)
+
+Imports a module or returns existing module if it's already been imported.
+
+Returns module object.
 
 If the module has already been imported, e.g. with the `import` statement, returns that
 module object.  Otherwise imports the module and then returns it.
 
-The prototype of `module.prototype` is `object.prototype`.
+module.prototype.exports
+------------------------
+
+    module.prototype.exports
+
+An object with keys being names of public globals and values being
+indices of these globals.
+
+The indices of the globals are valid only for the current run of Kos
+and can change in subsequent runs.
+
+Example:
+
+    > module.load("base").exports
+    { "integer": 1, "string": 2, ... }
+
+module.prototype.get()
+----------------------
+
+    module.prototype.get(name, default_value = void)
+
+Retrieves public global by `name` from a module.
+
+If the global does not exist, returns `default_value`.
+
+Example:
+
+    > module.load("base").get("args")
+    ["script.kos"]
 
 module.prototype.name
 ---------------------
@@ -4439,6 +4487,31 @@ Example:
 
 os
 ==
+
+arch
+----
+
+    arch
+
+Constant string representing CPU architecture for which Kos was compiled.
+
+This may not fully reflect the actual CPU architecture, for example on some Operating
+Systems it's possible to run 32-bit binaries on a 64-bit CPU, in such case `arch`
+would still represent 32-bit architecture.
+
+Typical values:
+
+- "x86" (32-bit x86 architecture)
+- "x86_64" (64-bit x86 architecture)
+- "aarch32" (32-bit ARM architecture)
+- "aarch64" (64-bit ARM architecture)
+
+On architectures which haven't been tested, this may contain "Unknown".
+
+Example:
+
+    > arch
+    "x86_64"
 
 cpus
 ----

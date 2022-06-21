@@ -1818,18 +1818,27 @@ do {
     assert b.name == "base"
 
     assert typeof b.get == "function"
-    assert b.get == ({}).get
-    assert b[truthy ? "get" : void] == ({}).get
+    assert b.get != ({}).get
 
-    assert typeof b.count == "function"
-    assert b.count != ({}).count
-    assert typeof b[truthy ? "count" : void] == "function"
-    assert b[truthy ? "count" : void] != ({}).count
+    assert typeof b.get("count") == "function"
+    assert b.get("count") == base.count
 
-    assert typeof b.hex == "function"
-    assert b.hex(32) == "0x20"
-    assert b[truthy ? "hex" : void](33) == "0x21"
+    assert typeof b.get("hex") == "function"
+    assert b.get("hex")(32) == "0x20"
 
-    expect_fail(() => b.non_existent)
-    expect_fail(() => b[truthy ? "non_existent" : "count"])
+    assert b.get("non_existent")     == void
+    assert b.get("non_existent", 42) == 42
+}
+
+do {
+    const exp = base.module.load("base").exports
+    assert typeof exp == "object"
+    assert "integer" in exp
+    assert "boolean" in exp
+    assert "count" in exp
+
+    for const k, v in exp {
+        assert typeof k == "string"
+        assert typeof v == "integer"
+    }
 }

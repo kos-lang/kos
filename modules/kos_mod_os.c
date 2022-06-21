@@ -1720,7 +1720,7 @@ KOS_INIT_MODULE(os, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
      *
      * Example:
      *
-     *     > sysname
+     *     > arch
      *     "x86_64"
      */
     TRY_ADD_STRING_CONSTANT( ctx, module.o, "arch", KOS_ARCH);
