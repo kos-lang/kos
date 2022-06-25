@@ -59,75 +59,82 @@ Examples
 
 This program prints "Hello, World!":
 
-    #!/usr/bin/env kos
-    import base.print
+```javascript
+#!/usr/bin/env kos
+import base.print
 
-    print("Hello, World!")
+print("Hello, World!")
+```
 
 This program prints 30 terms of the Fibonacci series:
 
-    #!/usr/bin/env kos
-    import base: print, range
+```javascript
+#!/usr/bin/env kos
+import base: print, range
 
-    const terms = 30
-    var   a     = 0
-    var   b     = 1
+const terms = 30
+var   a     = 0
+var   b     = 1
 
-    print("Fib series: \(a)")
+print("Fib series:")
+print("    \(a)")
 
-    for var i in range(terms) {
-        print("    \(b)")
-        const next = a + b
-        a = b
-        b = next
-    }
+for var i in range(terms - 1) {
+    print("    \(b)")
+    const next = a + b
+    a = b
+    b = next
+}
+```
 
 This program prints the first 1000 prime numbers:
 
-    #!/usr/bin/env kos
-    import base: print, range
+```javascript
+#!/usr/bin/env kos
+import base: print, range
 
-    # Prime number generator with a fixed-size sieve
-    fun primes(max_number)
-    {
-        yield 2 # Yield the only even prime number from the generator
+# Prime number generator with a fixed-size sieve
+fun primes(max_number)
+{
+    yield 2 # Yield the only even prime number from the generator
 
-        const sieve = [] # Empty array
+    const sieve = [] # Empty array
 
-        # Set array size, fills with 'void' values.
-        # We set to half of the max number checked, because
-        # we ignore even numbers and only check odd numbers.
-        const len = max_number >> 1
-        sieve.resize(len)
+    # Set array size, fills with 'void' values.
+    # We set to half of the max number checked, because
+    # we ignore even numbers and only check odd numbers.
+    const len = max_number >> 1
+    sieve.resize(len)
 
-        # Find and yield all odd primes
-        for var value in range(3, max_number, 2) {
+    # Find and yield all odd primes
+    for var value in range(3, max_number, 2) {
 
-            const idx = value >> 1
+        const idx = value >> 1
 
-            # Yield this number as prime if it hasn't been sifted-out
-            if ! sieve[idx] {
+        # Yield this number as prime if it hasn't been sifted-out
+        if ! sieve[idx] {
 
-                yield value
+            yield value
 
-                # Mark all multiplicities of this prime as non-primes
-                for var i in range(idx + value, len, value) {
-                    sieve[i] = true # Mark a non-prime
-                }
+            # Mark all multiplicities of this prime as non-primes
+            for var i in range(idx + value, len, value) {
+                sieve[i] = true # Mark a non-prime
             }
         }
     }
+}
 
-    public fun main
-    {
-        print("Prime numbers:")
+public fun main
+{
+    print("Prime numbers:")
 
-        var count = 0
+    var count = 0
 
-        for var value in primes(7920) {
-            print("    \(value)")
-            count += 1
-        }
-
-        print("Printed \(count) primes")
+    for var value in primes(7920) {
+        print("    \(value)")
+        count += 1
     }
+
+    print("Printed \(count) primes")
+}
+```
