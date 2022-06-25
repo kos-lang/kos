@@ -1736,3 +1736,34 @@ do {
     assert o.get(1)       == void
     assert o.get("x", 42) == 42
 }
+
+##############################################################################
+# implicitly use `this` to invoke super
+do {
+    class base
+    {
+    }
+
+    class derived extends base
+    {
+        constructor {
+            class inner extends base
+            {
+                constructor {
+                    this.x = 42
+                }
+            }
+            throw inner()
+        }
+    }
+
+    var exc = void
+    try {
+        derived()
+    }
+    catch const e {
+        exc = e.value
+    }
+
+    assert exc.x == 42
+}

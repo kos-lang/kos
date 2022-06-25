@@ -5740,7 +5740,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
     assert(scope->num_args <= KOS_MAX_REGS);
 
     /* Generate register for 'this' */
-    if (scope->uses_this) {
+    if (scope->uses_this || (needs_super_ctor && ! frame->uses_base_ctor)) {
         TRY(gen_reg(program, &frame->this_reg));
         ++last_reg;
         assert(frame->this_reg->reg == last_reg);
