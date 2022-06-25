@@ -2972,6 +2972,9 @@ static int switch_stmt(KOS_COMP_UNIT      *program,
 
     if ( ! node) {
         free_reg(program, value_reg);
+
+        program->cur_frame->break_offs = old_break_offs;
+
         return error;
     }
 
@@ -2999,6 +3002,8 @@ static int switch_stmt(KOS_COMP_UNIT      *program,
             TRY(visit_node(program, node, &value_reg));
             assert( ! value_reg);
         }
+
+        finish_break_continue(program, -1, old_break_offs);
 
         return error;
     }

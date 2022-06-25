@@ -1224,3 +1224,62 @@ do {
     assert doit(void, 0) == 0
     assert doit(0, false) == 0
 }
+
+# continue in switch
+do {
+    repeat {
+        switch void {
+            default {
+                continue
+            }
+        }
+        switch void {
+        }
+    } while false
+}
+
+# continue in switch
+do {
+    repeat {
+        switch void {
+            default {
+                continue
+            }
+        }
+        switch void {
+            default {
+                break
+            }
+        }
+    } while false
+}
+
+# switch after break
+do {
+    var i = 0
+    loop {
+        if i == 1 {
+            break
+        }
+        switch void {
+        }
+        i += 1
+    }
+    assert i == 1
+}
+
+# switch after break
+do {
+    var i = 0
+    loop {
+        if i == 1 {
+            break
+        }
+        switch void {
+            default {
+                i += 1
+            }
+        }
+    }
+    assert i == 1
+}
