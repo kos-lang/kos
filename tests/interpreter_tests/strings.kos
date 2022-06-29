@@ -328,6 +328,7 @@ do {
     assert "ab".rfind("x", 10)  == -1
     assert "ab".rfind("x", -10) == -1
     assert "ab".rfind("a", -10) == -1
+    assert "ab".rfind("abc")    == -1
 
     assert "abXYcdXXYefXYYgh".rfind("XY")      == 11
     assert "abXYcdXXYefXYYgh".rfind("XY", 99)  == 11

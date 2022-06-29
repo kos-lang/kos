@@ -13,6 +13,7 @@
 #include "../inc/kos_string.h"
 #include "../inc/kos_utils.h"
 #include "../core/kos_object_internal.h"
+#include "../core/kos_math.h"
 #include "../core/kos_misc.h"
 #include "../core/kos_try.h"
 #include <assert.h>
@@ -4205,7 +4206,7 @@ static KOS_OBJ_ID find_dir(KOS_CONTEXT         ctx,
                           args_obj,
                           1,
                           reverse ? -1 : 0,
-                          reverse ? (int)(this_len - KOS_get_string_length(pattern)) : (int)this_len,
+                          reverse ? KOS_max((int)(this_len - KOS_get_string_length(pattern)), 0) : (int)this_len,
                           reverse ? KOS_VOID_INDEX_IS_END : KOS_VOID_INDEX_IS_BEGIN,
                           &pos));
 
