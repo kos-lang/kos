@@ -922,68 +922,35 @@ KOS_OBJ_ID KOS_string_get_char(KOS_CONTEXT ctx,
 {
     KOS_STRING *new_str = KOS_NULL;
 
-    assert( ! IS_BAD_PTR(obj_id));
+    const uint32_t code = KOS_string_get_char_code(ctx, obj_id, idx);
 
-    if (GET_OBJ_TYPE(obj_id) != OBJ_STRING)
-        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_string));
-    else {
-        KOS_STRING_FLAGS elem_size = kos_get_string_elem_size(OBJPTR(STRING, obj_id));
-        const int        len       = (int)OBJPTR(STRING, obj_id)->header.length;
+    if (code != ~0U) {
 
-        if (idx < 0)
-            idx += len;
+        const KOS_STRING_FLAGS elem_size = string_size_from_max_code(code);
 
-        if (idx >= 0 && idx < len) {
+        new_str = new_empty_string(ctx, 1, elem_size);
 
-            const uint8_t *buf = (const uint8_t *)kos_get_string_buffer(OBJPTR(STRING, obj_id))
-                                 + (idx << elem_size);
+        if (new_str) {
 
-            uint32_t code;
+            uint8_t *const new_buf = (uint8_t *)kos_get_string_buffer(new_str);
 
             switch (elem_size) {
 
-                case KOS_STRING_ELEM_8:
-                    code = *buf;
-                    break;
-
                 case KOS_STRING_ELEM_16:
-                    code = *(const uint16_t *)buf;
+                    *(uint16_t *)new_buf = (uint16_t)code;
                     break;
 
-                default: /* KOS_STRING_ELEM_32 */
-                    assert(elem_size == KOS_STRING_ELEM_32);
-                    code = *(const uint32_t *)buf;
+                case KOS_STRING_ELEM_32:
+                    *(uint32_t *)new_buf = code;
                     break;
-            }
 
-            elem_size = string_size_from_max_code(code);
-
-            new_str = new_empty_string(ctx, 1, elem_size);
-
-            if (new_str) {
-
-                uint8_t *new_buf = (uint8_t *)kos_get_string_buffer(new_str);
-
-                switch (elem_size) {
-
-                    case KOS_STRING_ELEM_16:
-                        *(uint16_t *)new_buf = *(const uint16_t *)buf;
-                        break;
-
-                    case KOS_STRING_ELEM_32:
-                        *(uint32_t *)new_buf = *(const uint32_t *)buf;
-                        break;
-
-                    default:
-                        assert(elem_size == KOS_STRING_ELEM_8 ||
-                               elem_size == KOS_STRING_ASCII);
-                        *new_buf = *buf;
-                        break;
-                }
+                default:
+                    assert(elem_size == KOS_STRING_ELEM_8 ||
+                           elem_size == KOS_STRING_ASCII);
+                    *new_buf = (uint8_t)code;
+                    break;
             }
         }
-        else
-            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_index));
     }
 
     return OBJID(STRING, new_str);

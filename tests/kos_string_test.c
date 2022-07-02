@@ -871,13 +871,21 @@ int main(void)
     {
         KOS_OBJ_ID src;
         KOS_OBJ_ID s;
+#ifdef CONFIG_STRING16
+        const KOS_STRING_FLAGS expected_size_8 = KOS_STRING_ELEM_16;
+#elif defined(CONFIG_STRING32)
+        const KOS_STRING_FLAGS expected_size_8 = KOS_STRING_ELEM_32;
+#else
+        const KOS_STRING_FLAGS expected_size_8 = KOS_STRING_ELEM_8;
+#endif
+
         src = KOS_new_const_ascii_cstring(ctx, "xyz");
         TEST(!IS_BAD_PTR(src));
 
         s = KOS_string_get_char(ctx, src, 0);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(kos_get_string_elem_size(OBJPTR(STRING, s)) == KOS_STRING_ELEM_8);
+        TEST(kos_get_string_elem_size(OBJPTR(STRING, s)) == expected_size_8);
         TEST(KOS_get_string_length(s) == 1);
         TEST(OBJPTR(STRING, s)->header.hash == 0);
         TEST(KOS_string_get_char_code(ctx, s, 0) == 'x');
@@ -885,7 +893,7 @@ int main(void)
         s = KOS_string_get_char(ctx, src, 2);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(kos_get_string_elem_size(OBJPTR(STRING, s)) == KOS_STRING_ELEM_8);
+        TEST(kos_get_string_elem_size(OBJPTR(STRING, s)) == expected_size_8);
         TEST(KOS_get_string_length(s) == 1);
         TEST(OBJPTR(STRING, s)->header.hash == 0);
         TEST(KOS_string_get_char_code(ctx, s, 0) == 'z');
@@ -896,7 +904,7 @@ int main(void)
         s = KOS_string_get_char(ctx, src, -1);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(kos_get_string_elem_size(OBJPTR(STRING, s)) == KOS_STRING_ELEM_8);
+        TEST(kos_get_string_elem_size(OBJPTR(STRING, s)) == expected_size_8);
         TEST(KOS_get_string_length(s) == 1);
         TEST(OBJPTR(STRING, s)->header.hash == 0);
         TEST(KOS_string_get_char_code(ctx, s, 0) == 'z');
@@ -904,7 +912,7 @@ int main(void)
         s = KOS_string_get_char(ctx, src, -3);
         TEST(!IS_BAD_PTR(s));
         TEST(!IS_SMALL_INT(s));
-        TEST(kos_get_string_elem_size(OBJPTR(STRING, s)) == KOS_STRING_ELEM_8);
+        TEST(kos_get_string_elem_size(OBJPTR(STRING, s)) == expected_size_8);
         TEST(KOS_get_string_length(s) == 1);
         TEST(OBJPTR(STRING, s)->header.hash == 0);
         TEST(KOS_string_get_char_code(ctx, s, 0) == 'x');
