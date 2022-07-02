@@ -194,15 +194,20 @@ typedef struct KOS_HUGE_TRACKER_S {
 } KOS_HUGE_TRACKER;
 
 typedef enum KOS_STRING_FLAGS_E {
-    /* Two lowest bits specify string element (character) size in bytes */
+    /* Bits 0..1 specify string element (character) size in bytes */
     KOS_STRING_ELEM_8    = 0,
     KOS_STRING_ELEM_16   = 1,
     KOS_STRING_ELEM_32   = 2,
     KOS_STRING_ELEM_MASK = 3,
 
-    KOS_STRING_LOCAL     = 4, /* The string is stored entirely in the string object.          */
-    KOS_STRING_PTR       = 0, /* The string is stored somewhere else, we only have a pointer. */
-    KOS_STRING_REF       = 8  /* The string is stored in another string, we have a reference. */
+    /* Bit 2 indicates whether it's an ASCII string */
+    KOS_STRING_ASCII     = 4,
+
+    /* Bits 3..4 specify how the string is stored */
+    KOS_STRING_LOCAL     = 8,  /* The string is stored entirely in the string object.          */
+    KOS_STRING_PTR       = 0,  /* The string is stored somewhere else, we only have a pointer. */
+    KOS_STRING_REF       = 16, /* The string is stored in another string, we have a reference. */
+    KOS_STRING_STOR_MASK = 24
 } KOS_STRING_FLAGS;
 
 typedef struct KOS_STR_HEADER_S {
@@ -299,11 +304,11 @@ struct KOS_CONST_ARRAY_S {
 
 #define KOS_DECLARE_CONST_STRING_WITH_LENGTH(name, length, str) \
     KOS_DECLARE_ALIGNED(32, struct KOS_CONST_STRING_S name) =   \
-    { { { 0, 0 } }, { OBJ_STRING, 0, (length), KOS_STRING_ELEM_8 | KOS_STRING_PTR, (str) } }
+    { { { 0, 0 } }, { OBJ_STRING, 0, (length), KOS_STRING_ASCII | KOS_STRING_PTR, (str) } }
 
 #define KOS_DECLARE_STATIC_CONST_STRING_WITH_LENGTH(name, length, str) \
     KOS_DECLARE_ALIGNED(32, static struct KOS_CONST_STRING_S name) =   \
-    { { { 0, 0 } }, { OBJ_STRING, 0, (length), KOS_STRING_ELEM_8 | KOS_STRING_PTR, (str) } }
+    { { { 0, 0 } }, { OBJ_STRING, 0, (length), KOS_STRING_ASCII | KOS_STRING_PTR, (str) } }
 
 #define KOS_CONCAT_NAME_INTERNAL(a, b) a ## b
 

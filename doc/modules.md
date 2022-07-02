@@ -96,6 +96,7 @@ Table of Contents
     * [shallow()](#shallow)
     * [sort()](#sort)
     * [string()](#string)
+      * [string.prototype.ascii](#stringprototypeascii)
       * [string.prototype.code()](#stringprototypecode)
       * [string.prototype.ends\_with()](#stringprototypeends_with)
       * [string.prototype.find()](#stringprototypefind)
@@ -2447,6 +2448,18 @@ Examples:
     "10.1"
     > string("kos", [108, 97, 110, 103], 32)
     "koslang32"
+
+string.prototype.ascii
+----------------------
+
+    string.prototype.ascii
+
+Read-only flag indicating whether this is an ASCII string (boolean).
+
+Example:
+
+    > "kos".ascii
+    true
 
 string.prototype.code()
 -----------------------

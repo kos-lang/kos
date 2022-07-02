@@ -4568,6 +4568,33 @@ static KOS_OBJ_ID get_string_size(KOS_CONTEXT ctx,
     return ret;
 }
 
+/* @item base string.prototype.ascii
+ *
+ *     string.prototype.ascii
+ *
+ * Read-only flag indicating whether this is an ASCII string (boolean).
+ *
+ * Example:
+ *
+ *     > "kos".ascii
+ *     true
+ */
+static KOS_OBJ_ID get_string_ascii(KOS_CONTEXT ctx,
+                                   KOS_OBJ_ID  this_obj,
+                                   KOS_OBJ_ID  args_obj)
+{
+    KOS_OBJ_ID ret;
+
+    if (GET_OBJ_TYPE(this_obj) == OBJ_STRING)
+        ret = KOS_BOOL(OBJPTR(STRING, this_obj)->header.flags & KOS_STRING_ASCII);
+    else {
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_string));
+        ret = KOS_BADPTR;
+    }
+
+    return ret;
+}
+
 /* @item base string.prototype.reverse()
  *
  *     string.prototype.reverse()
@@ -5180,6 +5207,7 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "starts_with",  starts_with,         ends_with_args);
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "uppercase",    uppercase,           KOS_NULL);
     TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(string),    "size",         get_string_size,     KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(string),    "ascii",        get_string_ascii,    KOS_NULL);
 
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(thread),    "wait",         wait,                KOS_NULL);
 
