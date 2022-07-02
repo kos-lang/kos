@@ -1,3 +1,4 @@
 [submodule "tests/kos_fuzz_interpreter_corpus"]
 	path = tests/kos_fuzz_interpreter_corpus
-	url = git@github.com:kos-lang/fuzz-corpus.git
+	url = ../fuzz-corpus.git
+	branch = main
