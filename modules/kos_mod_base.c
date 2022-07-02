@@ -2748,23 +2748,9 @@ static int need_hex_char_print(unsigned char_code)
 
 static const char* get_type_str(KOS_OBJ_ID obj_id)
 {
-    switch (GET_OBJ_TYPE(obj_id))
-    {
-        case OBJ_SMALL_INTEGER:
-            /* fall through */
-        case OBJ_INTEGER:   return "integer";
-        case OBJ_FLOAT:     return "float";
-        case OBJ_VOID:      return "void";
-        case OBJ_BOOLEAN:   return "boolean";
-        case OBJ_STRING:    return "string";
-        case OBJ_OBJECT:    return "object";
-        case OBJ_ARRAY:     return "array";
-        case OBJ_BUFFER:    return "buffer";
-        case OBJ_FUNCTION:  return "function";
-        case OBJ_CLASS:     return "class";
-        case OBJ_MODULE:    return "module";
-        default:            return "unknown";
-    }
+    const KOS_TYPE type = GET_OBJ_TYPE(obj_id);
+
+    return (type <= OBJ_LAST_TYPE) ? KOS_get_type_name(type) : "unknown";
 }
 
 static void pack_format_skip_spaces(KOS_CONTEXT ctx,
