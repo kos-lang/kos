@@ -278,7 +278,7 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
     KOS_resume_context(ctx);
 
     if ( ! file) {
-        KOS_raise_errno_value(ctx, "fopen", stored_errno);
+        KOS_raise_errno_value(ctx, filename_cstr.buffer, stored_errno);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
