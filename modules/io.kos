@@ -267,11 +267,16 @@ file.prototype.read_lines = fun(keep_ends = false, gran = 0x1000)
  */
 public fun read_lines(filename, keep_ends = false, gran = 0x1000)
 {
-    with const f = open(filename, ro) {
-        for const line in f.read_lines(keep_ends, gran) {
-            yield line
+    fun read_lines_internal(in_file, keep_ends, gran)
+    {
+        with const f = in_file {
+            for const line in f.read_lines(keep_ends, gran) {
+                yield line
+            }
         }
     }
+
+    return read_lines_internal(open(filename, ro), keep_ends, gran)
 }
 
 /* @item io file.prototype.print_lines()
