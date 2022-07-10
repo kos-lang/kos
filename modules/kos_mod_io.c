@@ -46,6 +46,7 @@ KOS_DECLARE_STATIC_CONST_STRING(str_err_io_module_priv_data_failed, "failed to g
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_buffer,                 "argument to file.read_some is not a buffer");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_buffer_or_str,          "argument to file.write is neither a buffer nor a string");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_too_many_to_read,           "requested read size exceeds buffer size limit");
+KOS_DECLARE_STATIC_CONST_STRING(str_path,                           "path");
 KOS_DECLARE_STATIC_CONST_STRING(str_position,                       "position");
 KOS_DECLARE_STATIC_CONST_STRING(str_read,                           "read");
 KOS_DECLARE_STATIC_CONST_STRING(str_write,                          "write");
@@ -220,37 +221,31 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
                            KOS_OBJ_ID  this_obj,
                            KOS_OBJ_ID  args_obj)
 {
-    int        error        = KOS_SUCCESS;
-    int        stored_errno = 0;
-    KOS_OBJ_ID filename_obj;
-    KOS_OBJ_ID flags_obj;
-    FILE      *file         = KOS_NULL;
-    KOS_LOCAL  this_;
-    KOS_LOCAL  args;
-    KOS_LOCAL  ret;
     KOS_VECTOR filename_cstr;
     KOS_VECTOR flags_cstr;
+    KOS_LOCAL  this_;
+    KOS_LOCAL  args;
+    KOS_LOCAL  filename;
+    KOS_LOCAL  ret;
+    KOS_OBJ_ID flags_obj;
+    FILE      *file             = KOS_NULL;
+    int        error            = KOS_SUCCESS;
+    int        stored_errno     = 0;
+    int        updated_filename = 0;
 
     assert(KOS_get_array_size(args_obj) >= 2);
 
     KOS_vector_init(&filename_cstr);
     KOS_vector_init(&flags_cstr);
 
-    KOS_init_locals(ctx, &this_, &args, &ret, kos_end_locals);
+    KOS_init_locals(ctx, &this_, &args, &filename, &ret, kos_end_locals);
 
     this_.o = this_obj;
     args.o  = args_obj;
 
-    filename_obj = KOS_array_read(ctx, args.o, 0);
-    TRY_OBJID(filename_obj);
-
-    TRY(KOS_string_to_cstr_vec(ctx, filename_obj, &filename_cstr));
-
-    fix_path_separators(&filename_cstr);
+    /* Read flags */
 
     /* TODO use own flags */
-    /* TODO add flag to avoid cloexec */
-
     flags_obj = KOS_array_read(ctx, args.o, 1);
     TRY_OBJID(flags_obj);
 
@@ -263,17 +258,33 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
     TRY(KOS_append_cstr(ctx, &flags_cstr, "e", 1));
 #endif
 
+    /* Read filename argument and process it */
+
+    filename.o = KOS_array_read(ctx, args.o, 0);
+    TRY_OBJID(filename.o);
+
+    TRY(KOS_string_to_cstr_vec(ctx, filename.o, &filename_cstr));
+
+    /* Open the file */
+
     KOS_suspend_context(ctx);
+
+    fix_path_separators(&filename_cstr);
 
     file = fopen(filename_cstr.buffer, flags_cstr.buffer);
 
-    if ( ! file)
-        stored_errno = errno;
+    if (file) {
+        const size_t old_len = filename_cstr.size;
 
 #ifndef _WIN32
-    if (file)
         (void)fcntl(fileno(file), F_SETFD, FD_CLOEXEC);
 #endif
+
+        if (KOS_get_absolute_path(&filename_cstr) == KOS_SUCCESS)
+            updated_filename = filename_cstr.size > old_len;
+    }
+    else
+        stored_errno = errno;
 
     KOS_resume_context(ctx);
 
@@ -281,6 +292,8 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
         KOS_raise_errno_value(ctx, filename_cstr.buffer, stored_errno);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
+
+    /* Create file object */
 
     ret.o = KOS_new_object_with_private(ctx, this_.o, &file_priv_class, file_finalize);
     TRY_OBJID(ret.o);
@@ -291,6 +304,13 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
                                          KOS_get_module(ctx),
                                          get_file_pos,
                                          set_file_pos));
+
+    if (updated_filename) {
+        filename.o = KOS_new_string(ctx, filename_cstr.buffer, filename_cstr.size - 1);
+        TRY_OBJID(filename.o);
+    }
+
+    TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_path), filename.o));
 
     TRY(set_file_object(ctx, ret.o, file, 1));
 
@@ -1323,11 +1343,26 @@ cleanup:
     return error ? KOS_BADPTR : KOS_new_int(ctx, size);
 }
 
+/* @item io file.prototype.path
+ *
+ *     file.prototype.path
+ *
+ * Absolute path to the file.
+ *
+ * If the file was not open (e.g. it's a pipe or stdout) then `path` is `void`.
+ */
+static KOS_OBJ_ID get_file_path(KOS_CONTEXT ctx,
+                                KOS_OBJ_ID  this_obj,
+                                KOS_OBJ_ID  args_obj)
+{
+    return KOS_VOID;
+}
+
 /* @item io file.prototype.position
  *
  *     file.prototype.position
  *
- * Read-only position of the read/write pointer in the opened file object.
+ * Position of the read/write pointer in the opened file object.
  *
  * This property is also added to every file object and is writable
  * and shadows the `position` property from the prototype.
@@ -1658,6 +1693,7 @@ int kos_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "error",     get_file_error, KOS_NULL);
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "fd",        get_file_fd,    KOS_NULL);
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "info",      get_file_info,  KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "path",      get_file_path,  KOS_NULL);
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "position",  get_file_pos,   KOS_NULL);
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "size",      get_file_size,  KOS_NULL);
 

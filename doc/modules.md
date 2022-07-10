@@ -156,6 +156,7 @@ Table of Contents
       * [file.prototype.flush()](#fileprototypeflush)
       * [file.prototype.info](#fileprototypeinfo)
       * [file.prototype.lock()](#fileprototypelock)
+      * [file.prototype.path](#fileprototypepath)
       * [file.prototype.position](#fileprototypeposition)
       * [file.prototype.print()](#fileprototypeprint)
       * [file.prototype.print\_lines()](#fileprototypeprint_lines)
@@ -3524,12 +3525,21 @@ Example:
 
     > with f.lock() { f.print("Hello") }
 
+file.prototype.path
+-------------------
+
+    file.prototype.path
+
+Absolute path to the file.
+
+If the file was not open (e.g. it's a pipe or stdout) then `path` is `void`.
+
 file.prototype.position
 -----------------------
 
     file.prototype.position
 
-Read-only position of the read/write pointer in the opened file object.
+Position of the read/write pointer in the opened file object.
 
 This property is also added to every file object and is writable
 and shadows the `position` property from the prototype.

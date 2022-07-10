@@ -120,7 +120,7 @@ do {
 }
 
 ##############################################################################
-# file.size, file.position
+# file.size, file.position, file.path
 
 do {
     const name = "./__test_file"
@@ -175,6 +175,10 @@ do {
         assert f.position == 32
         assert buf4.size  == 1
         assert buf4[0]    == 131
+
+        assert "path" propertyof f
+        assert typeof f.path == "string"
+        assert f.path.ends_with("__test_file")
     }
 
     assert fs.remove(name)
@@ -192,6 +196,10 @@ do {
     assert io.stdin.fd  == 0
     assert io.stdout.fd == 1
     assert io.stderr.fd == 2
+
+    assert io.stdin.path == void
+    assert io.stdout.path == void
+    assert io.stderr.path == void
 }
 
 ##############################################################################
@@ -523,6 +531,15 @@ do {
 
 do {
     const p = io.pipe()
+
+    assert p.read  instanceof io.file
+    assert p.write instanceof io.file
+
+    assert p.read.path  == void
+    assert p.write.path == void
+
+    assert p.read.size  == 0
+    assert p.write.size == 0
 
     p.write.write(base.buffer().pack("u4", 0x12345678))
     p.write.flush()
