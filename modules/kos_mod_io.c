@@ -306,7 +306,7 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
                                          set_file_pos));
 
     if (updated_filename) {
-        filename.o = KOS_new_string(ctx, filename_cstr.buffer, filename_cstr.size - 1);
+        filename.o = KOS_new_string(ctx, filename_cstr.buffer, (unsigned)(filename_cstr.size - 1));
         TRY_OBJID(filename.o);
     }
 
