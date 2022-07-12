@@ -1594,7 +1594,7 @@ KOS_ATOMIC(uint64_t) sys_kernel_time;
 KOS_ATOMIC(uint64_t) sys_user_time;
 KOS_ATOMIC(double)   sys_last_load_avg;
 
-static void update_system_times()
+static void update_system_times(void)
 {
     FILETIME ft_idle_time;
     FILETIME ft_kernel_time;
@@ -1607,7 +1607,7 @@ static void update_system_times()
     }
 }
 
-static double get_windows_load_avg()
+static double get_windows_load_avg(void)
 {
     const uint64_t prev_idle_time = sys_idle_time;
     const uint64_t prev_load_time = sys_kernel_time + sys_user_time;
