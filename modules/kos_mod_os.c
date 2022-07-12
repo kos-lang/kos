@@ -1580,6 +1580,60 @@ cleanup:
     return error ? KOS_BADPTR : obj;
 }
 
+#ifdef _WIN32
+static uint64_t convert_file_time(FILETIME* file_time)
+{
+    ULARGE_INTEGER conv;
+    conv.u.LowPart  = file_time->dwLowDateTime;
+    conv.u.HighPart = file_time->dwHighDateTime;
+    return (uint64_t)conv.QuadPart;
+}
+
+KOS_ATOMIC(uint64_t) sys_idle_time;
+KOS_ATOMIC(uint64_t) sys_kernel_time;
+KOS_ATOMIC(uint64_t) sys_user_time;
+KOS_ATOMIC(double)   sys_last_load_avg;
+
+static void update_system_times()
+{
+    FILETIME ft_idle_time;
+    FILETIME ft_kernel_time;
+    FILETIME ft_user_time;
+
+    if (GetSystemTimes(&ft_idle_time, &ft_kernel_time, &ft_user_time)) {
+        sys_idle_time   = convert_file_time(&ft_idle_time);
+        sys_kernel_time = convert_file_time(&ft_kernel_time);
+        sys_user_time   = convert_file_time(&ft_user_time);
+    }
+}
+
+static double get_windows_load_avg()
+{
+    const uint64_t prev_idle_time = sys_idle_time;
+    const uint64_t prev_load_time = sys_kernel_time + sys_user_time;
+
+    uint64_t idle_time;
+    uint64_t load_time;
+    uint64_t total_time;
+    double   load_avg;
+
+    update_system_times();
+
+    idle_time  = sys_idle_time - prev_idle_time;
+    load_time  = sys_kernel_time + sys_user_time - prev_load_time;
+    total_time = idle_time + load_time;
+
+    if (total_time) {
+        load_avg = (double)(load_time * KOS_get_num_cpus()) / (double)total_time;
+        sys_last_load_avg = load_avg;
+    }
+    else
+        load_avg = sys_last_load_avg;
+
+    return load_avg;
+}
+#endif
+
 /* @item os getloadavg()
  *
  *     getloadavg()
@@ -1592,8 +1646,8 @@ cleanup:
  * System load indicates how many processes have been active, averaged over
  * a span of time (1/5/15 minutes).
  *
- * On systems which don't support load average, such as Windows, zeroes
- * are returned.
+ * On Windows, all 3 values are the same and indicate percentage of
+ * non-idle CPU time since last call to this function or since os module was loaded.
  *
  * Example:
  *
@@ -1615,7 +1669,13 @@ static KOS_OBJ_ID kos_getloadavg(KOS_CONTEXT ctx,
     ret.o = KOS_new_array(ctx, maxavg);
     TRY_OBJID(ret.o);
 
-#if !defined(_WIN32)
+    KOS_suspend_context(ctx);
+
+#ifdef _WIN32
+    loadavg[0] = get_windows_load_avg();
+    loadavg[1] = loadavg[0];
+    loadavg[2] = loadavg[0];
+#else
     i = getloadavg(loadavg, maxavg);
 
     if (i < 0)
@@ -1624,6 +1684,8 @@ static KOS_OBJ_ID kos_getloadavg(KOS_CONTEXT ctx,
     for ( ; i < maxavg; i++)
         loadavg[i] = 0.0;
 #endif
+
+    KOS_resume_context(ctx);
 
     for (i = 0; i < maxavg; i++) {
         const KOS_OBJ_ID num = KOS_new_float(ctx, loadavg[i]);
@@ -1669,7 +1731,9 @@ KOS_INIT_MODULE(os, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     KOS_init_local_with(ctx, &module, module_obj);
     KOS_init_locals(    ctx, &wait_func, &priv, &wait_proto, kos_end_locals);
 
-#ifndef _WIN32
+#ifdef _WIN32
+    update_system_times();
+#else
     OBJPTR(MODULE, module_obj)->finalize = cleanup_wait_list;
 #endif
 
@@ -1736,7 +1800,7 @@ KOS_INIT_MODULE(os, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
      *     > cpus
      *     4
      */
-    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "cpus",    (int64_t)KOS_get_num_cpus());
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "cpus", (int64_t)KOS_get_num_cpus());
 
     TRY(KOS_array_write(ctx, priv.o, 0, wait_proto.o));
 

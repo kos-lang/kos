@@ -4575,8 +4575,8 @@ Returns an array with three numbers:
 System load indicates how many processes have been active, averaged over
 a span of time (1/5/15 minutes).
 
-On systems which don't support load average, such as Windows, zeroes
-are returned.
+On Windows, all 3 values are the same and indicate percentage of
+non-idle CPU time since last call to this function or since os module was loaded.
 
 Example:
 
