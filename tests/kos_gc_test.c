@@ -1636,14 +1636,15 @@ int main(void)
         TEST(KOS_collect_garbage(ctx, &stats) == KOS_SUCCESS);
 
 #ifndef CONFIG_MAD_GC
-        TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated);
-        TEST(stats.num_objs_freed     == 0);
-        TEST(stats.num_objs_finalized == 0);
-        TEST(stats.num_pages_kept     == 1);
-        TEST(stats.num_pages_freed    == 0);
-        TEST(stats.size_evacuated     == base_stats.size_evacuated);
-        TEST(stats.size_freed         == 0);
-        TEST(stats.size_kept          >  0);
+        if (stats.num_objs_evacuated == base_stats.num_objs_evacuated) {
+            TEST(stats.num_objs_freed     == 0);
+            TEST(stats.num_objs_finalized == 0);
+            TEST(stats.num_pages_kept     == 1);
+            TEST(stats.num_pages_freed    == 0);
+            TEST(stats.size_evacuated     == base_stats.size_evacuated);
+            TEST(stats.size_freed         == 0);
+            TEST(stats.size_kept          >  0);
+        }
         TEST(stats.malloc_size        == MODULE_SIZE);
 #endif
 
@@ -1685,14 +1686,15 @@ int main(void)
         TEST(finalized == 47);
 
 #ifndef CONFIG_MAD_GC
-        TEST(stats.num_objs_evacuated == base_stats.num_objs_evacuated);
-        TEST(stats.num_objs_freed     == 0);
-        TEST(stats.num_objs_finalized == 1);
-        TEST(stats.num_pages_kept     == 1);
-        TEST(stats.num_pages_freed    == 0);
-        TEST(stats.size_evacuated     == 0);
-        TEST(stats.size_freed         == 0);
-        TEST(stats.size_kept          == base_stats.size_kept);
+        if (stats.num_objs_evacuated == base_stats.num_objs_evacuated) {
+            TEST(stats.num_objs_freed     == 0);
+            TEST(stats.num_objs_finalized == 1);
+            TEST(stats.num_pages_kept     == 1);
+            TEST(stats.num_pages_freed    == 0);
+            TEST(stats.size_evacuated     == 0);
+            TEST(stats.size_freed         == 0);
+            TEST(stats.size_kept          == base_stats.size_kept);
+        }
         TEST(stats.malloc_size        == MODULE_SIZE);
 #endif
 

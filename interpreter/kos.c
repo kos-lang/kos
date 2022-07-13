@@ -245,7 +245,10 @@ int main(int argc, char *argv[])
         goto cleanup;
     }
 
-    error = KOS_modules_init(ctx);
+    error = KOS_hook_ctrl_c(ctx);
+
+    if ( ! error)
+        error = KOS_modules_init(ctx);
 
     if (error) {
         fprintf(stderr, "Failed to initialize modules\n");
@@ -454,6 +457,9 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
 
     for (;;) {
         KOS_OBJ_ID ret;
+        int        hook_error;
+
+        TRY(KOS_unhook_ctrl_c(ctx));
 
         KOS_suspend_context(ctx);
 
@@ -462,6 +468,10 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
         stored_errno = get_errno(error);
 
         KOS_resume_context(ctx);
+
+        hook_error = KOS_hook_ctrl_c(ctx);
+        if ( ! error)
+            error = hook_error;
 
         if (error) {
             if (error == KOS_ERROR_INTERRUPTED)
@@ -480,6 +490,8 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
 
             tmp_buf.size = 0;
 
+            TRY(KOS_unhook_ctrl_c(ctx));
+
             KOS_suspend_context(ctx);
 
             error = kos_getline(&state, PROMPT_SUBSEQUENT_LINE, &tmp_buf);
@@ -487,6 +499,10 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
             stored_errno = get_errno(error);
 
             KOS_resume_context(ctx);
+
+            hook_error = KOS_hook_ctrl_c(ctx);
+            if ( ! error)
+                error = hook_error;
 
             if (error) {
                 assert(error == KOS_ERROR_OUT_OF_MEMORY ||

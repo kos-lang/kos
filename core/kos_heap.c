@@ -2777,9 +2777,11 @@ static void help_gc(KOS_CONTEXT ctx)
     KOS_atomic_write_relaxed_u32(ctx->gc_state, GC_INACTIVE);
 }
 
-void KOS_help_gc(KOS_CONTEXT ctx)
+void kos_help_gc(KOS_CONTEXT ctx)
 {
     KOS_HEAP *const heap = get_heap(ctx);
+
+    kos_validate_context(ctx);
 
     assert(KOS_atomic_read_relaxed_u32(ctx->gc_state) == GC_INACTIVE);
 
@@ -2894,6 +2896,8 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
     }
 
     KOS_atomic_write_release_u32(heap->gc_state, GC_INIT);
+
+    kos_set_global_event(ctx, KOS_EVENT_GC);
 
     stats.initial_heap_size   = heap->heap_size;
     stats.initial_malloc_size = heap->malloc_size;
@@ -3010,6 +3014,8 @@ int KOS_collect_garbage(KOS_CONTEXT   ctx,
     verify_heap_used_size(heap);
 
     gc_trace(("GC ctx=%p end cycle\n", (void *)ctx));
+
+    kos_clear_global_event(ctx, KOS_EVENT_GC);
 
     KOS_atomic_write_relaxed_u32(ctx->gc_state,  GC_INACTIVE);
     KOS_atomic_write_relaxed_u32(heap->gc_state, GC_INACTIVE);

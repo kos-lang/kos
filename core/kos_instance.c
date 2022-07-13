@@ -26,12 +26,11 @@
 #include <assert.h>
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
+#include <signal.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 
-static const char str_err_not_array[]           = "object is not an array";
-static const char str_err_thread_registered[]   = "thread already registered";
 static const char str_format_exception[]        = "Exception: ";
 static const char str_format_hash[]             = "  #";
 static const char str_format_line[]             = ":";
@@ -39,6 +38,14 @@ static const char str_format_function[]         = " in '";
 static const char str_format_module[]           = "' in ";
 static const char str_format_offset[]           = "  ";
 static const char str_format_question_marks[]   = "???";
+
+KOS_DECLARE_STATIC_CONST_STRING(str_description,               "description");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_ctrl_c,                "user pressed Ctrl-C");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_ctrl_c_already_hooked, "Ctrl-C already hooked");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_generator_end,         "end of generator");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_array,             "object is not an array");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_panic,                 "detected bytecode corruption");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_thread_registered,     "thread already registered");
 
 struct KOS_LIB_LIST_S {
     uint32_t       num_libs;
@@ -99,7 +106,6 @@ static void init_context(KOS_CONTEXT ctx, KOS_INSTANCE *inst)
 {
     ctx->next        = KOS_NULL;
     ctx->prev        = KOS_NULL;
-    ctx->gc_state    = GC_SUSPENDED;
     ctx->inst        = inst;
     ctx->cur_page    = KOS_NULL;
     ctx->thread_obj  = KOS_BADPTR;
@@ -109,6 +115,8 @@ static void init_context(KOS_CONTEXT ctx, KOS_INSTANCE *inst)
     ctx->stack_depth = 0;
     ctx->local_list  = KOS_NULL;
     ctx->ulocal_list = KOS_NULL;
+    ctx->gc_state    = GC_SUSPENDED;
+    ctx->event_flags = 0;
 }
 
 static int register_thread(KOS_INSTANCE *inst,
@@ -118,7 +126,7 @@ static int register_thread(KOS_INSTANCE *inst,
 
     if (kos_tls_get(inst->threads.thread_key)) {
         TRY(KOS_resume_context(ctx));
-        RAISE_EXCEPTION(str_err_thread_registered);
+        RAISE_EXCEPTION_STR(str_err_thread_registered);
     }
 
     assert( ! kos_tls_get(inst->threads.thread_key));
@@ -177,6 +185,8 @@ int KOS_instance_register_thread(KOS_INSTANCE *inst,
     inst->threads.main_thread.next = ctx;
     if (ctx->next)
         ctx->next->prev            = ctx;
+
+    ctx->event_flags               = inst->threads.main_thread.event_flags;
 
     kos_unlock_mutex(inst->threads.ctx_mutex);
 
@@ -292,6 +302,8 @@ static void clear_instance(KOS_INSTANCE *inst)
     inst->prototypes.generator_proto     = KOS_BADPTR;
     inst->prototypes.exception_proto     = KOS_BADPTR;
     inst->prototypes.generator_end_proto = KOS_BADPTR;
+    inst->prototypes.panic_proto         = KOS_BADPTR;
+    inst->prototypes.ctrl_c_proto        = KOS_BADPTR;
     inst->prototypes.thread_proto        = KOS_BADPTR;
     inst->prototypes.module_proto        = KOS_BADPTR;
     inst->modules.search_paths           = KOS_BADPTR;
@@ -380,6 +392,8 @@ int KOS_instance_init(KOS_INSTANCE *inst,
     TRY_OBJID(inst->prototypes.generator_proto     = KOS_new_object_with_prototype(ctx, inst->prototypes.function_proto));
     TRY_OBJID(inst->prototypes.exception_proto     = KOS_new_object(ctx));
     TRY_OBJID(inst->prototypes.generator_end_proto = KOS_new_object(ctx));
+    TRY_OBJID(inst->prototypes.panic_proto         = KOS_new_object(ctx));
+    TRY_OBJID(inst->prototypes.ctrl_c_proto        = KOS_new_object(ctx));
     TRY_OBJID(inst->prototypes.thread_proto        = KOS_new_object(ctx));
     TRY_OBJID(inst->prototypes.module_proto        = KOS_new_object(ctx));
     TRY_OBJID(inst->modules.module_names           = KOS_new_object(ctx));
@@ -401,6 +415,13 @@ int KOS_instance_init(KOS_INSTANCE *inst,
     inst->modules.init_module = OBJID(MODULE, init_module);
 
     TRY(init_search_paths(ctx));
+
+    TRY(KOS_set_property(ctx, inst->prototypes.generator_end_proto, KOS_CONST_ID(str_description),
+                         KOS_CONST_ID(str_err_generator_end)));
+    TRY(KOS_set_property(ctx, inst->prototypes.panic_proto, KOS_CONST_ID(str_description),
+                         KOS_CONST_ID(str_err_panic)));
+    TRY(KOS_set_property(ctx, inst->prototypes.ctrl_c_proto, KOS_CONST_ID(str_description),
+                         KOS_CONST_ID(str_err_ctrl_c)));
 
     *out_ctx = ctx;
 
@@ -890,11 +911,20 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
     TRY_OBJID(backtrace.o);
 
     if (GET_OBJ_TYPE(backtrace.o) != OBJ_ARRAY)
-        RAISE_EXCEPTION(str_err_not_array);
+        RAISE_EXCEPTION_STR(str_err_not_array);
 
     depth   = KOS_get_array_size(backtrace.o);
     array.o = KOS_new_array(ctx, 1 + depth);
     TRY_OBJID(array.o);
+
+    if (GET_OBJ_TYPE(value.o) == OBJ_OBJECT) {
+        str = KOS_get_property(ctx, value.o, KOS_CONST_ID(str_description));
+
+        if (IS_BAD_PTR(str))
+            KOS_clear_exception(ctx);
+        else
+            value.o = str;
+    }
 
     if (KOS_vector_reserve(&cstr, 80) != KOS_SUCCESS) {
         KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
@@ -975,15 +1005,22 @@ cleanup:
     return error ? KOS_BADPTR : array.o;
 }
 
-void KOS_raise_generator_end(KOS_CONTEXT ctx)
+static void raise_internal_exception(KOS_CONTEXT ctx, KOS_OBJ_ID base)
 {
-    KOS_INSTANCE *const inst = ctx->inst;
-
-    const KOS_OBJ_ID exception =
-            KOS_new_object_with_prototype(ctx, inst->prototypes.generator_end_proto);
+    const KOS_OBJ_ID exception = KOS_new_object_with_prototype(ctx, base);
 
     if ( ! IS_BAD_PTR(exception))
         KOS_raise_exception(ctx, exception);
+}
+
+void KOS_raise_generator_end(KOS_CONTEXT ctx)
+{
+    raise_internal_exception(ctx, ctx->inst->prototypes.generator_end_proto);
+}
+
+void kos_raise_panic(KOS_CONTEXT ctx)
+{
+    raise_internal_exception(ctx, ctx->inst->prototypes.panic_proto);
 }
 
 #ifdef NDEBUG
@@ -1131,4 +1168,181 @@ KOS_OBJ_ID KOS_destroy_top_locals(KOS_CONTEXT ctx, KOS_LOCAL *first, KOS_LOCAL *
 #endif
 
     return ret;
+}
+
+void kos_set_global_event(KOS_CONTEXT ctx, enum KOS_GLOBAL_EVENT_E event)
+{
+    KOS_INSTANCE* const inst = ctx->inst;
+    KOS_CONTEXT         walk_ctx;
+
+    kos_lock_mutex(inst->threads.ctx_mutex);
+
+    walk_ctx = &inst->threads.main_thread;
+
+    for ( ; walk_ctx; walk_ctx = walk_ctx->next) {
+        uint32_t flags;
+
+        do {
+            flags = KOS_atomic_read_relaxed_u32(walk_ctx->event_flags);
+        } while ( ! KOS_atomic_cas_weak_u32(walk_ctx->event_flags, flags, flags | event));
+    }
+
+    kos_unlock_mutex(inst->threads.ctx_mutex);
+}
+
+void kos_clear_global_event(KOS_CONTEXT ctx, enum KOS_GLOBAL_EVENT_E event)
+{
+    KOS_INSTANCE* const inst = ctx->inst;
+    KOS_CONTEXT         walk_ctx;
+
+    kos_lock_mutex(inst->threads.ctx_mutex);
+
+    walk_ctx = &inst->threads.main_thread;
+
+    for ( ; walk_ctx; walk_ctx = walk_ctx->next) {
+        uint32_t flags;
+
+        do {
+            flags = KOS_atomic_read_relaxed_u32(walk_ctx->event_flags);
+        } while ( ! KOS_atomic_cas_weak_u32(walk_ctx->event_flags, flags, flags & ~event));
+    }
+
+    kos_unlock_mutex(inst->threads.ctx_mutex);
+}
+
+int KOS_handle_global_event(KOS_CONTEXT ctx)
+{
+    uint32_t event;
+
+    kos_validate_context(ctx);
+
+    event = KOS_atomic_read_relaxed_u32(ctx->event_flags);
+
+    if ( ! event)
+        return KOS_SUCCESS;
+
+    if (event & KOS_EVENT_PANIC) {
+        kos_raise_panic(ctx);
+        return KOS_ERROR_EXCEPTION;
+    }
+
+    if (event & KOS_EVENT_CTRL_C) {
+        raise_internal_exception(ctx, ctx->inst->prototypes.ctrl_c_proto);
+
+        return KOS_ERROR_EXCEPTION;
+    }
+
+    if (event & KOS_EVENT_GC)
+        kos_help_gc(ctx);
+
+    return KOS_SUCCESS;
+}
+
+#ifdef _WIN32
+typedef void (* signal_handler)(int);
+
+static int set_signal(int sig, void (* handler)(int), signal_handler *old_action)
+{
+    return (kos_seq_fail() || ((*old_action = signal(sig, handler)) == SIG_ERR)) ? KOS_ERROR_ERRNO : KOS_SUCCESS;
+}
+
+static void restore_signal(int sig, signal_handler *old_action)
+{
+    signal(sig, *old_action);
+}
+#else
+typedef struct sigaction signal_handler;
+
+static int set_signal(int sig, void (* handler)(int), signal_handler *old_action)
+{
+    signal_handler sa;
+
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = handler;
+    sigemptyset(&sa.sa_mask);
+
+    return (kos_seq_fail() || sigaction(sig, &sa, old_action) != 0) ? KOS_ERROR_ERRNO : KOS_SUCCESS;
+}
+
+static void restore_signal(int sig, signal_handler *old_action)
+{
+    signal_handler prev_handler;
+
+    sigaction(sig, old_action, &prev_handler);
+}
+#endif
+
+struct KOS_CTRL_C {
+    KOS_ATOMIC(KOS_INSTANCE *) instance;
+    signal_handler             old_handler;
+};
+
+static struct KOS_CTRL_C ctrl_c;
+
+void ctrlc_signal_handler(int sig)
+{
+    KOS_INSTANCE *const instance = (KOS_INSTANCE *)KOS_atomic_read_relaxed_ptr(ctrl_c.instance);
+
+    kos_set_global_event(&instance->threads.main_thread, KOS_EVENT_CTRL_C);
+}
+
+int KOS_hook_ctrl_c(KOS_CONTEXT ctx)
+{
+    if ( ! KOS_atomic_cas_strong_ptr(ctrl_c.instance, (KOS_INSTANCE *)KOS_NULL, ctx->inst)) {
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_ctrl_c_already_hooked));
+        return KOS_ERROR_EXCEPTION;
+    }
+
+    if (set_signal(SIGINT, ctrlc_signal_handler, &ctrl_c.old_handler)) {
+        KOS_raise_errno(ctx, "signal");
+        return KOS_ERROR_EXCEPTION;
+    }
+
+    return KOS_SUCCESS;
+}
+
+int KOS_unhook_ctrl_c(KOS_CONTEXT ctx)
+{
+    if (KOS_atomic_read_acquire_ptr(ctrl_c.instance) == ctx->inst) {
+
+        restore_signal(SIGINT, &ctrl_c.old_handler);
+        memset(&ctrl_c.old_handler, 0, sizeof(ctrl_c.old_handler));
+
+        kos_clear_global_event(ctx, KOS_EVENT_CTRL_C);
+
+        KOS_atomic_write_release_ptr(ctrl_c.instance, (KOS_INSTANCE *)KOS_NULL);
+    }
+
+    return KOS_SUCCESS;
+}
+
+void KOS_clear_ctrl_c_event(KOS_CONTEXT ctx)
+{
+    KOS_LOCAL exception;
+    int       clear_flag = 0;
+
+    KOS_init_local_with(ctx, &exception, KOS_get_exception(ctx));
+
+    if ( ! IS_BAD_PTR(exception.o)) {
+
+        KOS_OBJ_ID value;
+
+        KOS_clear_exception(ctx);
+
+        value = KOS_get_property(ctx, exception.o, KOS_STR_VALUE);
+
+        if ( ! IS_BAD_PTR(value)) {
+            if (KOS_has_prototype(ctx, value, ctx->inst->prototypes.ctrl_c_proto))
+                clear_flag = 1;
+        }
+        else
+            KOS_clear_exception(ctx);
+
+        KOS_raise_exception(ctx, exception.o);
+    }
+
+    KOS_destroy_top_local(ctx, &exception);
+
+    if (clear_flag)
+        kos_clear_global_event(ctx, KOS_EVENT_CTRL_C);
 }

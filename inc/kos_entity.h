@@ -242,16 +242,32 @@ typedef union KOS_STRING_U {
 
 #define KOS_CONST_ID(obj) ( (KOS_OBJ_ID) ((intptr_t)&(obj).object + 1) )
 
-#ifdef KOS_CPP11
-#   define KOS_DECLARE_ALIGNED(alignment, object) alignas(alignment) object
+#if defined(KOS_CPP11)
+#   define KOS_ALIGN(alignment) alignas(alignment)
+#   define KOS_ALIGN_ATTRIBUTE(alignment)
+#   define KOS_ALIGN_PRE_STRUCT(alignment)
+#   define KOS_ALIGN_POST_STRUCT(alignment) KOS_ALIGN(alignment)
+#elif defined(__GNUC__)
+#   define KOS_ALIGN(alignment)
+#   define KOS_ALIGN_ATTRIBUTE(alignment) __attribute__((aligned(alignment)))
+#   define KOS_ALIGN_PRE_STRUCT(alignment)
+#   define KOS_ALIGN_POST_STRUCT(alignment) KOS_ALIGN_ATTRIBUTE(alignment)
+#elif defined(_MSC_VER)
+#   define KOS_ALIGN(alignment) __declspec(align(alignment))
+#   define KOS_ALIGN_ATTRIBUTE(alignment)
+#   define KOS_ALIGN_PRE_STRUCT(alignment) KOS_ALIGN(alignment)
+#   define KOS_ALIGN_POST_STRUCT(alignment)
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 #   include <stdalign.h>
-#   define KOS_DECLARE_ALIGNED(alignment, object) alignas(alignment) object
-#elif defined(__GNUC__)
-#   define KOS_DECLARE_ALIGNED(alignment, object) object __attribute__((aligned(alignment)))
-#elif defined(_MSC_VER)
-#   define KOS_DECLARE_ALIGNED(alignment, object) __declspec(align(alignment)) object
+#   define KOS_ALIGN(alignment) _Alignas(alignment)
+#   define KOS_ALIGN_ATTRIBUTE(alignment)
+    /* C11 does not allow alignment on struct definitions or types */
+#   define KOS_ALIGN_PRE_STRUCT(alignment)
+#   define KOS_ALIGN_POST_STRUCT(alignment)
 #endif
+
+#define KOS_DECLARE_ALIGNED(alignment, object) KOS_ALIGN(alignment) object KOS_ALIGN_ATTRIBUTE(alignment)
+#define KOS_ALIGNED_STRUCT(alignment) KOS_ALIGN_PRE_STRUCT(alignment) struct KOS_ALIGN_POST_STRUCT(alignment)
 
 #ifdef _MSC_VER
 #   define KOS_DECLARE_ALIGNED_API(alignment, object) KOS_API KOS_DECLARE_ALIGNED(alignment, object)

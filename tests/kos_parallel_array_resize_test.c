@@ -49,7 +49,7 @@ static int run_test(KOS_CONTEXT ctx, struct THREAD_DATA *data)
                 break;
             }
 
-            KOS_help_gc(ctx);
+            kos_help_gc(ctx);
         }
         if (stage == ~0U)
             break;

@@ -31,9 +31,6 @@
     - Stack reuse in tail calls.
     - Replace binds for non-global functions with LOAD.CONST
 
-* Hook Ctrl-C in interpreter to interrupt all threads; add a flag to interrupt all threads
-  for GC, Ctrl-C and debugger break/stop
-
 * Close generators by throwing an exception through the generator code during GC
 
 * Allow _ in parameters of the target of -> stream operator

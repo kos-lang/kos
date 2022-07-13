@@ -33,7 +33,6 @@ KOS_DECLARE_STATIC_CONST_STRING(str_err_div_overflow,             "division over
 KOS_DECLARE_STATIC_CONST_STRING(str_err_generator_running,        "generator is running");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_byte_value,       "buffer element value out of range");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_index,            "index out of range");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_instruction,      "invalid instruction");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_named_args_not_supported, "function does not support named arguments");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_no_setter,                "property is read-only");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_callable,             "object is not callable");
@@ -2932,7 +2931,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 PROF_ZONE_N(INSTR, "JUMP")
                 const KOS_IMM imm = kos_load_simm(bytecode + 1);
 
-                KOS_help_gc(ctx);
+                TRY(KOS_handle_global_event(ctx));
 
                 bytecode += 1 + imm.size + imm.value.sv;
                 NEXT_INSTRUCTION;
@@ -2945,7 +2944,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
 
                 assert(rsrc < num_regs);
 
-                KOS_help_gc(ctx);
+                TRY(KOS_handle_global_event(ctx));
 
                 if (kos_is_truthy(read_reg(stack_frame, rsrc)))
                     bytecode += imm.value.sv;
@@ -2961,7 +2960,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
 
                 assert(rsrc < num_regs);
 
-                KOS_help_gc(ctx);
+                TRY(KOS_handle_global_event(ctx));
 
                 if ( ! kos_is_truthy(read_reg(stack_frame, rsrc)))
                     bytecode += imm.value.sv;
@@ -3222,10 +3221,10 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 else {
                     const KOS_IMM imm = kos_load_simm(bytecode + 3);
 
-                    KOS_help_gc(ctx);
-
                     bytecode += finished ? 0 : imm.value.sv;
                     bytecode += 3 + imm.size;
+
+                    TRY(KOS_handle_global_event(ctx));
                 }
 
                 NEXT_INSTRUCTION;
@@ -3561,8 +3560,11 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
             BEGIN_BREAKPOINT_INSTRUCTION: {
                 PROF_ZONE_N(INSTR, "BREAKPOINT")
                 assert(instr == INSTR_BREAKPOINT);
-                if (instr != INSTR_BREAKPOINT)
-                    RAISE_EXCEPTION_STR(str_err_invalid_instruction);
+                if (instr != INSTR_BREAKPOINT) {
+                    kos_set_global_event(ctx, KOS_EVENT_PANIC);
+                    kos_raise_panic(ctx);
+                    goto cleanup;
+                }
 
                 /* TODO simply call a debugger function from instance */
 
@@ -3608,6 +3610,7 @@ cleanup:
                 bytecode = get_bytecode_at_offs(stack_frame, catch_offs);
 
                 clear_catch(stack_frame);
+                KOS_clear_ctrl_c_event(ctx);
                 KOS_clear_exception(ctx);
                 NEXT_INSTRUCTION;
             }

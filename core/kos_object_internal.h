@@ -130,6 +130,12 @@ KOS_TYPE kos_get_object_type_gc_safe(KOS_OBJ_ID obj);
 void kos_validate_context(KOS_CONTEXT ctx);
 #endif
 
+void kos_set_global_event(KOS_CONTEXT ctx, enum KOS_GLOBAL_EVENT_E event);
+
+void kos_clear_global_event(KOS_CONTEXT ctx, enum KOS_GLOBAL_EVENT_E event);
+
+void kos_raise_panic(KOS_CONTEXT ctx);
+
 /*==========================================================================*/
 /* KOS_OBJECT                                                               */
 /*==========================================================================*/
@@ -370,5 +376,7 @@ static_assert(KOS_SLOTS_OFFS + (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS) <= KOS
 static_assert(KOS_PAGE_SIZE >= KOS_BITMAP_OFFS + KOS_BITMAP_SIZE + (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS), "Unexpected number of slots");
 static_assert(KOS_PAGE_SIZE - KOS_BITMAP_OFFS - KOS_BITMAP_SIZE - (KOS_SLOTS_PER_PAGE << KOS_OBJ_ALIGN_BITS) < (1 << KOS_OBJ_ALIGN_BITS), "Wasted space in pages");
 #endif
+
+void kos_help_gc(KOS_CONTEXT ctx);
 
 #endif

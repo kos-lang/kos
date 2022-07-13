@@ -18,6 +18,7 @@ _KOS_buffer_make_room
 _KOS_buffer_reserve
 _KOS_buffer_resize
 _KOS_buffer_slice
+_KOS_clear_ctrl_c_event
 _KOS_collect_garbage
 _KOS_compare
 _KOS_delete_property
@@ -55,8 +56,9 @@ _KOS_get_property_with_depth
 _KOS_get_prototype
 _KOS_get_time_us
 _KOS_get_type_name
+_KOS_handle_global_event
 _KOS_has_prototype
-_KOS_help_gc
+_KOS_hook_ctrl_c
 _KOS_init_local_with
 _KOS_init_locals
 _KOS_init_string_iter
@@ -164,6 +166,7 @@ _KOS_string_to_utf8
 _KOS_string_uppercase
 _KOS_suspend_context
 _KOS_true
+_KOS_unhook_ctrl_c
 _KOS_unload_file
 _KOS_unload_library
 _KOS_utf8_calc_buf_size_16

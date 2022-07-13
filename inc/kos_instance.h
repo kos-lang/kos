@@ -177,20 +177,22 @@ typedef struct KOS_UNORDERED_LOCAL_S {
     struct KOS_UNORDERED_LOCAL_S *prev;
 } KOS_ULOCAL;
 
-struct KOS_THREAD_CONTEXT_S {
-    KOS_CONTEXT          next;     /* List of thread roots in instance */
-    KOS_CONTEXT          prev;
-    KOS_ATOMIC(uint32_t) gc_state;
-
-    KOS_INSTANCE *inst;
+KOS_ALIGNED_STRUCT(64) KOS_THREAD_CONTEXT_S {
     KOS_PAGE     *cur_page;
-    KOS_OBJ_ID    thread_obj;
     KOS_OBJ_ID    exception;
     KOS_OBJ_ID    stack;        /* Topmost container for registers & stack frames */
     uint32_t      regs_idx;     /* Index of first register in current frame       */
     uint32_t      stack_depth;
     KOS_LOCAL    *local_list;
     KOS_ULOCAL   *ulocal_list;
+
+    KOS_INSTANCE *inst;
+    KOS_CONTEXT   next;         /* List of thread roots in instance */
+    KOS_CONTEXT   prev;
+    KOS_OBJ_ID    thread_obj;
+
+    KOS_ATOMIC(uint32_t) gc_state;
+    KOS_ATOMIC(uint32_t) event_flags;
 };
 
 struct KOS_PROTOTYPES_S {
@@ -207,6 +209,8 @@ struct KOS_PROTOTYPES_S {
     KOS_OBJ_ID generator_proto;
     KOS_OBJ_ID exception_proto;
     KOS_OBJ_ID generator_end_proto;
+    KOS_OBJ_ID panic_proto;
+    KOS_OBJ_ID ctrl_c_proto;
     KOS_OBJ_ID thread_proto;
     KOS_OBJ_ID module_proto;
 };
@@ -414,8 +418,24 @@ KOS_API
 int KOS_collect_garbage(KOS_CONTEXT   ctx,
                         KOS_GC_STATS *out_stats);
 
+enum KOS_GLOBAL_EVENT_E {
+    KOS_EVENT_GC       = 1,   /* GC is in progress                        */
+    KOS_EVENT_CTRL_C   = 2,   /* User pressed Ctrl-C or received SIGINT   */
+    KOS_EVENT_PANIC    = 4,   /* Fatal error, such as bytecode corruption */
+    KOS_EVENT_DEBUGGER = 8    /* Debugger trap                            */
+};
+
 KOS_API
-void KOS_help_gc(KOS_CONTEXT ctx);
+int KOS_handle_global_event(KOS_CONTEXT ctx);
+
+KOS_API
+int KOS_hook_ctrl_c(KOS_CONTEXT ctx);
+
+KOS_API
+int KOS_unhook_ctrl_c(KOS_CONTEXT ctx);
+
+KOS_API
+void KOS_clear_ctrl_c_event(KOS_CONTEXT ctx);
 
 KOS_API
 void KOS_suspend_context(KOS_CONTEXT ctx);

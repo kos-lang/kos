@@ -19,6 +19,7 @@ EXPORTS
     KOS_buffer_reserve
     KOS_buffer_resize
     KOS_buffer_slice
+    KOS_clear_ctrl_c_event
     KOS_collect_garbage
     KOS_compare
     KOS_delete_property
@@ -56,8 +57,9 @@ EXPORTS
     KOS_get_prototype
     KOS_get_time_us
     KOS_get_type_name
+    KOS_handle_global_event
     KOS_has_prototype
-    KOS_help_gc
+    KOS_hook_ctrl_c
     KOS_init_local_with
     KOS_init_locals
     KOS_init_string_iter
@@ -166,6 +168,7 @@ EXPORTS
     KOS_string_uppercase
     KOS_suspend_context
     KOS_true DATA
+    KOS_unhook_ctrl_c
     KOS_unload_file
     KOS_unload_library
     KOS_utf8_calc_buf_size_16
