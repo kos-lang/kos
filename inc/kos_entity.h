@@ -10,6 +10,10 @@
 #include <assert.h>
 #include <stdint.h>
 
+#ifdef _MSC_VER
+#   pragma warning( disable : 4324 ) /* structure was padded due to alignment specifier */
+#endif
+
 /* Note: entity types are always even.  See the description of size_and_type field
  * to find out why. */
 typedef enum KOS_ENTITY_TYPE_E {

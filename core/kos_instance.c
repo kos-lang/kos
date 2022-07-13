@@ -186,7 +186,8 @@ int KOS_instance_register_thread(KOS_INSTANCE *inst,
     if (ctx->next)
         ctx->next->prev            = ctx;
 
-    ctx->event_flags               = inst->threads.main_thread.event_flags;
+    KOS_atomic_write_relaxed_u32(ctx->event_flags,
+            KOS_atomic_read_relaxed_u32(inst->threads.main_thread.event_flags));
 
     kos_unlock_mutex(inst->threads.ctx_mutex);
 
