@@ -35,6 +35,7 @@ static const char *const node_types[] = {
     "throw",
     "assert",
     "refinement",
+    "opt_refinement",
     "slice",
     "invocation",
     "var",

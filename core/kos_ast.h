@@ -25,6 +25,7 @@ typedef enum KOS_NODE_TYPE_U {
     NT_ASSERT,
 
     NT_REFINEMENT,
+    NT_OPT_REFINEMENT,      /* optional refinement */
     NT_SLICE,
     NT_INVOCATION,
     NT_VAR,

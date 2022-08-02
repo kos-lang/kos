@@ -2046,7 +2046,7 @@ static int invocation(KOS_COMP_UNIT *program, KOS_AST_NODE *node)
     const KOS_AST_NODE *child_node = node->children;
 
     assert(child_node);
-    if (child_node->type == NT_REFINEMENT) {
+    if (child_node->type == NT_REFINEMENT || child_node->type == NT_OPT_REFINEMENT) {
 
         child_node = child_node->children;
         assert(child_node);
@@ -2207,6 +2207,8 @@ static int visit_node(KOS_COMP_UNIT *program,
         case NT_ASSERT:
             /* fall through */
         case NT_REFINEMENT:
+            /* fall through */
+        case NT_OPT_REFINEMENT:
             /* fall through */
         case NT_SLICE:
             /* fall through */

@@ -1683,7 +1683,7 @@ do {
     }
     expect_fail(some)
 }
-    
+
 do {
     class base { }
     class derived extends base {
@@ -1766,4 +1766,54 @@ do {
     }
 
     assert exc.x == 42
+}
+
+##############################################################################
+# optional value
+do {
+    const empty = {}
+    assert ! ("hello" in empty)
+    assert ! ("hello" propertyof empty)
+
+    assert empty.?hello == void
+    assert empty.?"hello" == void
+    assert empty[?"hello"] == void
+    assert empty[?base.args.size ? "hello" : void] == void
+
+    const simple = { hello: 42 }
+    assert "hello" in simple
+    assert "hello" propertyof simple
+
+    assert simple.?hello == 42
+    assert simple.?"hello" == 42
+    assert simple[?"hello"] == 42
+    assert simple[?base.args.size ? "hello" : void] == 42
+
+    class fortytwo {
+        var hello = 42
+    }
+
+    const ft = fortytwo()
+    assert ! ("hello" in ft)
+    assert "hello" propertyof ft
+
+    assert ft.?hello == 42
+    assert ft.?"hello" == 42
+    assert ft[?"hello"] == 42
+    assert ft[?base.args.size ? "hello" : void] == 42
+
+    assert base.?hello == void
+    assert base.?"hello" == void
+    assert base[?"hello"] == void
+    assert base[?base.args.size ? "hello" : void] == void
+
+    expect_fail(() => ft[?void])
+    expect_fail(() => ft[?true])
+    expect_fail(() => ft[?52])
+    expect_fail(() => ft[?fortytwo])
+
+    expect_fail(() => base[?void])
+    expect_fail(() => base[?true])
+    expect_fail(() => base[?52])
+    expect_fail(() => base[?fortytwo])
 }

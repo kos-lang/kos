@@ -709,6 +709,38 @@ int main(void)
     TEST_INSTR INSTR_GET,        { V_EXCEPT                            }, { { V_OBJECT                          }, { V_OBJECT                          } } END
 
     /*========================================================================*/
+    /* GET.OPT */
+    TEST_INSTR INSTR_GET_OPT,    { V_VOID                              }, { { V_VOID                            }, { V_STR0                            } } END
+    TEST_INSTR INSTR_GET_OPT,    { V_VOID                              }, { { V_FALSE                           }, { V_STR0                            } } END
+    TEST_INSTR INSTR_GET_OPT,    { V_VOID                              }, { { V_INT32, 0,                       }, { V_STR0                            } } END
+    TEST_INSTR INSTR_GET_OPT,    { V_VOID                              }, { { V_FLOAT, 0,           0x3FF00000U }, { V_STR0                            } } END
+    TEST_INSTR INSTR_GET_OPT,    { V_VOID                              }, { { V_STR1                            }, { V_STR0                            } } END
+    TEST_INSTR INSTR_GET_OPT,    { V_VOID                              }, { { V_ARRAY, 10                       }, { V_STR0                            } } END
+    TEST_INSTR INSTR_GET_OPT,    { V_VOID                              }, { { V_OBJECT                          }, { V_STR0                            } } END
+    TEST_INSTR INSTR_GET_OPT,    { V_EXCEPT                            }, { { V_OBJECT                          }, { V_VOID                            } } END
+    /* string */
+    TEST_INSTR INSTR_GET_OPT,    { V_STR1,    0, 0,        "b"         }, { { V_STR0,  0, 0,        "bad"       }, { V_INT32, 0                        } } END
+    TEST_INSTR INSTR_GET_OPT,    { V_STR1,    0, 0,        "a"         }, { { V_STR0,  0, 0,        "bad"       }, { V_INT32, 1                        } } END
+    TEST_INSTR INSTR_GET_OPT,    { V_STR1,    0, 0,        "d"         }, { { V_STR0,  0, 0,        "bad"       }, { V_INT32, 2                        } } END
+    TEST_INSTR INSTR_GET_OPT,    { V_STR1,    0, 0,        "b"         }, { { V_STR0,  0, 0,        "bad"       }, { V_INT32, (uint32_t)-3             } } END
+    TEST_INSTR INSTR_GET_OPT,    { V_STR1,    0, 0,        "a"         }, { { V_STR0,  0, 0,        "bad"       }, { V_INT32, (uint32_t)-2             } } END
+    TEST_INSTR INSTR_GET_OPT,    { V_STR1,    0, 0,        "d"         }, { { V_STR0,  0, 0,        "bad"       }, { V_INT32, (uint32_t)-1             } } END
+    TEST_INSTR INSTR_GET_OPT,    { V_VOID                              }, { { V_STR0,  0, 0,        "bad"       }, { V_INT32, (uint32_t)-4             } } END
+    TEST_INSTR INSTR_GET_OPT,    { V_VOID                              }, { { V_STR0,  0, 0,        "bad"       }, { V_INT32, 3                        } } END
+    /* array */
+    TEST_INSTR INSTR_GET_OPT,    { V_VOID                              }, { { V_ARRAY, 10                       }, { V_INT32, 0                        } } END
+    TEST_INSTR INSTR_GET_OPT,    { V_VOID                              }, { { V_ARRAY, 10                       }, { V_INT32, 9                        } } END
+    TEST_INSTR INSTR_GET_OPT,    { V_VOID                              }, { { V_ARRAY, 10                       }, { V_INT32, (uint32_t)-1             } } END
+    TEST_INSTR INSTR_GET_OPT,    { V_VOID                              }, { { V_ARRAY, 10                       }, { V_INT32, (uint32_t)-10            } } END
+    TEST_INSTR INSTR_GET_OPT,    { V_VOID                              }, { { V_ARRAY, 10                       }, { V_INT32, (uint32_t)-11            } } END
+    TEST_INSTR INSTR_GET_OPT,    { V_VOID                              }, { { V_ARRAY, 10                       }, { V_INT32, 10                       } } END
+    /* wrong types */
+    TEST_INSTR INSTR_GET_OPT,    { V_EXCEPT                            }, { { V_OBJECT                          }, { V_FALSE                           } } END
+    TEST_INSTR INSTR_GET_OPT,    { V_VOID                              }, { { V_OBJECT                          }, { V_INT32, 1                        } } END
+    TEST_INSTR INSTR_GET_OPT,    { V_EXCEPT                            }, { { V_OBJECT                          }, { V_ARRAY, 5                        } } END
+    TEST_INSTR INSTR_GET_OPT,    { V_EXCEPT                            }, { { V_OBJECT                          }, { V_OBJECT                          } } END
+
+    /*========================================================================*/
     /* GET.ELEM8 */
     /* string */
     TEST_INSTR INSTR_GET_ELEM8,  { V_STR1,    0, 0,        "b"         }, { { V_STR0,  0, 0,        "bad"       }, { V_IMM8,   0                       } } END
@@ -733,6 +765,30 @@ int main(void)
     TEST_INSTR INSTR_GET_ELEM8,  { V_EXCEPT                            }, { { V_FLOAT, 0,           0x3FF00000U }, { V_IMM8,   0                       } } END
 
     /*========================================================================*/
+    /* GET.ELEM8.OPT */
+    /* string */
+    TEST_INSTR INSTR_GET_ELEM8_OPT, { V_STR1,    0, 0,        "b"      }, { { V_STR0,  0, 0,        "bad"       }, { V_IMM8,   0                       } } END
+    TEST_INSTR INSTR_GET_ELEM8_OPT, { V_STR1,    0, 0,        "a"      }, { { V_STR0,  0, 0,        "bad"       }, { V_IMM8,   1                       } } END
+    TEST_INSTR INSTR_GET_ELEM8_OPT, { V_STR1,    0, 0,        "d"      }, { { V_STR0,  0, 0,        "bad"       }, { V_IMM8,   2                       } } END
+    TEST_INSTR INSTR_GET_ELEM8_OPT, { V_STR1,    0, 0,        "b"      }, { { V_STR0,  0, 0,        "bad"       }, { V_IMM8,   (uint32_t)-3            } } END
+    TEST_INSTR INSTR_GET_ELEM8_OPT, { V_STR1,    0, 0,        "a"      }, { { V_STR0,  0, 0,        "bad"       }, { V_IMM8,   (uint32_t)-2            } } END
+    TEST_INSTR INSTR_GET_ELEM8_OPT, { V_STR1,    0, 0,        "d"      }, { { V_STR0,  0, 0,        "bad"       }, { V_IMM8,   (uint32_t)-1            } } END
+    TEST_INSTR INSTR_GET_ELEM8_OPT, { V_VOID                           }, { { V_STR0,  0, 0,        "bad"       }, { V_IMM8,   (uint32_t)-4            } } END
+    TEST_INSTR INSTR_GET_ELEM8_OPT, { V_VOID                           }, { { V_STR0,  0, 0,        "bad"       }, { V_IMM8,   3                       } } END
+    /* array */
+    TEST_INSTR INSTR_GET_ELEM8_OPT, { V_VOID                           }, { { V_ARRAY, 10                       }, { V_IMM8,   0                       } } END
+    TEST_INSTR INSTR_GET_ELEM8_OPT, { V_VOID                           }, { { V_ARRAY, 10                       }, { V_IMM8,   9                       } } END
+    TEST_INSTR INSTR_GET_ELEM8_OPT, { V_VOID                           }, { { V_ARRAY, 10                       }, { V_IMM8,   (uint32_t)-1            } } END
+    TEST_INSTR INSTR_GET_ELEM8_OPT, { V_VOID                           }, { { V_ARRAY, 10                       }, { V_IMM8,   (uint32_t)-10           } } END
+    TEST_INSTR INSTR_GET_ELEM8_OPT, { V_VOID                           }, { { V_ARRAY, 10                       }, { V_IMM8,   (uint32_t)-11           } } END
+    TEST_INSTR INSTR_GET_ELEM8_OPT, { V_VOID                           }, { { V_ARRAY, 10                       }, { V_IMM8,   10                      } } END
+    /* wrong types */
+    TEST_INSTR INSTR_GET_ELEM8_OPT, { V_EXCEPT                         }, { { V_VOID                            }, { V_IMM8,   0                       } } END
+    TEST_INSTR INSTR_GET_ELEM8_OPT, { V_EXCEPT                         }, { { V_FALSE                           }, { V_IMM8,   0                       } } END
+    TEST_INSTR INSTR_GET_ELEM8_OPT, { V_EXCEPT                         }, { { V_INT32, 0,                       }, { V_IMM8,   0                       } } END
+    TEST_INSTR INSTR_GET_ELEM8_OPT, { V_EXCEPT                         }, { { V_FLOAT, 0,           0x3FF00000U }, { V_IMM8,   0                       } } END
+
+    /*========================================================================*/
     /* GET.RANGE */
     TEST_INSTR INSTR_GET_RANGE,  { V_STR1,    0, 0,        "def"       }, { { V_STR0,  0, 0,        "abcdefgh"  }, { V_INT32, 3   }, { V_INT32, 6      } } END
     TEST_INSTR INSTR_GET_RANGE,  { V_STR1,    0, 0,        "abc"       }, { { V_STR0,  0, 0,        "abcdefgh"  }, { V_VOID       }, { V_INT32, (uint32_t)-5 } } END
@@ -746,7 +802,7 @@ int main(void)
     TEST_INSTR INSTR_GET_RANGE,  { V_EXCEPT                            }, { { V_VOID                            }, { V_VOID       }, { V_VOID          } } END
 
     /*========================================================================*/
-    /* GET.PROP */
+    /* GET.PROP8 */
     TEST_INSTR INSTR_GET_PROP8,  { V_EXCEPT                            }, { { V_VOID                            }, { V_IMM8,  0                        } } END
     TEST_INSTR INSTR_GET_PROP8,  { V_EXCEPT                            }, { { V_FALSE                           }, { V_IMM8,  0                        } } END
     TEST_INSTR INSTR_GET_PROP8,  { V_EXCEPT                            }, { { V_INT32, 0,                       }, { V_IMM8,  0                        } } END
@@ -754,6 +810,16 @@ int main(void)
     TEST_INSTR INSTR_GET_PROP8,  { V_EXCEPT                            }, { { V_STR1                            }, { V_IMM8,  0                        } } END
     TEST_INSTR INSTR_GET_PROP8,  { V_EXCEPT                            }, { { V_ARRAY, 10                       }, { V_IMM8,  0                        } } END
     TEST_INSTR INSTR_GET_PROP8,  { V_EXCEPT                            }, { { V_OBJECT                          }, { V_IMM8,  0                        } } END
+
+    /*========================================================================*/
+    /* GET.PROP8.OPT */
+    TEST_INSTR INSTR_GET_PROP8_OPT, { V_VOID                         }, { { V_VOID                            }, { V_IMM8,  0                        } } END
+    TEST_INSTR INSTR_GET_PROP8_OPT, { V_VOID                         }, { { V_FALSE                           }, { V_IMM8,  0                        } } END
+    TEST_INSTR INSTR_GET_PROP8_OPT, { V_VOID                         }, { { V_INT32, 0,                       }, { V_IMM8,  0                        } } END
+    TEST_INSTR INSTR_GET_PROP8_OPT, { V_VOID                         }, { { V_FLOAT, 0,           0x3FF00000U }, { V_IMM8,  0                        } } END
+    TEST_INSTR INSTR_GET_PROP8_OPT, { V_VOID                         }, { { V_STR1                            }, { V_IMM8,  0                        } } END
+    TEST_INSTR INSTR_GET_PROP8_OPT, { V_VOID                         }, { { V_ARRAY, 10                       }, { V_IMM8,  0                        } } END
+    TEST_INSTR INSTR_GET_PROP8_OPT, { V_VOID                         }, { { V_OBJECT                          }, { V_IMM8,  0                        } } END
 
     /*========================================================================*/
     /* GET.PROTO */
@@ -770,6 +836,13 @@ int main(void)
     TEST_INSTR INSTR_GET_MOD_GLOBAL, { V_EXCEPT                        }, { { V_IMM8, 0                         }, { V_INT32, 0                        } } END
     TEST_INSTR INSTR_GET_MOD_GLOBAL, { V_EXCEPT                        }, { { V_IMM8, 127                       }, { V_INT32, 0                        } } END
     TEST_INSTR INSTR_GET_MOD_GLOBAL, { V_EXCEPT                        }, { { V_IMM8, 0                         }, { V_INT32, 1000                     } } END
+
+    /*========================================================================*/
+    /* GET.MOD.GLOBAL.OPT */
+    TEST_INSTR INSTR_GET_MOD_GLOBAL_OPT, { V_INTEGER, 42               }, { { V_IMM8, 0                         }, { V_STR0, 0, 0, "fortytwo"          } } END
+    TEST_INSTR INSTR_GET_MOD_GLOBAL_OPT, { V_EXCEPT                    }, { { V_IMM8, 0                         }, { V_INT32, 0                        } } END
+    TEST_INSTR INSTR_GET_MOD_GLOBAL_OPT, { V_EXCEPT                    }, { { V_IMM8, 127                       }, { V_INT32, 0                        } } END
+    TEST_INSTR INSTR_GET_MOD_GLOBAL_OPT, { V_EXCEPT                    }, { { V_IMM8, 0                         }, { V_INT32, 1000                     } } END
 
     /*========================================================================*/
     /* GET.MOD.ELEM */

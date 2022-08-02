@@ -1178,10 +1178,10 @@ part of the outermost `MemberExpression`.
 
     UnnamedArgument ::= RHSExpression [ "..." ]
 
-    Refinement ::= ( "[" RHSExpression "]" )
+    Refinement ::= ( "[" [ "?" ] RHSExpression "]" )
                  | ( "[" [ RHSExpression ] ":" [ RHSExpression ] "]" )
-                 | ( "." Identifier )
-                 | ( "." StringLiteral )
+                 | ( "." [ "?" ] Identifier )
+                 | ( "." [ "?" ] StringLiteral )
 
 To avoid ambiguities, the opening square bracket `[` cannot be the first
 non-whitespace, non-comment token on the line if the `Refinement` is

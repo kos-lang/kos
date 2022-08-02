@@ -1659,6 +1659,12 @@ static int refinement_identifier(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
     TRY(next_token(parser));
 
+    if (parser->token.op == OT_LOGTRI) {
+        (*ret)->type = NT_OPT_REFINEMENT;
+
+        TRY(next_token(parser));
+    }
+
     if (parser->token.type == TT_STRING_OPEN) {
         parser->error_str = str_err_expected_string;
         error = KOS_ERROR_PARSE_FAILED;
@@ -1690,6 +1696,12 @@ static int refinement_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
     node = KOS_NULL;
 
     TRY(next_token(parser));
+
+    if (parser->token.op == OT_LOGTRI) {
+        (*ret)->type = NT_OPT_REFINEMENT;
+
+        TRY(next_token(parser));
+    }
 
     if (parser->token.sep == ST_SQUARE_CLOSE) {
         parser->error_str = str_err_expected_expression;

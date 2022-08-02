@@ -1111,6 +1111,8 @@ static int visit_node(KOS_COMP_UNIT *program,
             /* fall through */
         case NT_REFINEMENT:
             /* fall through */
+        case NT_OPT_REFINEMENT:
+            /* fall through */
         case NT_SLICE:
             /* fall through */
         case NT_INVOCATION:

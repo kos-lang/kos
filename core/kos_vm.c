@@ -1741,7 +1741,9 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(GET_MOD_GLOBAL): { /* <r.dest>, <uimm.mod.idx>, <r.glob> */
+            BEGIN_INSTRUCTION(GET_MOD_GLOBAL):       /* <r.dest>, <uimm.mod.idx>, <r.glob> */
+                /* fall through */
+            BEGIN_INSTRUCTION(GET_MOD_GLOBAL_OPT): { /* <r.dest>, <uimm.mod.idx>, <r.glob> */
                 PROF_ZONE_N(INSTR, "GET.MOD.GLOBAL")
                 const KOS_IMM  mod_idx    = kos_load_uimm(bytecode + 2);
                 const unsigned rglob      = bytecode[2 + mod_idx.size];
@@ -1761,13 +1763,24 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 glob_idx = KOS_get_property_shallow(ctx,
                                                     OBJPTR(MODULE, module_obj)->global_names,
                                                     read_reg(stack_frame, rglob));
-                TRY_OBJID(glob_idx);
 
-                assert(IS_SMALL_INT(glob_idx));
+                if (IS_BAD_PTR(glob_idx)) {
 
-                out = KOS_array_read(ctx, OBJPTR(MODULE, module_obj)->globals,
-                                     (int)GET_SMALL_INT(glob_idx));
-                TRY_OBJID(out);
+                    if (instr == INSTR_GET_MOD_GLOBAL ||
+                        GET_OBJ_TYPE(read_reg(stack_frame, rglob)) != OBJ_STRING)
+
+                        goto cleanup;
+
+                    KOS_clear_exception(ctx);
+                    out = KOS_VOID;
+                }
+                else {
+                    assert(IS_SMALL_INT(glob_idx));
+
+                    out = KOS_array_read(ctx, OBJPTR(MODULE, module_obj)->globals,
+                                         (int)GET_SMALL_INT(glob_idx));
+                    TRY_OBJID(out);
+                }
 
                 assert(rdest < num_regs);
                 write_reg(stack_frame, rdest, out);
@@ -1822,7 +1835,9 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(GET): { /* <r.dest>, <r.src>, <r.prop> */
+            BEGIN_INSTRUCTION(GET):       /* <r.dest>, <r.src>, <r.prop> */
+                /* fall through */
+            BEGIN_INSTRUCTION(GET_OPT): { /* <r.dest>, <r.src>, <r.prop> */
                 PROF_ZONE_N(INSTR, "GET")
                 const unsigned rsrc  = bytecode[2];
                 const unsigned rprop = bytecode[3];
@@ -1852,12 +1867,25 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                         out = read_buffer(ctx, src, (int)idx);
                     else
                         out = KOS_array_read(ctx, src, (int)idx);
+
+                    if (IS_BAD_PTR(out) && instr == INSTR_GET_OPT) {
+                        KOS_clear_exception(ctx);
+                        out = KOS_VOID;
+                    }
                 }
                 else {
                     out = KOS_get_property(ctx, src, prop);
-                    TRY_OBJID(out);
 
-                    if (GET_OBJ_TYPE(out) == OBJ_DYNAMIC_PROP) {
+                    if (IS_BAD_PTR(out)) {
+                        if (instr == INSTR_GET_OPT &&
+                            GET_OBJ_TYPE(read_reg(stack_frame, rprop)) == OBJ_STRING) {
+
+                            KOS_clear_exception(ctx);
+                            out = KOS_VOID;
+                        }
+                    }
+
+                    if ( ! IS_BAD_PTR(out) && GET_OBJ_TYPE(out) == OBJ_DYNAMIC_PROP) {
                         store_instr_offs(stack_frame, bytecode);
 
                         out = OBJPTR(DYNAMIC_PROP, out)->getter;
@@ -1876,7 +1904,9 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(GET_ELEM8): { /* <r.dest>, <r.src>, <int8> */
+            BEGIN_INSTRUCTION(GET_ELEM8):       /* <r.dest>, <r.src>, <int8> */
+                /* fall through */
+            BEGIN_INSTRUCTION(GET_ELEM8_OPT): { /* <r.dest>, <r.src>, <int8> */
                 PROF_ZONE_N(INSTR, "GET.ELEM8")
                 const unsigned rsrc = bytecode[2];
                 const int32_t  idx  = (int8_t)bytecode[3];
@@ -1901,7 +1931,14 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 else
                     RAISE_EXCEPTION_STR(str_err_not_indexable);
 
-                TRY_OBJID(out);
+                if (IS_BAD_PTR(out)) {
+                    if (instr == INSTR_GET_ELEM8_OPT) {
+                        KOS_clear_exception(ctx);
+                        out = KOS_VOID;
+                    }
+                    else
+                        goto cleanup;
+                }
 
                 assert(rdest < num_regs);
                 write_reg(stack_frame, rdest, out);
@@ -1989,7 +2026,9 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
                 NEXT_INSTRUCTION;
             }
 
-            BEGIN_INSTRUCTION(GET_PROP8): { /* <r.dest>, <r.src>, <uint8.str.idx> */
+            BEGIN_INSTRUCTION(GET_PROP8):       /* <r.dest>, <r.src>, <uint8.str.idx> */
+                /* fall through */
+            BEGIN_INSTRUCTION(GET_PROP8_OPT): { /* <r.dest>, <r.src>, <uint8.str.idx> */
                 PROF_ZONE_N(INSTR, "GET.PROP8")
                 const unsigned rsrc = bytecode[2];
                 const uint8_t  idx  = bytecode[3];
@@ -2005,7 +2044,15 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
 
                 obj = read_reg(stack_frame, rsrc);
                 out = KOS_get_property(ctx, obj, prop);
-                TRY_OBJID(out);
+
+                if (IS_BAD_PTR(out)) {
+                    if (instr == INSTR_GET_PROP8_OPT) {
+                        KOS_clear_exception(ctx);
+                        out = KOS_VOID;
+                    }
+                    else
+                        goto cleanup;
+                }
 
                 if (GET_OBJ_TYPE(out) == OBJ_DYNAMIC_PROP) {
                     store_instr_offs(stack_frame, bytecode);

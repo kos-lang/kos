@@ -2252,11 +2252,14 @@ cleanup:
 }
 
 static int gen_get_prop_instr(KOS_COMP_UNIT *program,
+                              KOS_NODE_TYPE  ref_type,
                               int            rdest,
                               int            robj,
                               int            str_idx)
 {
     int error;
+
+    assert(ref_type == NT_REFINEMENT || ref_type == NT_OPT_REFINEMENT);
 
     if (str_idx > 255) {
         KOS_REG *tmp   = KOS_NULL;
@@ -2269,13 +2272,21 @@ static int gen_get_prop_instr(KOS_COMP_UNIT *program,
 
         TRY(gen_instr2(program, INSTR_LOAD_CONST, rprop, str_idx));
 
-        TRY(gen_instr3(program, INSTR_GET, rdest, robj, rprop));
+        TRY(gen_instr3(program,
+                       ref_type == NT_REFINEMENT ? INSTR_GET : INSTR_GET_OPT,
+                       rdest,
+                       robj,
+                       rprop));
 
         if (tmp)
             free_reg(program, tmp);
     }
     else
-        error = gen_instr3(program, INSTR_GET_PROP8, rdest, robj, str_idx);
+        error = gen_instr3(program,
+                           ref_type == NT_REFINEMENT ? INSTR_GET_PROP8 : INSTR_GET_PROP8_OPT,
+                           rdest,
+                           robj,
+                           str_idx);
 
 cleanup:
     return error;
@@ -2356,7 +2367,7 @@ static int is_for_range(KOS_COMP_UNIT      *program,
             return 0;
     }
     /* Detect reference via base.range() */
-    else if (node->type == NT_REFINEMENT) {
+    else if (node->type == NT_REFINEMENT || node->type == NT_OPT_REFINEMENT) {
 
         const KOS_AST_NODE *ref_node = node->children;
         const KOS_VAR      *var;
@@ -3424,11 +3435,14 @@ static int get_global_idx(const char *global_name,
 
 static int refinement_module(KOS_COMP_UNIT      *program,
                              KOS_VAR            *module_var,
+                             KOS_NODE_TYPE       ref_type,
                              const KOS_AST_NODE *node, /* the second child of the refinement node */
                              KOS_REG           **reg)
 {
-    int        error;
     KOS_VECTOR cstr;
+    int        error;
+
+    assert(ref_type == NT_REFINEMENT || ref_type == NT_OPT_REFINEMENT);
 
     KOS_vector_init(&cstr);
 
@@ -3448,15 +3462,31 @@ static int refinement_module(KOS_COMP_UNIT      *program,
                                         length,
                                         get_global_idx,
                                         &global_idx);
-        if (error && (error != KOS_ERROR_OUT_OF_MEMORY)) {
-            program->error_token = &node->token;
-            program->error_str   = str_err_no_such_module_variable;
-            RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
+        if (error != KOS_ERROR_OUT_OF_MEMORY) {
+
+            if (error) {
+
+                if (ref_type == NT_REFINEMENT) {
+                    program->error_token = &node->token;
+                    program->error_str   = str_err_no_such_module_variable;
+                    RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
+                }
+
+                TRY(gen_reg(program, reg));
+
+                TRY(gen_instr1(program, INSTR_LOAD_VOID, (*reg)->reg));
+            }
+            else {
+
+                TRY(gen_reg(program, reg));
+
+                TRY(gen_instr3(program,
+                               INSTR_GET_MOD_ELEM,
+                               (*reg)->reg,
+                               module_var->array_idx,
+                               global_idx));
+            }
         }
-
-        TRY(gen_reg(program, reg));
-
-        TRY(gen_instr3(program, INSTR_GET_MOD_ELEM, (*reg)->reg, module_var->array_idx, global_idx));
     }
     else {
 
@@ -3467,7 +3497,11 @@ static int refinement_module(KOS_COMP_UNIT      *program,
 
         TRY(gen_dest_reg(program, reg, prop));
 
-        TRY(gen_instr3(program, INSTR_GET_MOD_GLOBAL, (*reg)->reg, module_var->array_idx, prop->reg));
+        TRY(gen_instr3(program,
+                       ref_type == NT_REFINEMENT ? INSTR_GET_MOD_GLOBAL : INSTR_GET_MOD_GLOBAL_OPT,
+                       (*reg)->reg,
+                       module_var->array_idx,
+                       prop->reg));
 
         if (*reg != prop)
             free_reg(program, prop);
@@ -3514,13 +3548,16 @@ static int maybe_int(const KOS_AST_NODE *node,
 }
 
 static int refinement_object(KOS_COMP_UNIT      *program,
+                             KOS_NODE_TYPE       ref_type,
                              const KOS_AST_NODE *node,
                              KOS_REG           **reg, /* the first child of the refinement node */
                              KOS_REG           **out_obj)
 {
-    int      error;
-    KOS_REG *obj = KOS_NULL;
     int64_t  idx;
+    KOS_REG *obj = KOS_NULL;
+    int      error;
+
+    assert(ref_type == NT_REFINEMENT || ref_type == NT_OPT_REFINEMENT);
 
     if (node->type == NT_SUPER_PROTO_LITERAL)
         obj = super_prototype(program, node);
@@ -3554,11 +3591,15 @@ static int refinement_object(KOS_COMP_UNIT      *program,
         int str_idx;
         TRY(gen_str(program, &node->token, &str_idx));
 
-        TRY(gen_get_prop_instr(program, (*reg)->reg, obj->reg, str_idx));
+        TRY(gen_get_prop_instr(program, ref_type, (*reg)->reg, obj->reg, str_idx));
     }
     else if (maybe_int(node, &idx) && is_sint8(idx)) {
 
-        TRY(gen_instr3(program, INSTR_GET_ELEM8, (*reg)->reg, obj->reg, (int)idx));
+        TRY(gen_instr3(program,
+                       ref_type == NT_REFINEMENT ? INSTR_GET_ELEM8 : INSTR_GET_ELEM8_OPT,
+                       (*reg)->reg,
+                       obj->reg,
+                       (int)idx));
     }
     else {
 
@@ -3567,7 +3608,11 @@ static int refinement_object(KOS_COMP_UNIT      *program,
         TRY(visit_node(program, node, &prop));
         assert(prop);
 
-        TRY(gen_instr3(program, INSTR_GET, (*reg)->reg, obj->reg, prop->reg));
+        TRY(gen_instr3(program,
+                       ref_type == NT_REFINEMENT ? INSTR_GET : INSTR_GET_OPT,
+                       (*reg)->reg,
+                       obj->reg,
+                       prop->reg));
 
         free_reg(program, prop);
     }
@@ -3584,8 +3629,9 @@ static int refinement(KOS_COMP_UNIT      *program,
                       KOS_REG           **reg,
                       KOS_REG           **out_obj)
 {
-    int      error;
-    KOS_VAR *module_var = KOS_NULL;
+    KOS_VAR            *module_var = KOS_NULL;
+    const KOS_NODE_TYPE ref_type = node->type;
+    int                 error;
 
     node = node->children;
     assert(node);
@@ -3601,10 +3647,10 @@ static int refinement(KOS_COMP_UNIT      *program,
         assert(node);
         assert(!node->next);
 
-        error = refinement_module(program, module_var, node, reg);
+        error = refinement_module(program, module_var, ref_type, node, reg);
     }
     else
-        error = refinement_object(program, node, reg, out_obj);
+        error = refinement_object(program, ref_type, node, reg, out_obj);
 
     return error;
 }
@@ -3618,7 +3664,7 @@ static int maybe_refinement(KOS_COMP_UNIT      *program,
 
     assert(out_obj);
 
-    if (node->type == NT_REFINEMENT)
+    if (node->type == NT_REFINEMENT || node->type == NT_OPT_REFINEMENT)
         error = refinement(program, node, reg, out_obj);
     else {
         error    = visit_node(program, node, reg);
@@ -3773,7 +3819,7 @@ static int gen_load_array(KOS_COMP_UNIT      *program,
     TRY(gen_reg(program, &resize_fun));
     TRY(gen_reg(program, &const_size));
 
-    TRY(gen_get_prop_instr(program, resize_fun->reg, operand1, str_idx));
+    TRY(gen_get_prop_instr(program, NT_REFINEMENT, resize_fun->reg, operand1, str_idx));
 
     numeric.type = KOS_INTEGER_VALUE;
     numeric.u.i  = operand2;
@@ -3930,7 +3976,7 @@ static int super_invocation(KOS_COMP_UNIT      *program,
             apply_fun = *reg;
     }
 
-    TRY(gen_get_prop_instr(program, apply_fun->reg, base_ctor_reg->reg, str_idx));
+    TRY(gen_get_prop_instr(program, NT_REFINEMENT, apply_fun->reg, base_ctor_reg->reg, str_idx));
 
     assert(program->cur_frame->this_reg);
     TRY(gen_instr2(program, INSTR_MOVE, args_regs[0]->reg, program->cur_frame->this_reg->reg));
@@ -4170,7 +4216,7 @@ static int async_op(KOS_COMP_UNIT      *program,
     if ( ! *reg)
         *reg = async;
 
-    TRY(gen_get_prop_instr(program, async->reg, fun->reg, str_idx));
+    TRY(gen_get_prop_instr(program, NT_REFINEMENT, async->reg, fun->reg, str_idx));
 
     if ( ! obj)
         TRY(gen_instr1(program, INSTR_LOAD_VOID, argn[0]->reg));
@@ -4554,7 +4600,7 @@ static int delete_op(KOS_COMP_UNIT      *program,
 
     assert(node->children);
 
-    if (node->children->type != NT_REFINEMENT) {
+    if (node->children->type != NT_REFINEMENT && node->children->type != NT_OPT_REFINEMENT) {
         program->error_token = &node->children->token;
         program->error_str   = str_err_expected_refinement;
         RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
@@ -4880,7 +4926,7 @@ static int assign_member(KOS_COMP_UNIT      *program,
 
             TRY(gen_reg(program, &tmp_reg));
 
-            TRY(gen_get_prop_instr(program, tmp_reg->reg, obj->reg, str_idx));
+            TRY(gen_get_prop_instr(program, NT_REFINEMENT, tmp_reg->reg, obj->reg, str_idx));
 
             TRY(gen_instr3(program, assign_instr(assg_op), tmp_reg->reg, tmp_reg->reg, src->reg));
 
@@ -5042,7 +5088,7 @@ static int assign_slice(KOS_COMP_UNIT      *program,
 
     TRY(gen_reg(program, &func_reg));
 
-    TRY(gen_get_prop_instr(program, func_reg->reg, obj_reg->reg, str_idx));
+    TRY(gen_get_prop_instr(program, NT_REFINEMENT, func_reg->reg, obj_reg->reg, str_idx));
 
     TRY(gen_instr5(program, INSTR_CALL_N, func_reg->reg, func_reg->reg, obj_reg->reg, argn[0]->reg, 3));
 
@@ -6378,6 +6424,8 @@ static int visit_node(KOS_COMP_UNIT      *program,
             error = try_stmt(program, node);
             break;
         case NT_REFINEMENT:
+            /* fall through */
+        case NT_OPT_REFINEMENT:
             error = refinement(program, node, reg, KOS_NULL);
             break;
         case NT_SLICE:
