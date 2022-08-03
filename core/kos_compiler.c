@@ -3630,7 +3630,7 @@ static int refinement(KOS_COMP_UNIT      *program,
                       KOS_REG           **out_obj)
 {
     KOS_VAR            *module_var = KOS_NULL;
-    const KOS_NODE_TYPE ref_type = node->type;
+    const KOS_NODE_TYPE ref_type   = (KOS_NODE_TYPE)node->type;
     int                 error;
 
     node = node->children;
