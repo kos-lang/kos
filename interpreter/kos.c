@@ -20,6 +20,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <locale.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -65,6 +66,8 @@ static int is_option(const char *arg,
                      const char *short_opt,
                      const char *long_opt);
 
+static int get_exit_code(KOS_OBJ_ID ret);
+
 static void print_usage(void);
 
 static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf);
@@ -73,17 +76,18 @@ int main(int argc, char *argv[])
 {
     PROF_ZONE(MODULE)
 
+    KOS_INSTANCE inst;
+    KOS_CONTEXT  ctx;
+    KOS_VECTOR   buf;
     int          error       = KOS_SUCCESS;
     int          inst_ok     = 0;
     int          is_script   = 0;
     int          i_module    = 0;
     int          i_first_arg = 0;
     int          interactive = -1;
+    int          exit_code   = 0;
     uint32_t     mem_size    = 0;
     uint32_t     flags       = 0;
-    KOS_INSTANCE inst;
-    KOS_CONTEXT  ctx;
-    KOS_VECTOR   buf;
 
     KOS_init_debug_output();
 
@@ -282,10 +286,12 @@ int main(int argc, char *argv[])
             module_obj = KOS_destroy_top_local(ctx, &module);
         }
 
-        if ( ! error) {
+        if ( ! error && ! IS_BAD_PTR(module_obj)) {
             const KOS_OBJ_ID ret = KOS_module_run_function(ctx, module_obj, KOS_CONST_ID(str_main), KOS_FUNC_OPTIONAL);
             if (IS_BAD_PTR(ret))
                 error = KOS_ERROR_EXCEPTION;
+            else
+                exit_code = get_exit_code(ret);
         }
     }
     else {
@@ -304,11 +310,13 @@ int main(int argc, char *argv[])
 
             ret = KOS_repl(ctx, str_stdin, KOS_RUN_STDIN | KOS_IMPORT_BASE, &module_obj, KOS_NULL, 0);
 
-            if ( ! IS_BAD_PTR(ret))
+            if ( ! IS_BAD_PTR(ret) && ! IS_BAD_PTR(module_obj))
                 ret = KOS_module_run_function(ctx, module_obj, KOS_CONST_ID(str_main), KOS_FUNC_OPTIONAL);
 
             if (IS_BAD_PTR(ret))
                 error = KOS_ERROR_EXCEPTION;
+            else
+                exit_code = get_exit_code(ret);
         }
     }
 
@@ -325,7 +333,10 @@ cleanup:
 
     KOS_vector_destroy(&buf);
 
-    return error ? EXIT_FAILURE : EXIT_SUCCESS;
+    if (error)
+        exit_code = 1;
+
+    return exit_code;
 }
 
 static int is_option(const char *arg,
@@ -352,6 +363,32 @@ static int is_option(const char *arg,
         return ! strcmp(arg + 1, short_opt);
 
     return 0;
+}
+
+static int get_exit_code(KOS_OBJ_ID ret)
+{
+    int64_t value;
+
+    assert( ! IS_BAD_PTR(ret));
+
+    if (IS_SMALL_INT(ret))
+        value = GET_SMALL_INT(ret);
+
+    else switch (READ_OBJ_TYPE(ret)) {
+
+        case OBJ_INTEGER:
+            value = OBJPTR(INTEGER, ret)->value;
+            break;
+
+        case OBJ_FLOAT:
+            value = (int64_t)floor(OBJPTR(FLOAT, ret)->value);
+            break;
+
+        default:
+            return 0;
+    }
+
+    return (value < 0 || value > 255) ? 1 : (int)value;
 }
 
 static void print_usage(void)

@@ -479,3 +479,38 @@ fi
 find_in_output "^0: $"
 find_in_output "^1: x y$"
 find_in_output "^2: z w$"
+
+##############################################################################
+# Exit code from main() passed via -c
+
+EC=0
+"$KOS" -c 'public fun main { return 42 }' || EC=$?
+
+if [ $EC -ne 42 ]; then
+    echo "$LINENO: Error: Expected exit code 42 but got $EC" >&2
+    exit 1
+fi
+
+##############################################################################
+# Exit code from main() passed via stdin
+
+EC=0
+echo 'public fun main { return 43 }' | "$KOS" || EC=$?
+
+if [ $EC -ne 43 ]; then
+    echo "$LINENO: Error: Expected exit code 43 but got $EC" >&2
+    exit 1
+fi
+
+##############################################################################
+# Empty input
+
+echo '' | "$KOS" | remove_cr > "$OUTPUT"
+
+COUNT=$(wc -l < "$OUTPUT")
+
+if [ $COUNT -ne 0 ]; then
+    echo "$LINENO: Error: Unexpected output" >&2
+    cat "$OUTPUT"
+    exit 1
+fi
