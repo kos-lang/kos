@@ -1529,10 +1529,18 @@ static KOS_OBJ_ID set_file_size(KOS_CONTEXT ctx,
 
     TRY(KOS_get_integer(ctx, arg, &size));
 
-    if ((size < 0) || (size != (int64_t)(off_t)size)) {
+#ifdef _WIN32
+#   define BAD_SIZE_CHECK(size) 0
+#else
+#   define BAD_SIZE_CHECK(size) ((size) != (int64_t)(off_t)(size))
+#endif
+
+    if ((size < 0) || BAD_SIZE_CHECK(size)) {
         KOS_raise_printf(ctx, "invalid file size: %" PRId64, size);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
+
+#undef BAD_SIZE_CHECK
 
     KOS_init_local_with(ctx, &this_, this_obj);
 
