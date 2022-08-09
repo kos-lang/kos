@@ -618,11 +618,10 @@ do {
 
         # Shrink file
 
-        f.seek(512)
         assert f.resize(512) == f
 
         assert f.size     == 512
-        assert f.position == 512
+        assert f.position == 1024
 
         const one_two_three_512 = base.buffer(base.range(1024).map(x => x % 256))
         f.seek(0)

@@ -1546,14 +1546,24 @@ static KOS_OBJ_ID set_file_size(KOS_CONTEXT ctx,
 
     KOS_suspend_context(ctx);
 
+    if (fflush(get_file(file_holder))) {
+
+        const int stored_errno = errno;
+
+        KOS_resume_context(ctx);
+
+        KOS_raise_errno_value(ctx, "fflush", stored_errno);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+
 #ifdef _WIN32
     {
         HANDLE        handle = (HANDLE)_get_osfhandle(_fileno(get_file(file_holder)));
         LARGE_INTEGER new_size;
         LARGE_INTEGER old_pos;
 
-        new_size->QuadPart = 0;
-        old_pos->QuadPart  = 0;
+        new_size.QuadPart = 0;
+        old_pos.QuadPart  = 0;
 
         if ( ! SetFilePointerEx(handle, new_size, &old_pos, FILE_CURRENT)) {
             const DWORD last_error = GetLastError();
@@ -1562,7 +1572,7 @@ static KOS_OBJ_ID set_file_size(KOS_CONTEXT ctx,
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
 
-        new_size->QuadPart = size;
+        new_size.QuadPart = size;
 
         if ( ! SetFilePointerEx(handle, new_size, KOS_NULL, FILE_BEGIN)) {
             const DWORD last_error = GetLastError();
