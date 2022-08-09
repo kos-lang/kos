@@ -1188,6 +1188,7 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
         memset(&basic_info, 0, sizeof(basic_info));
         memset(&std_info, 0, sizeof(std_info));
         memset(&storage_info, 0, sizeof(storage_info));
+        memset(&id_info, 0, sizeof(id_info));
 
         KOS_suspend_context(ctx);
 
