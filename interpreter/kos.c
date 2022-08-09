@@ -66,7 +66,7 @@ static int is_option(const char *arg,
                      const char *short_opt,
                      const char *long_opt);
 
-static int get_exit_code(KOS_OBJ_ID ret);
+static int get_exit_code(KOS_CONTEXT ctx, KOS_OBJ_ID ret);
 
 static void print_usage(void);
 
@@ -291,7 +291,7 @@ int main(int argc, char *argv[])
             if (IS_BAD_PTR(ret))
                 error = KOS_ERROR_EXCEPTION;
             else
-                exit_code = get_exit_code(ret);
+                exit_code = get_exit_code(ctx, ret);
         }
     }
     else {
@@ -316,7 +316,7 @@ int main(int argc, char *argv[])
             if (IS_BAD_PTR(ret))
                 error = KOS_ERROR_EXCEPTION;
             else
-                exit_code = get_exit_code(ret);
+                exit_code = get_exit_code(ctx, ret);
         }
     }
 
@@ -365,27 +365,15 @@ static int is_option(const char *arg,
     return 0;
 }
 
-static int get_exit_code(KOS_OBJ_ID ret)
+static int get_exit_code(KOS_CONTEXT ctx, KOS_OBJ_ID ret)
 {
-    int64_t value;
+    int64_t value = 0;
 
     assert( ! IS_BAD_PTR(ret));
 
-    if (IS_SMALL_INT(ret))
-        value = GET_SMALL_INT(ret);
-
-    else switch (READ_OBJ_TYPE(ret)) {
-
-        case OBJ_INTEGER:
-            value = OBJPTR(INTEGER, ret)->value;
-            break;
-
-        case OBJ_FLOAT:
-            value = (int64_t)floor(OBJPTR(FLOAT, ret)->value);
-            break;
-
-        default:
-            return 0;
+    if (KOS_get_integer(ctx, ret, &value)) {
+        KOS_clear_exception(ctx);
+        return 0;
     }
 
     return (value < 0 || value > 255) ? 1 : (int)value;
