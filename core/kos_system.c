@@ -625,6 +625,7 @@ KOS_OBJ_ID kos_stat(KOS_CONTEXT ctx, struct stat *st)
     info.o = KOS_new_object(ctx);
     TRY_OBJID(info.o);
 
+    SET_INT_PROPERTY("dev",        st->st_dev);
     SET_INT_PROPERTY("flags",      st->st_mode);
     SET_INT_PROPERTY("hard_links", st->st_nlink);
     SET_INT_PROPERTY("inode",      st->st_ino);

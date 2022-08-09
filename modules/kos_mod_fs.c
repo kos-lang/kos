@@ -145,6 +145,7 @@ static int64_t get_epoch_time_us(const FILETIME *time)
  *  * block_size - ideal block size for reading/writing
  *  * flags      - bitflags representing OS-specific file attributes
  *  * inode      - inode number
+ *  * dev        - id of the device where the file is stored
  *  * hard_links - number of hard links
  *  * uid        - id of the owner
  *  * gid        - id of the owning group
@@ -156,7 +157,7 @@ static int64_t get_epoch_time_us(const FILETIME *time)
  * The precision of time properties is OS-dependent.  For example,
  * on POSIX-compatible OS-es these properties have 1 second precision.
  *
- * On Windows, the `inode`, `uid`, `gid`, `blocks`, `block_size` and `hard_links` properties are
+ * On Windows, the `inode`, `dev`, `uid`, `gid`, `blocks`, `block_size` and `hard_links` properties are
  * not produced.
  *
  * The `device` property is only produced for device objects on some

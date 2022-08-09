@@ -164,6 +164,7 @@ Table of Contents
       * [file.prototype.read\_line()](#fileprototyperead_line)
       * [file.prototype.read\_lines()](#fileprototyperead_lines)
       * [file.prototype.read\_some()](#fileprototyperead_some)
+      * [file.prototype.resize()](#fileprototyperesize)
       * [file.prototype.seek()](#fileprototypeseek)
       * [file.prototype.size](#fileprototypesize)
       * [file.prototype.write()](#fileprototypewrite)
@@ -3251,6 +3252,7 @@ The returned object contains the following properties:
  * block_size - ideal block size for reading/writing
  * flags      - bitflags representing OS-specific file attributes
  * inode      - inode number
+ * dev        - id of the device where the file is stored
  * hard_links - number of hard links
  * uid        - id of the owner
  * gid        - id of the owning group
@@ -3262,7 +3264,7 @@ The returned object contains the following properties:
 The precision of time properties is OS-dependent.  For example,
 on POSIX-compatible OS-es these properties have 1 second precision.
 
-On Windows, the `inode`, `uid`, `gid`, `blocks`, `block_size` and `hard_links` properties are
+On Windows, the `inode`, `dev`, `uid`, `gid`, `blocks`, `block_size` and `hard_links` properties are
 not produced.
 
 The `device` property is only produced for device objects on some
@@ -3491,6 +3493,7 @@ The property is an object containing the following properties:
  * block_size - ideal block size for reading/writing
  * flags      - bitflags representing OS-specific file attributes
  * inode      - inode number
+ * dev        - id of the device where the file is stored
  * hard_links - number of hard links
  * uid        - id of the owner
  * gid        - id of the owning group
@@ -3646,6 +3649,22 @@ returned instead of creating a new buffer.
 
 This is a low-level function, `file.prototype.read()` is a better choice
 in most cases.
+
+file.prototype.resize()
+-----------------------
+
+    file.prototype.resize(size)
+
+Resize the file to the desired size.
+
+Returns the file object for file which has been resized.
+
+`size` is the new size of the file.  If `size` is smaller than the current
+file size, data at the end of the file is discareded.  If `size` is greater
+than the current file size, the file is extended with zeroes.
+If `size` is a float, it is converted to integer using floor mode.
+
+Throws an exception if the size is incorrect or if the file cannot be resized.
 
 file.prototype.seek()
 ---------------------

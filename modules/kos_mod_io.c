@@ -20,6 +20,8 @@
 #include "../core/kos_try.h"
 #include <errno.h>
 #include <fcntl.h>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
@@ -49,6 +51,7 @@ KOS_DECLARE_STATIC_CONST_STRING(str_err_too_many_to_read,           "requested r
 KOS_DECLARE_STATIC_CONST_STRING(str_path,                           "path");
 KOS_DECLARE_STATIC_CONST_STRING(str_position,                       "position");
 KOS_DECLARE_STATIC_CONST_STRING(str_read,                           "read");
+KOS_DECLARE_STATIC_CONST_STRING(str_size,                           "size");
 KOS_DECLARE_STATIC_CONST_STRING(str_write,                          "write");
 
 static KOS_OBJ_ID get_file_pos(KOS_CONTEXT ctx,
@@ -801,7 +804,6 @@ cleanup:
  * This is a low-level function, `file.prototype.read()` is a better choice
  * in most cases.
  */
-KOS_DECLARE_STATIC_CONST_STRING(str_size,   "size");
 KOS_DECLARE_STATIC_CONST_STRING(str_buffer, "buffer");
 
 static const KOS_CONVERT read_some_args[3] = {
@@ -1125,6 +1127,7 @@ static int64_t get_epoch_time_us(const LARGE_INTEGER *time)
  *  * block_size - ideal block size for reading/writing
  *  * flags      - bitflags representing OS-specific file attributes
  *  * inode      - inode number
+ *  * dev        - id of the device where the file is stored
  *  * hard_links - number of hard links
  *  * uid        - id of the owner
  *  * gid        - id of the owning group
@@ -1170,9 +1173,11 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
         FILE_BASIC_INFO    basic_info;
         FILE_STANDARD_INFO std_info;
         FILE_STORAGE_INFO  storage_info;
+        FILE_ID_INFO       id_info;
         DWORD              last_error   = 0;
         BOOL               ok           = FALSE;
         BOOL               have_storage = FALSE;
+        BOOL               have_id      = FALSE;
 
         KOS_DECLARE_STATIC_CONST_STRING(str_type,          "type");
         KOS_DECLARE_STATIC_CONST_STRING(str_type_file,     "file");
@@ -1202,6 +1207,10 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
                 have_storage = GetFileInformationByHandleEx(handle, FileStorageInfo,
                                                             &storage_info, sizeof(storage_info));
 
+            if (ok)
+                have_id = GetFileInformationByHandleEx(handle, FileIdInfo,
+                                                       &id_info, sizeof(id_info));
+
             if ( ! ok)
                 last_error = GetLastError();
         }
@@ -1210,7 +1219,7 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
 
         if ( ! ok) {
             if (last_error)
-                KOS_raise_last_error(ctx, KOS_NULL, last_error);
+                KOS_raise_last_error(ctx, "GetFileInformationByHandleEx", last_error);
             else
                 KOS_raise_exception(ctx, KOS_CONST_ID(str_err_file_stat));
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
@@ -1218,10 +1227,13 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
 
         if ( ! have_storage)
             storage_info.LogicalBytesPerSector = 1;
+        if ( ! have_id)
+            id_info.VolumeSerialNumber = 0;
 
         info.o = KOS_new_object(ctx);
         TRY_OBJID(info.o);
 
+        SET_INT_PROPERTY("dev",        id_info.VolumeSerialNumber);
         SET_INT_PROPERTY("flags",      basic_info.FileAttributes);
         SET_INT_PROPERTY("hard_links", std_info.NumberOfLinks);
         SET_INT_PROPERTY("size",       std_info.EndOfFile.QuadPart);
@@ -1291,7 +1303,8 @@ static KOS_OBJ_ID get_file_size(KOS_CONTEXT ctx,
     {
         HANDLE             handle;
         FILE_STANDARD_INFO std_info;
-        BOOL               ok       = FALSE;
+        DWORD              last_error = 0;
+        BOOL               ok         = FALSE;
 
         KOS_DECLARE_STATIC_CONST_STRING(str_err_file_stat, "unable to obtain information about file");
 
@@ -1307,10 +1320,18 @@ static KOS_OBJ_ID get_file_size(KOS_CONTEXT ctx,
             ok = GetFileInformationByHandleEx(handle, FileStandardInfo,
                                               &std_info, sizeof(std_info));
 
+        if ( ! ok)
+            last_error = GetLastError();
+
         KOS_resume_context(ctx);
 
-        if ( ! ok)
-            RAISE_EXCEPTION_STR(str_err_file_stat);
+        if ( ! ok) {
+            if (last_error)
+                KOS_raise_last_error(ctx, "GetFileInformationByHandleEx", last_error);
+            else
+                KOS_raise_exception(ctx, KOS_CONST_ID(str_err_file_stat));
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
 
         size = (int64_t)std_info.EndOfFile.QuadPart;
     }
@@ -1458,6 +1479,112 @@ static KOS_OBJ_ID set_file_pos(KOS_CONTEXT ctx,
         KOS_raise_errno_value(ctx, "fseek", stored_errno);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
+
+    KOS_resume_context(ctx);
+
+    this_obj = KOS_destroy_top_local(ctx, &this_);
+
+cleanup:
+    release_file(file_holder);
+
+    return error ? KOS_BADPTR : this_obj;
+}
+
+/* @item io file.prototype.resize()
+ *
+ *     file.prototype.resize(size)
+ *
+ * Resize the file to the desired size.
+ *
+ * Returns the file object for file which has been resized.
+ *
+ * `size` is the new size of the file.  If `size` is smaller than the current
+ * file size, data at the end of the file is discareded.  If `size` is greater
+ * than the current file size, the file is extended with zeroes.
+ * If `size` is a float, it is converted to integer using floor mode.
+ *
+ * Throws an exception if the size is incorrect or if the file cannot be resized.
+ */
+static const KOS_CONVERT set_file_size_args[2] = {
+    KOS_DEFINE_MANDATORY_ARG(str_size),
+    KOS_DEFINE_TAIL_ARG()
+};
+
+static KOS_OBJ_ID set_file_size(KOS_CONTEXT ctx,
+                                KOS_OBJ_ID  this_obj,
+                                KOS_OBJ_ID  args_obj)
+{
+    KOS_FILE_HOLDER *file_holder = KOS_NULL;
+    KOS_LOCAL        this_;
+    KOS_OBJ_ID       arg;
+    int64_t          size;
+    int              error       = KOS_SUCCESS;
+
+    assert(KOS_get_array_size(args_obj) >= 1);
+
+    TRY(acquire_file_object(ctx, this_obj, &file_holder));
+
+    arg = KOS_array_read(ctx, args_obj, 0);
+    TRY_OBJID(arg);
+
+    TRY(KOS_get_integer(ctx, arg, &size));
+
+    if ((size < 0) || (size != (int64_t)(off_t)size)) {
+        KOS_raise_printf(ctx, "invalid file size: %" PRId64, size);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+
+    KOS_init_local_with(ctx, &this_, this_obj);
+
+    KOS_suspend_context(ctx);
+
+#ifdef _WIN32
+    {
+        HANDLE        handle = (HANDLE)_get_osfhandle(_fileno(get_file(file_holder)));
+        LARGE_INTEGER new_size;
+        LARGE_INTEGER old_pos;
+
+        new_size->QuadPart = 0;
+        old_pos->QuadPart  = 0;
+
+        if ( ! SetFilePointerEx(handle, new_size, &old_pos, FILE_CURRENT)) {
+            const DWORD last_error = GetLastError();
+            KOS_resume_context(ctx);
+            KOS_raise_last_error(ctx, "SetFilePointerEx - get size", last_error);
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+
+        new_size->QuadPart = size;
+
+        if ( ! SetFilePointerEx(handle, new_size, KOS_NULL, FILE_BEGIN)) {
+            const DWORD last_error = GetLastError();
+            KOS_resume_context(ctx);
+            KOS_raise_last_error(ctx, "SetFilePointerEx - set size", last_error);
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+
+        if ( ! SetEndOfFile(handle)) {
+            const DWORD last_error = GetLastError();
+            KOS_resume_context(ctx);
+            KOS_raise_last_error(ctx, "SetEndOfFile", last_error);
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+
+        if ( ! SetFilePointerEx(handle, old_pos, KOS_NULL, FILE_BEGIN)) {
+            const DWORD last_error = GetLastError();
+            KOS_resume_context(ctx);
+            KOS_raise_last_error(ctx, "SetFilePointerEx - restore position", last_error);
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+    }
+#else
+    if (ftruncate(fileno(get_file(file_holder)), (off_t)size)) {
+        const int stored_errno = errno;
+        KOS_resume_context(ctx);
+        KOS_raise_errno_value(ctx, "fseek", stored_errno);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+#endif
 
     KOS_resume_context(ctx);
 
@@ -1687,6 +1814,7 @@ int kos_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "read_line", read_line,      read_line_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "read_some", read_some,      read_some_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "release",   kos_close,      KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "resize",    set_file_size,  set_file_size_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "seek",      set_file_pos,   set_file_pos_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "write",     kos_write,      KOS_NULL);
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "eof",       get_file_eof,   KOS_NULL);

@@ -576,3 +576,78 @@ do {
     assert fs.remove(name)
     assert ! fs.file_exists(name)
 }
+
+##############################################################################
+# file.resize
+
+do {
+    const name = "./__resize_file"
+    fs.remove(name)
+    assert ! fs.file_exists(name)
+
+    with const f = io.create(name) {
+
+        # Resize empty file to 1024
+
+        assert f.size     == 0
+        assert f.position == 0
+
+        assert f.resize(1024) == f
+
+        assert f.size     == 1024
+        assert f.position == 0
+
+        const zero_1024 = base.buffer(1024)
+        const zero_1024_input = f.read_some(1024)
+
+        assert zero_1024_input.size == 1024
+        assert zero_1024_input == zero_1024
+        assert f.position == 1024
+
+        # Write interesting data
+
+        assert f.seek(0)
+        assert f.position == 0
+
+        const one_two_three_1024 = base.buffer(base.range(1024).map(x => x % 256))
+        f.seek(0)
+        f.write(one_two_three_1024)
+
+        assert f.size     == 1024
+        assert f.position == 1024
+
+        # Shrink file
+
+        assert f.resize(512) == f
+
+        assert f.size     == 512
+        assert f.position == 1024
+
+        const one_two_three_512 = base.buffer(base.range(1024).map(x => x % 256))
+        f.seek(0)
+        const one_two_three_512_input = f.read_some(512)
+
+        assert one_two_three_512_input.size == 512
+        assert one_two_three_512_input == one_two_three_512_input
+        assert f.position == 512
+
+        # Grow file
+
+        f.seek(256)
+        assert f.resize(768)
+
+        assert f.size     == 768
+        assert f.position == 256
+
+        const one_two_three_256_zero_256 = base.buffer(base.range(512).map(x =>
+                                                       (x < 256) ? x : 0))
+        const one_two_three_256_zero_256_input = f.read_some(512)
+
+        assert one_two_three_256_zero_256_input.size == 512
+        assert one_two_three_256_zero_256_input == one_two_three_256_zero_256
+        assert f.position == 768
+    }
+
+    assert fs.remove(name)
+    assert ! fs.file_exists(name)
+}
