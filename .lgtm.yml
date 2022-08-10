@@ -4,4 +4,4 @@ extraction:
             build_command:
                 - grep -c ^proc /proc/cpuinfo
                 - cc --version
-                - make -j $(grep -c ^proc /proc/cpuinfo) build.interpreter build.tests
+                - make -j $(grep -c ^proc /proc/cpuinfo) interpreter tests
