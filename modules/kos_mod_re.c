@@ -1209,10 +1209,12 @@ static void disassemble(struct RE_OBJ *re, const char *re_cstr)
 
         for (; ptr < instr_end; i_arg++) {
             uint16_t operand = *(ptr++);
+            char     pr_buf[11];
 
-            num_printed = snprintf(bytes_buf, bytes_remaining, " %04X", operand);
-
+            num_printed = snprintf(pr_buf, sizeof(pr_buf), " %04X", operand);
             assert(num_printed < bytes_remaining);
+
+            memcpy(bytes_buf, pr_buf, num_printed);
             bytes_buf       += num_printed;
             bytes_remaining -= num_printed;
 
@@ -1220,15 +1222,19 @@ static void disassemble(struct RE_OBJ *re, const char *re_cstr)
                 const unsigned target = (unsigned)offs + ((int)(int16_t)operand * 2);
 
                 assert(target <= re->bytecode_size * 2U);
-                if (target == re->bytecode_size * 2U)
-                    num_printed = snprintf(mnem_buf, mnem_remaining, "END");
+                if (target == re->bytecode_size * 2U) {
+                    static const char end[] = "END";
+                    memcpy(pr_buf, end, sizeof(end) - 1);
+                    num_printed = sizeof(end) - 1;
+                }
                 else
-                    num_printed = snprintf(mnem_buf, mnem_remaining, "%08X", target);
+                    num_printed = snprintf(pr_buf, sizeof(pr_buf), "%08X", target);
             }
             else
-                num_printed = snprintf(mnem_buf, mnem_remaining, "%u", operand);
+                num_printed = snprintf(pr_buf, sizeof(pr_buf), "%u", operand);
 
-            assert(num_printed <= mnem_remaining);
+            assert(num_printed < mnem_remaining);
+            memcpy(mnem_buf, pr_buf, num_printed);
             mnem_buf       += num_printed;
             mnem_remaining -= num_printed;
 
