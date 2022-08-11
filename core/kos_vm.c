@@ -1463,7 +1463,7 @@ static void write_reg(KOS_STACK_FRAME *stack_frame,
 #   define PROF_ZONE_NAME_FUN(func_obj_expr)
 #endif
 
-static KOS_OBJ_ID execute(KOS_CONTEXT ctx)
+static KOS_OBJ_ID execute(KOS_CONTEXT ctx) /* lgtm [cpp/use-of-goto] */
 {
     PROF_ZONE(VM)
 
