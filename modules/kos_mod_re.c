@@ -1223,9 +1223,9 @@ static void disassemble(struct RE_OBJ *re, const char *re_cstr)
 
                 assert(target <= re->bytecode_size * 2U);
                 if (target == re->bytecode_size * 2U) {
-                    static const char end[] = "END";
-                    memcpy(pr_buf, end, sizeof(end) - 1);
-                    num_printed = sizeof(end) - 1;
+                    static const char end_str[] = "END";
+                    memcpy(pr_buf, end_str, sizeof(end_str) - 1);
+                    num_printed = sizeof(end_str) - 1;
                 }
                 else
                     num_printed = snprintf(pr_buf, sizeof(pr_buf), "%08X", target);
