@@ -863,7 +863,7 @@ static KOS_OBJ_ID get_named_args(KOS_CONTEXT ctx,
 
         assert(IS_SMALL_INT(idx_id));
         assert(GET_SMALL_INT(idx_id) >= 0);
-        assert(GET_SMALL_INT(idx_id) < ~0U);
+        assert(GET_SMALL_INT(idx_id) < (intptr_t)(~0U >> 1));
 
         idx = (uint32_t)GET_SMALL_INT(idx_id);
 

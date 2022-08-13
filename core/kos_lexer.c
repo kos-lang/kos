@@ -1042,7 +1042,7 @@ int kos_lexer_next_token(KOS_LEXER          *lexer,
 
     token->begin = begin;
 
-    if (end - begin > 0xFFFFU) {
+    if (end - begin > 0xFFFF) {
         token->length = 0xFFFFU;
         if ( ! error) {
             lexer->error_str = str_err_token_too_long;
