@@ -1675,6 +1675,8 @@ static KOS_OBJ_ID kos_getloadavg(KOS_CONTEXT ctx,
     loadavg[0] = get_windows_load_avg();
     loadavg[1] = loadavg[0];
     loadavg[2] = loadavg[0];
+#elif defined(__HAIKU__)
+    /* Not implemented */
 #else
     i = getloadavg(loadavg, maxavg);
 
