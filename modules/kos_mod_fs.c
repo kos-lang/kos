@@ -243,6 +243,8 @@ static KOS_OBJ_ID info(KOS_CONTEXT ctx,
 
         KOS_suspend_context(ctx);
 
+        errno = 0;
+
         if (KOS_get_bool(follow_obj))
             ret = stat(filename_cstr.buffer, &st);
         else
@@ -315,6 +317,8 @@ static KOS_OBJ_ID remove(KOS_CONTEXT ctx,
         }
     }
 #else
+    errno = 0;
+
     if ( ! unlink(filename_cstr.buffer))
         ret = KOS_TRUE;
     else if (errno == ENOENT)
@@ -391,6 +395,8 @@ static KOS_OBJ_ID cwd(KOS_CONTEXT ctx,
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
 
+        errno = 0;
+
         buf = getcwd(path_cstr.buffer, path_cstr.size);
 
         if (buf)
@@ -450,6 +456,8 @@ static KOS_OBJ_ID kos_chdir(KOS_CONTEXT ctx,
         error = KOS_ERROR_EXCEPTION;
     }
 #else
+    errno = 0;
+
     if (chdir(path_cstr.buffer) == -1) {
         KOS_raise_errno(ctx, "chdir");
         error = KOS_ERROR_EXCEPTION;
@@ -496,6 +504,8 @@ static int make_directory(KOS_CONTEXT ctx,
     struct stat statbuf;
 
     KOS_suspend_context(ctx);
+
+    errno = 0;
 
     if (mkdir(path_cstr, 0777)) {
         const int saved_errno = errno;
@@ -648,6 +658,8 @@ static KOS_OBJ_ID kos_rmdir(KOS_CONTEXT ctx,
         }
     }
 #else
+    errno = 0;
+
     if ( ! rmdir(path_cstr.buffer))
         ret = KOS_TRUE;
     else if (errno == ENOENT)
@@ -841,6 +853,8 @@ static KOS_OBJ_ID find_first_file(KOS_CONTEXT ctx, KOS_VECTOR *path_cstr_vec, KO
         DIR *dir;
 
         KOS_suspend_context(ctx);
+
+        errno = 0;
 
         dir = opendir(path_cstr_vec->buffer);
 

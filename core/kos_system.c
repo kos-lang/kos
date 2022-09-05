@@ -11,6 +11,7 @@
 #include "kos_perf.h"
 #include "kos_try.h"
 #include <assert.h>
+#include <errno.h>
 #include <limits.h>
 #include <memory.h>
 #include <stdio.h>
@@ -88,6 +89,8 @@ static int is_file(const char *filename)
     int         error = KOS_SUCCESS;
     struct stat statbuf;
 
+    errno = 0;
+
     if (0 == stat(filename, &statbuf)) {
         if (S_ISDIR(statbuf.st_mode) || kos_seq_fail())
             error = KOS_ERROR_NOT_FOUND;
@@ -141,6 +144,8 @@ int KOS_load_file(const char  *filename,
     assert( ! file_buf->size);
 
     TRY(is_file(filename));
+
+    errno = 0;
 
     file = kos_seq_fail() ? KOS_NULL :
            fopen(filename, "rb" KOS_FOPEN_CLOEXEC);
@@ -215,6 +220,8 @@ int KOS_load_file(const char  *filename,
     assert( ! file_buf->buffer);
     assert( ! file_buf->size);
 
+    errno = 0;
+
     fd = kos_unix_open(filename, O_RDONLY);
     if (fd == -1)
         RAISE_ERROR(KOS_ERROR_ERRNO);
@@ -259,6 +266,8 @@ int KOS_get_absolute_path(KOS_VECTOR *path)
 {
     int   error;
     char *resolved_path;
+
+    errno = 0;
 
 #ifdef _WIN32
     resolved_path = _fullpath(KOS_NULL, path->buffer, 0);

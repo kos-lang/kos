@@ -1057,6 +1057,8 @@ static void redirect_io(FILE *src_file,
 
     src_fd = fileno(src_file);
 
+    errno = 0;
+
     if (dup2(src_fd, target_fd) == -1)
         send_errno_and_exit(status_fd);
 
@@ -1236,6 +1238,8 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
         int   err_value = 0;
 
         KOS_suspend_context(ctx);
+
+        errno = 0;
 
         /* Create pipe for sending failure status of the child process */
         if ((pipe(exec_status_fd) != 0) || kos_seq_fail()) {
@@ -1443,6 +1447,8 @@ static KOS_OBJ_ID wait_for_child(KOS_CONTEXT ctx,
         int   stored_errno = 0;
 
         KOS_suspend_context(ctx);
+
+        errno = 0;
 
         ret_pid = waitpid(wait_info->pid, &status, 0);
 

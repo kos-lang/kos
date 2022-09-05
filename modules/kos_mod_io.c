@@ -274,6 +274,8 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
 
     fix_path_separators(&filename_cstr);
 
+    errno = 0;
+
     file = fopen(filename_cstr.buffer, flags_cstr.buffer);
 
     if (file) {
@@ -347,6 +349,8 @@ static FILE *to_file(KOS_CONTEXT ctx, HANDLE *handle, const char *mode)
     else {
         *handle = INVALID_HANDLE_VALUE;
 
+        errno = 0;
+
         file = _fdopen(fd, mode);
 
         if ( ! file) {
@@ -370,6 +374,8 @@ static FILE *to_file(KOS_CONTEXT ctx, int *fd, const char *mode)
     int   stored_errno = 0;
 
     KOS_suspend_context(ctx);
+
+    errno = 0;
 
     file = fdopen(*fd, mode);
 
@@ -439,6 +445,8 @@ static KOS_OBJ_ID kos_pipe(KOS_CONTEXT ctx,
 #else
     {
         int pipe_fd[2];
+
+        errno = 0;
 
         if ( ! kos_seq_fail() && (pipe(pipe_fd) == 0)) {
             read_pipe  = pipe_fd[0];
@@ -663,6 +671,8 @@ static KOS_OBJ_ID flush(KOS_CONTEXT ctx,
 
     KOS_suspend_context(ctx);
 
+    errno = 0;
+
     result = fflush(get_file(file_holder));
     if (result || kos_seq_fail()) {
         result       = 1;
@@ -752,6 +762,8 @@ static KOS_OBJ_ID read_line(KOS_CONTEXT ctx,
             KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
+
+        errno = 0;
 
         ret = fgets(buf.buffer + last_size, size_delta, get_file(file_holder));
 
@@ -864,6 +876,8 @@ static KOS_OBJ_ID read_some(KOS_CONTEXT ctx,
 
     KOS_suspend_context(ctx);
 
+    errno = 0;
+
     num_read = fread(data + offset, 1, (size_t)to_read, get_file(file_holder));
 
     if (num_read < (size_t)to_read && ferror(get_file(file_holder)))
@@ -960,6 +974,8 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
 
                 KOS_suspend_context(ctx);
 
+                errno = 0;
+
                 num_writ = fwrite(data, 1, to_write, get_file(file_holder));
 
                 if (num_writ < to_write)
@@ -986,6 +1002,8 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
 
             if (cstr.size) {
                 KOS_suspend_context(ctx);
+
+                errno = 0;
 
                 num_writ = fwrite(cstr.buffer, 1, cstr.size - 1, get_file(file_holder));
 
@@ -1258,6 +1276,8 @@ static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
 
         KOS_suspend_context(ctx);
 
+        errno = 0;
+
         error = fstat(fileno(get_file(file_holder)), &st);
 
         if (error)
@@ -1343,6 +1363,8 @@ static KOS_OBJ_ID get_file_size(KOS_CONTEXT ctx,
 
         KOS_suspend_context(ctx);
 
+        errno = 0;
+
         error = fstat(fileno(get_file(file_holder)), &st);
 
         if (error)
@@ -1403,6 +1425,8 @@ static KOS_OBJ_ID get_file_pos(KOS_CONTEXT ctx,
     TRY(acquire_file_object(ctx, this_obj, &file_holder));
 
     KOS_suspend_context(ctx);
+
+    errno = 0;
 
     pos = ftell(get_file(file_holder));
 
@@ -1473,6 +1497,8 @@ static KOS_OBJ_ID set_file_pos(KOS_CONTEXT ctx,
     KOS_init_local_with(ctx, &this_, this_obj);
 
     KOS_suspend_context(ctx);
+
+    errno = 0;
 
     if (fseek(get_file(file_holder), (long)pos, whence)) {
         const int stored_errno = errno;
@@ -1546,6 +1572,8 @@ static KOS_OBJ_ID set_file_size(KOS_CONTEXT ctx,
     KOS_init_local_with(ctx, &this_, this_obj);
 
     KOS_suspend_context(ctx);
+
+    errno = 0;
 
     if (fflush(get_file(file_holder))) {
 
@@ -1724,6 +1752,8 @@ static KOS_OBJ_ID kos_lock(KOS_CONTEXT ctx,
         }
     }
 #else
+    errno = 0;
+
     if (flock(fileno(get_file(file_holder)), LOCK_EX)) {
         const int saved_errno = errno;
 

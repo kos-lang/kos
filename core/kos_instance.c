@@ -24,6 +24,7 @@
 #include "kos_threads_internal.h"
 #include "kos_try.h"
 #include <assert.h>
+#include <errno.h>
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #include <signal.h>
@@ -1244,6 +1245,8 @@ typedef void (* signal_handler)(int);
 
 static int set_signal(int sig, void (* handler)(int), signal_handler *old_action)
 {
+    errno = 0;
+
     return (kos_seq_fail() || ((*old_action = signal(sig, handler)) == SIG_ERR)) ? KOS_ERROR_ERRNO : KOS_SUCCESS;
 }
 
@@ -1261,6 +1264,8 @@ static int set_signal(int sig, void (* handler)(int), signal_handler *old_action
     memset(&sa, 0, sizeof(sa));
     sa.sa_handler = handler;
     sigemptyset(&sa.sa_mask);
+
+    errno = 0;
 
     return (kos_seq_fail() || sigaction(sig, &sa, old_action) != 0) ? KOS_ERROR_ERRNO : KOS_SUCCESS;
 }

@@ -96,6 +96,8 @@ static int install_signal(int sig, void (*handler)(int), signal_handler *old_act
     sa.sa_flags   = 0;
     sigemptyset(&sa.sa_mask);
 
+    errno = 0;
+
     return ((sigaction(sig, &sa, old_action) != 0) || kos_seq_fail()) ? KOS_ERROR_ERRNO : KOS_SUCCESS;
 }
 
@@ -113,7 +115,11 @@ static int console_write(const char *data,
     return KOS_SUCCESS;
 }
 
-#define console_read getchar
+static int console_read(void)
+{
+    errno = 0;
+    return getchar();
+}
 
 #define is_term_set() getenv("TERM")
 
@@ -232,7 +238,7 @@ static int receive_cursor_pos(unsigned *pos)
 
     if (c != 0x1B) {
         ungetc(c, stdin);
-        return KOS_ERROR_ERRNO;
+        return KOS_ERROR_NOT_FOUND;
     }
 
     do {
@@ -248,7 +254,7 @@ static int receive_cursor_pos(unsigned *pos)
     buf[i] = 0;
 
     if (sscanf(buf, "[%u;%uR", &rows, &cols) != 2)
-        return KOS_ERROR_ERRNO;
+        return KOS_ERROR_NOT_FOUND;
 
     *pos = cols;
 
@@ -335,6 +341,8 @@ static int init_terminal(TERM_INFO *old_info)
     int error = KOS_ERROR_ERRNO;
 
     struct termios new_attrs;
+
+    errno = 0;
 
     if ( ! tcgetattr(fileno(stdin), &new_attrs)) {
 
