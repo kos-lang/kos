@@ -1932,6 +1932,31 @@ cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
+static void print_run_info(KOS_CONTEXT ctx,
+                           KOS_OBJ_ID  module_obj,
+                           KOS_OBJ_ID  func_name,
+                           const char* str1,
+                           const char* str2)
+{
+    KOS_VECTOR cstr_module;
+    KOS_VECTOR cstr_func;
+
+    if ( ! (ctx->inst->flags & KOS_INST_VERBOSE))
+        return;
+
+    KOS_vector_init(&cstr_module);
+    KOS_vector_init(&cstr_func);
+
+    if ( ! KOS_string_to_cstr_vec(ctx, OBJPTR(MODULE, module_obj)->name, &cstr_module) &&
+         ! KOS_string_to_cstr_vec(ctx, func_name, &cstr_func))
+        printf("%s%s.%s%s\n", str1, cstr_module.buffer, cstr_func.buffer, str2);
+    else
+        KOS_clear_exception(ctx);
+
+    KOS_vector_destroy(&cstr_func);
+    KOS_vector_destroy(&cstr_module);
+}
+
 KOS_OBJ_ID KOS_module_run_function(KOS_CONTEXT               ctx,
                                    KOS_OBJ_ID                module_obj,
                                    KOS_OBJ_ID                func_name,
@@ -1948,8 +1973,13 @@ KOS_OBJ_ID KOS_module_run_function(KOS_CONTEXT               ctx,
             return KOS_BADPTR;
 
         KOS_clear_exception(ctx);
+
+        print_run_info(ctx, module_obj, func_name, "Function ", " not found");
+
         return KOS_VOID;
     }
+
+    print_run_info(ctx, module_obj, func_name, "Running function ", "");
 
     KOS_init_local_with(ctx, &func, func.o);
 
