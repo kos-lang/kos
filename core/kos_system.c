@@ -267,9 +267,8 @@ int KOS_get_absolute_path(KOS_VECTOR *path)
     int   error;
     char *resolved_path;
 
-    errno = 0;
-
 #ifdef _WIN32
+    errno = 0;
     resolved_path = _fullpath(KOS_NULL, path->buffer, 0);
 #   define need_free 1
 #else
@@ -283,6 +282,7 @@ int KOS_get_absolute_path(KOS_VECTOR *path)
 #       define pathbuf   0
 #       define need_free 1
 #   endif
+    errno = 0;
     resolved_path = realpath(path->buffer, pathbuf);
 #endif
 
