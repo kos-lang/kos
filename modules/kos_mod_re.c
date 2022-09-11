@@ -466,6 +466,8 @@ static int parse_class_char_escape_seq(struct RE_PARSE_CTX *re_ctx, uint32_t *ou
             /* fall through */
         case '"':
             /* fall through */
+        case '\\':
+            /* fall through */
         case '-':
             *out_code = code;
             error = KOS_SUCCESS;
