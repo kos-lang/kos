@@ -297,7 +297,7 @@ int main(int argc, char *argv[])
     else {
 
         if (interactive < 0)
-            interactive = KOS_is_stdin_interactive();
+            interactive = KOS_is_file_interactive(stdin);
 
         /* Load subsequent pieces of script from interactive prompt */
         if (interactive)

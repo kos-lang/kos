@@ -72,8 +72,8 @@ _KOS_instance_register_thread
 _KOS_instance_set_args
 _KOS_instance_unregister_thread
 _KOS_io_get_file
+_KOS_is_file_interactive
 _KOS_is_generator
-_KOS_is_stdin_interactive
 _KOS_iterator_next
 _KOS_load_file
 _KOS_load_library

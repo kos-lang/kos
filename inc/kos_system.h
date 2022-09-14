@@ -9,6 +9,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #ifdef _WIN32
 #   define KOS_PATH_SEPARATOR          '\\'
@@ -35,7 +36,7 @@ extern "C" {
 struct KOS_VECTOR_S;
 
 KOS_API
-int KOS_is_stdin_interactive(void);
+int KOS_is_file_interactive(FILE *file);
 
 KOS_API
 int KOS_does_file_exist(const char *filename);

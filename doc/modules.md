@@ -150,6 +150,7 @@ Table of Contents
     * [create\_flag](#create_flag)
     * [file()](#file)
       * [file.prototype.close()](#fileprototypeclose)
+      * [file.prototype.console](#fileprototypeconsole)
       * [file.prototype.eof](#fileprototypeeof)
       * [file.prototype.error](#fileprototypeerror)
       * [file.prototype.fd](#fileprototypefd)
@@ -3437,6 +3438,14 @@ file.prototype.close()
     file.prototype.close()
 
 Closes the file object if it is still opened.
+
+file.prototype.console
+----------------------
+
+    file.prototype.console
+
+A boolean read-only flag indicating whether the file represents
+an interactive console.
 
 file.prototype.eof
 ------------------

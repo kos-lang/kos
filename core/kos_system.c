@@ -52,10 +52,10 @@
 #   include <sys/syspage.h>
 #endif
 
-int KOS_is_stdin_interactive(void)
+int KOS_is_file_interactive(FILE *file)
 {
 #ifdef _WIN32
-    const int fd = _fileno(stdin);
+    const int fd = _fileno(file);
 
     if (_isatty(fd)) {
         const HANDLE handle = (HANDLE)_get_osfhandle(fd);
@@ -69,7 +69,7 @@ int KOS_is_stdin_interactive(void)
 
     return 0;
 #else
-    return isatty(fileno(stdin));
+    return isatty(fileno(file));
 #endif
 }
 

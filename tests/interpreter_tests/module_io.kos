@@ -37,6 +37,7 @@ do {
         assert f.fd > 2
         assert ! f.error
         assert ! f.eof
+        assert ! f.console
 
         assert f.size == 0
 
@@ -200,6 +201,9 @@ do {
     assert io.stdin.path == void
     assert io.stdout.path == void
     assert io.stderr.path == void
+
+    assert typeof io.stdin.console  == "boolean"
+    assert typeof io.stdout.console == "boolean"
 }
 
 ##############################################################################
@@ -540,6 +544,9 @@ do {
 
     assert p.read.size  == 0
     assert p.write.size == 0
+
+    assert ! p.read.console
+    assert ! p.write.console
 
     p.write.write(base.buffer().pack("u4", 0x12345678))
     p.write.flush()

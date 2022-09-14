@@ -282,9 +282,9 @@ cleanup:
  *
  * If the file cannot be deleted, throws an error.
  */
-static KOS_OBJ_ID remove(KOS_CONTEXT ctx,
-                         KOS_OBJ_ID  this_obj,
-                         KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_remove(KOS_CONTEXT ctx,
+                             KOS_OBJ_ID  this_obj,
+                             KOS_OBJ_ID  args_obj)
 {
     int        error;
     KOS_OBJ_ID ret          = KOS_BADPTR;
@@ -953,7 +953,7 @@ int kos_module_fs_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 
     TRY_ADD_FUNCTION(ctx,  module.o, "file_exists", file_exists, filename_arg);
     TRY_ADD_FUNCTION(ctx,  module.o, "info",        info,        info_args);
-    TRY_ADD_FUNCTION(ctx,  module.o, "remove",      remove,      filename_arg);
+    TRY_ADD_FUNCTION(ctx,  module.o, "remove",      kos_remove,  filename_arg);
     TRY_ADD_FUNCTION(ctx,  module.o, "cwd",         cwd,         KOS_NULL);
     TRY_ADD_FUNCTION(ctx,  module.o, "chdir",       kos_chdir,   path_arg);
     TRY_ADD_GENERATOR(ctx, module.o, "listdir",     listdir,     path_arg);

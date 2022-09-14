@@ -1414,7 +1414,7 @@ int kos_getline(KOS_GETLINE      *state,
     KOS_mempool_init_small(&edit.temp_allocator, 0x1000U);
     error = init_history(&edit, state->head);
 
-    if ( ! error && KOS_is_stdin_interactive() && is_term_set()) {
+    if ( ! error && KOS_is_file_interactive(stdin) && is_term_set()) {
 
         edit.interactive = 1;
 
