@@ -37,7 +37,6 @@ Branch health (master)
 [![Build Status](https://github.com/kos-lang/kos/workflows/Tests/badge.svg)](https://github.com/kos-lang/kos/actions)
 [![Coverage Status](https://coveralls.io/repos/github/kos-lang/kos/badge.svg?branch=master)](https://coveralls.io/github/kos-lang/kos?branch=master)
 [![Coverity Scan](https://scan.coverity.com/projects/10189/badge.svg)](https://scan.coverity.com/projects/kos)
-[![Lgtm alerts](https://img.shields.io/lgtm/alerts/g/kos-lang/kos.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/kos-lang/kos/alerts/)
 
 Documentation
 -------------
