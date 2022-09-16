@@ -30,26 +30,22 @@
     - Function inlining for simple functions, esp. inside loops.
     - Stack reuse in tail calls.
     - Replace binds for non-global functions with LOAD.CONST
+    - Init arrays/objects from a constant, by doing a deep copy (only works for some
+      initializers, which don't reference other objects, etc.)
+    - Make r255 a VOID object
+    - References 127 constants via r128..r254 (LOAD.CONST 0 is then constant 127)
 
 * Close generators by throwing an exception through the generator code during GC
 
 * Allow _ in parameters of the target of -> stream operator
 
-* Add warnings about variable shadowing
+* Add warnings about variable shadowing, consider making shadowing an error
 
-* ? Callstack from shallow is missing built-in function
-
-* Reduce need for passing module objects, e.g. when creating builtin dyn props
-
-* Allow referencing module objects from the language, add a way to extract list of modules
+* Add a way to extract list of modules
 
 * Add string.prototype.swapcase()
 
-* Allow import anywhere
-
 * Add exit/help as special commands in REPL or as functions in a special module
-
-* Add way to list modules and globals in modules, manipulate globals
 
 * ? Comparison operators for objects
 
@@ -79,3 +75,7 @@
         myobj.prop = get fun { };
 
 * Constructor functions - determine interaction with generators and iterators.
+
+* Fix string comparison, compare by code point value.
+
+* Add unicode module for string comparison, uppercase/lowercase, etc.
