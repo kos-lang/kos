@@ -1099,9 +1099,6 @@ static int prepare_call(KOS_CONTEXT        ctx,
                     args.o = make_args(ctx, stack_obj, regs_idx + rarg1, num_args);
                     TRY_OBJID(args.o);
                 }
-
-                args.o = set_default_args_for_handler(ctx, func.o, args.o);
-                TRY_OBJID(args.o);
             }
 
             set_stack_flag(ctx, KOS_CAN_YIELD);
