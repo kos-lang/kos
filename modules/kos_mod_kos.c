@@ -32,6 +32,7 @@ KOS_DECLARE_STATIC_CONST_STRING(str_err_name_not_string,      "'name' argument i
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_paren,            "previous token was not ')'");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_script_not_buffer,    "'script' argument object is not a buffer");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_script_not_generator, "'script' argument object is a function but not a generator");
+KOS_DECLARE_STATIC_CONST_STRING(str_ignore_errors,            "ignore_errors");
 KOS_DECLARE_STATIC_CONST_STRING(str_keyword,                  "keyword");
 KOS_DECLARE_STATIC_CONST_STRING(str_line,                     "line");
 KOS_DECLARE_STATIC_CONST_STRING(str_lines,                    "lines");
@@ -68,8 +69,9 @@ static void finalize(KOS_CONTEXT ctx,
 
 KOS_DECLARE_PRIVATE_CLASS(lexer_priv_class);
 
-static const KOS_CONVERT raw_lexer_args[2] = {
+static const KOS_CONVERT raw_lexer_args[3] = {
     KOS_DEFINE_MANDATORY_ARG(str_script),
+    KOS_DEFINE_OPTIONAL_ARG( str_ignore_errors, KOS_FALSE),
     KOS_DEFINE_TAIL_ARG()
 };
 
@@ -131,7 +133,8 @@ static KOS_OBJ_ID raw_lexer(KOS_CONTEXT ctx,
     /* Instantiate the lexer on first invocation */
     if ( ! KOS_object_get_private(lexer.o, &lexer_priv_class)) {
 
-        uint32_t buf_size;
+        KOS_OBJ_ID ignore_errors;
+        uint32_t   buf_size;
 
         init.o = lexer.o;
 
@@ -197,16 +200,14 @@ static KOS_OBJ_ID raw_lexer(KOS_CONTEXT ctx,
         kos_lexer->own_buf       = KOS_NULL;
         kos_lexer->own_buf_size  = 0;
 
-        if (KOS_get_array_size(regs.o) > 1) {
-            KOS_OBJ_ID ignore_errors = KOS_array_read(ctx, regs.o, 1);
+        assert(KOS_get_array_size(regs.o) > 1);
+        ignore_errors = KOS_array_read(ctx, regs.o, 1);
+        TRY_OBJID(ignore_errors);
 
-            TRY_OBJID(ignore_errors);
+        if (GET_OBJ_TYPE(ignore_errors) != OBJ_BOOLEAN)
+            RAISE_EXCEPTION_STR(str_err_bad_ignore_errors);
 
-            if (GET_OBJ_TYPE(ignore_errors) != OBJ_BOOLEAN)
-                RAISE_EXCEPTION_STR(str_err_bad_ignore_errors);
-
-            kos_lexer->ignore_errors = (ignore_errors == KOS_TRUE) ? 1 : 0;
-        }
+        kos_lexer->ignore_errors = (ignore_errors == KOS_TRUE) ? 1 : 0;
 
         TRY(KOS_array_resize(ctx, regs.o, 2));
 
