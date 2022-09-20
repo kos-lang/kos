@@ -1199,28 +1199,28 @@ static void disassemble(struct RE_OBJ *re, const char *re_cstr)
         const RE_INSTR_DESC *const desc            = &re_instr_descs[instr];
         const uint16_t      *const instr_end       = ptr + desc->num_args;
         char                      *mnem_buf        = &buf[0];
-        size_t                     mnem_remaining  = MNEMONIC_SIZE;
         char                      *bytes_buf       = bytes;
-        size_t                     bytes_remaining = sizeof(buf) - MNEMONIC_SIZE;
+#ifndef NDEBUG
+        char                *const mnem_buf_end    = mnem_buf + MNEMONIC_SIZE;
+        char                *const bytes_buf_end   = bytes_buf + (sizeof(buf) - MNEMONIC_SIZE);
+#endif
         int                        i_arg           = 0;
         size_t                     num_printed;
 
-        num_printed = snprintf(bytes_buf, bytes_remaining, " %04X", instr);
+        num_printed = snprintf(bytes_buf, sizeof(buf) - MNEMONIC_SIZE, " %04X", instr);
 
-        assert(num_printed < bytes_remaining);
-        bytes_buf       += num_printed;
-        bytes_remaining -= num_printed;
+        assert(num_printed < sizeof(buf) - MNEMONIC_SIZE);
+        bytes_buf += num_printed;
 
         for (; ptr < instr_end; i_arg++) {
             uint16_t operand = *(ptr++);
             char     pr_buf[11];
 
             num_printed = snprintf(pr_buf, sizeof(pr_buf), " %04X", operand);
-            assert(num_printed < bytes_remaining);
+            assert(bytes_buf + num_printed < bytes_buf_end);
 
             memcpy(bytes_buf, pr_buf, num_printed);
-            bytes_buf       += num_printed;
-            bytes_remaining -= num_printed;
+            bytes_buf += num_printed;
 
             if ( ! i_arg && desc->first_arg_is_offs) {
                 const unsigned target = (unsigned)offs + ((int)(int16_t)operand * 2);
@@ -1237,23 +1237,21 @@ static void disassemble(struct RE_OBJ *re, const char *re_cstr)
             else
                 num_printed = snprintf(pr_buf, sizeof(pr_buf), "%u", operand);
 
-            assert(num_printed < mnem_remaining);
+            assert(mnem_buf + num_printed < mnem_buf_end);
             memcpy(mnem_buf, pr_buf, num_printed);
-            mnem_buf       += num_printed;
-            mnem_remaining -= num_printed;
+            mnem_buf += num_printed;
 
             if (ptr < instr_end) {
-                assert(mnem_remaining >= 2);
+                assert(mnem_buf + 2 <= mnem_buf_end);
                 mnem_buf[0] = ',';
                 mnem_buf[1] = ' ';
-                mnem_buf       += 2;
-                mnem_remaining -= 2;
+                mnem_buf += 2;
             }
         }
 
-        assert(bytes_remaining >= 1);
+        assert(bytes_buf < bytes_buf_end);
         *bytes_buf = 0;
-        assert(mnem_remaining >= 1);
+        assert(mnem_buf < mnem_buf_end);
         *mnem_buf = 0;
 
         printf("%08X:%-25s %-17s%s\n", (unsigned)offs, bytes, desc->str_instr, buf);
