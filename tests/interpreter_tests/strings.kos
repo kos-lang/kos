@@ -9,6 +9,26 @@ import test_tools.expect_fail
 
 do {
     const str = "\0a\x0a\x{0}\x{80}\x{ffFFff}"
+
+    assert str.size == 6
+    assert str.code(0) == 0
+    assert str.code(1) == 0x61
+    assert str.code(2) == 10
+    assert str.code(3) == 0
+    assert str.code(4) == 0x80
+    assert str.code(5) == 0xFF_FF_FF
+}
+
+do {
+    const esc = "\e\f\n\r\t\v"
+
+    assert esc.size == 6
+    assert esc.code(0) == 0x1B
+    assert esc.code(1) == 12
+    assert esc.code(2) == 10
+    assert esc.code(3) == 13
+    assert esc.code(4) == 9
+    assert esc.code(5) == 11
 }
 
 do {
