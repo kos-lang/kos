@@ -642,3 +642,38 @@ do {
 do {
     expect_fail(() => re.re(r"[\x]"))
 }
+
+do {
+    const special = [
+        { char: "\t", esc: "t", in_raw: "\t", in_class: "\t" },
+        { char: "\n", esc: "n", in_raw: "\n", in_class: "\n" },
+        { char: "\v", esc: "v", in_raw: "\v", in_class: "\v" },
+        { char: "\f", esc: "f", in_raw: "\f", in_class: "\f" },
+        { char: "\r", esc: "r", in_raw: "\r", in_class: "\r" },
+        { char: "(",  esc: "(", in_raw: void, in_class: "("  },
+        { char: ")",  esc: ")", in_raw: void, in_class: ")"  },
+        { char: "[",  esc: "[", in_raw: void, in_class: "["  },
+        { char: "]",  esc: "]", in_raw: "]",  in_class: void },
+    ]
+    for const tst in special {
+
+        const search_str = "ab\(tst.char)\(tst.char)cd"
+
+        const re_strings = ["\\\(tst.esc)+", "[\\\(tst.esc)x]+"]
+        if tst.in_raw {
+            re_strings.push("\(tst.in_raw)+")
+        }
+        if tst.in_class {
+            re_strings.push("[\(tst.in_class)x]+")
+        }
+
+        for const re_str in re_strings {
+            const r = re.re(re_str)
+            const found = r.find(search_str)
+            assert found != void
+            assert found.match == "\(tst.char)\(tst.char)"
+            assert found.begin == 2
+            assert found.end   == 4
+        }
+    }
+}

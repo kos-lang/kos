@@ -444,6 +444,15 @@ static int parse_number(struct RE_PARSE_CTX *re_ctx, uint32_t* number)
     return KOS_SUCCESS;
 }
 
+/* Escape characters in their natural order, used for parsing:
+ * \t : 9
+ * \n : 10
+ * \v : 11
+ * \f : 12
+ * \r : 13
+ */
+static const char esc_whitespace[] = "tnvfr";
+
 static int parse_class_char_escape_seq(struct RE_PARSE_CTX *re_ctx, uint32_t *out_code)
 {
     const uint32_t code = peek_next_char(&re_ctx->iter);
@@ -460,7 +469,13 @@ static int parse_class_char_escape_seq(struct RE_PARSE_CTX *re_ctx, uint32_t *ou
 
     switch (code) {
 
+        case '[':
+            /* fall through */
         case ']':
+            /* fall through */
+        case '(':
+            /* fall through */
+        case ')':
             /* fall through */
         case '^':
             /* fall through */
@@ -474,12 +489,20 @@ static int parse_class_char_escape_seq(struct RE_PARSE_CTX *re_ctx, uint32_t *ou
             break;
 
         default: {
-            char str_code[6];
+            const char *const found_esc = (code < 0x7F) ? strchr(esc_whitespace, (char)code) : KOS_NULL;
 
-            encode_utf8(code, &str_code[0], sizeof(str_code));
-            KOS_raise_printf(re_ctx->ctx, "unsupported escape sequence \\%s at position %d",
-                             str_code, re_ctx->idx);
-            error = KOS_ERROR_EXCEPTION;
+            if (found_esc) {
+                *out_code = 9 + (uint32_t)(found_esc - esc_whitespace);
+                error = KOS_SUCCESS;
+            }
+            else {
+                char str_code[6];
+
+                encode_utf8(code, &str_code[0], sizeof(str_code));
+                KOS_raise_printf(re_ctx->ctx, "unsupported escape sequence \\%s at position %d",
+                                 str_code, re_ctx->idx);
+                error = KOS_ERROR_EXCEPTION;
+            }
         }
     }
 
@@ -788,6 +811,8 @@ static int parse_escape_seq(struct RE_PARSE_CTX *re_ctx)
             /* fall through */
         case '(':
             /* fall through */
+        case ')':
+            /* fall through */
         case '"':
             error = emit_instr1(re_ctx, INSTR_MATCH_ONE_CHAR, code);
             break;
@@ -845,12 +870,21 @@ static int parse_escape_seq(struct RE_PARSE_CTX *re_ctx)
         }
 
         default: {
-            char str_code[6];
+            const char *const found_esc = (code < 0x7F) ? strchr(esc_whitespace, (char)code) : KOS_NULL;
 
-            encode_utf8(code, &str_code[0], sizeof(str_code));
-            KOS_raise_printf(re_ctx->ctx, "unsupported escape sequence \\%s at position %d",
-                             str_code, re_ctx->idx);
-            error = KOS_ERROR_EXCEPTION;
+            if (found_esc) {
+                const uint32_t actual_code = 9 + (uint32_t)(found_esc - esc_whitespace);
+
+                error = emit_instr1(re_ctx, INSTR_MATCH_ONE_CHAR, actual_code);
+            }
+            else {
+                char str_code[6];
+
+                encode_utf8(code, &str_code[0], sizeof(str_code));
+                KOS_raise_printf(re_ctx->ctx, "unsupported escape sequence \\%s at position %d",
+                                 str_code, re_ctx->idx);
+                error = KOS_ERROR_EXCEPTION;
+            }
         }
     }
 
