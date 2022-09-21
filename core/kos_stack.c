@@ -530,8 +530,8 @@ static int dump_stack(KOS_OBJ_ID stack,
     KOS_STACK_FRAME  *stack_frame = (KOS_STACK_FRAME *)&OBJPTR(STACK, stack)->buf[frame_idx];
     KOS_OBJ_ID        func        = KOS_atomic_read_relaxed_obj(stack_frame->func_obj);
     KOS_OBJ_ID        offs_id;
-    intptr_t          instr_offs  = get_instr_offs(stack_frame);
-    const unsigned    line        = KOS_function_addr_to_line(func, instr_offs);
+    intptr_t          instr_offs;
+    unsigned          line;
     int               error       = KOS_SUCCESS;
     KOS_LOCAL         module;
     KOS_LOCAL         func_name;
@@ -539,8 +539,14 @@ static int dump_stack(KOS_OBJ_ID stack,
     KOS_LOCAL         module_path;
     KOS_LOCAL         frame_desc;
 
-    if (OBJPTR(FUNCTION, func)->handler)
+    if (OBJPTR(FUNCTION, func)->handler) {
+        line       = 0;
         instr_offs = (intptr_t)OBJPTR(FUNCTION, func)->handler;
+    }
+    else {
+        instr_offs = get_instr_offs(stack_frame);
+        line       = KOS_function_addr_to_line(func, (uint32_t)instr_offs);
+    }
 
     KOS_init_local_with(ctx, &module,      OBJPTR(FUNCTION, func)->module);
     KOS_init_local_with(ctx, &func_name,   OBJPTR(FUNCTION, func)->name);
