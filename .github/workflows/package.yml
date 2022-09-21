@@ -20,6 +20,9 @@ jobs:
           echo "::set-output name=version::${GITHUB_REF#*/*/}"
           echo "::set-output name=version_number::${GITHUB_REF#*/*/v}"
         id: version
+      - uses: actions/checkout@v2
+      - name: Verify version
+        run: interpreter/verify_version.sh ${{ needs.release.outputs.version }}
       - name: Create release
         uses: actions/create-release@v1
         id: create_release

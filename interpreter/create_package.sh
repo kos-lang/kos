@@ -51,7 +51,7 @@ PKGNAME="kos-$VERSION"
 
 compile_kos()
 {
-    make -j "$JOBS" "$@" builtin_modules=0 strict=1 version_major="$VERSION_MAJOR" version_minor="$VERSION_MINOR" version_revision="$VERSION_REVISION"
+    make -j "$JOBS" "$@" builtin_modules=0 strict=1
 }
 
 collect_package()
