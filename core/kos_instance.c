@@ -942,7 +942,7 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
 
     for (i = 0; i < depth; i++) {
 
-        char     cbuf[16];
+        char     cbuf[19];
         unsigned len;
 
         frame_desc.o = KOS_array_read(ctx, backtrace.o, (int)i);
@@ -961,9 +961,11 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
 
         str = KOS_get_property(ctx, frame_desc.o, KOS_STR_OFFSET);
         TRY_OBJID(str);
-        if (IS_SMALL_INT(str)) {
-            len = (unsigned)snprintf(cbuf, sizeof(cbuf), "0x%X",
-                                     (unsigned)GET_SMALL_INT(str));
+        if (IS_NUMERIC_OBJ(str)) {
+            int64_t int_value;
+
+            TRY(KOS_get_integer(ctx, str, &int_value));
+            len = (unsigned)snprintf(cbuf, sizeof(cbuf), "0x%" PRIX64, int_value);
             TRY(KOS_append_cstr(ctx, &cstr, cbuf, KOS_min(len, (unsigned)(sizeof(cbuf) - 1))));
         }
         else

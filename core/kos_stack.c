@@ -525,18 +525,22 @@ static int dump_stack(KOS_OBJ_ID stack,
                       uint32_t   frame_size,
                       void      *cookie)
 {
-    KOS_DUMP_CONTEXT       *dump_ctx    = (KOS_DUMP_CONTEXT *)cookie;
-    KOS_CONTEXT             ctx         = dump_ctx->ctx;
-    KOS_STACK_FRAME        *stack_frame = (KOS_STACK_FRAME *)&OBJPTR(STACK, stack)->buf[frame_idx];
-    KOS_OBJ_ID              func        = KOS_atomic_read_relaxed_obj(stack_frame->func_obj);
-    const uint32_t          instr_offs  = get_instr_offs(stack_frame);
-    const unsigned          line        = KOS_function_addr_to_line(func, instr_offs);
-    int                     error       = KOS_SUCCESS;
-    KOS_LOCAL               module;
-    KOS_LOCAL               func_name;
-    KOS_LOCAL               module_name;
-    KOS_LOCAL               module_path;
-    KOS_LOCAL               frame_desc;
+    KOS_DUMP_CONTEXT *dump_ctx    = (KOS_DUMP_CONTEXT *)cookie;
+    KOS_CONTEXT       ctx         = dump_ctx->ctx;
+    KOS_STACK_FRAME  *stack_frame = (KOS_STACK_FRAME *)&OBJPTR(STACK, stack)->buf[frame_idx];
+    KOS_OBJ_ID        func        = KOS_atomic_read_relaxed_obj(stack_frame->func_obj);
+    KOS_OBJ_ID        offs_id;
+    intptr_t          instr_offs  = get_instr_offs(stack_frame);
+    const unsigned    line        = KOS_function_addr_to_line(func, instr_offs);
+    int               error       = KOS_SUCCESS;
+    KOS_LOCAL         module;
+    KOS_LOCAL         func_name;
+    KOS_LOCAL         module_name;
+    KOS_LOCAL         module_path;
+    KOS_LOCAL         frame_desc;
+
+    if (OBJPTR(FUNCTION, func)->handler)
+        instr_offs = (intptr_t)OBJPTR(FUNCTION, func)->handler;
 
     KOS_init_local_with(ctx, &module,      OBJPTR(FUNCTION, func)->module);
     KOS_init_local_with(ctx, &func_name,   OBJPTR(FUNCTION, func)->name);
@@ -548,8 +552,6 @@ static int dump_stack(KOS_OBJ_ID stack,
     assert(dump_ctx->idx < KOS_get_array_size(dump_ctx->backtrace.o));
     TRY(KOS_array_write(ctx, dump_ctx->backtrace.o, (int)dump_ctx->idx, frame_desc.o));
 
-    /* TODO use builtin function pointer for offset */
-
     if ( ! IS_BAD_PTR(module.o)) {
         module_name.o = OBJPTR(MODULE, module.o)->name;
         module_path.o = OBJPTR(MODULE, module.o)->path;
@@ -558,7 +560,9 @@ static int dump_stack(KOS_OBJ_ID stack,
     TRY(KOS_set_property(ctx, frame_desc.o, KOS_CONST_ID(str_module), module_name.o));
     TRY(KOS_set_property(ctx, frame_desc.o, KOS_STR_FILE,             module_path.o));
     TRY(KOS_set_property(ctx, frame_desc.o, KOS_STR_LINE,             TO_SMALL_INT((int)line)));
-    TRY(KOS_set_property(ctx, frame_desc.o, KOS_STR_OFFSET,           TO_SMALL_INT((int)instr_offs)));
+    offs_id = KOS_new_int(ctx, (int64_t)instr_offs);
+    TRY_OBJID(offs_id);
+    TRY(KOS_set_property(ctx, frame_desc.o, KOS_STR_OFFSET,           offs_id));
     TRY(KOS_set_property(ctx, frame_desc.o, KOS_STR_FUNCTION,         func_name.o));
 
     ++dump_ctx->idx;
