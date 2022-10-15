@@ -20,7 +20,7 @@ jobs:
           echo "::set-output name=version::${GITHUB_REF#*/*/}"
           echo "::set-output name=version_number::${GITHUB_REF#*/*/v}"
         id: version
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Verify version
         run: interpreter/verify_version.sh ${{ steps.version.outputs.version }}
       - name: Create release
@@ -47,7 +47,7 @@ jobs:
     timeout-minutes: 3
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Package
         run: interpreter/create_package.sh ${{ needs.release.outputs.version }}
       - uses: actions/upload-artifact@v2
@@ -66,7 +66,7 @@ jobs:
         with:
           path-type: inherit
           install: diffutils
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Remove link.exe from MSYS2
         shell: msys2 {0}
         run: rm -f /bin/link.exe
@@ -90,7 +90,7 @@ jobs:
       - default
       - windows
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/download-artifact@v2
         with:
           path: "./artifacts"
