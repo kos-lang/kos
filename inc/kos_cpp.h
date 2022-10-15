@@ -98,7 +98,9 @@ class context {
         void signal_error();
 
         void raise(const char* desc) {
-            KOS_raise_exception(ctx_, KOS_new_cstring(ctx_, desc));
+            const KOS_OBJ_ID err_id = KOS_new_cstring(ctx_, desc);
+            if ( ! IS_BAD_PTR(err_id))
+                KOS_raise_exception(ctx_, err_id);
         }
 
         void raise_and_signal_error(const char* desc) {
