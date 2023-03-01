@@ -8,10 +8,13 @@
 #include <windows.h>
 #pragma warning( pop )
 
+#pragma warning( push )
+#pragma warning( disable : 5264 )
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 #include <string>
+#pragma warning( pop )
 
 using std::string;
 
