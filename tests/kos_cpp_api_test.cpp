@@ -3,15 +3,7 @@
  */
 
 #include "../inc/kos.h"
-
-#if defined(_MSC_VER) && (_MSC_VER >= 1930)
-#   pragma warning( push )
-#   pragma warning( disable : 5264 )
-#endif
 #include <iostream>
-#if defined(_MSC_VER) && (_MSC_VER >= 1930)
-#   pragma warning( pop )
-#endif
 
 int64_t add_func(bool second, int a, int64_t b)
 {

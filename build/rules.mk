@@ -113,6 +113,7 @@ ifeq ($(UNAME), Windows)
     CFLAGS += -wd5027 # move assignment operator was implicitly defined as deleted
     CFLAGS += -wd5039 # pointer or reference to potentially throwing function passed to extern C function under -EHc
     CFLAGS += -wd5045 # compiler will insert Spectre mitigation for memory load if /Qspectre switch specified
+    CFLAGS += -wd5264 # 'const' variable is not used in MS headers
 
     gcov = 0
 
