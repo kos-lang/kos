@@ -9,7 +9,9 @@
 #pragma warning( pop )
 
 #pragma warning( push )
-#pragma warning( disable : 5264 )
+#if _MSC_VER >= 1930
+#   pragma warning( disable : 5264 )
+#endif
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
