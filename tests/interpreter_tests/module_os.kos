@@ -168,7 +168,7 @@ if bin_cat {
     }
 
     with const f = io.open(dest) {
-        assert (f.read_lines() -> "".join) == data
+        assert (f.read_lines() -> base.join("")) == data
     }
 
     fs.remove(src)

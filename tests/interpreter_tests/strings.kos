@@ -794,16 +794,14 @@ do {
 }
 
 ##############################################################################
-# base.string.prototype.join
+# base.join
 
 do {
-    assert "".join([])      == ""
-    assert ":".join([])     == ""
-    assert ":".join([""])   == ""
-    assert ":".join("join") == "j:o:i:n"
-    assert ":".join(["this", 42]) == "this:42"
-
-    expect_fail(() => "".join())
+    assert base.join("", [])      == ""
+    assert base.join(":", [])     == ""
+    assert base.join(":", [""])   == ""
+    assert base.join(":", "join") == "j:o:i:n"
+    assert base.join(":", ["this", 42]) == "this:42"
 }
 
 ##############################################################################

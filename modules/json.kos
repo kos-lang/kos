@@ -2,7 +2,7 @@
 # Copyright (c) 2014-2022 Chris Dragan
 
 import kos
-import base: array, generator, number, string
+import base: array, generator, join, number, string
 
 const separator_map = {
     "{": void,
@@ -372,16 +372,16 @@ fun dump(object)
         }
 
         case "array" {
-            return "[\( object.map(dump) -> ",".join )]"
+            return "[\( object.map(dump) -> join(",") )]"
         }
 
         case "object" {
-            return "{\( object.map(kv => "\( dump(kv[0]) ):\( dump(kv[1]) )") -> ",".join )}"
+            return "{\( object.map(kv => "\( dump(kv[0]) ):\( dump(kv[1]) )") -> join(",") )}"
         }
 
         case "function" {
             if object instanceof generator {
-                return "[\( object.map(dump) -> ",".join )]"
+                return "[\( object.map(dump) -> join(",") )]"
             }
             else {
                 fallthrough

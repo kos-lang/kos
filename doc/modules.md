@@ -99,7 +99,6 @@ Table of Contents
       * [string.prototype.find()](#stringprototypefind)
       * [string.prototype.get()](#stringprototypeget)
       * [string.prototype.iterator()](#stringprototypeiterator)
-      * [string.prototype.join()](#stringprototypejoin)
       * [string.prototype.ljust()](#stringprototypeljust)
       * [string.prototype.lowercase()](#stringprototypelowercase)
       * [string.prototype.lstrip()](#stringprototypelstrip)
@@ -2532,31 +2531,6 @@ Examples:
     f
     o
     o
-
-string.prototype.join()
------------------------
-
-    string.prototype.join(iterable)
-
-Connects strings together using `this` string as separator.
-
-Returns a string, which is a concatenation of all elements
-from the `iterable` object with the `this` string inserted in-between the
-elements.
-
-`iterable` can return objects of any type accepted by the `string` constructor.
-
-Elements are extracted from `iterable` object through its `iterator()`
-function.
-
-Examples:
-
-    > "=".join(["answer", 42, "question", "?"])
-    "answer=42=question=?"
-    > ", ".join(["apple", "banana", "orange"])
-    "apple, banana, orange"
-    > range(5, 10) -> "_".join
-    "5_6_7_8_9"
 
 string.prototype.ljust()
 ------------------------

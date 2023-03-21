@@ -2165,7 +2165,7 @@ public fun each(args...)
 public fun join(sep, args...)
 {
     assert typeof sep == "string"
-    fun inner_join(to_join)
+    fun join(to_join)
     {
         if typeof to_join != "array" {
             to_join = [ to_join ... ]
@@ -2184,38 +2184,9 @@ public fun join(sep, args...)
     }
 
     if args.size {
-        return inner_join(args[0])
+        return join(args[0])
     }
     else {
-        return inner_join
+        return join
     }
-}
-
-/* @item base string.prototype.join()
- *
- *     string.prototype.join(iterable)
- *
- * Connects strings together using `this` string as separator.
- *
- * Returns a string, which is a concatenation of all elements
- * from the `iterable` object with the `this` string inserted in-between the
- * elements.
- *
- * `iterable` can return objects of any type accepted by the `string` constructor.
- *
- * Elements are extracted from `iterable` object through its `iterator()`
- * function.
- *
- * Examples:
- *
- *     > "=".join(["answer", 42, "question", "?"])
- *     "answer=42=question=?"
- *     > ", ".join(["apple", "banana", "orange"])
- *     "apple, banana, orange"
- *     > range(5, 10) -> "_".join
- *     "5_6_7_8_9"
- */
-string.prototype.join = fun(to_join)
-{
-    return join(this, to_join)
 }
