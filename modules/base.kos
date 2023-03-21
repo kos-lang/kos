@@ -492,68 +492,6 @@ buffer.prototype.insert = fun(begin, iterable, args...)
     }
 }
 
-fun indices
-{
-    return range(this.size)
-}
-
-/* @item base array.prototype.indices()
- *
- *     array.prototype.indices()
- *
- * A generator which produces subsequent indices of array elements.
- *
- * Returns an iterator function, which yields subsequent indices of
- * the array's elements in ascending order.
- *
- * `a.indices()` is equivalent to `range(a.size)`, where `a` is some
- * array.
- *
- * Example:
- *
- *     > [ "a", "b", "c" ].indices() -> array
- *     [0, 1, 2]
- */
-array.prototype.indices = indices
-
-/* @item base string.prototype.indices()
- *
- *     string.prototype.indices()
- *
- * A generator which produces subsequent indices of string elements.
- *
- * Returns an iterator function, which yields subsequent indices of
- * the string's elements in ascending order.
- *
- * `s.indices()` is equivalent to `range(s.size)`, where `s` is some
- * string.
- *
- * Example:
- *
- *     > "foobar".indices() -> array
- *     [0, 1, 2, 3, 4, 5]
- */
-string.prototype.indices = indices
-
-/* @item base buffer.prototype.indices()
- *
- *     buffer.prototype.indices()
- *
- * A generator which produces subsequent indices of buffer elements.
- *
- * Returns an iterator function, which yields subsequent indices of
- * the buffer's elements in ascending order.
- *
- * `b.indices()` is equivalent to `range(b.size)`, where `b` is some
- * buffer.
- *
- * Example:
- *
- *     > buffer(4).indices() -> array
- *     [0, 1, 2, 3]
- */
-buffer.prototype.indices = indices
-
 fun get_value_from_array(index, default_value = void)
 {
     const size = this.size
@@ -1983,6 +1921,53 @@ public fun sort(key = void, args...)
     }
 
     return sort(iterable)
+}
+
+/* @item base indices()
+ *
+ *     indices(iterable)
+ *
+ * A generator which produces subsequent indices of an iterable object.
+ *
+ * Returns an iterator function, which yields subsequent indices of
+ * the iterable object's elements in ascending order.  For array, buffer
+ * or string that is integers from `0` to `size - 1`.  For other types,
+ * these are indices produced as the generator iterates through them.
+ *
+ * If another generator is provided as `iterable`, subsequent values are
+ * extracted from it and turned into indices, in which case this operation
+ * is destructive.
+ *
+ * For array, buffer or string, `indices(a)` is equivalent to `range(a.size)`,
+ * where `a` is that array, buffer or string.
+ *
+ * Example:
+ *
+ *     > indices([ "a", "b", "c" ]) -> array
+ *     [0, 1, 2]
+ *
+ *     > indices("foobar") -> array
+ *     [0, 1, 2, 3, 4, 5]
+ */
+public fun indices(iterable)
+{
+    switch typeof iterable {
+        case "array", "buffer", "string" {
+            return range(iterable.size)
+        }
+    }
+
+    fun indices(iterable)
+    {
+        var   i  = 0
+        const _1 = 1
+        for const _ in iterable {
+            yield i
+            i += _1
+        }
+    }
+
+    return indices(iterable)
 }
 
 /* @item base enumerate()

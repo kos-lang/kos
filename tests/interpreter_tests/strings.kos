@@ -750,22 +750,6 @@ do {
 }
 
 ##############################################################################
-# base.string.prototype.indices
-
-do {
-    const it = "".indices()
-    expect_fail(()=>it())
-}
-do {
-    const it = "abcd".indices()
-    assert it() == 0
-    assert it() == 1
-    assert it() == 2
-    assert it() == 3
-    expect_fail(()=>it())
-}
-
-##############################################################################
 # base.string.prototype.ljust
 
 do {

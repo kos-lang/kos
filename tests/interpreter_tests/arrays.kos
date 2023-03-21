@@ -1153,17 +1153,6 @@ do {
 }
 
 ##############################################################################
-# base.array.prototype.indices
-
-do {
-    const it = [ true, void, -2 ].indices()
-    assert it() == 0
-    assert it() == 1
-    assert it() == 2
-    expect_fail(()=>it())
-}
-
-##############################################################################
 # base.array.prototype.fill
 
 do {

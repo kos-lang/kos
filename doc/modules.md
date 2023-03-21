@@ -9,7 +9,6 @@ Table of Contents
       * [array.prototype.cas()](#arrayprototypecas)
       * [array.prototype.fill()](#arrayprototypefill)
       * [array.prototype.get()](#arrayprototypeget)
-      * [array.prototype.indices()](#arrayprototypeindices)
       * [array.prototype.insert()](#arrayprototypeinsert)
       * [array.prototype.insert\_array()](#arrayprototypeinsert_array)
       * [array.prototype.iterator()](#arrayprototypeiterator)
@@ -27,7 +26,6 @@ Table of Contents
       * [buffer.prototype.copy\_buffer()](#bufferprototypecopy_buffer)
       * [buffer.prototype.fill()](#bufferprototypefill)
       * [buffer.prototype.get()](#bufferprototypeget)
-      * [buffer.prototype.indices()](#bufferprototypeindices)
       * [buffer.prototype.insert()](#bufferprototypeinsert)
       * [buffer.prototype.iterator()](#bufferprototypeiterator)
       * [buffer.prototype.pack()](#bufferprototypepack)
@@ -67,6 +65,7 @@ Table of Contents
       * [generator.prototype.state](#generatorprototypestate)
     * [generator\_end()](#generator_end)
     * [hex()](#hex)
+    * [indices()](#indices)
     * [integer()](#integer)
       * [integer.prototype.hex()](#integerprototypehex)
     * [join()](#join)
@@ -101,7 +100,6 @@ Table of Contents
       * [string.prototype.ends\_with()](#stringprototypeends_with)
       * [string.prototype.find()](#stringprototypefind)
       * [string.prototype.get()](#stringprototypeget)
-      * [string.prototype.indices()](#stringprototypeindices)
       * [string.prototype.iterator()](#stringprototypeiterator)
       * [string.prototype.join()](#stringprototypejoin)
       * [string.prototype.ljust()](#stringprototypeljust)
@@ -444,24 +442,6 @@ Examples:
     "-"
     > ["a", "b", "c", "d"].get(-1, "-")
     "d"
-
-array.prototype.indices()
--------------------------
-
-    array.prototype.indices()
-
-A generator which produces subsequent indices of array elements.
-
-Returns an iterator function, which yields subsequent indices of
-the array's elements in ascending order.
-
-`a.indices()` is equivalent to `range(a.size)`, where `a` is some
-array.
-
-Example:
-
-    > [ "a", "b", "c" ].indices() -> array
-    [0, 1, 2]
 
 array.prototype.insert()
 ------------------------
@@ -868,24 +848,6 @@ Examples:
     "-"
     > buffer([10, 11, 12, 13]).get(-1, "-")
     13
-
-buffer.prototype.indices()
---------------------------
-
-    buffer.prototype.indices()
-
-A generator which produces subsequent indices of buffer elements.
-
-Returns an iterator function, which yields subsequent indices of
-the buffer's elements in ascending order.
-
-`b.indices()` is equivalent to `range(b.size)`, where `b` is some
-buffer.
-
-Example:
-
-    > buffer(4).indices() -> array
-    [0, 1, 2, 3]
 
 buffer.prototype.insert()
 -------------------------
@@ -1735,6 +1697,33 @@ Examples:
     > hex(123, 4)
     "0x007b"
 
+indices()
+---------
+
+    indices(iterable)
+
+A generator which produces subsequent indices of an iterable object.
+
+Returns an iterator function, which yields subsequent indices of
+the iterable object's elements in ascending order.  For array, buffer
+or string that is integers from `0` to `size - 1`.  For other types,
+these are indices produced as the generator iterates through them.
+
+If another generator is provided as `iterable`, subsequent values are
+extracted from it and turned into indices, in which case this operation
+is destructive.
+
+For array, buffer or string, `indices(a)` is equivalent to `range(a.size)`,
+where `a` is that array, buffer or string.
+
+Example:
+
+    > indices([ "a", "b", "c" ]) -> array
+    [0, 1, 2]
+
+    > indices("foobar") -> array
+    [0, 1, 2, 3, 4, 5]
+
 integer()
 ---------
 
@@ -2547,24 +2536,6 @@ Examples:
     "-"
     > "abcd".get(-1, "-")
     "d"
-
-string.prototype.indices()
---------------------------
-
-    string.prototype.indices()
-
-A generator which produces subsequent indices of string elements.
-
-Returns an iterator function, which yields subsequent indices of
-the string's elements in ascending order.
-
-`s.indices()` is equivalent to `range(s.size)`, where `s` is some
-string.
-
-Example:
-
-    > "foobar".indices() -> array
-    [0, 1, 2, 3, 4, 5]
 
 string.prototype.iterator()
 ---------------------------

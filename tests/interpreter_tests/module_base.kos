@@ -825,7 +825,6 @@ do {
 do {
     const a = [ base.deep(base.array.prototype) ... ]
     var has_size    = false
-    var has_indices = false
     var has_apply   = false
 
     for const i in base.range(a.size) {
@@ -833,14 +832,12 @@ do {
         assert typeof elem == "array"
         assert elem.size   == 2
         switch elem[0] {
-            case "size"    { has_size = true    }
-            case "indices" { has_indices = true }
-            case "apply"   { has_apply = true   }
+            case "size"  { has_size = true    }
+            case "apply" { has_apply = true   }
         }
     }
 
     assert has_size
-    assert has_indices
     assert ! has_apply
 }
 
@@ -1841,4 +1838,53 @@ do {
         assert typeof k == "string"
         assert typeof v == "integer"
     }
+}
+
+##############################################################################
+# base.indices
+
+do {
+    const it = base.indices(["a", void, 8])
+    assert it() == 0
+    assert it() == 1
+    assert it() == 2
+    expect_fail(it)
+}
+
+do {
+    const it = base.indices("koslang")
+    assert it() == 0
+    assert it() == 1
+    assert it() == 2
+    assert it() == 3
+    assert it() == 4
+    assert it() == 5
+    assert it() == 6
+    expect_fail(it)
+}
+
+do {
+    const it = base.indices(base.buffer(4))
+    assert it() == 0
+    assert it() == 1
+    assert it() == 2
+    assert it() == 3
+    expect_fail(it)
+}
+
+do {
+    const it = base.indices(base.range(5))
+    assert it() == 0
+    assert it() == 1
+    assert it() == 2
+    assert it() == 3
+    assert it() == 4
+    expect_fail(it)
+}
+
+do {
+    const it = base.indices({a: "a", b: "B"})
+    assert it() == 0
+    assert it() == 1
+    expect_fail(it)
 }

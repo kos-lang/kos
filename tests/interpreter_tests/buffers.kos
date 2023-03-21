@@ -1010,7 +1010,7 @@ do {
 
 do {
     const b = buffer(10)
-    for var i in b.indices() {
+    for var i in range(b.size) {
         b[i] = 0x41 + i;
     }
 
@@ -1020,7 +1020,7 @@ do {
     const s2 = string(b)
     assert typeof s1 == "string"
     assert s1.size == 10
-    for var i in s1.indices() {
+    for var i in range(s1.size) {
         assert s1[i] == contents[i]
     }
     assert s1 == s2
