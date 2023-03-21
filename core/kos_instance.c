@@ -1290,7 +1290,7 @@ struct KOS_CTRL_C {
 
 static struct KOS_CTRL_C ctrl_c;
 
-void ctrlc_signal_handler(int sig)
+static void instance_ctrlc_signal_handler(int sig)
 {
     KOS_INSTANCE *const instance = (KOS_INSTANCE *)KOS_atomic_read_relaxed_ptr(ctrl_c.instance);
 
@@ -1304,7 +1304,7 @@ int KOS_hook_ctrl_c(KOS_CONTEXT ctx)
         return KOS_ERROR_EXCEPTION;
     }
 
-    if (set_signal(SIGINT, ctrlc_signal_handler, &ctrl_c.old_handler)) {
+    if (set_signal(SIGINT, instance_ctrlc_signal_handler, &ctrl_c.old_handler)) {
         KOS_raise_errno(ctx, "signal");
         return KOS_ERROR_EXCEPTION;
     }
