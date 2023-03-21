@@ -17,7 +17,6 @@ Table of Contents
       * [array.prototype.repeat()](#arrayprototyperepeat)
       * [array.prototype.reserve()](#arrayprototypereserve)
       * [array.prototype.resize()](#arrayprototyperesize)
-      * [array.prototype.reverse()](#arrayprototypereverse)
       * [array.prototype.size](#arrayprototypesize)
       * [array.prototype.slice()](#arrayprototypeslice)
       * [array.prototype.sort()](#arrayprototypesort)
@@ -32,7 +31,6 @@ Table of Contents
       * [buffer.prototype.repeat()](#bufferprototyperepeat)
       * [buffer.prototype.reserve()](#bufferprototypereserve)
       * [buffer.prototype.resize()](#bufferprototyperesize)
-      * [buffer.prototype.reverse()](#bufferprototypereverse)
       * [buffer.prototype.size](#bufferprototypesize)
       * [buffer.prototype.slice()](#bufferprototypeslice)
       * [buffer.prototype.unpack()](#bufferprototypeunpack)
@@ -603,18 +601,6 @@ Example:
     > a.resize(5)
     [void, void, void, void, void]
 
-array.prototype.reverse()
--------------------------
-
-    array.prototype.reverse()
-
-Returns a new array with elements in reverse order.
-
-Example:
-
-    > [1, 2, 3, 4].reverse()
-    [4, 3, 2, 1]
-
 array.prototype.size
 --------------------
 
@@ -1042,18 +1028,6 @@ Example:
     > const a = buffer()
     > b.resize(5)
     <00 00 00 00 00>
-
-buffer.prototype.reverse()
---------------------------
-
-    buffer.prototype.reverse()
-
-Returns a new buffer with elements in reverse order.
-
-Example:
-
-    > buffer([10, 20, 30]).reverse()
-    <30, 20, 10>
 
 buffer.prototype.size
 ---------------------
@@ -3942,18 +3916,15 @@ reverse()
 
 A generator which produces elements of an iterable object in reverse order.
 
-For strings, arrays and buffers, returns the object of the same type
-containing elements in reverse order.
-
-For objects of other type, returns an iterator function, which yields
-elements of the iterable object in backwards order.
+Returns an iterator function, which yields subsequent elements starting from
+the last element.
 
 Examples:
 
-    > iter.reverse(range(4)) -> array
-    [3, 2, 1, 0]
-    > iter.reverse("language")
-    "egaugnal"
+    > iter.reverse([1, 2, 3, 4]) -> array
+    [4, 3, 2, 1]
+    > iter.reverse(buffer([10, 20, 30])) -> buffer
+    <30, 20, 10>
 
 json
 ====

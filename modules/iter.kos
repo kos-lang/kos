@@ -230,34 +230,39 @@ const indexable_with_int = {
  *
  * A generator which produces elements of an iterable object in reverse order.
  *
- * For strings, arrays and buffers, returns the object of the same type
- * containing elements in reverse order.
- *
- * For objects of other type, returns an iterator function, which yields
- * elements of the iterable object in backwards order.
+ * Returns an iterator function, which yields subsequent elements starting from
+ * the last element.
  *
  * Examples:
  *
- *     > iter.reverse(range(4)) -> array
- *     [3, 2, 1, 0]
- *     > iter.reverse("language")
- *     "egaugnal"
+ *     > iter.reverse([1, 2, 3, 4]) -> array
+ *     [4, 3, 2, 1]
+ *     > iter.reverse(buffer([10, 20, 30])) -> buffer
+ *     <30, 20, 10>
  */
 public fun reverse(iterable)
 {
-    if typeof iterable in indexable_with_int {
-        return iterable.reverse()
-    }
-    else {
-        iterable = [ iterable ... ]
-        return fun(iterable_inner) {
-            var i = iterable_inner.size
-            while i {
-                i -= 1
-                yield iterable_inner[i]
+    switch typeof iterable {
+        case "array", "buffer", "string" {
+            fun reverse(iterable) {
+                for const idx in range(iterable.size - 1, -1, -1) {
+                    yield iterable[idx]
+                }
             }
-        } (iterable)
+
+            return reverse(iterable)
+        }
     }
+
+    fun reverse(iterable)
+    {
+        const copy = [ iterable ... ]
+        while copy.size {
+            yield copy.pop()
+        }
+    }
+
+    return reverse(iterable)
 }
 
 /* @item iter iota()

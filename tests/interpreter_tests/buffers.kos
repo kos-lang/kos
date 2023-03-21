@@ -1082,39 +1082,6 @@ do {
 }
 
 ##############################################################################
-# base.buffer.prototype.reverse()
-do {
-    const b = buffer(5)
-    for var i in range(5) {
-        b[i] = i
-    }
-    const b_r = b.reverse()
-    assert b_r.size == 5
-    assert typeof b_r == "buffer"
-    for var i in range(5) {
-        b_r[-i-1] == i
-    }
-
-    const empty = buffer(0)
-    const empty_r = empty.reverse()
-    assert typeof empty_r == "buffer"
-    assert empty_r.size == 0
-    empty_r.resize(10)
-    assert empty_r.size == 10
-    assert empty.size == 0
-
-    const one = buffer(1)
-    one[0] = 101
-    const one_r = one.reverse()
-    assert typeof one_r == "buffer"
-    assert one_r.size == 1
-    assert one_r[0] == 101
-    one_r.resize(10)
-    assert one_r.size == 10
-    assert one.size == 1
-}
-
-##############################################################################
 # base.buffer.prototype.repeat()
 do {
     const a = buffer(3)

@@ -181,19 +181,19 @@ do {
 
 do {
     const a = iter.reverse([1, 2, 3, 4])
-    assert typeof a == "array"
-    assert a.size == 4
-    assert a[0] == 4
-    assert a[1] == 3
-    assert a[2] == 2
-    assert a[3] == 1
+    assert typeof a == "function"
+    assert a() == 4
+    assert a() == 3
+    assert a() == 2
+    assert a() == 1
+    expect_fail(a)
 
     const s = iter.reverse("kos")
-    assert typeof s == "string"
-    assert s.size == 3
-    assert s[0] == "s"
-    assert s[1] == "o"
-    assert s[2] == "k"
+    assert typeof s == "function"
+    assert s() == "s"
+    assert s() == "o"
+    assert s() == "k"
+    expect_fail(s)
 
     const f = iter.reverse(base.range(2, 6))
     assert typeof f == "function"

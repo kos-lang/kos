@@ -1726,47 +1726,6 @@ integer.prototype.hex = fun(min_digits = 0)
     return hex(this, min_digits)
 }
 
-fun reverse
-{
-    var   dst = this.size
-    const obj = typeof this == "buffer" ? buffer() : array()
-    obj.resize(dst)
-    const _1 = 1
-    var src = 0
-    while dst {
-        dst -= _1
-        obj[dst] = this[src]
-        src += _1
-    }
-    return obj
-}
-
-/* @item base array.prototype.reverse()
- *
- *     array.prototype.reverse()
- *
- * Returns a new array with elements in reverse order.
- *
- * Example:
- *
- *     > [1, 2, 3, 4].reverse()
- *     [4, 3, 2, 1]
- */
-array.prototype.reverse = reverse
-
-/* @item base buffer.prototype.reverse()
- *
- *     buffer.prototype.reverse()
- *
- * Returns a new buffer with elements in reverse order.
- *
- * Example:
- *
- *     > buffer([10, 20, 30]).reverse()
- *     <30, 20, 10>
- */
-buffer.prototype.reverse = reverse
-
 /* @item base array.prototype.repeat()
  *
  *     array.prototype.repeat(num)
