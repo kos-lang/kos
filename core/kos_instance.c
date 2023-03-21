@@ -323,6 +323,32 @@ static void clear_instance(KOS_INSTANCE *inst)
     init_context(&inst->threads.main_thread, inst);
 }
 
+static int init_prototypes(KOS_CONTEXT ctx, struct KOS_PROTOTYPES_S *prototypes)
+{
+    int error = KOS_SUCCESS;
+
+    TRY_OBJID(prototypes->object_proto        = KOS_new_object_with_prototype(ctx, KOS_VOID));
+    TRY_OBJID(prototypes->number_proto        = KOS_new_object(ctx));
+    TRY_OBJID(prototypes->integer_proto       = KOS_new_object_with_prototype(ctx, prototypes->number_proto));
+    TRY_OBJID(prototypes->float_proto         = KOS_new_object_with_prototype(ctx, prototypes->number_proto));
+    TRY_OBJID(prototypes->string_proto        = KOS_new_object(ctx));
+    TRY_OBJID(prototypes->boolean_proto       = KOS_new_object(ctx));
+    TRY_OBJID(prototypes->array_proto         = KOS_new_object(ctx));
+    TRY_OBJID(prototypes->buffer_proto        = KOS_new_object(ctx));
+    TRY_OBJID(prototypes->function_proto      = KOS_new_object(ctx));
+    TRY_OBJID(prototypes->class_proto         = KOS_new_object_with_prototype(ctx, prototypes->function_proto));
+    TRY_OBJID(prototypes->generator_proto     = KOS_new_object_with_prototype(ctx, prototypes->function_proto));
+    TRY_OBJID(prototypes->exception_proto     = KOS_new_object(ctx));
+    TRY_OBJID(prototypes->generator_end_proto = KOS_new_object(ctx));
+    TRY_OBJID(prototypes->panic_proto         = KOS_new_object(ctx));
+    TRY_OBJID(prototypes->ctrl_c_proto        = KOS_new_object(ctx));
+    TRY_OBJID(prototypes->thread_proto        = KOS_new_object(ctx));
+    TRY_OBJID(prototypes->module_proto        = KOS_new_object(ctx));
+
+cleanup:
+    return error;
+}
+
 #ifdef CONFIG_FUZZ
 KOS_ATOMIC(uint32_t) kos_fuzz_instructions;
 #endif
@@ -381,23 +407,8 @@ int KOS_instance_init(KOS_INSTANCE *inst,
 
     ctx = &inst->threads.main_thread;
 
-    TRY_OBJID(inst->prototypes.object_proto        = KOS_new_object_with_prototype(ctx, KOS_VOID));
-    TRY_OBJID(inst->prototypes.number_proto        = KOS_new_object(ctx));
-    TRY_OBJID(inst->prototypes.integer_proto       = KOS_new_object_with_prototype(ctx, inst->prototypes.number_proto));
-    TRY_OBJID(inst->prototypes.float_proto         = KOS_new_object_with_prototype(ctx, inst->prototypes.number_proto));
-    TRY_OBJID(inst->prototypes.string_proto        = KOS_new_object(ctx));
-    TRY_OBJID(inst->prototypes.boolean_proto       = KOS_new_object(ctx));
-    TRY_OBJID(inst->prototypes.array_proto         = KOS_new_object(ctx));
-    TRY_OBJID(inst->prototypes.buffer_proto        = KOS_new_object(ctx));
-    TRY_OBJID(inst->prototypes.function_proto      = KOS_new_object(ctx));
-    TRY_OBJID(inst->prototypes.class_proto         = KOS_new_object_with_prototype(ctx, inst->prototypes.function_proto));
-    TRY_OBJID(inst->prototypes.generator_proto     = KOS_new_object_with_prototype(ctx, inst->prototypes.function_proto));
-    TRY_OBJID(inst->prototypes.exception_proto     = KOS_new_object(ctx));
-    TRY_OBJID(inst->prototypes.generator_end_proto = KOS_new_object(ctx));
-    TRY_OBJID(inst->prototypes.panic_proto         = KOS_new_object(ctx));
-    TRY_OBJID(inst->prototypes.ctrl_c_proto        = KOS_new_object(ctx));
-    TRY_OBJID(inst->prototypes.thread_proto        = KOS_new_object(ctx));
-    TRY_OBJID(inst->prototypes.module_proto        = KOS_new_object(ctx));
+    TRY(init_prototypes(ctx, &inst->prototypes));
+
     TRY_OBJID(inst->modules.module_names           = KOS_new_object(ctx));
     TRY_OBJID(inst->modules.modules                = KOS_new_array(ctx, 0));
     TRY_OBJID(inst->modules.search_paths           = KOS_new_array(ctx, 0));
