@@ -234,8 +234,7 @@ Table of Contents
     * [spawn()](#spawn)
     * [sysname](#sysname)
   * [random](#random)
-    * [rand\_float()](#rand_float)
-    * [rand\_integer()](#rand_integer)
+    * [grandom](#grandom)
     * [random()](#random)
       * [random.prototype.float()](#randomprototypefloat)
       * [random.prototype.integer()](#randomprototypeinteger)
@@ -4705,43 +4704,20 @@ Example:
 random
 ======
 
-rand_float()
-------------
+grandom
+-------
 
-    rand_float()
+    grandom
 
-Generates a pseudo-random float with uniform distribution from 0.0
-(inclusive) to 1.0 (exclusive).
-
-Returns a float in the range from 0.0 to 1.0, where 0.0 can be possibly
-produced and 1.0 is never produced.
-
-Example:
-
-    > random.rand_float()
-    0.05080192760294
-
-rand_integer()
---------------
-
-    rand_integer()
-    rand_integer(min, max)
-
-Generates a pseudo-random integer with uniform distribution.
-
-Returns a random integer.
-
-The first variant generates any integer number.
-
-The second variant generates an integer between the chosen `min` and `max`
-values.  The `min` and `max` values are included in the possible range.
+Global pseudo-random number generator object initialized with
+system-specific source of entropy (see random()).
 
 Examples:
 
-    > random.rand_integer()
-    -3655836363997440814
-    > random.rand_integer(-100, 100)
+    > random.grandom.integer()
     42
+    > random.grandom.float()
+    1.314159265358979323
 
 random()
 --------
@@ -4848,7 +4824,7 @@ from the `iterable` using its `iterator()` function.
 
 Example:
 
-    > range(10) -> shuffle
+    > range(10) -> random.shuffle
     [9, 4, 3, 0, 5, 7, 1, 6, 8, 2]
 
 re

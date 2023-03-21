@@ -16,11 +16,11 @@ fun expect_fail(function)
     assert failed
 }
 
-# random.rand_integer
+# random.grandom.integer
 do {
     var sum = 0
     for const i in range(0x100) {
-        sum += random.rand_integer() >> 13
+        sum += random.grandom.integer() >> 13
     }
 
     sum >>= 59
@@ -29,29 +29,29 @@ do {
     assert sum <  0x10
 
     for const i in range(10) {
-        const value = random.rand_integer(-9, 50)
+        const value = random.grandom.integer(-9, 50)
         assert value >= -9
         assert value <= 50
     }
 
     do {
-        const v = random.rand_integer(0, 1)
+        const v = random.grandom.integer(0, 1)
         assert v == 0 || v == 1
     }
 
-    assert random.rand_integer(1, 1) == 1
-    assert random.rand_integer(-10000, -10000) == -10000
+    assert random.grandom.integer(1, 1) == 1
+    assert random.grandom.integer(-10000, -10000) == -10000
 
-    expect_fail(()=>random.rand_integer(1))
-    expect_fail(()=>random.rand_integer(min = 1))
-    expect_fail(()=>random.rand_integer(max = 1))
-    expect_fail(()=>random.rand_integer(1, 0))
+    expect_fail(()=>random.grandom.integer(1))
+    expect_fail(()=>random.grandom.integer(min = 1))
+    expect_fail(()=>random.grandom.integer(max = 1))
+    expect_fail(()=>random.grandom.integer(1, 0))
 }
 
-# random.rand_float
+# random.grandom.float
 do {
     for const i in range(0x100) {
-        const r = random.rand_float()
+        const r = random.grandom.float()
         assert r >= 0
         assert r < 1
     }
@@ -68,7 +68,7 @@ do {
     expect_fail(()=>random.random(true))
     expect_fail(()=>random.random(10e19))
 
-    const seed = random.rand_integer()
+    const seed = random.grandom.integer()
 
     const a = []
 
