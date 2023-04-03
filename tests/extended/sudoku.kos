@@ -91,7 +91,7 @@ fun print_board(board)
 {
     const next  = board.data.iterator()
     const len   = f_base > 3 ? 2 : 1
-    const blank = " ".repeat(len) + "."
+    const blank = " ".repeats(len) + "."
     for const irow in range(f_size) {
         const disp_row = []
 
@@ -113,7 +113,7 @@ fun print_board(board)
         print(string.apply(void, disp_row))
 
         if irow % f_base == f_base - 1 && irow != f_size - 1 {
-            print("-".repeat(f_size * (len + 1) + (f_base - 1) * 2 + 1))
+            print("-".repeats(f_size * (len + 1) + (f_base - 1) * 2 + 1))
         }
     }
 }
@@ -122,10 +122,10 @@ fun print_board(board)
 fun generate_board()
 {
     var board = {
-        data: [void].repeat(f_size * f_size),
-        rows: [0].repeat(f_size),
-        cols: [0].repeat(f_size),
-        blocks: [0].repeat(f_size)
+        data: array(f_size * f_size),
+        rows: array(f_size, 0),
+        cols: array(f_size, 0),
+        blocks: array(f_size, 0)
     }
 
     const bit_mask = (1 << (f_size + 1)) - 2

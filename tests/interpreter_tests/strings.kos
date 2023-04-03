@@ -576,15 +576,15 @@ do {
 }
 
 do {
-    assert "".repeat(0)    == ""
-    assert "a".repeat(0)   == ""
-    assert "".repeat(1)    == ""
-    assert "a".repeat(1)   == "a"
-    assert "a".repeat(2)   == "aa"
-    assert "x".repeat(10)  == "xxxxxxxxxx"
-    assert "mno".repeat(2) == "mnomno"
-    expect_fail(()=>"x".repeat(0x10000))
-    expect_fail(()=>base.string.prototype.repeat.apply([], [2]))
+    assert "".repeats(0)    == ""
+    assert "a".repeats(0)   == ""
+    assert "".repeats(1)    == ""
+    assert "a".repeats(1)   == "a"
+    assert "a".repeats(2)   == "aa"
+    assert "x".repeats(10)  == "xxxxxxxxxx"
+    assert "mno".repeats(2) == "mnomno"
+    expect_fail(()=>"x".repeats(0x10000))
+    expect_fail(()=>base.string.prototype.repeats.apply([], [2]))
 }
 
 # test case from fuzzer
@@ -617,7 +617,7 @@ do {
     var exception = false
     try {
         const init = "0123456789ABCDEF"
-        const str = init.repeat(0x10000 / init.size - 1)
+        const str = init.repeats(0x10000 / init.size - 1)
         # Trigger exception - string too long
         "\(init)\(str)\(init)"
     }

@@ -395,47 +395,6 @@ do {
     assert typeof a  == "void"
 }
 
-# Repeat
-do {
-    const a = [1, 2, 3, 4, 5]
-    const b = a.repeat(0)
-    assert a.size == 5
-    assert b.size == 0
-    assert a[0] == 1
-    assert a[1] == 2
-    assert a[2] == 3
-    assert a[3] == 4
-    assert a[4] == 5
-
-    const c = a.repeat(1)
-    assert a.size == 5
-    assert c.size == 5
-    for const i in range(5) {
-        assert a[i] == i + 1
-        assert c[i] == i + 1
-    }
-
-    const d = a.repeat(3)
-    assert a.size == 5
-    assert d.size == 15
-    for const i in range(5) {
-        assert a[i] == i + 1
-        assert d[i] == i + 1
-        assert d[i+5] == i + 1
-        assert d[i+10] == i + 1
-    }
-
-    assert [].repeat(0).size == 0
-    assert [].repeat(1).size == 0
-    assert [].repeat(10000).size == 0
-
-    expect_fail(()=>[].repeat(-1))
-    expect_fail(()=>[1].repeat(-1))
-    expect_fail(()=>[1].repeat(""))
-    expect_fail(()=>[1].repeat(void))
-    expect_fail(()=>[1].repeat())
-}
-
 # Slice test case from fuzzer
 # Invalid operand for slice operator must not crash the compiler.
 do {

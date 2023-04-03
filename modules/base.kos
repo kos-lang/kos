@@ -639,7 +639,7 @@ string.prototype.ljust = fun(size, fill = " ")
         return this
     }
 
-    return this + fill.repeat(size - this.size)
+    return this + fill.repeats(size - this.size)
 }
 
 /* @item base string.prototype.rjust()
@@ -677,7 +677,7 @@ string.prototype.rjust = fun(size, fill = " ")
         return this
     }
 
-    return fill.repeat(size - this.size) + this
+    return fill.repeats(size - this.size) + this
 }
 
 /* @item base string.prototype.zfill()
@@ -717,7 +717,7 @@ string.prototype.zfill = fun(size, fill = "0")
         return this
     }
 
-    const fill = fill.repeat(size - this.size)
+    const fill = fill.repeats(size - this.size)
 
     const sign = this.size ? this[0] : ""
 
@@ -1724,71 +1724,6 @@ public fun hex(value, min_digits = 0)
 integer.prototype.hex = fun(min_digits = 0)
 {
     return hex(this, min_digits)
-}
-
-/* @item base array.prototype.repeat()
- *
- *     array.prototype.repeat(num)
- *
- * Creates a repeated array.
- *
- * `num` is a non-negative number of times to repeat the array.
- *
- * If `num` is a float, it is converted to integer using floor mode.
- *
- * Example:
- *
- *     > [7, 8, 9].repeat(4)
- *     [7, 8, 9, 7, 8, 9, 7, 8, 9, 7, 8, 9]
- */
-array.prototype.repeat = fun(num)
-{
-    assert num >= 0
-    const old_size  = this.size
-    const new_size  = old_size * num
-    const new_array = []
-    new_array.resize(new_size)
-    if old_size == 1 {
-        new_array.fill(this[0])
-    }
-    else {
-        for const i in range(0, new_size, old_size) {
-            new_array.insert_array(i, i + old_size, this)
-        }
-    }
-    return new_array
-}
-
-/* @item base buffer.prototype.repeat()
- *
- *     buffer.prototype.repeat(num)
- *
- * Creates a repeated buffer.
- *
- * `num` is a non-negative number of times to repeat the buffer.
- *
- * If `num` is a float, it is converted to integer using floor mode.
- *
- * Example:
- *
- *     > buffer([7, 8, 9]).repeat(4)
- *     <07, 08, 09, 07, 08, 09, 07, 08, 09, 07, 08, 09>
- */
-buffer.prototype.repeat = fun(num)
-{
-    assert num >= 0
-    const old_size  = this.size
-    const new_size  = old_size * num
-    const new_buf = buffer(new_size)
-    if old_size == 1 {
-        new_buf.fill(this[0])
-    }
-    else {
-        for const i in range(0, new_size, old_size) {
-            new_buf.copy_buffer(i, this)
-        }
-    }
-    return new_buf
 }
 
 /* @item base sort()

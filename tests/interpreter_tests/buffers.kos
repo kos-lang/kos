@@ -1082,51 +1082,6 @@ do {
 }
 
 ##############################################################################
-# base.buffer.prototype.repeat()
-do {
-    const a = buffer(3)
-    a[0] = 10
-    a[1] = 20
-    a[2] = 30
-
-    const b = a.repeat(0)
-    assert b.size == 0
-
-    const c = a.repeat(1)
-    assert c.size == 3
-    for const i in range(3) {
-        c[i] == (i + 1) * 10
-    }
-
-    const d = a.repeat(3)
-    assert d.size == 9
-    for const i in range(3) {
-        d[i]     == (i + 1) * 10
-        d[i + 3] == (i + 1) * 10
-        d[i + 6] == (i + 1) * 10
-    }
-
-    a.size == 3
-    a[0] == 10
-    a[1] == 20
-    a[2] == 30
-
-    const empty = buffer(0)
-    assert typeof empty == "buffer"
-    assert empty.size == 0
-
-    assert empty.repeat(0).size == 0
-    assert empty.repeat(1).size == 0
-    assert empty.repeat(10000).size == 0
-
-    expect_fail(()=>empty.repeat(-1))
-    expect_fail(()=>a.repeat(-1))
-    expect_fail(()=>a.repeat(""))
-    expect_fail(()=>a.repeat(void))
-    expect_fail(()=>a.repeat())
-}
-
-##############################################################################
 # base.buffer.prototype.get
 do {
     const b = buffer([1, 2, 3])

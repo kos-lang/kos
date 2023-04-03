@@ -4088,9 +4088,9 @@ cleanup:
     return error ? KOS_BADPTR : ret;
 }
 
-/* @item base string.prototype.repeat()
+/* @item base string.prototype.repeats()
  *
- *     string.prototype.repeat(count)
+ *     string.prototype.repeats(count)
  *
  * Creates a repeated string.
  *
@@ -4100,19 +4100,19 @@ cleanup:
  *
  * Examples:
  *
- *     > "-".repeat(10)
+ *     > "-".repeats(10)
  *     "----------"
- *     > "foo".repeat(5)
+ *     > "foo".repeats(5)
  *     "foofoofoofoofoo"
  */
-static const KOS_CONVERT repeat_args[2] = {
+static const KOS_CONVERT repeats_args[2] = {
     KOS_DEFINE_MANDATORY_ARG(str_count),
     KOS_DEFINE_TAIL_ARG()
 };
 
-static KOS_OBJ_ID repeat(KOS_CONTEXT ctx,
-                         KOS_OBJ_ID  this_obj,
-                         KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID repeats(KOS_CONTEXT ctx,
+                          KOS_OBJ_ID  this_obj,
+                          KOS_OBJ_ID  args_obj)
 {
     int        error = KOS_SUCCESS;
     KOS_OBJ_ID arg   = KOS_array_read(ctx, args_obj, 0);
@@ -5184,7 +5184,7 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "find",         find,                find_args);
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "code",         code,                code_args);
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "lowercase",    lowercase,           KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "repeat",       repeat,              repeat_args);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "repeats",      repeats,             repeats_args);
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "rfind",        rfind,               rfind_args);
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "rscan",        rscan,               rscan_args);
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "reverse",      reverse,             KOS_NULL);

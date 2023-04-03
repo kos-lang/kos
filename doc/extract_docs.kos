@@ -179,11 +179,11 @@ public fun main(script, args...)
     # Print module documentation
     for const topic, items in sort(x => x[0], docs) {
         print(topic)
-        print("=".repeat(topic.size))
+        print("=".repeats(topic.size))
         print()
         for const item, contents in sort(x => x[0], items) {
             print(item)
-            print("-".repeat(item.size))
+            print("-".repeats(item.size))
             print()
             var last_empty = false
             for const line in contents {

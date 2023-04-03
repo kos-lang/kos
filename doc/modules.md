@@ -14,7 +14,6 @@ Table of Contents
       * [array.prototype.iterator()](#arrayprototypeiterator)
       * [array.prototype.pop()](#arrayprototypepop)
       * [array.prototype.push()](#arrayprototypepush)
-      * [array.prototype.repeat()](#arrayprototyperepeat)
       * [array.prototype.reserve()](#arrayprototypereserve)
       * [array.prototype.resize()](#arrayprototyperesize)
       * [array.prototype.size](#arrayprototypesize)
@@ -28,7 +27,6 @@ Table of Contents
       * [buffer.prototype.insert()](#bufferprototypeinsert)
       * [buffer.prototype.iterator()](#bufferprototypeiterator)
       * [buffer.prototype.pack()](#bufferprototypepack)
-      * [buffer.prototype.repeat()](#bufferprototyperepeat)
       * [buffer.prototype.reserve()](#bufferprototypereserve)
       * [buffer.prototype.resize()](#bufferprototyperesize)
       * [buffer.prototype.size](#bufferprototypesize)
@@ -102,7 +100,7 @@ Table of Contents
       * [string.prototype.ljust()](#stringprototypeljust)
       * [string.prototype.lowercase()](#stringprototypelowercase)
       * [string.prototype.lstrip()](#stringprototypelstrip)
-      * [string.prototype.repeat()](#stringprototyperepeat)
+      * [string.prototype.repeats()](#stringprototyperepeats)
       * [string.prototype.reverse()](#stringprototypereverse)
       * [string.prototype.rfind()](#stringprototyperfind)
       * [string.prototype.rjust()](#stringprototyperjust)
@@ -181,6 +179,7 @@ Table of Contents
     * [iota()](#iota)
     * [iproduct()](#iproduct)
     * [product()](#product)
+    * [repeats()](#repeats)
     * [reverse()](#reverse)
   * [json](#json)
     * [dump()](#dump)
@@ -550,22 +549,6 @@ Example:
 
     > [1, 1, 1].push(10, 20)
     3
-
-array.prototype.repeat()
-------------------------
-
-    array.prototype.repeat(num)
-
-Creates a repeated array.
-
-`num` is a non-negative number of times to repeat the array.
-
-If `num` is a float, it is converted to integer using floor mode.
-
-Example:
-
-    > [7, 8, 9].repeat(4)
-    [7, 8, 9, 7, 8, 9, 7, 8, 9, 7, 8, 9]
 
 array.prototype.reserve()
 -------------------------
@@ -979,22 +962,6 @@ Examples:
     <fd 00 fd 00 00 00 80 3f>
     > buffer().pack("> 3 u2", 0x100F, 0x200F, 0x300F)
     <10 0F 20 0F 30 0F>
-
-buffer.prototype.repeat()
--------------------------
-
-    buffer.prototype.repeat(num)
-
-Creates a repeated buffer.
-
-`num` is a non-negative number of times to repeat the buffer.
-
-If `num` is a float, it is converted to integer using floor mode.
-
-Example:
-
-    > buffer([7, 8, 9]).repeat(4)
-    <07, 08, 09, 07, 08, 09, 07, 08, 09, 07, 08, 09>
 
 buffer.prototype.reserve()
 --------------------------
@@ -2592,10 +2559,10 @@ Example:
     > "  foo  ".lstrip()
     "foo  "
 
-string.prototype.repeat()
--------------------------
+string.prototype.repeats()
+--------------------------
 
-    string.prototype.repeat(count)
+    string.prototype.repeats(count)
 
 Creates a repeated string.
 
@@ -2605,9 +2572,9 @@ If `count` is a float, it is converted to integer using floor mode.
 
 Examples:
 
-    > "-".repeat(10)
+    > "-".repeats(10)
     "----------"
-    > "foo".repeat(5)
+    > "foo".repeats(5)
     "foofoofoofoofoo"
 
 string.prototype.reverse()
@@ -3882,6 +3849,28 @@ Example:
 
     > iter.product(range(5, 7), "xyz") -> array
     [[5, x], [6, x], [5, y], [6, y], [5, z], [6, z]]
+
+repeats()
+---------
+
+    repeats(count)
+    repeats(count, iterable)
+
+A generator which produces a sequence of elements from `iterable` object
+repeated `count` times.
+
+The first variant returns a generator function which can be used with various types
+of iterable objects to produce repeated sequences of their elemets.
+
+The second variant is the generator function which produces repeated sequence
+of elements.
+
+Examples:
+
+     > range(3) -> iter.repeats(5) -> array
+     [0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2]
+     > iter.repeats(3, [10, 20]) -> array
+     [10, 20, 10, 20, 10, 20]
 
 reverse()
 ---------

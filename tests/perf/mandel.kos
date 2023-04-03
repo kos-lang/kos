@@ -37,7 +37,7 @@ const iterations    = 256
 const width  = 50
 const height = 25
 
-const output = [0].repeat(width * height)
+const output = array(width * height, 0)
 
 fun mandelbrot_int(cx, cy)
 {

@@ -121,6 +121,6 @@ do {
     assert string(buffer([0x31])) == "1"
     assert "Uu".uppercase() == "UU"
     assert "Uu".lowercase() == "uu"
-    assert "Uu".repeat(2) == "UuUu"
+    assert "Uu".repeats(2) == "UuUu"
     assert "Uu".reverse() == "uU"
 }
