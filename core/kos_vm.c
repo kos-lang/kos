@@ -821,7 +821,6 @@ static KOS_OBJ_ID get_named_args(KOS_CONTEXT ctx,
     KOS_LOCAL      func;
     KOS_VECTOR     cstr;
     int            error     = KOS_SUCCESS;
-    uint32_t       num_found = 0; /* Number of input args       */
     uint32_t       end_found = 0; /* Max arg index found plus 1 */
     const uint32_t min_args  = OBJPTR(FUNCTION, func_obj)->opts.min_args;
     const uint32_t max_args  = OBJPTR(FUNCTION, func_obj)->opts.num_def_args + min_args;
@@ -851,8 +850,6 @@ static KOS_OBJ_ID get_named_args(KOS_CONTEXT ctx,
         const KOS_OBJ_ID idx_id = KOS_get_property(ctx,
                                                    OBJPTR(FUNCTION, func.o)->arg_map,
                                                    KOS_get_walk_key(input.o));
-
-        ++num_found;
 
         if (IS_BAD_PTR(idx_id)) {
             KOS_clear_exception(ctx);
