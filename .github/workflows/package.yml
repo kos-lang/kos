@@ -17,23 +17,12 @@ jobs:
     steps:
       - name: Set version number
         run: |
-          echo "::set-output name=version::${GITHUB_REF#*/*/}"
-          echo "::set-output name=version_number::${GITHUB_REF#*/*/v}"
+          echo "version=${GITHUB_REF#*/*/}" >> $GITHUB_OUTPUT
+          echo "version_number=${GITHUB_REF#*/*/v}" >> $GITHUB_OUTPUT
         id: version
       - uses: actions/checkout@v3
       - name: Verify version
         run: interpreter/verify_version.sh ${{ steps.version.outputs.version }}
-      - name: Create release
-        uses: actions/create-release@v1
-        id: create_release
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          draft: true
-          prerelease: false
-          release_name: ${{ steps.version.outputs.version }}
-          tag_name: ${{ github.ref }}
-          body: Release ${{ steps.version.outputs.version }}
 
   default:
     strategy:
@@ -94,13 +83,12 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           path: "./artifacts"
-      - run: npm install glob
-      - name: Upload release assets
-        uses: actions/github-script@v3
+      - name: Create and upload release
+        uses: softprops/action-gh-release@v1
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const script        = require(`${process.env.GITHUB_WORKSPACE}/.github/scripts/upload-release-asset.js`);
-            const artifacts_dir = `${process.env.GITHUB_WORKSPACE}/artifacts/package`;
-            const release_id    = "${{ needs.release.outputs.id }}";
-            script({github, context, artifacts_dir, release_id});
+          draft: true
+          prerelease: false
+          name: ${{ needs.release.outputs.version }}
+          tag_name: ${{ github.ref }}
+          body: Release ${{ needs.release.outputs.version }}
+          files: artifacts/package/kos-*
