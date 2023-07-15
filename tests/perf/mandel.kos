@@ -131,6 +131,6 @@ public fun main(use_float = false)
 
     for const y in range(height) {
         const start = y * width
-        print("".join(output[start : start + width]))
+        print(join("", output[start : start + width]))
     }
 }
