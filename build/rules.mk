@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-# Copyright (c) 2014-2022 Chris Dragan
+# Copyright (c) 2014-2023 Chris Dragan
 
 ##############################################################################
 # Function to convert a relative path to a reverse path

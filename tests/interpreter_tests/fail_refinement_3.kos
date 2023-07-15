@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-# Copyright (c) 2014-2022 Chris Dragan
+# Copyright (c) 2014-2023 Chris Dragan
 
 const x = [];
 x[0x8000000000000000] = 1; # index out of supported range

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-# Copyright (c) 2014-2022 Chris Dragan
+# Copyright (c) 2014-2023 Chris Dragan
 
 depth = tests/perf/time_us
 
