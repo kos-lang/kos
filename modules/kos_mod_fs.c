@@ -442,6 +442,10 @@ static KOS_OBJ_ID tempdir(KOS_CONTEXT ctx,
     char buf[MAX_PATH + 1];
 
     const DWORD len = GetTempPath((DWORD)sizeof(buf), buf);
+    if ( ! len) {
+        KOS_raise_last_error(ctx, "GetTempPath", (unsigned)GetLastError());
+        return KOS_ERROR_EXCEPTION;
+    }
 
     return KOS_new_string(ctx, buf, len > MAX_PATH ? MAX_PATH : len);
 
