@@ -136,6 +136,7 @@ Table of Contents
     * [path\_separator](#path_separator)
     * [remove()](#remove)
     * [rmdir()](#rmdir)
+    * [tempdir()](#tempdir)
   * [io](#io)
     * [append()](#append)
     * [append\_flag](#append_flag)
@@ -3234,6 +3235,21 @@ not empty or if it's a file.
 Example:
 
     > rmdir("/tmp/test")
+
+tempdir()
+---------
+
+    tempdir()
+
+Returns a string containing path to system-wide directory used for storing temporary files.
+
+On non-Windows operating systems this can be contents of the `TMPDIR` variable or the
+path to `/tmp` directory, on Windows this can be the contents of the `TEMP` variable.
+
+Example:
+
+    > tempdir()
+    "/tmp"
 
 io
 ==

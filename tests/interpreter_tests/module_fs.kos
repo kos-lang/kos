@@ -167,3 +167,11 @@ do {
 
     fs.rmdir(dir_name)
 }
+
+##############################################################################
+# fs.tempdir()
+
+do {
+    assert typeof fs.tempdir() == "string"
+    assert fs.info(fs.tempdir() + "/").type == "directory"
+}

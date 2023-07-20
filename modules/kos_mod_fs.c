@@ -13,6 +13,7 @@
 #include "../inc/kos_utils.h"
 #include "../core/kos_system_internal.h"
 #include "../core/kos_try.h"
+#include <stdlib.h>
 #include <string.h>
 #ifdef _WIN32
 #   define WIN32_LEAN_AND_MEAN
@@ -417,6 +418,52 @@ cleanup:
     KOS_vector_destroy(&path_cstr);
 
     return error ? KOS_BADPTR : path_obj;
+}
+
+/* @item fs tempdir()
+ *
+ *     tempdir()
+ *
+ * Returns a string containing path to system-wide directory used for storing temporary files.
+ *
+ * On non-Windows operating systems this can be contents of the `TMPDIR` variable or the
+ * path to `/tmp` directory, on Windows this can be the contents of the `TEMP` variable.
+ *
+ * Example:
+ *
+ *     > tempdir()
+ *     "/tmp"
+ */
+static KOS_OBJ_ID tempdir(KOS_CONTEXT ctx,
+                          KOS_OBJ_ID  this_obj,
+                          KOS_OBJ_ID  args_obj)
+{
+#ifdef _WIN32
+    char buf[MAX_PATH + 1];
+
+    const DWORD len = GetTempPath((DWORD)sizeof(buf), buf);
+
+    return KOS_new_string(ctx, buf, len > MAX_PATH : MAX_PATH : len);
+
+#else
+
+    KOS_DECLARE_STATIC_CONST_STRING(str_tmp,     "/tmp");
+    KOS_DECLARE_STATIC_CONST_STRING(str_var_tmp, "/var/tmp");
+
+    struct stat statbuf;
+
+    const char *const tmpdir = getenv("TMPDIR");
+    if (tmpdir)
+        return KOS_new_cstring(ctx, tmpdir);
+
+    if (0 == stat("/tmp", &statbuf) && S_ISDIR(statbuf.st_mode))
+        return KOS_CONST_ID(str_tmp);
+
+    if (0 == stat("/var/tmp", &statbuf) && S_ISDIR(statbuf.st_mode))
+        return KOS_CONST_ID(str_var_tmp);
+
+    return KOS_CONST_ID(str_tmp);
+#endif
 }
 
 /* @item fs chdir()
@@ -955,6 +1002,7 @@ int kos_module_fs_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_FUNCTION(ctx,  module.o, "info",        info,        info_args);
     TRY_ADD_FUNCTION(ctx,  module.o, "remove",      kos_remove,  filename_arg);
     TRY_ADD_FUNCTION(ctx,  module.o, "cwd",         cwd,         KOS_NULL);
+    TRY_ADD_FUNCTION(ctx,  module.o, "tempdir",     tempdir,     KOS_NULL);
     TRY_ADD_FUNCTION(ctx,  module.o, "chdir",       kos_chdir,   path_arg);
     TRY_ADD_GENERATOR(ctx, module.o, "listdir",     listdir,     path_arg);
     TRY_ADD_FUNCTION(ctx,  module.o, "mkdir",       kos_mkdir,   mkdir_args);
