@@ -443,7 +443,7 @@ static KOS_OBJ_ID tempdir(KOS_CONTEXT ctx,
 
     const DWORD len = GetTempPath((DWORD)sizeof(buf), buf);
 
-    return KOS_new_string(ctx, buf, len > MAX_PATH : MAX_PATH : len);
+    return KOS_new_string(ctx, buf, len > MAX_PATH ? MAX_PATH : len);
 
 #else
 
