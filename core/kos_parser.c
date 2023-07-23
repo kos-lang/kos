@@ -44,6 +44,7 @@ static const char str_err_expected_named_assignment[] = "expected '=' after name
 static const char str_err_expected_param_default[]    = "expected default value for parameter";
 static const char str_err_expected_paren_close[]      = "expected ')'";
 static const char str_err_expected_paren_open[]       = "expected '('";
+static const char str_err_expected_public_name[]      = "expected identifier for public function";
 static const char str_err_expected_semicolon[]        = "expected ';'";
 static const char str_err_expected_square_close[]     = "expected ']'";
 static const char str_err_expected_string[]           = "unexpected interpolated string";
@@ -2268,7 +2269,7 @@ static int function_stmt(KOS_PARSER *parser, int is_public, KOS_AST_NODE **ret)
         fun_node = KOS_NULL;
     }
     else if (is_public) {
-        parser->error_str = str_err_expected_identifier;
+        parser->error_str = str_err_expected_public_name;
         error = KOS_ERROR_PARSE_FAILED;
     }
     else {
