@@ -356,4 +356,7 @@ int kos_comp_walk_globals(void                          *ctx,
                           KOS_COMP_WALK_GLOBALS_CALLBACK callback,
                           void                          *cookie);
 
+int kos_comp_check_private_global(void            *ctx,
+                                  const KOS_TOKEN *token);
+
 #endif

@@ -33,15 +33,16 @@
 #   pragma warning( disable : 4191 ) /* 'type cast': unsafe conversion from 'LIB_FUNCTION' to 'KOS_BUILTIN_INIT' */
 #endif
 
-KOS_DECLARE_STATIC_CONST_STRING(str_cur_dir,      ".");
-KOS_DECLARE_STATIC_CONST_STRING(str_eol,          "\n");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_internal, "internal error");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_stdin,    "failed reading from stdin");
-KOS_DECLARE_STATIC_CONST_STRING(str_format_colon, ":");
-KOS_DECLARE_STATIC_CONST_STRING(str_format_error, ": error: ");
-KOS_DECLARE_STATIC_CONST_STRING(str_global,       "<global>");
-KOS_DECLARE_STATIC_CONST_STRING(str_path_sep,     KOS_PATH_SEPARATOR_STR);
-KOS_DECLARE_STATIC_CONST_STRING(str_script_ext,   ".kos");
+KOS_DECLARE_STATIC_CONST_STRING(str_cur_dir,        ".");
+KOS_DECLARE_STATIC_CONST_STRING(str_eol,            "\n");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_internal,   "internal error");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_stdin,      "failed reading from stdin");
+KOS_DECLARE_STATIC_CONST_STRING(str_format_colon,   ":");
+KOS_DECLARE_STATIC_CONST_STRING(str_format_error,   ": error: ");
+KOS_DECLARE_STATIC_CONST_STRING(str_format_warning, ": warning: ");
+KOS_DECLARE_STATIC_CONST_STRING(str_global,         "<global>");
+KOS_DECLARE_STATIC_CONST_STRING(str_path_sep,       KOS_PATH_SEPARATOR_STR);
+KOS_DECLARE_STATIC_CONST_STRING(str_script_ext,     ".kos");
 
 struct KOS_MODULE_LOAD_CHAIN_S {
     KOS_MODULE_LOAD_CHAIN *next;
@@ -1041,27 +1042,38 @@ static KOS_OBJ_ID get_line(KOS_CONTEXT ctx,
     return ret;
 }
 
-static KOS_OBJ_ID format_error(KOS_CONTEXT  ctx,
-                               KOS_OBJ_ID   module_obj,
-                               const char  *data,
-                               unsigned     data_size,
-                               const char  *error_str,
-                               KOS_FILE_POS pos)
+struct KOS_COMP_CTX {
+    KOS_CONTEXT ctx;
+    KOS_LOCAL   module;
+    const char *data;
+    unsigned    data_size;
+};
+
+enum KOS_ERROR_OR_WARNING {
+    KOS_WARNING,
+    KOS_ERROR
+};
+
+static KOS_OBJ_ID format_error(struct KOS_COMP_CTX      *comp_ctx,
+                               enum KOS_ERROR_OR_WARNING is_error,
+                               const char               *error_str,
+                               KOS_FILE_POS              pos)
 {
-    int        error = KOS_SUCCESS;
-    KOS_OBJ_ID ret   = KOS_BADPTR;
-    KOS_VECTOR cstr;
-    KOS_LOCAL  parts[11];
+    KOS_CONTEXT ctx   = comp_ctx->ctx;
+    KOS_OBJ_ID  ret   = KOS_BADPTR;
+    KOS_VECTOR  cstr;
+    KOS_LOCAL   parts[11];
+    int         error = KOS_SUCCESS;
 
     KOS_vector_init(&cstr);
 
     KOS_init_locals(ctx, &parts[0], &parts[2], &parts[4], &parts[6], &parts[8], &parts[10],
                     kos_end_locals);
 
-    parts[0].o = KOS_get_file_name(ctx, OBJPTR(MODULE, module_obj)->path);
+    parts[0].o = KOS_get_file_name(ctx, OBJPTR(MODULE, comp_ctx->module.o)->path);
     TRY_OBJID(parts[0].o);
     if (KOS_get_string_length(parts[0].o) == 0)
-        parts[0].o = OBJPTR(MODULE, module_obj)->name;
+        parts[0].o = OBJPTR(MODULE, comp_ctx->module.o)->name;
 
     parts[1].o = KOS_CONST_ID(str_format_colon);
 
@@ -1073,14 +1085,14 @@ static KOS_OBJ_ID format_error(KOS_CONTEXT  ctx,
     parts[4].o = KOS_object_to_string(ctx, TO_SMALL_INT((int)pos.column));
     TRY_OBJID(parts[4].o);
 
-    parts[5].o = KOS_CONST_ID(str_format_error);
+    parts[5].o = is_error ? KOS_CONST_ID(str_format_error) : KOS_CONST_ID(str_format_warning);
 
     parts[6].o = KOS_new_const_ascii_cstring(ctx, error_str);
     TRY_OBJID(parts[6].o);
 
     parts[7].o = KOS_CONST_ID(str_eol);
 
-    parts[8].o = get_line(ctx, data, data_size, pos.line);
+    parts[8].o = get_line(ctx, comp_ctx->data, comp_ctx->data_size, pos.line);
     TRY_OBJID(parts[8].o);
 
     parts[9].o = KOS_CONST_ID(str_eol);
@@ -1117,12 +1129,13 @@ int kos_comp_resolve_global(void                          *vframe,
                             KOS_COMP_WALK_GLOBALS_CALLBACK callback,
                             void                          *cookie)
 {
-    KOS_LOCAL     str;
-    KOS_CONTEXT   ctx   = (KOS_CONTEXT)vframe;
-    KOS_INSTANCE *inst  = ctx->inst;
-    KOS_OBJ_ID    module_obj;
-    KOS_OBJ_ID    glob_idx_obj;
-    int           error = KOS_SUCCESS;
+    KOS_LOCAL            str;
+    struct KOS_COMP_CTX *comp_ctx = (struct KOS_COMP_CTX *)vframe;
+    KOS_CONTEXT          ctx      = comp_ctx->ctx;
+    KOS_INSTANCE        *inst     = ctx->inst;
+    KOS_OBJ_ID           module_obj;
+    KOS_OBJ_ID           glob_idx_obj;
+    int                  error    = KOS_SUCCESS;
 
     assert(module_idx >= 0);
 
@@ -1163,12 +1176,13 @@ int kos_comp_walk_globals(void                          *vframe,
                           KOS_COMP_WALK_GLOBALS_CALLBACK callback,
                           void                          *cookie)
 {
-    int                 error  = KOS_SUCCESS;
-    KOS_CONTEXT         ctx    = (KOS_CONTEXT)vframe;
-    KOS_INSTANCE *const inst   = ctx->inst;
-    KOS_VECTOR          name;
-    KOS_LOCAL           walk;
-    KOS_OBJ_ID          module_obj;
+    struct KOS_COMP_CTX *comp_ctx = (struct KOS_COMP_CTX *)vframe;
+    KOS_CONTEXT          ctx      = comp_ctx->ctx;
+    KOS_INSTANCE *const  inst     = ctx->inst;
+    KOS_VECTOR           name;
+    KOS_LOCAL            walk;
+    KOS_OBJ_ID           module_obj;
+    int                  error    = KOS_SUCCESS;
 
     KOS_vector_init(&name);
 
@@ -1203,6 +1217,37 @@ cleanup:
         error = (KOS_get_exception(ctx) == KOS_STR_OUT_OF_MEMORY) ? KOS_ERROR_OUT_OF_MEMORY : KOS_ERROR_NOT_FOUND;
         KOS_clear_exception(ctx);
     }
+
+    return error;
+}
+
+int kos_comp_check_private_global(void            *vframe,
+                                  const KOS_TOKEN *token)
+{
+    static const char main[] = "main";
+
+    struct KOS_COMP_CTX *const comp_ctx = (struct KOS_COMP_CTX *)vframe;
+    KOS_OBJ_ID                 err_str;
+    KOS_VECTOR                 err_cstr;
+    int                        error    = KOS_SUCCESS;
+
+    KOS_vector_init(&err_cstr);
+
+    if (sizeof(main) - 1 != token->length || memcmp(token->begin, main, token->length) != 0)
+        goto cleanup;
+
+    err_str = format_error(comp_ctx,
+                           KOS_WARNING,
+                           "main function is not declared as public",
+                           get_token_pos(token));
+    TRY_OBJID(err_str);
+
+    TRY(KOS_string_to_cstr_vec(comp_ctx->ctx, err_str, &err_cstr));
+
+    printf("%s\n", err_cstr.buffer);
+
+cleanup:
+    KOS_vector_destroy(&err_cstr);
 
     return error;
 }
@@ -1312,18 +1357,22 @@ static int compile_module(KOS_CONTEXT ctx,
     KOS_AST_NODE       *ast;
     KOS_PARSER          parser;
     KOS_COMP_UNIT       program;
-    KOS_LOCAL           module;
+    struct KOS_COMP_CTX comp_ctx;
     int                 error             = KOS_SUCCESS;
     unsigned            num_opt_passes    = 0;
 
     time_0 = KOS_get_time_us();
 
-    KOS_init_local_with(ctx, &module, module_obj);
+    KOS_init_local_with(ctx, &comp_ctx.module, module_obj);
+
+    comp_ctx.ctx       = ctx;
+    comp_ctx.data      = data;
+    comp_ctx.data_size = data_size;
 
     /* Initialize parser and compiler */
     kos_compiler_init(&program, module_idx);
-    if ( ! IS_BAD_PTR(OBJPTR(MODULE, module.o)->constants))
-        program.num_constants = (int)KOS_get_array_size(OBJPTR(MODULE, module.o)->constants);
+    if ( ! IS_BAD_PTR(OBJPTR(MODULE, comp_ctx.module.o)->constants))
+        program.num_constants = (int)KOS_get_array_size(OBJPTR(MODULE, comp_ctx.module.o)->constants);
     kos_parser_init(&parser,
                     &program.allocator,
                     module_idx,
@@ -1338,12 +1387,7 @@ static int compile_module(KOS_CONTEXT ctx,
 
         const KOS_FILE_POS pos = (error == KOS_ERROR_SCANNING_FAILED)
                                  ? parser.lexer.pos : get_token_pos(&parser.token);
-        KOS_OBJ_ID error_obj = format_error(ctx,
-                                            module.o,
-                                            data,
-                                            data_size,
-                                            parser.error_str,
-                                            pos);
+        KOS_OBJ_ID error_obj = format_error(&comp_ctx, KOS_ERROR, parser.error_str, pos);
         assert( ! IS_BAD_PTR(error_obj) || KOS_is_exception_pending(ctx));
         if ( ! IS_BAD_PTR(error_obj))
             KOS_raise_exception(ctx, error_obj);
@@ -1364,25 +1408,23 @@ static int compile_module(KOS_CONTEXT ctx,
 
     /* Save base module index */
     if (module_idx == KOS_BASE_MODULE_IDX)
-        TRY(KOS_array_write(ctx, inst->modules.modules, module_idx, module.o));
+        TRY(KOS_array_write(ctx, inst->modules.modules, module_idx, comp_ctx.module.o));
 
     /* Prepare compiler */
-    program.ctx            = ctx;
+    program.ctx            = &comp_ctx;
     program.is_interactive = (flags & KOS_RUN_INTERACTIVE) ? 1 : 0;
     TRY(predefine_globals(ctx,
                           &program,
-                          OBJPTR(MODULE, module.o)->global_names,
-                          OBJPTR(MODULE, module.o)->module_names));
+                          OBJPTR(MODULE, comp_ctx.module.o)->global_names,
+                          OBJPTR(MODULE, comp_ctx.module.o)->module_names));
 
     /* Compile source code into bytecode */
     error = kos_compiler_compile(&program, ast, &num_opt_passes);
 
     if (error == KOS_ERROR_COMPILE_FAILED) {
 
-        KOS_OBJ_ID error_obj = format_error(ctx,
-                                            module.o,
-                                            data,
-                                            data_size,
+        KOS_OBJ_ID error_obj = format_error(&comp_ctx,
+                                            KOS_ERROR,
                                             program.error_str,
                                             get_token_pos(program.error_token));
         assert( ! IS_BAD_PTR(error_obj) || KOS_is_exception_pending(ctx));
@@ -1400,7 +1442,7 @@ static int compile_module(KOS_CONTEXT ctx,
         KOS_VECTOR cname;
 
         KOS_vector_init(&cname);
-        error = KOS_string_to_cstr_vec(ctx, OBJPTR(MODULE, module.o)->name, &cname);
+        error = KOS_string_to_cstr_vec(ctx, OBJPTR(MODULE, comp_ctx.module.o)->name, &cname);
 
         if ( ! error) {
             printf("%s: parsing             : %u us\n", cname.buffer, (unsigned)(time_1 - time_0));
@@ -1412,9 +1454,9 @@ static int compile_module(KOS_CONTEXT ctx,
         TRY(error);
     }
 
-    TRY(alloc_globals(ctx, &program, module.o));
-    TRY(alloc_constants(ctx, &program, module.o));
-    TRY(save_direct_modules(ctx, &program, module.o));
+    TRY(alloc_globals(ctx, &program, comp_ctx.module.o));
+    TRY(alloc_constants(ctx, &program, comp_ctx.module.o));
+    TRY(save_direct_modules(ctx, &program, comp_ctx.module.o));
 
     {
         KOS_FRAME  *frame;
@@ -1424,13 +1466,13 @@ static int compile_module(KOS_CONTEXT ctx,
         frame = (KOS_FRAME *)ast->u.scope;
         assert(frame->scope.has_frame);
 
-        OBJPTR(MODULE, module.o)->main_idx = frame->constant->header.index;
+        OBJPTR(MODULE, comp_ctx.module.o)->main_idx = frame->constant->header.index;
     }
 
 cleanup:
     kos_parser_destroy(&parser);
     kos_compiler_destroy(&program);
-    KOS_destroy_top_local(ctx, &module);
+    KOS_destroy_top_local(ctx, &comp_ctx.module);
     return error;
 }
 
@@ -1733,9 +1775,10 @@ int kos_comp_import_module(void       *vframe,
                            uint16_t    length,
                            int        *module_idx)
 {
-    KOS_CONTEXT ctx = (KOS_CONTEXT)vframe;
-    KOS_OBJ_ID  module_obj;
-    int         already_loaded = 0;
+    struct KOS_COMP_CTX *comp_ctx = (struct KOS_COMP_CTX *)vframe;
+    KOS_CONTEXT          ctx      = comp_ctx->ctx;
+    KOS_OBJ_ID           module_obj;
+    int                  already_loaded = 0;
 
     assert(module_idx);
 

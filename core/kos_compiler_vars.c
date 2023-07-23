@@ -405,6 +405,7 @@ static int define_var(KOS_COMP_UNIT         *program,
         program->error_token = &node->token;
         program->error_str   = str_err_redefined_var;
         error                = KOS_ERROR_COMPILE_FAILED;
+        goto cleanup;
     }
 
     var = alloc_var(program, global ? VAR_GLOBAL : VAR_LOCAL, is_const, node);
@@ -426,6 +427,9 @@ static int define_var(KOS_COMP_UNIT         *program,
     }
     else {
         KOS_SCOPE *scope = &program->cur_frame->scope;
+
+        if ( ! program->scope_stack->parent_scope)
+            TRY(kos_comp_check_private_global(program->ctx, &node->token));
 
         var->next            = scope->fun_vars_list;
         scope->fun_vars_list = var;

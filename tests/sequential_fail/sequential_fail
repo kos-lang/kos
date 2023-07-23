@@ -18,7 +18,7 @@ END=$(($3 + $4 - 1))
 for KOSSEQFAIL in $(seq $BEGIN $END); do
     export KOSSEQFAIL
     RET=0
-    "$KOS" -v sequential_fail/sequential_fail.kos -print - -kosarg > "$OUTPUT.stdout" 2> "$OUTPUT.stderr"|| RET=$?
+    "$KOS" -v sequential_fail/sequential_fail.kos -print - -kosarg > "$OUTPUT.stdout" 2> "$OUTPUT.stderr" || RET=$?
 
     if [ "$RET" = "0" ]; then
         echo "Note: Test passed at sequence point $KOSSEQFAIL"
