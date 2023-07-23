@@ -1224,7 +1224,7 @@ cleanup:
 int kos_comp_check_private_global(void            *vframe,
                                   const KOS_TOKEN *token)
 {
-    static const char main[] = "main";
+    static const char main_str[] = "main";
 
     struct KOS_COMP_CTX *const comp_ctx = (struct KOS_COMP_CTX *)vframe;
     KOS_OBJ_ID                 err_str;
@@ -1233,7 +1233,7 @@ int kos_comp_check_private_global(void            *vframe,
 
     KOS_vector_init(&err_cstr);
 
-    if (sizeof(main) - 1 != token->length || memcmp(token->begin, main, token->length) != 0)
+    if (sizeof(main_str) - 1 != token->length || memcmp(token->begin, main_str, token->length) != 0)
         goto cleanup;
 
     err_str = format_error(comp_ctx,
