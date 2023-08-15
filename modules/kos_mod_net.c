@@ -16,6 +16,7 @@
 
 #ifdef _WIN32
 #   include <winsock2.h>
+#   include <ws2tcpip.h>
 #else
 #   include <arpa/inet.h>
 #   include <errno.h>
@@ -28,17 +29,19 @@
 #ifdef _WIN32
 #define reset_last_error() ((void)0)
 
-static int get_error()
+static int get_error(void)
 {
     return WSAGetLastError();
 }
 #else
-static void reset_last_error()
+#define closesocket close
+
+static void reset_last_error(void)
 {
     errno = 0;
 }
 
-static int get_error()
+static int get_error(void)
 {
     return errno;
 }
@@ -79,7 +82,7 @@ static void release_socket(KOS_SOCKET_HOLDER *socket_holder)
 
             if (socket_fd >= 0) {
                 /* TODO shutdown */
-                close(socket_fd);
+                closesocket(socket_fd);
             }
 
             KOS_free(socket_holder);
@@ -147,7 +150,9 @@ typedef union KOS_GENERIC_ADDR_U {
     struct sockaddr     addr;
     struct sockaddr_in  inet;
     struct sockaddr_in6 inet6;
+#ifndef _WIN32
     struct sockaddr_un  local;
+#endif
 } KOS_GENERIC_ADDR;
 
 #ifdef _WIN32
@@ -510,7 +515,9 @@ KOS_INIT_MODULE(net, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "shutdown",   kos_shutdown,   KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "write",      kos_write,      KOS_NULL);
 
+#ifndef _WIN32
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "AF_LOCAL", AF_LOCAL);
+#endif
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "AF_INET",  AF_INET);
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "AF_INET6", AF_INET6);
 
