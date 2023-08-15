@@ -264,6 +264,15 @@ endif
 ##############################################################################
 # Various options
 
+builtin_modules ?= 1
+
+ifeq ($(UNAME), Windows)
+    ifeq ($(builtin_modules), 1)
+        # Needed for net module
+        EXE_LDFLAGS += ws2_32.lib
+    endif
+endif
+
 threads ?= 1
 
 ifneq ($(threads), 1)

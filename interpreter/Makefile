@@ -22,13 +22,6 @@ libs += $(out_dir_base)/core/$(call LIB_NAME,kos_lang)
 
 $(kos_exe): $(libs)
 
-ifeq ($(UNAME), Windows)
-    builtin_modules ?= 1
-    ifeq ($(builtin_modules), 1)
-        $(kos_exe): LDFLAGS += ws2_32.lib
-    endif
-endif
-
 $(eval $(call LINK_EXE,kos,$(c_files) $(cpp_files),$(libs)))
 
 ifdef tracy

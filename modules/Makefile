@@ -17,7 +17,6 @@ include ../build/rules.mk
 ######################################################################
 # Module shared libraries
 
-builtin_modules  ?= 1
 external_modules ?=
 
 ifeq ($(builtin_modules), 1)
@@ -46,7 +45,7 @@ $(eval $(call EXTERNAL_MODULE,net))
 
 ifeq ($(UNAME), Windows)
     ifneq ($(builtin_modules), 1)
-	$(call SHARED_TARGET,net): SHARED_LDFLAGS += ws2_32.lib
+        $(call SHARED_TARGET,net): SHARED_LDFLAGS += ws2_32.lib
     endif
 endif
 
