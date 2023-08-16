@@ -40,14 +40,14 @@ endif
 c_files_math = kos_mod_math.c
 $(eval $(call EXTERNAL_MODULE,math))
 
-c_files_net = kos_mod_net.c
-$(eval $(call EXTERNAL_MODULE,net))
-
 ifeq ($(UNAME), Windows)
     ifneq ($(builtin_modules), 1)
         $(call SHARED_TARGET,net): SHARED_LDFLAGS += ws2_32.lib
     endif
 endif
+
+c_files_net = kos_mod_net.c
+$(eval $(call EXTERNAL_MODULE,net))
 
 c_files_os = kos_mod_os.c
 $(eval $(call EXTERNAL_MODULE,os))

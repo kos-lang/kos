@@ -27,6 +27,10 @@
 #endif
 
 #ifdef _WIN32
+typedef SOCKET KOS_SOCKET;
+
+#define KOS_INVALID_SOCKET ((KOS_SOCKET)INVALID_SOCKET)
+
 #define reset_last_error() ((void)0)
 
 static int get_error(void)
@@ -34,6 +38,10 @@ static int get_error(void)
     return WSAGetLastError();
 }
 #else
+typedef int KOS_SOCKET;
+
+#define KOS_INVALID_SOCKET ((KOS_SOCKET)-1)
+
 #define closesocket close
 
 static void reset_last_error(void)
@@ -78,7 +86,7 @@ static void release_socket(KOS_SOCKET_HOLDER *socket_holder)
         assert(ref_count >= 1);
 
         if (ref_count == 1) {
-            const int32_t socket_fd = (int32_t)KOS_atomic_swap_u32(socket_holder->socket_fd, (uint32_t)-1);
+            const int32_t socket_fd = (int32_t)KOS_atomic_swap_u32(socket_holder->socket_fd, (uint32_t)KOS_INVALID_SOCKET);
 
             if (socket_fd >= 0) {
                 /* TODO shutdown */
@@ -100,7 +108,7 @@ KOS_DECLARE_PRIVATE_CLASS(socket_priv_class);
 
 static int set_socket_object(KOS_CONTEXT ctx,
                              KOS_OBJ_ID  socket_obj,
-                             int         socket_fd,
+                             KOS_SOCKET  socket_fd,
                              int         family)
 {
     KOS_SOCKET_HOLDER *const socket_holder = (KOS_SOCKET_HOLDER *)KOS_malloc(sizeof(KOS_SOCKET_HOLDER));
@@ -110,7 +118,7 @@ static int set_socket_object(KOS_CONTEXT ctx,
         return KOS_ERROR_EXCEPTION;
     }
 
-    socket_holder->socket_fd = socket_fd;
+    socket_holder->socket_fd = (uint32_t)socket_fd;
     socket_holder->ref_count = 1;
     socket_holder->family    = family;
 
@@ -119,9 +127,9 @@ static int set_socket_object(KOS_CONTEXT ctx,
     return KOS_SUCCESS;
 }
 
-static int get_socket(KOS_SOCKET_HOLDER *socket_holder)
+static KOS_SOCKET get_socket(KOS_SOCKET_HOLDER *socket_holder)
 {
-    return socket_holder ? (int)KOS_atomic_read_relaxed_u32(socket_holder->socket_fd) : -1;
+    return socket_holder ? (KOS_SOCKET)KOS_atomic_read_relaxed_u32(socket_holder->socket_fd) : KOS_INVALID_SOCKET;
 }
 
 static int acquire_socket_object(KOS_CONTEXT         ctx,
@@ -135,7 +143,7 @@ static int acquire_socket_object(KOS_CONTEXT         ctx,
         return KOS_ERROR_EXCEPTION;
     }
 
-    if ( ! get_socket(*socket_holder)) {
+    if (get_socket(*socket_holder) == KOS_INVALID_SOCKET) {
         release_socket(*socket_holder);
         *socket_holder = KOS_NULL;
 
@@ -201,14 +209,14 @@ static KOS_OBJ_ID kos_socket(KOS_CONTEXT ctx,
                              KOS_OBJ_ID  this_obj,
                              KOS_OBJ_ID  args_obj)
 {
-    KOS_LOCAL this_;
-    KOS_LOCAL ret;
-    int       socket_fd    = -1;
-    int32_t   arg_domain   = 0;
-    int32_t   arg_type     = 0;
-    int32_t   arg_protocol = 0;
-    int       saved_errno;
-    int       error;
+    KOS_LOCAL  this_;
+    KOS_LOCAL  ret;
+    KOS_SOCKET socket_fd    = KOS_INVALID_SOCKET;
+    int32_t    arg_domain   = 0;
+    int32_t    arg_type     = 0;
+    int32_t    arg_protocol = 0;
+    int        saved_errno;
+    int        error;
 
     assert(KOS_get_array_size(args_obj) >= 3);
 
@@ -228,7 +236,7 @@ static KOS_OBJ_ID kos_socket(KOS_CONTEXT ctx,
 
     KOS_resume_context(ctx);
 
-    if (socket_fd < 0) {
+    if (socket_fd == KOS_INVALID_SOCKET) {
         KOS_raise_errno_value(ctx, "socket", saved_errno);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
