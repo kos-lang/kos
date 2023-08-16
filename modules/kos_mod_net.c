@@ -86,7 +86,7 @@ static void release_socket(KOS_SOCKET_HOLDER *socket_holder)
         assert(ref_count >= 1);
 
         if (ref_count == 1) {
-            const int32_t socket_fd = (int32_t)KOS_atomic_swap_u32(socket_holder->socket_fd, (uint32_t)KOS_INVALID_SOCKET);
+            const int32_t socket_fd = (int32_t)KOS_atomic_swap_u32(socket_holder->socket_fd, ~0U);
 
             if (socket_fd >= 0) {
                 /* TODO shutdown */
