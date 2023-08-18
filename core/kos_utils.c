@@ -1710,9 +1710,6 @@ void KOS_raise_errno(KOS_CONTEXT ctx, const char *prefix)
 }
 
 #ifdef _WIN32
-KOS_DECLARE_STATIC_CONST_STRING(str_err_last_error, "Windows error");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_colon,      ": ");
-
 void KOS_raise_last_error(KOS_CONTEXT ctx, const char *prefix, unsigned error_value)
 {
     char *msg = KOS_NULL;
