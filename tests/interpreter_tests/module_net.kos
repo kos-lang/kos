@@ -19,7 +19,6 @@ do {
 
     net.socket(net.AF_INET6).bind()
     net.socket(net.AF_INET6).bind("")
-    net.socket(net.AF_INET6).bind("localhost")
     net.socket(net.AF_INET6).bind("::1")
     net.socket(net.AF_INET6).bind("::1", 11006)
     net.socket(net.AF_INET6).bind(port = 11007)
