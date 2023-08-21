@@ -536,16 +536,74 @@ static KOS_OBJ_ID kos_close(KOS_CONTEXT ctx,
 
 }
 
+static const KOS_CONVERT connect_args[3] = {
+    { KOS_CONST_ID(str_address), KOS_BADPTR, 0, 0, KOS_NATIVE_STRING_PTR },
+    { KOS_CONST_ID(str_port),    KOS_BADPTR, 0, 0, KOS_NATIVE_UINT16     },
+    KOS_DEFINE_TAIL_ARG()
+};
+
 /* @item net socket.prototype.connect()
  *
- *     socket.prototype.connect()
+ *     socket.prototype.connect(address, port)
+ *
+ * Connects the socket to a remote address.
+ *
+ * `address` specifies the IP address to connect to.  For IPv4 and IPv6 sockets this is
+ * a hostname or a numeric IP address.
+ *
+ * `port` specifies the port to bind.  It is an integer value from 1 to 65535.
+ *
+ * Returns the socket itself (`this`).
+ *
+ * On error throws an exception.
  */
 static KOS_OBJ_ID kos_connect(KOS_CONTEXT ctx,
                               KOS_OBJ_ID  this_obj,
                               KOS_OBJ_ID  args_obj)
 {
-    /* TODO */
-    return KOS_VOID;
+    struct KOS_MEMPOOL_S alloc;
+    KOS_GENERIC_ADDR     addr;
+    ADDR_LEN             addr_len;
+    KOS_LOCAL            this_;
+    char                *address_cstr  = KOS_NULL;
+    KOS_SOCKET_HOLDER   *socket_holder = KOS_NULL;
+    int                  saved_errno;
+    int                  error;
+    uint16_t             port          = 0;
+
+    KOS_init_local_with(ctx, &this_, this_obj);
+
+    KOS_mempool_init_small(&alloc, 512U);
+
+    TRY(KOS_extract_native_from_array(ctx, args_obj, "argument", connect_args, &alloc, &address_cstr, &port));
+
+    TRY(acquire_socket_object(ctx, this_.o, &socket_holder));
+
+    TRY(get_address(ctx, socket_holder, address_cstr, port, &addr, &addr_len));
+
+    KOS_suspend_context(ctx);
+
+    reset_last_error();
+
+    error = connect(get_socket(socket_holder), &addr.addr, addr_len);
+
+    saved_errno = get_error();
+
+    KOS_resume_context(ctx);
+
+    if (error) {
+        KOS_raise_errno_value(ctx, "connect", saved_errno);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+
+cleanup:
+    release_socket(socket_holder);
+
+    KOS_mempool_destroy(&alloc);
+
+    this_.o = KOS_destroy_top_local(ctx, &this_);
+
+    return error ? KOS_BADPTR : this_.o;
 }
 
 /* @item net socket.prototype.getsockopt()
@@ -758,7 +816,7 @@ KOS_INIT_MODULE(net, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "accept",     kos_accept,     KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "bind",       kos_bind,       bind_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "close",      kos_close,      KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "connect",    kos_connect,    KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "connect",    kos_connect,    connect_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "getsockopt", kos_getsockopt, KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "listen",     kos_listen,     listen_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "read",       kos_read,       KOS_NULL);
