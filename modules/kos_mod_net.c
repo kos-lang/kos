@@ -115,25 +115,34 @@ static void socket_finalize(KOS_CONTEXT ctx, void *priv)
 
 KOS_DECLARE_PRIVATE_CLASS(socket_priv_class);
 
+static KOS_SOCKET_HOLDER *make_socket_holder(KOS_CONTEXT ctx,
+                                             KOS_SOCKET  socket_fd,
+                                             int         family)
+{
+    KOS_SOCKET_HOLDER *const socket_holder = (KOS_SOCKET_HOLDER *)KOS_malloc(sizeof(KOS_SOCKET_HOLDER));
+
+    if (socket_holder) {
+        socket_holder->socket_fd = (uint32_t)socket_fd;
+        socket_holder->ref_count = 1;
+        socket_holder->family    = family;
+    }
+    else
+        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+
+    return socket_holder;
+}
+
 static int set_socket_object(KOS_CONTEXT ctx,
                              KOS_OBJ_ID  socket_obj,
                              KOS_SOCKET  socket_fd,
                              int         family)
 {
-    KOS_SOCKET_HOLDER *const socket_holder = (KOS_SOCKET_HOLDER *)KOS_malloc(sizeof(KOS_SOCKET_HOLDER));
+    KOS_SOCKET_HOLDER *const socket_holder = make_socket_holder(ctx, socket_fd, family);
 
-    if ( ! socket_holder) {
-        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
-        return KOS_ERROR_EXCEPTION;
-    }
+    if (socket_holder)
+        KOS_object_set_private_ptr(socket_obj, socket_holder);
 
-    socket_holder->socket_fd = (uint32_t)socket_fd;
-    socket_holder->ref_count = 1;
-    socket_holder->family    = family;
-
-    KOS_object_set_private_ptr(socket_obj, socket_holder);
-
-    return KOS_SUCCESS;
+    return socket_holder ? KOS_SUCCESS : KOS_ERROR_EXCEPTION;
 }
 
 static KOS_SOCKET get_socket(KOS_SOCKET_HOLDER *socket_holder)
@@ -429,7 +438,7 @@ static const KOS_CONVERT bind_args[3] = {
  * If `port` is not specified, a random port number is chosen.  Ports below 1024
  * are typically reserved for system services and require administrator privileges.
  *
- * Returns the `this` socket object.
+ * Returns the socket itself (`this`).
  *
  * On error throws an exception.
  */
@@ -485,13 +494,46 @@ cleanup:
 /* @item net socket.prototype.close()
  *
  *     socket.prototype.close()
+ *
+ * Closes the socket object if it is still opened.
+ *
+ * Returns the socket itself (`this`).
+ *
+ * On error throws an exception.
+ */
+/* @item net socket.prototype.release()
+ *
+ *     socket.prototype.release()
+ *
+ * Closes the socket object if it is still opened.  This function is identical
+ * with `socket.prototype.close()` and it is suitable for use with the `with` statement.
+ *
+ * Returns the socket itself (`this`).
+ *
+ * On error throws an exception.
  */
 static KOS_OBJ_ID kos_close(KOS_CONTEXT ctx,
                             KOS_OBJ_ID  this_obj,
                             KOS_OBJ_ID  args_obj)
 {
-    /* TODO */
-    return KOS_VOID;
+    KOS_SOCKET_HOLDER *closed_holder;
+    KOS_SOCKET_HOLDER *socket_holder;
+
+    if (GET_OBJ_TYPE(this_obj) != OBJ_OBJECT) {
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_socket_not_open));
+        return KOS_BADPTR;
+    }
+
+    closed_holder = make_socket_holder(ctx, KOS_INVALID_SOCKET, -1);
+    if ( ! closed_holder)
+        return KOS_BADPTR;
+
+    socket_holder = (KOS_SOCKET_HOLDER *)KOS_object_swap_private(this_obj, &socket_priv_class, closed_holder);
+
+    release_socket(socket_holder);
+
+    return this_obj;
+
 }
 
 /* @item net socket.prototype.connect()
@@ -518,16 +560,62 @@ static KOS_OBJ_ID kos_getsockopt(KOS_CONTEXT ctx,
     return KOS_VOID;
 }
 
+KOS_DECLARE_STATIC_CONST_STRING(str_backlog, "backlog");
+
+static const KOS_CONVERT listen_args[2] = {
+    { KOS_CONST_ID(str_backlog), TO_SMALL_INT(5), 0, 0, KOS_NATIVE_INT32 },
+    KOS_DEFINE_TAIL_ARG()
+};
+
 /* @item net socket.prototype.listen()
  *
- *     socket.prototype.listen()
+ *     socket.prototype.listen(backlog = 5)
+ *
+ * Prepares a socket for accepting connections.
+ *
+ * `backlog` specifies how many connections can be waiting.
+ *
+ * Returns the socket itself (`this`).
+ *
+ * On error throws an exception.
  */
 static KOS_OBJ_ID kos_listen(KOS_CONTEXT ctx,
                              KOS_OBJ_ID  this_obj,
                              KOS_OBJ_ID  args_obj)
 {
-    /* TODO */
-    return KOS_VOID;
+    KOS_LOCAL          this_;
+    KOS_SOCKET_HOLDER *socket_holder = KOS_NULL;
+    int                saved_errno;
+    int                error;
+    int32_t            backlog       = 0;
+
+    KOS_init_local_with(ctx, &this_, this_obj);
+
+    TRY(KOS_extract_native_from_array(ctx, args_obj, "argument", listen_args, KOS_NULL, &backlog));
+
+    TRY(acquire_socket_object(ctx, this_.o, &socket_holder));
+
+    KOS_suspend_context(ctx);
+
+    reset_last_error();
+
+    error = listen(get_socket(socket_holder), backlog);
+
+    saved_errno = get_error();
+
+    KOS_resume_context(ctx);
+
+    if (error) {
+        KOS_raise_errno_value(ctx, "listen", saved_errno);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+
+cleanup:
+    release_socket(socket_holder);
+
+    this_.o = KOS_destroy_top_local(ctx, &this_);
+
+    return error ? KOS_BADPTR : this_.o;
 }
 
 /* @item net socket.prototype.read()
@@ -672,7 +760,7 @@ KOS_INIT_MODULE(net, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "close",      kos_close,      KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "connect",    kos_connect,    KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "getsockopt", kos_getsockopt, KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "listen",     kos_listen,     KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "listen",     kos_listen,     listen_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "read",       kos_read,       KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "recv",       kos_recv,       KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "recvfrom",   kos_recvfrom,   KOS_NULL);
