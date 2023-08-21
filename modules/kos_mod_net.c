@@ -180,116 +180,15 @@ typedef socklen_t ADDR_LEN;
 
 static int get_ip_address(KOS_CONTEXT        ctx,
                           KOS_SOCKET_HOLDER *socket_holder,
-                          KOS_OBJ_ID         addr_obj,
+                          const char        *addr_cstr,
+                          uint16_t           port,
                           KOS_GENERIC_ADDR  *addr,
                           ADDR_LEN          *addr_len)
 {
-    KOS_VECTOR addr_cstr;
-    int        port  = 0;
-    int        error = KOS_SUCCESS;
-
-    KOS_vector_init(&addr_cstr);
-
-    switch (GET_OBJ_TYPE(addr_obj)) {
-
-        case OBJ_STRING:
-            {
-                size_t i;
-
-                TRY(KOS_string_to_cstr_vec(ctx, addr_obj, &addr_cstr));
-
-                assert((addr_cstr.size > 0) && (addr_cstr.buffer[addr_cstr.size - 1] == 0));
-
-                /* Find last ':' which separates address from port */
-                i = addr_cstr.size;
-                while (i > 0) {
-                    --i;
-                    if (addr_cstr.buffer[i] == ':')
-                        break;
-                }
-
-                if ((i == 0) && (addr_cstr.buffer[0] == ':')) {
-                    KOS_raise_printf(ctx, "no address specified in '%s'", addr_cstr.buffer);
-                    RAISE_ERROR(KOS_ERROR_EXCEPTION);
-                }
-
-                if (i + 2 == addr_cstr.size) {
-                    addr_cstr.buffer[i] = 0;
-                    addr_cstr.size      = i + 1;
-                }
-                else if (i) {
-                    const char *port_cstr;
-                    char       *end_port;
-                    size_t      port_len;
-                    long        port_val;
-
-                    port_cstr = &addr_cstr.buffer[i + 1];
-                    port_len  = addr_cstr.size - i - 2;
-
-                    addr_cstr.buffer[i] = 0;
-                    addr_cstr.size      = i + 1;
-
-                    port_val = strtol(port_cstr, &end_port, 10);
-
-                    if ((end_port != port_cstr + port_len) || (port_val < 0) || (port_val > 0xFFFF)) {
-                        KOS_raise_printf(ctx, "'%s' is not a valid port number", port_cstr);
-                        RAISE_ERROR(KOS_ERROR_EXCEPTION);
-                    }
-
-                    port = (int)port_val;
-                }
-            }
-            break;
-
-        case OBJ_OBJECT:
-            {
-                KOS_OBJ_ID value = KOS_get_property(ctx, addr_obj, KOS_CONST_ID(str_address));
-
-                if (IS_BAD_PTR(value)) {
-                    KOS_clear_exception(ctx);
-                    KOS_raise_printf(ctx, "no address specified");
-                    RAISE_ERROR(KOS_ERROR_EXCEPTION);
-                }
-                if (GET_OBJ_TYPE(value) != OBJ_STRING) {
-                    KOS_raise_printf(ctx, "%s is not a valid address",
-                                     KOS_get_type_name(GET_OBJ_TYPE(value)));
-                    RAISE_ERROR(KOS_ERROR_EXCEPTION);
-                }
-
-                TRY(KOS_string_to_cstr_vec(ctx, value, &addr_cstr));
-
-                value = KOS_get_property(ctx, addr_obj, KOS_CONST_ID(str_port));
-
-                if ( ! IS_BAD_PTR(value)) {
-
-                    int64_t port64;
-
-                    if ( ! IS_NUMERIC_OBJ(value)) {
-                        KOS_raise_printf(ctx, "%s is not a valid port",
-                                         KOS_get_type_name(GET_OBJ_TYPE(value)));
-                        RAISE_ERROR(KOS_ERROR_EXCEPTION);
-                    }
-
-                    TRY(KOS_get_integer(ctx, value, &port64));
-
-                    if (port64 < 0 || port64 > 0xFFFF) {
-                        KOS_raise_printf(ctx, "%" PRId64 " is not a valid port number", port64);
-                        RAISE_ERROR(KOS_ERROR_EXCEPTION);
-                    }
-
-                    port = (int)port64;
-                }
-            }
-            break;
-
-        default:
-            KOS_raise_printf(ctx, "%s does not specify a valid address\n",
-                             KOS_get_type_name(GET_OBJ_TYPE(addr_obj)));
-            RAISE_ERROR(KOS_ERROR_EXCEPTION);
-    }
+    int error = KOS_SUCCESS;
 
 #if 1
-    {
+    if (addr_cstr[0]) {
         struct addrinfo  hint;
         struct addrinfo *info = KOS_NULL;
 
@@ -299,7 +198,7 @@ static int get_ip_address(KOS_CONTEXT        ctx,
 
         KOS_suspend_context(ctx);
 
-        error = getaddrinfo(addr_cstr.buffer,
+        error = getaddrinfo(addr_cstr,
                             KOS_NULL,
                             &hint,
                             &info);
@@ -332,12 +231,12 @@ static int get_ip_address(KOS_CONTEXT        ctx,
 
             if (socket_holder->family == AF_INET) {
                 addr->inet          = *(struct sockaddr_in *)cur_info->ai_addr;
-                addr->inet.sin_port = htons((uint16_t)port);
+                addr->inet.sin_port = htons(port);
                 *addr_len           = sizeof(addr->inet);
             }
             else {
                 addr->inet6           = *(struct sockaddr_in6 *)cur_info->ai_addr;
-                addr->inet6.sin6_port = htons((uint16_t)port);
+                addr->inet6.sin6_port = htons(port);
                 *addr_len             = sizeof(addr->inet6);
             }
         }
@@ -345,12 +244,12 @@ static int get_ip_address(KOS_CONTEXT        ctx,
         freeaddrinfo(info);
     }
 #else
-    {
+    if (addr_cstr[0]) {
         struct hostent *ent;
 
         KOS_suspend_context(ctx);
 
-        ent = gethostbyname(addr_cstr.buffer);
+        ent = gethostbyname(addr_cstr);
 
         error = ent ? KOS_SUCCESS : h_errno;
 
@@ -363,28 +262,37 @@ static int get_ip_address(KOS_CONTEXT        ctx,
 
         addr->inet.sin_family = AF_INET;
         addr->inet.sin_addr   = *(struct in_addr *)ent->h_addr;
-        addr->inet.sin_port   = htons((uint16_t)port);
+        addr->inet.sin_port   = htons(port);
         *addr_len             = sizeof(addr->inet);
     }
 #endif
+    else {
+        addr->addr.sa_family = socket_holder->family;
+
+        if (socket_holder->family == AF_INET) {
+            addr->inet.sin_port = htons(port);
+            *addr_len           = sizeof(addr->inet);
+        }
+        else {
+            addr->inet6.sin6_port = htons(port);
+            *addr_len             = sizeof(addr->inet6);
+        }
+    }
 
 cleanup:
-    KOS_vector_destroy(&addr_cstr);
-
     return error;
 }
 
 static int get_address(KOS_CONTEXT        ctx,
                        KOS_SOCKET_HOLDER *socket_holder,
-                       KOS_OBJ_ID         addr_obj,
+                       const char        *addr_cstr,
+                       uint16_t           port,
                        KOS_GENERIC_ADDR  *addr,
                        ADDR_LEN          *addr_len)
 {
     int error = KOS_SUCCESS;
 
     memset(addr, 0, sizeof(*addr));
-
-    addr->addr.sa_family = socket_holder->family;
 
     switch (socket_holder->family) {
 
@@ -393,7 +301,8 @@ static int get_address(KOS_CONTEXT        ctx,
                    socket_holder->family == AF_INET6);
             error = get_ip_address(ctx,
                                    socket_holder,
-                                   addr_obj,
+                                   addr_cstr,
+                                   port,
                                    addr,
                                    addr_len);
             break;
@@ -504,8 +413,11 @@ cleanup:
     return KOS_VOID;
 }
 
-static const KOS_CONVERT bind_args[2] = {
-    KOS_DEFINE_MANDATORY_ARG(str_address),
+KOS_DECLARE_STATIC_CONST_STRING(str_empty, "");
+
+static const KOS_CONVERT bind_args[3] = {
+    { KOS_CONST_ID(str_address), KOS_CONST_ID(str_empty), 0, 0, KOS_NATIVE_STRING_PTR },
+    { KOS_CONST_ID(str_port),    TO_SMALL_INT(0),         0, 0, KOS_NATIVE_UINT16     },
     KOS_DEFINE_TAIL_ARG()
 };
 
@@ -523,22 +435,25 @@ static KOS_OBJ_ID kos_bind(KOS_CONTEXT ctx,
                            KOS_OBJ_ID  this_obj,
                            KOS_OBJ_ID  args_obj)
 {
-    KOS_GENERIC_ADDR   addr;
-    ADDR_LEN           addr_len;
-    KOS_LOCAL          this_;
-    KOS_SOCKET_HOLDER *socket_holder = KOS_NULL;
-    KOS_OBJ_ID         addr_obj;
-    int                saved_errno;
-    int                error;
+    struct KOS_MEMPOOL_S alloc;
+    KOS_GENERIC_ADDR     addr;
+    ADDR_LEN             addr_len;
+    KOS_LOCAL            this_;
+    char                *address_cstr  = KOS_NULL;
+    KOS_SOCKET_HOLDER   *socket_holder = KOS_NULL;
+    int                  saved_errno;
+    int                  error;
+    uint16_t             port          = 0;
 
     KOS_init_local_with(ctx, &this_, this_obj);
 
-    addr_obj = KOS_array_read(ctx, args_obj, 0);
-    assert( ! IS_BAD_PTR(addr_obj));
+    KOS_mempool_init_small(&alloc, 512U);
+
+    TRY(KOS_extract_native_from_array(ctx, args_obj, "argument", bind_args, &alloc, &address_cstr, &port));
 
     TRY(acquire_socket_object(ctx, this_.o, &socket_holder));
 
-    TRY(get_address(ctx, socket_holder, addr_obj, &addr, &addr_len));
+    TRY(get_address(ctx, socket_holder, address_cstr, port, &addr, &addr_len));
 
     KOS_suspend_context(ctx);
 
@@ -557,6 +472,8 @@ static KOS_OBJ_ID kos_bind(KOS_CONTEXT ctx,
 
 cleanup:
     release_socket(socket_holder);
+
+    KOS_mempool_destroy(&alloc);
 
     this_.o = KOS_destroy_top_local(ctx, &this_);
 

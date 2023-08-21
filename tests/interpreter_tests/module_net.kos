@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2014-2023 Chris Dragan
+
+import base
+import net
+import test_tools.expect_fail
+          
+##############################################################################
+# socket.bind()
+
+do {
+    net.socket().bind()
+    net.socket().bind("")
+    net.socket().bind("localhost")
+    net.socket().bind("127.0.0.1")
+    net.socket().bind("localhost", 11000)
+    net.socket().bind("127.0.0.1", 11001)
+    net.socket().bind(port = 11002)
+
+    net.socket(net.AF_INET6).bind()
+    net.socket(net.AF_INET6).bind("")
+    net.socket(net.AF_INET6).bind("localhost")
+    net.socket(net.AF_INET6).bind("127.0.0.1")
+    net.socket(net.AF_INET6).bind("::1")
+    net.socket(net.AF_INET6).bind("::1", 11006)
+    net.socket(net.AF_INET6).bind(port = 11007)
+}
