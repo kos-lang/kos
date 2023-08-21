@@ -294,25 +294,19 @@ static int get_address(KOS_CONTEXT        ctx,
 
     memset(addr, 0, sizeof(*addr));
 
-    switch (socket_holder->family) {
+    if (socket_holder->family == AF_INET ||
+        socket_holder->family == AF_INET6) {
 
-        default:
-            assert(socket_holder->family == AF_INET ||
-                   socket_holder->family == AF_INET6);
-            error = get_ip_address(ctx,
-                                   socket_holder,
-                                   addr_cstr,
-                                   port,
-                                   addr,
-                                   addr_len);
-            break;
-
-#ifndef _WIN32
-        case AF_LOCAL:
-            /* TODO */
-            *addr_len = 0;
-            break;
-#endif
+        error = get_ip_address(ctx,
+                               socket_holder,
+                               addr_cstr,
+                               port,
+                               addr,
+                               addr_len);
+    }
+    else {
+        /* TODO AF_LOCAL */
+        assert(0);
     }
 
     return error;
@@ -423,9 +417,17 @@ static const KOS_CONVERT bind_args[3] = {
 
 /* @item net socket.prototype.bind()
  *
- *     socket.prototype.bind(address)
+ *     socket.prototype.bind(address = "", port = 0)
  *
- * Binds an address to a socket.  `address` specifies the address to bind.
+ * Binds an address to a socket.
+ *
+ * `address` specifies the IP address to bind.  For IPv4 and IPv6 sockets this is
+ * a hostname or a numeric IP address.  If not specified, the default address
+ * 0.0.0.0 is bound.
+ *
+ * `port` specifies the port to bind.  It is an integer value from 0 to 65535.
+ * If `port` is not specified, a random port number is chosen.  Ports below 1024
+ * are typically reserved for system services and require administrator privileges.
  *
  * Returns the `this` socket object.
  *
