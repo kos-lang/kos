@@ -267,15 +267,15 @@ static int get_ip_address(KOS_CONTEXT        ctx,
     }
 #endif
     else {
-        addr->addr.sa_family = socket_holder->family;
-
         if (socket_holder->family == AF_INET) {
-            addr->inet.sin_port = htons(port);
-            *addr_len           = sizeof(addr->inet);
+            addr->inet.sin_family = AF_INET;
+            addr->inet.sin_port   = htons(port);
+            *addr_len             = sizeof(addr->inet);
         }
         else {
-            addr->inet6.sin6_port = htons(port);
-            *addr_len             = sizeof(addr->inet6);
+            addr->inet6.sin6_family = AF_INET6;
+            addr->inet6.sin6_port   = htons(port);
+            *addr_len               = sizeof(addr->inet6);
         }
     }
 
