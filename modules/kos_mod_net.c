@@ -438,7 +438,7 @@ static KOS_OBJ_ID kos_accept(KOS_CONTEXT ctx,
 
     reset_last_error();
 
-    socket_fd = accept(get_socket(socket_holder), &addr.addr, &addr_len);
+    socket_fd = accept(get_socket(socket_holder), &addr, &addr_len);
 
     if (socket_fd == -1)
         saved_errno = get_error();
