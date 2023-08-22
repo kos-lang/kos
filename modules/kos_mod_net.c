@@ -63,8 +63,9 @@ static int get_error(void)
 #endif
 
 KOS_DECLARE_STATIC_CONST_STRING(str_address,             "address");
-KOS_DECLARE_STATIC_CONST_STRING(str_port,                "port");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_socket_not_open, "socket not open or not a socket object");
+KOS_DECLARE_STATIC_CONST_STRING(str_port,                "port");
+KOS_DECLARE_STATIC_CONST_STRING(str_socket,              "socket");
 
 typedef struct KOS_SOCKET_HOLDER_S {
     KOS_ATOMIC(uint32_t) socket_fd;
@@ -343,6 +344,8 @@ static const KOS_CONVERT socket_args[4] = {
  * `domain` is the communication domain, e.g. `AF_INET`, `AF_INET6` or `AF_LOCAL`.
  * `type` specifies the semantics of communication, e.g. `SOCK_STREAM`, `SOCK_DGRAM` or `SOCK_RAW`.
  * `protocol` specifies particular protocol, 0 typically indicates default protocol.
+ *
+ * On error throws an exception.
  */
 static KOS_OBJ_ID kos_socket(KOS_CONTEXT ctx,
                              KOS_OBJ_ID  this_obj,
@@ -354,7 +357,7 @@ static KOS_OBJ_ID kos_socket(KOS_CONTEXT ctx,
     int32_t    arg_domain   = 0;
     int32_t    arg_type     = 0;
     int32_t    arg_protocol = 0;
-    int        saved_errno;
+    int        saved_errno  = 0;
     int        error;
 
     assert(KOS_get_array_size(args_obj) >= 3);
@@ -371,7 +374,8 @@ static KOS_OBJ_ID kos_socket(KOS_CONTEXT ctx,
 
     socket_fd = socket(arg_domain, arg_type, arg_protocol);
 
-    saved_errno = get_error();
+    if (socket_fd == -1)
+        saved_errno = get_error();
 
     KOS_resume_context(ctx);
 
@@ -394,26 +398,73 @@ cleanup:
 /* @item net socket.prototype.accept()
  *
  *     socket.prototype.accept()
+ *
+ * Accepts pending connection on a listening socket.
+ *
+ * The `this` socket must be in a listening state, i.e.
+ * `listen()` must have been called on it.
+ *
+ * Returns an object with two properties:
+ * - `socket`: new socket with the accepted connection,
+ * - `address`: address of the remote host from which the connetion has been made.
+ *
+ * On error throws an exception.
  */
 static KOS_OBJ_ID kos_accept(KOS_CONTEXT ctx,
                              KOS_OBJ_ID  this_obj,
                              KOS_OBJ_ID  args_obj)
 {
+    KOS_LOCAL          this_;
+    KOS_LOCAL          sock;
+    KOS_LOCAL          ret;
+    KOS_GENERIC_ADDR   addr;
     KOS_SOCKET_HOLDER *socket_holder = KOS_NULL;
+    KOS_OBJ_ID         proto_obj;
+    KOS_SOCKET         socket_fd     = KOS_INVALID_SOCKET;
+    ADDR_LEN           addr_len      = (ADDR_LEN)sizeof(addr);
+    int                saved_errno   = 0;
     int                error;
+
+    KOS_init_local(     ctx, &ret);
+    KOS_init_local(     ctx, &sock);
+    KOS_init_local_with(ctx, &this_, this_obj);
 
     TRY(acquire_socket_object(ctx, this_obj, &socket_holder));
 
     KOS_suspend_context(ctx);
 
-    /* TODO */
+    reset_last_error();
+
+    socket_fd = accept(get_socket(socket_holder), &addr.addr, &addr_len);
+
+    if (socket_fd == -1)
+        saved_errno = get_error();
 
     KOS_resume_context(ctx);
+
+    if (socket_fd == KOS_INVALID_SOCKET) {
+        KOS_raise_errno_value(ctx, "accept", saved_errno);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+
+    proto_obj = KOS_get_prototype(ctx, this_.o);
+
+    sock.o = KOS_new_object_with_private(ctx, proto_obj, &socket_priv_class, socket_finalize);
+    TRY_OBJID(sock.o);
+
+    TRY(set_socket_object(ctx, sock.o, socket_fd, socket_holder->family));
+
+    ret.o = KOS_new_object(ctx);
+    TRY_OBJID(ret.o);
+
+    TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_socket), sock.o));
 
 cleanup:
     release_socket(socket_holder);
 
-    return KOS_VOID;
+    ret.o = KOS_destroy_top_locals(ctx, &this_, &ret);
+
+    return error ? KOS_BADPTR : ret.o;
 }
 
 KOS_DECLARE_STATIC_CONST_STRING(str_empty, "");
