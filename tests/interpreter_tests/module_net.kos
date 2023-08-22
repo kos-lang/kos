@@ -19,7 +19,17 @@ do {
 
     net.socket(net.AF_INET6).bind()
     net.socket(net.AF_INET6).bind("")
-    net.socket(net.AF_INET6).bind("::1")
-    net.socket(net.AF_INET6).bind("::1", 11006)
     net.socket(net.AF_INET6).bind(port = 11007)
+
+    var ok = true
+    try {
+        net.socket(net.AF_INET6).bind("localhost")
+    }
+    catch (const e) {
+        ok = false
+    }
+    if ok {
+        net.socket(net.AF_INET6).bind("::1")
+        net.socket(net.AF_INET6).bind("::1", 11006)
+    }
 }
