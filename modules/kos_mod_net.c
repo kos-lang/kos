@@ -811,16 +811,63 @@ static KOS_OBJ_ID kos_setsockopt(KOS_CONTEXT ctx,
     return KOS_VOID;
 }
 
+KOS_DECLARE_STATIC_CONST_STRING(str_how, "how");
+
+static const KOS_CONVERT shutdown_args[2] = {
+    { KOS_CONST_ID(str_how), TO_SMALL_INT(SHUT_RDWR), 0, 0, KOS_NATIVE_INT32 },
+    KOS_DEFINE_TAIL_ARG()
+};
+
 /* @item net socket.prototype.shutdown()
  *
- *     socket.prototype.shutdown()
+ *     socket.prototype.shutdown(how = SHUT_RDWR)
+ *
+ * Shuts down one or two directions of the connection.
+ *
+ * `how` specifies if only one direction of the connection is closed
+ * (`SHUT_RD` or `SHUT_WR`) or both (`SHUT_RDWR`).
+ *
+ * Returns the socket itself (`this`).
+ *
+ * On error throws an exception.
  */
 static KOS_OBJ_ID kos_shutdown(KOS_CONTEXT ctx,
                                KOS_OBJ_ID  this_obj,
                                KOS_OBJ_ID  args_obj)
 {
-    /* TODO */
-    return KOS_VOID;
+    KOS_LOCAL          this_;
+    KOS_SOCKET_HOLDER *socket_holder = KOS_NULL;
+    int                saved_errno;
+    int                error;
+    int32_t            how           = 0;
+
+    KOS_init_local_with(ctx, &this_, this_obj);
+
+    TRY(KOS_extract_native_from_array(ctx, args_obj, "argument", shutdown_args, KOS_NULL, &how));
+
+    TRY(acquire_socket_object(ctx, this_.o, &socket_holder));
+
+    KOS_suspend_context(ctx);
+
+    reset_last_error();
+
+    error = shutdown(get_socket(socket_holder), how);
+
+    saved_errno = get_error();
+
+    KOS_resume_context(ctx);
+
+    if (error) {
+        KOS_raise_errno_value(ctx, "shutdown", saved_errno);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+
+cleanup:
+    release_socket(socket_holder);
+
+    this_.o = KOS_destroy_top_local(ctx, &this_);
+
+    return error ? KOS_BADPTR : this_.o;
 }
 
 /* @item net socket.prototype.write()
@@ -878,7 +925,7 @@ KOS_INIT_MODULE(net, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "send",       kos_send,       KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "sendto",     kos_sendto,     KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "setsockopt", kos_setsockopt, KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "shutdown",   kos_shutdown,   KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "shutdown",   kos_shutdown,   shutdown_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "write",      kos_write,      KOS_NULL);
 
 #ifndef _WIN32
@@ -890,6 +937,10 @@ KOS_INIT_MODULE(net, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SOCK_STREAM", SOCK_STREAM);
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SOCK_DGRAM",  SOCK_DGRAM);
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SOCK_RAW",    SOCK_RAW);
+
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SHUT_RD",     SHUT_RD);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SHUT_RDWR",   SHUT_RDWR);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SHUT_WR",     SHUT_WR);
 
 cleanup:
     KOS_destroy_top_locals(ctx, &socket_proto, &module);
