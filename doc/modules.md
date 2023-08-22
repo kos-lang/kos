@@ -218,6 +218,24 @@ Table of Contents
     * [sin()](#sin)
     * [sqrt()](#sqrt)
     * [tan()](#tan)
+  * [net](#net)
+    * [socket()](#socket)
+      * [socket.prototype.accept()](#socketprototypeaccept)
+      * [socket.prototype.bind()](#socketprototypebind)
+      * [socket.prototype.close()](#socketprototypeclose)
+      * [socket.prototype.connect()](#socketprototypeconnect)
+      * [socket.prototype.getsockopt()](#socketprototypegetsockopt)
+      * [socket.prototype.listen()](#socketprototypelisten)
+      * [socket.prototype.read()](#socketprototyperead)
+      * [socket.prototype.recv()](#socketprototyperecv)
+      * [socket.prototype.recvfrom()](#socketprototyperecvfrom)
+      * [socket.prototype.release()](#socketprototyperelease)
+      * [socket.prototype.select()](#socketprototypeselect)
+      * [socket.prototype.send()](#socketprototypesend)
+      * [socket.prototype.sendto()](#socketprototypesendto)
+      * [socket.prototype.setsockopt()](#socketprototypesetsockopt)
+      * [socket.prototype.shutdown()](#socketprototypeshutdown)
+      * [socket.prototype.write()](#socketprototypewrite)
   * [os](#os)
     * [arch](#arch)
     * [cpus](#cpus)
@@ -4455,6 +4473,170 @@ Example:
 
     > math.tan(math.pi / 4)
     1.0
+
+net
+===
+
+socket()
+--------
+
+    socket(domain = AF_INET, type = SOCK_STREAM, protocol = 0)
+
+Socket object class.
+
+Returns created socket object.
+
+`domain` is the communication domain, e.g. `AF_INET`, `AF_INET6` or `AF_LOCAL`.
+`type` specifies the semantics of communication, e.g. `SOCK_STREAM`, `SOCK_DGRAM` or `SOCK_RAW`.
+`protocol` specifies particular protocol, 0 typically indicates default protocol.
+
+On error throws an exception.
+
+socket.prototype.accept()
+-------------------------
+
+    socket.prototype.accept()
+
+Accepts pending connection on a listening socket.
+
+The `this` socket must be in a listening state, i.e.
+`listen()` must have been called on it.
+
+Returns an object with two properties:
+- `socket`: new socket with the accepted connection,
+- `address`: address of the remote host from which the connetion has been made.
+
+On error throws an exception.
+
+socket.prototype.bind()
+-----------------------
+
+    socket.prototype.bind(address = "", port = 0)
+
+Binds an address to a socket.
+
+`address` specifies the IP address to bind.  For IPv4 and IPv6 sockets this is
+a hostname or a numeric IP address.  If not specified, the default address
+0.0.0.0 is bound.
+
+`port` specifies the port to bind.  It is an integer value from 0 to 65535.
+If `port` is not specified, a random port number is chosen.  Ports below 1024
+are typically reserved for system services and require administrator privileges.
+
+Returns the socket itself (`this`).
+
+On error throws an exception.
+
+socket.prototype.close()
+------------------------
+
+    socket.prototype.close()
+
+Closes the socket object if it is still opened.
+
+Returns the socket itself (`this`).
+
+On error throws an exception.
+
+socket.prototype.connect()
+--------------------------
+
+    socket.prototype.connect(address, port)
+
+Connects the socket to a remote address.
+
+`address` specifies the IP address to connect to.  For IPv4 and IPv6 sockets this is
+a hostname or a numeric IP address.
+
+`port` specifies the port to bind.  It is an integer value from 1 to 65535.
+
+Returns the socket itself (`this`).
+
+On error throws an exception.
+
+socket.prototype.getsockopt()
+-----------------------------
+
+    socket.prototype.getsockopt()
+
+socket.prototype.listen()
+-------------------------
+
+    socket.prototype.listen(backlog = 5)
+
+Prepares a socket for accepting connections.
+
+`backlog` specifies how many connections can be waiting.
+
+Returns the socket itself (`this`).
+
+On error throws an exception.
+
+socket.prototype.read()
+-----------------------
+
+    socket.prototype.read()
+
+socket.prototype.recv()
+-----------------------
+
+    socket.prototype.recv()
+
+socket.prototype.recvfrom()
+---------------------------
+
+    socket.prototype.recvfrom()
+
+socket.prototype.release()
+--------------------------
+
+    socket.prototype.release()
+
+Closes the socket object if it is still opened.  This function is identical
+with `socket.prototype.close()` and it is suitable for use with the `with` statement.
+
+Returns the socket itself (`this`).
+
+On error throws an exception.
+
+socket.prototype.select()
+-------------------------
+
+    socket.prototype.select()
+
+socket.prototype.send()
+-----------------------
+
+    socket.prototype.send()
+
+socket.prototype.sendto()
+-------------------------
+
+    socket.prototype.sendto()
+
+socket.prototype.setsockopt()
+-----------------------------
+
+    socket.prototype.setsockopt()
+
+socket.prototype.shutdown()
+---------------------------
+
+    socket.prototype.shutdown(how = SHUT_RDWR)
+
+Shuts down one or two directions of the connection.
+
+`how` specifies if only one direction of the connection is closed
+(`SHUT_RD` or `SHUT_WR`) or both (`SHUT_RDWR`).
+
+Returns the socket itself (`this`).
+
+On error throws an exception.
+
+socket.prototype.write()
+------------------------
+
+    socket.prototype.write()
 
 os
 ==
