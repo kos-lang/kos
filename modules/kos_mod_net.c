@@ -104,10 +104,8 @@ static void release_socket(KOS_SOCKET_HOLDER *socket_holder)
         if (ref_count == 1) {
             const int32_t socket_fd = (int32_t)KOS_atomic_swap_u32(socket_holder->socket_fd, ~0U);
 
-            if (socket_fd >= 0) {
-                /* TODO shutdown */
+            if (socket_fd >= 0)
                 closesocket(socket_fd);
-            }
 
             KOS_free(socket_holder);
         }
