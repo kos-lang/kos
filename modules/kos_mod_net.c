@@ -775,7 +775,7 @@ static KOS_OBJ_ID kos_recv(KOS_CONTEXT ctx,
     int64_t            to_read;
     KOS_SOCKET_HOLDER *socket_holder = KOS_NULL;
     uint8_t           *data;
-    size_t             num_read;
+    ssize_t            num_read;
     KOS_OBJ_ID         arg;
     uint32_t           offset;
     int                error         = KOS_SUCCESS;
