@@ -3,6 +3,7 @@
  */
 
 #include "../inc/kos_array.h"
+#include "../inc/kos_buffer.h"
 #include "../inc/kos_constants.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_instance.h"
@@ -12,6 +13,7 @@
 #include "../inc/kos_object.h"
 #include "../inc/kos_string.h"
 #include "../inc/kos_utils.h"
+#include "../core/kos_object_internal.h"
 #include "../core/kos_try.h"
 
 #define __STDC_FORMAT_MACROS
@@ -65,10 +67,11 @@ static int get_error(void)
 }
 #endif
 
-KOS_DECLARE_STATIC_CONST_STRING(str_address,             "address");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_socket_not_open, "socket not open or not a socket object");
-KOS_DECLARE_STATIC_CONST_STRING(str_port,                "port");
-KOS_DECLARE_STATIC_CONST_STRING(str_socket,              "socket");
+KOS_DECLARE_STATIC_CONST_STRING(str_address,               "address");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_buffer_or_str, "argument to socket.send is neither a buffer nor a string");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_socket_not_open,   "socket not open or not a socket object");
+KOS_DECLARE_STATIC_CONST_STRING(str_port,                  "port");
+KOS_DECLARE_STATIC_CONST_STRING(str_socket,                "socket");
 
 typedef struct KOS_SOCKET_HOLDER_S {
     KOS_ATOMIC(uint32_t) socket_fd;
@@ -778,16 +781,124 @@ static KOS_OBJ_ID kos_select(KOS_CONTEXT ctx,
     return KOS_VOID;
 }
 
+/* @item net socket.prototype.write()
+ *
+ *     socket.prototype.write(values...)
+ *
+ * This is the same function as `socket.prototype.send()`.
+ */
 /* @item net socket.prototype.send()
  *
- *     socket.prototype.send()
+ *     socket.prototype.send(values...)
  */
 static KOS_OBJ_ID kos_send(KOS_CONTEXT ctx,
                            KOS_OBJ_ID  this_obj,
                            KOS_OBJ_ID  args_obj)
 {
-    /* TODO */
-    return KOS_VOID;
+    KOS_VECTOR         cstr;
+    KOS_LOCAL          print_args;
+    KOS_LOCAL          arg;
+    KOS_LOCAL          args;
+    KOS_LOCAL          this_;
+    KOS_SOCKET_HOLDER *socket_holder = KOS_NULL;
+    const uint32_t     num_args      = KOS_get_array_size(args_obj);
+    uint32_t           i_arg;
+    int                error;
+
+    KOS_vector_init(&cstr);
+
+    KOS_init_locals(ctx, &print_args, &arg, &args, &this_, kos_end_locals);
+
+    args.o  = args_obj;
+    this_.o = this_obj;
+
+    TRY(acquire_socket_object(ctx, this_.o, &socket_holder));
+
+    for (i_arg = 0; i_arg < num_args; i_arg++) {
+
+        ssize_t num_writ    = 0;
+        int     saved_errno = 0;
+
+        arg.o = KOS_array_read(ctx, args.o, i_arg);
+        TRY_OBJID(arg.o);
+
+        if (GET_OBJ_TYPE(arg.o) == OBJ_BUFFER) {
+
+            const size_t to_write = (size_t)KOS_get_buffer_size(arg.o);
+
+            if (to_write > 0) {
+
+                const uint8_t *data = KOS_buffer_data_const(arg.o);
+
+                if (kos_is_heap_object(KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, arg.o)->data))) {
+
+                    if (KOS_vector_resize(&cstr, to_write)) {
+                        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+                        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                    }
+
+                    memcpy(cstr.buffer, data, to_write);
+                    data = (uint8_t *)cstr.buffer;
+                }
+                else {
+                    assert(kos_is_tracked_object(KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, arg.o)->data)));
+                }
+
+                KOS_suspend_context(ctx);
+
+                reset_last_error();
+
+                num_writ = send(get_socket(socket_holder), data, to_write, 0);
+
+                if (num_writ < 0)
+                    saved_errno = get_error();
+
+                KOS_resume_context(ctx);
+            }
+        }
+        else if (GET_OBJ_TYPE(arg.o) == OBJ_STRING) {
+
+            if (IS_BAD_PTR(print_args.o)) {
+                print_args.o = KOS_new_array(ctx, 1);
+                TRY_OBJID(print_args.o);
+            }
+
+            TRY(KOS_array_write(ctx, print_args.o, 0, arg.o));
+
+            TRY(KOS_print_to_cstr_vec(ctx, print_args.o, KOS_DONT_QUOTE, &cstr, " ", 1));
+
+            if (cstr.size) {
+                KOS_suspend_context(ctx);
+
+                reset_last_error();
+
+                num_writ = send(get_socket(socket_holder), cstr.buffer, cstr.size - 1, 0);
+
+                if (num_writ < 0)
+                    saved_errno = get_error();
+
+                KOS_resume_context(ctx);
+            }
+
+            cstr.size = 0;
+        }
+        else
+            RAISE_EXCEPTION_STR(str_err_not_buffer_or_str);
+
+        if (saved_errno) {
+            KOS_raise_errno_value(ctx, "send", saved_errno);
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+    }
+
+cleanup:
+    release_socket(socket_holder);
+
+    KOS_vector_destroy(&cstr);
+
+    this_.o = KOS_destroy_top_locals(ctx, &print_args, &this_);
+
+    return error ? KOS_BADPTR : this_.o;
 }
 
 /* @item net socket.prototype.sendto()
@@ -873,18 +984,6 @@ cleanup:
     return error ? KOS_BADPTR : this_.o;
 }
 
-/* @item net socket.prototype.write()
- *
- *     socket.prototype.write()
- */
-static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
-                            KOS_OBJ_ID  this_obj,
-                            KOS_OBJ_ID  args_obj)
-{
-    /* TODO */
-    return KOS_VOID;
-}
-
 KOS_INIT_MODULE(net, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 {
     int       error = KOS_SUCCESS;
@@ -929,7 +1028,7 @@ KOS_INIT_MODULE(net, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "sendto",     kos_sendto,     KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "setsockopt", kos_setsockopt, KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "shutdown",   kos_shutdown,   shutdown_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "write",      kos_write,      KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "write",      kos_send,       KOS_NULL);
 
 #ifndef _WIN32
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "AF_LOCAL", AF_LOCAL);
