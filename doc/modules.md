@@ -4575,12 +4575,28 @@ On error throws an exception.
 socket.prototype.read()
 -----------------------
 
-    socket.prototype.read()
+    socket.prototype.read(size = 4096 [, buffer])
+
+This is the same function as `socket.prototype.recv()`.
 
 socket.prototype.recv()
 -----------------------
 
-    socket.prototype.recv()
+    socket.prototype.recv(size = 4096 [, buffer])
+
+Receives a variable number of bytes from a connected socket object.
+
+Receives as many bytes as it can, up to the specified `size`.
+
+`size` is the maximum bytes to receive.  `size` defaults to 4096.  Fewer
+bytes can be received if no more bytes are available.
+
+If `buffer` is specified, bytes are appended to it and that buffer is
+returned instead of creating a new buffer.
+
+Returns a buffer containing the bytes read.
+
+On error throws an exception.
 
 socket.prototype.recvfrom()
 ---------------------------

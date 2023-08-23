@@ -68,7 +68,9 @@ static int get_error(void)
 #endif
 
 KOS_DECLARE_STATIC_CONST_STRING(str_address,               "address");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_buffer,        "argument to socket.recv is not a buffer");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_buffer_or_str, "argument to socket.send is neither a buffer nor a string");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_too_many_to_read,  "requested read size exceeds buffer size limit");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_socket_not_open,   "socket not open or not a socket object");
 KOS_DECLARE_STATIC_CONST_STRING(str_port,                  "port");
 KOS_DECLARE_STATIC_CONST_STRING(str_socket,                "socket");
@@ -731,28 +733,115 @@ cleanup:
     return error ? KOS_BADPTR : this_.o;
 }
 
+KOS_DECLARE_STATIC_CONST_STRING(str_buffer, "buffer");
+KOS_DECLARE_STATIC_CONST_STRING(str_size,   "size");
+
+static const KOS_CONVERT recv_args[3] = {
+    KOS_DEFINE_OPTIONAL_ARG(str_size,   TO_SMALL_INT(4096)),
+    KOS_DEFINE_OPTIONAL_ARG(str_buffer, KOS_VOID          ),
+    KOS_DEFINE_TAIL_ARG()
+};
+
 /* @item net socket.prototype.read()
  *
- *     socket.prototype.read()
+ *     socket.prototype.read(size = 4096 [, buffer])
+ *
+ * This is the same function as `socket.prototype.recv()`.
  */
-static KOS_OBJ_ID kos_read(KOS_CONTEXT ctx,
-                           KOS_OBJ_ID  this_obj,
-                           KOS_OBJ_ID  args_obj)
-{
-    /* TODO */
-    return KOS_VOID;
-}
-
 /* @item net socket.prototype.recv()
  *
- *     socket.prototype.recv()
+ *     socket.prototype.recv(size = 4096 [, buffer])
+ *
+ * Receives a variable number of bytes from a connected socket object.
+ *
+ * Receives as many bytes as it can, up to the specified `size`.
+ *
+ * `size` is the maximum bytes to receive.  `size` defaults to 4096.  Fewer
+ * bytes can be received if no more bytes are available.
+ *
+ * If `buffer` is specified, bytes are appended to it and that buffer is
+ * returned instead of creating a new buffer.
+ *
+ * Returns a buffer containing the bytes read.
+ *
+ * On error throws an exception.
  */
 static KOS_OBJ_ID kos_recv(KOS_CONTEXT ctx,
                            KOS_OBJ_ID  this_obj,
                            KOS_OBJ_ID  args_obj)
 {
-    /* TODO */
-    return KOS_VOID;
+    KOS_LOCAL          args;
+    KOS_LOCAL          buf;
+    int64_t            to_read;
+    KOS_SOCKET_HOLDER *socket_holder = KOS_NULL;
+    uint8_t           *data;
+    size_t             num_read;
+    KOS_OBJ_ID         arg;
+    uint32_t           offset;
+    int                error         = KOS_SUCCESS;
+    int                saved_errno   = 0;
+
+    assert(KOS_get_array_size(args_obj) >= 2);
+
+    KOS_init_local(     ctx, &buf);
+    KOS_init_local_with(ctx, &args, args_obj);
+
+    TRY(acquire_socket_object(ctx, this_obj, &socket_holder));
+
+    arg = KOS_array_read(ctx, args.o, 0);
+    TRY_OBJID(arg);
+
+    TRY(KOS_get_integer(ctx, arg, &to_read));
+
+    if (to_read < 1)
+        to_read = 1;
+
+    buf.o = KOS_array_read(ctx, args.o, 1);
+    TRY_OBJID(buf.o);
+
+    if (buf.o == KOS_VOID)
+        buf.o = KOS_new_buffer(ctx, 0);
+    else if (GET_OBJ_TYPE(buf.o) != OBJ_BUFFER)
+        RAISE_EXCEPTION_STR(str_err_not_buffer);
+
+    offset = KOS_get_buffer_size(buf.o);
+
+    if (to_read > (int64_t)(0xFFFFFFFFU - offset))
+        RAISE_EXCEPTION_STR(str_err_too_many_to_read);
+
+    TRY(KOS_buffer_resize(ctx, buf.o, (unsigned)(offset + to_read)));
+
+    data = KOS_buffer_data(ctx, buf.o);
+
+    if ( ! data)
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+
+    KOS_suspend_context(ctx);
+
+    reset_last_error();
+
+    num_read = recv(get_socket(socket_holder), data + offset, (size_t)to_read, 0);
+
+    if (num_read < -1)
+        saved_errno = get_error();
+
+    KOS_resume_context(ctx);
+
+    assert(num_read <= (size_t)to_read);
+
+    TRY(KOS_buffer_resize(ctx, buf.o, (unsigned)(offset + num_read)));
+
+    if (saved_errno) {
+        KOS_raise_errno_value(ctx, "recv", saved_errno);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+
+cleanup:
+    release_socket(socket_holder);
+
+    buf.o = KOS_destroy_top_locals(ctx, &args, &buf);
+
+    return error ? KOS_BADPTR : buf.o;
 }
 
 /* @item net socket.prototype.recvfrom()
@@ -1032,8 +1121,8 @@ KOS_INIT_MODULE(net, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "connect",    kos_connect,    connect_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "getsockopt", kos_getsockopt, KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "listen",     kos_listen,     listen_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "read",       kos_read,       KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "recv",       kos_recv,       KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "read",       kos_recv,       recv_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "recv",       kos_recv,       recv_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "recvfrom",   kos_recvfrom,   KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "release",    kos_close,      KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "select",     kos_select,     KOS_NULL);
