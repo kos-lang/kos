@@ -788,6 +788,21 @@ static KOS_OBJ_ID kos_select(KOS_CONTEXT ctx,
 /* @item net socket.prototype.send()
  *
  *     socket.prototype.send(values...)
+ *
+ * Sends strings or buffers containing bytes through a connected socket.
+ *
+ * Each argument is either a buffer or a string object.  Empty buffers
+ * or strings are ignored and nothing is sent through the socket.
+ *
+ * If an argument is a string, it is converted to UTF-8 bytes representation
+ * before being sent.
+ *
+ * Invoking this function without any arguments doesn't send anything
+ * through the socket but ensures that the socket object is correct.
+ *
+ * Returns the socket itself (`this`).
+ *
+ * On error throws an exception.
  */
 static KOS_OBJ_ID kos_send(KOS_CONTEXT ctx,
                            KOS_OBJ_ID  this_obj,
