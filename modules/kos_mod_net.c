@@ -772,10 +772,10 @@ static KOS_OBJ_ID kos_recv(KOS_CONTEXT ctx,
 {
     KOS_LOCAL          args;
     KOS_LOCAL          buf;
+    int64_t            num_read;
     int64_t            to_read;
     KOS_SOCKET_HOLDER *socket_holder = KOS_NULL;
     uint8_t           *data;
-    ssize_t            num_read;
     KOS_OBJ_ID         arg;
     uint32_t           offset;
     int                error         = KOS_SUCCESS;
@@ -827,7 +827,7 @@ static KOS_OBJ_ID kos_recv(KOS_CONTEXT ctx,
 
     KOS_resume_context(ctx);
 
-    assert(num_read <= (size_t)to_read);
+    assert(num_read <= to_read);
 
     TRY(KOS_buffer_resize(ctx, buf.o, (unsigned)(offset + num_read)));
 
@@ -918,7 +918,7 @@ static KOS_OBJ_ID kos_send(KOS_CONTEXT ctx,
 
     for (i_arg = 0; i_arg < num_args; i_arg++) {
 
-        ssize_t num_writ    = 0;
+        int64_t num_writ    = 0;
         int     saved_errno = 0;
 
         arg.o = KOS_array_read(ctx, args.o, i_arg);
