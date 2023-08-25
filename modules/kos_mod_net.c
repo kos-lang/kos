@@ -33,6 +33,7 @@
 #   include <netdb.h>
 #   include <netinet/in.h>
 #   include <sys/socket.h>
+#   include <sys/time.h>
 #   include <sys/types.h>
 #   include <sys/un.h>
 #   include <unistd.h>
@@ -663,18 +664,6 @@ cleanup:
     return error ? KOS_BADPTR : this_.o;
 }
 
-/* @item net socket.prototype.getsockopt()
- *
- *     socket.prototype.getsockopt()
- */
-static KOS_OBJ_ID kos_getsockopt(KOS_CONTEXT ctx,
-                                 KOS_OBJ_ID  this_obj,
-                                 KOS_OBJ_ID  args_obj)
-{
-    /* TODO */
-    return KOS_VOID;
-}
-
 KOS_DECLARE_STATIC_CONST_STRING(str_backlog, "backlog");
 
 static const KOS_CONVERT listen_args[2] = {
@@ -1015,6 +1004,191 @@ static KOS_OBJ_ID kos_sendto(KOS_CONTEXT ctx,
     return KOS_VOID;
 }
 
+KOS_DECLARE_STATIC_CONST_STRING(str_option, "option");
+
+static const KOS_CONVERT getsockopt_args[2] = {
+    KOS_DEFINE_MANDATORY_ARG(str_option),
+    KOS_DEFINE_TAIL_ARG()
+};
+
+/* @item net socket.prototype.getsockopt()
+ *
+ *     socket.prototype.getsockopt()
+ */
+static KOS_OBJ_ID kos_getsockopt(KOS_CONTEXT ctx,
+                                 KOS_OBJ_ID  this_obj,
+                                 KOS_OBJ_ID  args_obj)
+{
+    /* TODO */
+    return KOS_VOID;
+}
+
+#ifdef _WIN32
+typedef BOOL SOCK_OPT_BOOL;
+#else
+typedef int SOCK_OPT_BOOL;
+#endif
+
+static int setsockopt_bool(KOS_CONTEXT        ctx,
+                           KOS_SOCKET_HOLDER *socket_holder,
+                           int                option,
+                           KOS_OBJ_ID         value)
+{
+    int64_t       val64;
+    SOCK_OPT_BOOL bool_value;
+    int           error       = 0;
+    int           saved_errno = 0;
+
+    if (GET_OBJ_TYPE(value) == OBJ_BOOLEAN)
+        val64 = (int)KOS_get_bool(value);
+    else if ( ! IS_NUMERIC_OBJ(value)) {
+        KOS_raise_printf(ctx, "value argument is %s but expected integer",
+                         KOS_get_type_name(GET_OBJ_TYPE(value)));
+        return KOS_ERROR_EXCEPTION;
+    }
+    else {
+        error = KOS_get_integer(ctx, value, &val64);
+        if (error)
+            return error;
+    }
+
+    bool_value = (SOCK_OPT_BOOL)(val64 != 0);
+
+    KOS_suspend_context(ctx);
+
+    reset_last_error();
+
+    error = setsockopt(get_socket(socket_holder),
+                       SOL_SOCKET,
+                       option,
+                       &bool_value,
+                       (ADDR_LEN)sizeof(bool_value));
+
+    if (error)
+        saved_errno = get_error();
+
+    KOS_resume_context(ctx);
+
+    if (error) {
+        KOS_raise_errno_value(ctx, "setsockopt", saved_errno);
+        return KOS_ERROR_EXCEPTION;
+    }
+
+    return KOS_SUCCESS;
+}
+
+static int setsockopt_int(KOS_CONTEXT        ctx,
+                          KOS_SOCKET_HOLDER *socket_holder,
+                          int                option,
+                          KOS_OBJ_ID         value)
+{
+    int64_t val64;
+    int     int_value;
+    int     error       = 0;
+    int     saved_errno = 0;
+
+    if ( ! IS_NUMERIC_OBJ(value)) {
+        KOS_raise_printf(ctx, "value argument is %s but expected integer",
+                         KOS_get_type_name(GET_OBJ_TYPE(value)));
+        return KOS_ERROR_EXCEPTION;
+    }
+
+    error = KOS_get_integer(ctx, value, &val64);
+    if (error)
+        return error;
+
+    int_value = (int)val64;
+
+    KOS_suspend_context(ctx);
+
+    reset_last_error();
+
+    error = setsockopt(get_socket(socket_holder),
+                       SOL_SOCKET,
+                       option,
+                       &int_value,
+                       (ADDR_LEN)sizeof(int_value));
+
+    if (error)
+        saved_errno = get_error();
+
+    KOS_resume_context(ctx);
+
+    if (error) {
+        KOS_raise_errno_value(ctx, "setsockopt", saved_errno);
+        return KOS_ERROR_EXCEPTION;
+    }
+
+    return KOS_SUCCESS;
+}
+
+static int setsockopt_time(KOS_CONTEXT        ctx,
+                           KOS_SOCKET_HOLDER *socket_holder,
+                           int                option,
+                           KOS_OBJ_ID         value)
+{
+    int64_t        val64;
+#ifdef _WIN32
+    DWORD          time_value;
+#else
+    struct timeval time_value;
+#endif
+    int            error       = 0;
+    int            saved_errno = 0;
+
+    if ( ! IS_NUMERIC_OBJ(value)) {
+        KOS_raise_printf(ctx, "value argument is %s but expected integer",
+                         KOS_get_type_name(GET_OBJ_TYPE(value)));
+        return KOS_ERROR_EXCEPTION;
+    }
+
+    error = KOS_get_integer(ctx, value, &val64);
+    if (error)
+        return error;
+
+    if (val64 < 0 || val64 > 0x7FFFFFFF) {
+        KOS_raise_printf(ctx, "value argument %" PRId64 " is out of range", val64);
+        return KOS_ERROR_EXCEPTION;
+    }
+
+#ifdef _WIN32
+    time_value = (DWORD)(uint64_t)val64;
+#else
+    time_value.tv_sec  = (unsigned)((uint64_t)val64 / 1000U);
+    time_value.tv_usec = ((uint64_t)val64 % 1000U) * 1000U;
+#endif
+
+    KOS_suspend_context(ctx);
+
+    reset_last_error();
+
+    error = setsockopt(get_socket(socket_holder),
+                       SOL_SOCKET,
+                       option,
+                       &time_value,
+                       (ADDR_LEN)sizeof(time_value));
+
+    if (error)
+        saved_errno = get_error();
+
+    KOS_resume_context(ctx);
+
+    if (error) {
+        KOS_raise_errno_value(ctx, "setsockopt", saved_errno);
+        return KOS_ERROR_EXCEPTION;
+    }
+
+    return KOS_SUCCESS;
+}
+
+KOS_DECLARE_STATIC_CONST_STRING(str_value, "value");
+
+static const KOS_CONVERT setsockopt_args[3] = {
+    KOS_DEFINE_MANDATORY_ARG(str_option),
+    KOS_DEFINE_MANDATORY_ARG(str_value),
+    KOS_DEFINE_TAIL_ARG()
+};
+
 /* @item net socket.prototype.setsockopt()
  *
  *     socket.prototype.setsockopt()
@@ -1023,8 +1197,90 @@ static KOS_OBJ_ID kos_setsockopt(KOS_CONTEXT ctx,
                                  KOS_OBJ_ID  this_obj,
                                  KOS_OBJ_ID  args_obj)
 {
-    /* TODO */
-    return KOS_VOID;
+    KOS_LOCAL          args;
+    KOS_LOCAL          this_;
+    KOS_SOCKET_HOLDER *socket_holder;
+    KOS_OBJ_ID         value;
+    int64_t            option;
+    int                error;
+
+    assert(KOS_get_array_size(args_obj) > 1);
+
+    KOS_init_local_with(ctx, &this_, this_obj);
+    KOS_init_local_with(ctx, &args,  args_obj);
+
+    TRY(acquire_socket_object(ctx, this_.o, &socket_holder));
+
+    value = KOS_array_read(ctx, args.o, 0);
+    TRY_OBJID(value);
+
+    if (GET_OBJ_TYPE(value) > OBJ_INTEGER) {
+        KOS_raise_printf(ctx, "option argument is %s but expected integer",
+                         KOS_get_type_name(GET_OBJ_TYPE(value)));
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+
+    TRY(KOS_get_integer(ctx, value, &option));
+
+    value = KOS_array_read(ctx, args.o, 1);
+    TRY_OBJID(value);
+
+    switch (option) {
+        case SO_BROADCAST:
+            TRY(setsockopt_bool(ctx, socket_holder, (int)option, value));
+            break;
+
+        case SO_DEBUG:
+            TRY(setsockopt_bool(ctx, socket_holder, (int)option, value));
+            break;
+
+        case SO_DONTROUTE:
+            TRY(setsockopt_bool(ctx, socket_holder, (int)option, value));
+            break;
+
+        case SO_KEEPALIVE:
+            TRY(setsockopt_bool(ctx, socket_holder, (int)option, value));
+            break;
+
+        /*
+        case SO_LINGER:
+        */
+
+        case SO_OOBINLINE:
+            TRY(setsockopt_bool(ctx, socket_holder, (int)option, value));
+            break;
+
+        case SO_RCVBUF:
+            TRY(setsockopt_int(ctx, socket_holder, (int)option, value));
+            break;
+
+        case SO_RCVTIMEO:
+            TRY(setsockopt_time(ctx, socket_holder, (int)option, value));
+            break;
+
+        case SO_REUSEADDR:
+            TRY(setsockopt_bool(ctx, socket_holder, (int)option, value));
+            break;
+
+        case SO_SNDBUF:
+            TRY(setsockopt_int(ctx, socket_holder, (int)option, value));
+            break;
+
+        case SO_SNDTIMEO:
+            TRY(setsockopt_time(ctx, socket_holder, (int)option, value));
+            break;
+
+        default:
+            KOS_raise_printf(ctx, "unknown option %" PRId64, option);
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+
+cleanup:
+    release_socket(socket_holder);
+
+    this_.o = KOS_destroy_top_locals(ctx, &args, &this_);
+
+    return error ? KOS_BADPTR : this_.o;
 }
 
 KOS_DECLARE_STATIC_CONST_STRING(str_how, "how");
@@ -1119,7 +1375,7 @@ KOS_INIT_MODULE(net, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "bind",       kos_bind,       bind_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "close",      kos_close,      KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "connect",    kos_connect,    connect_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "getsockopt", kos_getsockopt, KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "getsockopt", kos_getsockopt, getsockopt_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "listen",     kos_listen,     listen_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "read",       kos_recv,       recv_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "recv",       kos_recv,       recv_args);
@@ -1128,23 +1384,35 @@ KOS_INIT_MODULE(net, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "select",     kos_select,     KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "send",       kos_send,       KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "sendto",     kos_sendto,     KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "setsockopt", kos_setsockopt, KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "setsockopt", kos_setsockopt, setsockopt_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "shutdown",   kos_shutdown,   shutdown_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "write",      kos_send,       KOS_NULL);
 
 #ifndef _WIN32
-    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "AF_LOCAL", AF_LOCAL);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "AF_LOCAL",     AF_LOCAL);
 #endif
-    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "AF_INET",  AF_INET);
-    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "AF_INET6", AF_INET6);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "AF_INET",      AF_INET);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "AF_INET6",     AF_INET6);
 
-    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SOCK_STREAM", SOCK_STREAM);
-    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SOCK_DGRAM",  SOCK_DGRAM);
-    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SOCK_RAW",    SOCK_RAW);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SOCK_STREAM",  SOCK_STREAM);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SOCK_DGRAM",   SOCK_DGRAM);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SOCK_RAW",     SOCK_RAW);
 
-    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SHUT_RD",     SHUT_RD);
-    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SHUT_RDWR",   SHUT_RDWR);
-    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SHUT_WR",     SHUT_WR);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SHUT_RD",      SHUT_RD);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SHUT_RDWR",    SHUT_RDWR);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SHUT_WR",      SHUT_WR);
+
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SO_BROADCAST", SO_BROADCAST);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SO_DEBUG",     SO_DEBUG);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SO_DONTROUTE", SO_DONTROUTE);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SO_KEEPALIVE", SO_KEEPALIVE);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SO_LINGER",    SO_LINGER);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SO_OOBINLINE", SO_OOBINLINE);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SO_RCVBUF",    SO_RCVBUF);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SO_RCVTIMEO",  SO_RCVTIMEO);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SO_REUSEADDR", SO_REUSEADDR);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SO_SNDBUF",    SO_SNDBUF);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SO_SNDTIMEO",  SO_SNDTIMEO);
 
 cleanup:
     KOS_destroy_top_locals(ctx, &socket_proto, &module);
