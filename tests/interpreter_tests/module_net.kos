@@ -8,28 +8,69 @@ import test_tools.expect_fail
 ##############################################################################
 # socket.bind()
 
+var ipv6 = true
+
 do {
     net.socket().bind()
     net.socket().bind("")
     net.socket().bind("localhost")
     net.socket().bind("127.0.0.1")
-    net.socket().bind("localhost", 11000)
-    net.socket().bind("127.0.0.1", 11001)
-    net.socket().bind(port = 11002)
+    net.socket().setsockopt(net.SO_REUSEADDR, true).bind("localhost", 11000)
+    net.socket().setsockopt(net.SO_REUSEADDR, true).bind("127.0.0.1", 11001)
+    net.socket().setsockopt(net.SO_REUSEADDR, true).bind(port = 11002)
 
     net.socket(net.AF_INET6).bind()
     net.socket(net.AF_INET6).bind("")
-    net.socket(net.AF_INET6).bind(port = 11007)
+    net.socket(net.AF_INET6).setsockopt(net.SO_REUSEADDR, true).bind(port = 11003)
 
     var ok = true
     try {
         net.socket(net.AF_INET6).bind("localhost")
     }
     catch (const e) {
-        ok = false
+        ipv6 = false
     }
-    if ok {
+    if ipv6 {
         net.socket(net.AF_INET6).bind("::1")
-        net.socket(net.AF_INET6).bind("::1", 11006)
+        net.socket(net.AF_INET6).setsockopt(net.SO_REUSEADDR, true).bind("::1", 11004)
     }
+}
+
+##############################################################################
+
+do {
+    const port = 11005
+
+    const server_sock = net.socket(net.AF_INET, net.SOCK_STREAM)
+    assert server_sock.setsockopt(net.SO_REUSEADDR, true) == server_sock
+    assert server_sock.bind("0.0.0.0", port)              == server_sock
+    assert server_sock.listen()                           == server_sock
+
+    const recv_thread = async do {
+        const recv_sock = server_sock.accept().socket
+        assert recv_sock instanceof net.socket
+
+        assert server_sock.close() == server_sock
+
+        assert recv_sock.shutdown(net.SHUT_WR) == recv_sock
+
+        const b = recv_sock.recv(5)
+        assert typeof b == "buffer"
+
+        assert recv_sock.shutdown(net.SHUT_RD) == recv_sock
+        assert recv_sock.close()               == recv_sock
+
+        assert b.size == 5
+        assert base.string(b) == "hello"
+    }
+
+    const send_sock = net.socket(net.AF_INET, net.SOCK_STREAM)
+    assert send_sock.connect("localhost", port) == send_sock
+    assert send_sock.shutdown(net.SHUT_RD)      == send_sock
+    assert send_sock.send("hello")              == send_sock
+
+    recv_thread.wait()
+
+    assert send_sock.shutdown(net.SHUT_WR)      == send_sock
+    assert send_sock.close()                    == send_sock
 }
