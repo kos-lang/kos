@@ -1198,48 +1198,49 @@ static KOS_OBJ_ID kos_setsockopt(KOS_CONTEXT ctx,
                                  KOS_OBJ_ID  args_obj)
 {
     KOS_LOCAL          args;
+    KOS_LOCAL          value;
     KOS_LOCAL          this_;
     KOS_SOCKET_HOLDER *socket_holder;
-    KOS_OBJ_ID         value;
     int64_t            option;
     int                error;
 
     assert(KOS_get_array_size(args_obj) > 1);
 
     KOS_init_local_with(ctx, &this_, this_obj);
+    KOS_init_local(     ctx, &value);
     KOS_init_local_with(ctx, &args,  args_obj);
 
     TRY(acquire_socket_object(ctx, this_.o, &socket_holder));
 
-    value = KOS_array_read(ctx, args.o, 0);
-    TRY_OBJID(value);
+    value.o = KOS_array_read(ctx, args.o, 0);
+    TRY_OBJID(value.o);
 
-    if (GET_OBJ_TYPE(value) > OBJ_INTEGER) {
+    if (GET_OBJ_TYPE(value.o) > OBJ_INTEGER) {
         KOS_raise_printf(ctx, "option argument is %s but expected integer",
-                         KOS_get_type_name(GET_OBJ_TYPE(value)));
+                         KOS_get_type_name(GET_OBJ_TYPE(value.o)));
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
-    TRY(KOS_get_integer(ctx, value, &option));
+    TRY(KOS_get_integer(ctx, value.o, &option));
 
-    value = KOS_array_read(ctx, args.o, 1);
-    TRY_OBJID(value);
+    value.o = KOS_array_read(ctx, args.o, 1);
+    TRY_OBJID(value.o);
 
     switch (option) {
         case SO_BROADCAST:
-            TRY(setsockopt_bool(ctx, socket_holder, (int)option, value));
+            TRY(setsockopt_bool(ctx, socket_holder, (int)option, value.o));
             break;
 
         case SO_DEBUG:
-            TRY(setsockopt_bool(ctx, socket_holder, (int)option, value));
+            TRY(setsockopt_bool(ctx, socket_holder, (int)option, value.o));
             break;
 
         case SO_DONTROUTE:
-            TRY(setsockopt_bool(ctx, socket_holder, (int)option, value));
+            TRY(setsockopt_bool(ctx, socket_holder, (int)option, value.o));
             break;
 
         case SO_KEEPALIVE:
-            TRY(setsockopt_bool(ctx, socket_holder, (int)option, value));
+            TRY(setsockopt_bool(ctx, socket_holder, (int)option, value.o));
             break;
 
         /*
@@ -1247,27 +1248,33 @@ static KOS_OBJ_ID kos_setsockopt(KOS_CONTEXT ctx,
         */
 
         case SO_OOBINLINE:
-            TRY(setsockopt_bool(ctx, socket_holder, (int)option, value));
+            TRY(setsockopt_bool(ctx, socket_holder, (int)option, value.o));
             break;
 
         case SO_RCVBUF:
-            TRY(setsockopt_int(ctx, socket_holder, (int)option, value));
+            TRY(setsockopt_int(ctx, socket_holder, (int)option, value.o));
             break;
 
         case SO_RCVTIMEO:
-            TRY(setsockopt_time(ctx, socket_holder, (int)option, value));
+            TRY(setsockopt_time(ctx, socket_holder, (int)option, value.o));
             break;
 
         case SO_REUSEADDR:
-            TRY(setsockopt_bool(ctx, socket_holder, (int)option, value));
+            TRY(setsockopt_bool(ctx, socket_holder, (int)option, value.o));
             break;
 
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+        case SO_REUSEPORT:
+            TRY(setsockopt_bool(ctx, socket_holder, SO_REUSEPORT, value.o));
+            break;
+#endif
+
         case SO_SNDBUF:
-            TRY(setsockopt_int(ctx, socket_holder, (int)option, value));
+            TRY(setsockopt_int(ctx, socket_holder, (int)option, value.o));
             break;
 
         case SO_SNDTIMEO:
-            TRY(setsockopt_time(ctx, socket_holder, (int)option, value));
+            TRY(setsockopt_time(ctx, socket_holder, (int)option, value.o));
             break;
 
         default:
@@ -1411,6 +1418,9 @@ KOS_INIT_MODULE(net, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SO_RCVBUF",    SO_RCVBUF);
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SO_RCVTIMEO",  SO_RCVTIMEO);
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SO_REUSEADDR", SO_REUSEADDR);
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SO_REUSEPORT", SO_REUSEPORT);
+#endif
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SO_SNDBUF",    SO_SNDBUF);
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SO_SNDTIMEO",  SO_SNDTIMEO);
 
