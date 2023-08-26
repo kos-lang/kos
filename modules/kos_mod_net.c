@@ -41,6 +41,8 @@
 
 #ifdef _WIN32
 typedef SOCKET KOS_SOCKET;
+typedef int    DATA_LEN;
+typedef int    ADDR_LEN;
 
 #define KOS_INVALID_SOCKET ((KOS_SOCKET)INVALID_SOCKET)
 
@@ -51,7 +53,9 @@ static int get_error(void)
     return WSAGetLastError();
 }
 #else
-typedef int KOS_SOCKET;
+typedef int       KOS_SOCKET;
+typedef size_t    DATA_LEN;
+typedef socklen_t ADDR_LEN;
 
 #define KOS_INVALID_SOCKET ((KOS_SOCKET)-1)
 
@@ -188,12 +192,6 @@ typedef union KOS_GENERIC_ADDR_U {
     struct sockaddr_un  local;
 #endif
 } KOS_GENERIC_ADDR;
-
-#ifdef _WIN32
-typedef int ADDR_LEN;
-#else
-typedef socklen_t ADDR_LEN;
-#endif
 
 static int get_ip_address(KOS_CONTEXT        ctx,
                           KOS_SOCKET_HOLDER *socket_holder,
@@ -809,7 +807,7 @@ static KOS_OBJ_ID kos_recv(KOS_CONTEXT ctx,
 
     reset_last_error();
 
-    num_read = recv(get_socket(socket_holder), (char *)(data + offset), (size_t)to_read, 0);
+    num_read = recv(get_socket(socket_holder), (char *)(data + offset), (DATA_LEN)to_read, 0);
 
     if (num_read < -1)
         saved_errno = get_error();
@@ -939,7 +937,7 @@ static KOS_OBJ_ID kos_send(KOS_CONTEXT ctx,
 
                 reset_last_error();
 
-                num_writ = send(get_socket(socket_holder), (const char *)data, to_write, 0);
+                num_writ = send(get_socket(socket_holder), (const char *)data, (DATA_LEN)to_write, 0);
 
                 if (num_writ < 0)
                     saved_errno = get_error();
@@ -963,7 +961,7 @@ static KOS_OBJ_ID kos_send(KOS_CONTEXT ctx,
 
                 reset_last_error();
 
-                num_writ = send(get_socket(socket_holder), cstr.buffer, cstr.size - 1, 0);
+                num_writ = send(get_socket(socket_holder), cstr.buffer, (DATA_LEN)(cstr.size - 1), 0);
 
                 if (num_writ < 0)
                     saved_errno = get_error();
