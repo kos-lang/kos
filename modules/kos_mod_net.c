@@ -809,7 +809,7 @@ static KOS_OBJ_ID kos_recv(KOS_CONTEXT ctx,
 
     reset_last_error();
 
-    num_read = recv(get_socket(socket_holder), data + offset, (size_t)to_read, 0);
+    num_read = recv(get_socket(socket_holder), (char *)(data + offset), (size_t)to_read, 0);
 
     if (num_read < -1)
         saved_errno = get_error();
@@ -939,7 +939,7 @@ static KOS_OBJ_ID kos_send(KOS_CONTEXT ctx,
 
                 reset_last_error();
 
-                num_writ = send(get_socket(socket_holder), data, to_write, 0);
+                num_writ = send(get_socket(socket_holder), (const char *)data, to_write, 0);
 
                 if (num_writ < 0)
                     saved_errno = get_error();
@@ -1061,7 +1061,7 @@ static int setsockopt_bool(KOS_CONTEXT        ctx,
     error = setsockopt(get_socket(socket_holder),
                        SOL_SOCKET,
                        option,
-                       &bool_value,
+                       (const void *)&bool_value,
                        (ADDR_LEN)sizeof(bool_value));
 
     if (error)
@@ -1106,7 +1106,7 @@ static int setsockopt_int(KOS_CONTEXT        ctx,
     error = setsockopt(get_socket(socket_holder),
                        SOL_SOCKET,
                        option,
-                       &int_value,
+                       (const void *)&int_value,
                        (ADDR_LEN)sizeof(int_value));
 
     if (error)
@@ -1165,7 +1165,7 @@ static int setsockopt_time(KOS_CONTEXT        ctx,
     error = setsockopt(get_socket(socket_holder),
                        SOL_SOCKET,
                        option,
-                       &time_value,
+                       (const void *)&time_value,
                        (ADDR_LEN)sizeof(time_value));
 
     if (error)
