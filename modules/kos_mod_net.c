@@ -723,12 +723,6 @@ cleanup:
 KOS_DECLARE_STATIC_CONST_STRING(str_buffer, "buffer");
 KOS_DECLARE_STATIC_CONST_STRING(str_size,   "size");
 
-static const KOS_CONVERT recv_args[3] = {
-    KOS_DEFINE_OPTIONAL_ARG(str_size,   TO_SMALL_INT(4096)),
-    KOS_DEFINE_OPTIONAL_ARG(str_buffer, KOS_VOID          ),
-    KOS_DEFINE_TAIL_ARG()
-};
-
 /* @item net socket.prototype.read()
  *
  *     socket.prototype.read(size = 4096 [, buffer])
@@ -1352,6 +1346,12 @@ KOS_INIT_MODULE(net, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     int       error = KOS_SUCCESS;
     KOS_LOCAL module;
     KOS_LOCAL socket_proto;
+
+    const KOS_CONVERT recv_args[3] = {
+        KOS_DEFINE_OPTIONAL_ARG(str_size,   TO_SMALL_INT(4096)),
+        KOS_DEFINE_OPTIONAL_ARG(str_buffer, KOS_VOID          ),
+        KOS_DEFINE_TAIL_ARG()
+    };
 
     KOS_init_debug_output();
 
