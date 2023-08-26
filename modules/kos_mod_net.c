@@ -159,7 +159,16 @@ static int set_socket_object(KOS_CONTEXT ctx,
 
 static KOS_SOCKET get_socket(KOS_SOCKET_HOLDER *socket_holder)
 {
-    return socket_holder ? (KOS_SOCKET)KOS_atomic_read_relaxed_u32(socket_holder->socket_fd) : KOS_INVALID_SOCKET;
+    return (KOS_SOCKET)KOS_atomic_read_relaxed_u32(socket_holder->socket_fd);
+}
+
+static int is_socket_valid(KOS_SOCKET s)
+{
+#ifdef _WIN32
+    return s != KOS_INVALID_SOCKET;
+#else
+    return s >= 0;
+#endif
 }
 
 static int acquire_socket_object(KOS_CONTEXT         ctx,
@@ -173,7 +182,7 @@ static int acquire_socket_object(KOS_CONTEXT         ctx,
         return KOS_ERROR_EXCEPTION;
     }
 
-    if (get_socket(*socket_holder) == KOS_INVALID_SOCKET) {
+    if ( ! is_socket_valid(get_socket(*socket_holder))) {
         release_socket(*socket_holder);
         *socket_holder = KOS_NULL;
 
