@@ -1061,7 +1061,7 @@ static int setsockopt_bool(KOS_CONTEXT        ctx,
     error = setsockopt(get_socket(socket_holder),
                        SOL_SOCKET,
                        option,
-                       (const void *)&bool_value,
+                       (const char *)&bool_value,
                        (ADDR_LEN)sizeof(bool_value));
 
     if (error)
@@ -1106,7 +1106,7 @@ static int setsockopt_int(KOS_CONTEXT        ctx,
     error = setsockopt(get_socket(socket_holder),
                        SOL_SOCKET,
                        option,
-                       (const void *)&int_value,
+                       (const char *)&int_value,
                        (ADDR_LEN)sizeof(int_value));
 
     if (error)
@@ -1165,7 +1165,7 @@ static int setsockopt_time(KOS_CONTEXT        ctx,
     error = setsockopt(get_socket(socket_holder),
                        SOL_SOCKET,
                        option,
-                       (const void *)&time_value,
+                       (const char *)&time_value,
                        (ADDR_LEN)sizeof(time_value));
 
     if (error)
