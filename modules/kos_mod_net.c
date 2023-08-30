@@ -18,6 +18,7 @@
 
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -33,6 +34,7 @@
 #   include <netdb.h>
 #   include <netinet/in.h>
 #   include <sys/socket.h>
+#   include <sys/select.h>
 #   include <sys/time.h>
 #   include <sys/types.h>
 #   include <sys/un.h>
@@ -43,6 +45,7 @@
 typedef SOCKET KOS_SOCKET;
 typedef int    DATA_LEN;
 typedef int    ADDR_LEN;
+typedef long   TIME_FRAGMENT;
 
 #define KOS_INVALID_SOCKET ((KOS_SOCKET)INVALID_SOCKET)
 
@@ -56,6 +59,7 @@ static int get_error(void)
 typedef int       KOS_SOCKET;
 typedef size_t    DATA_LEN;
 typedef socklen_t ADDR_LEN;
+typedef unsigned  TIME_FRAGMENT;
 
 #define KOS_INVALID_SOCKET ((KOS_SOCKET)-1)
 
@@ -79,6 +83,7 @@ KOS_DECLARE_STATIC_CONST_STRING(str_err_too_many_to_read,  "requested read size 
 KOS_DECLARE_STATIC_CONST_STRING(str_err_socket_not_open,   "socket not open or not a socket object");
 KOS_DECLARE_STATIC_CONST_STRING(str_port,                  "port");
 KOS_DECLARE_STATIC_CONST_STRING(str_socket,                "socket");
+KOS_DECLARE_STATIC_CONST_STRING(str_timeout_sec,           "timeout_sec");
 
 typedef struct KOS_SOCKET_HOLDER_S {
     KOS_ATOMIC(uint32_t) socket_fd;
@@ -846,16 +851,109 @@ static KOS_OBJ_ID kos_recvfrom(KOS_CONTEXT ctx,
     return KOS_VOID;
 }
 
-/* @item net socket.prototype.select()
+/* @item net socket.prototype.wait()
  *
- *     socket.prototype.select()
+ *     socket.prototype.wait(timeout_sec = void)
+ *
+ * Waits for data to be available to read from the socket.
+ *
+ * On a connected or datagram socket, this function waits for data to be
+ * received and be ready to read via the `recv()` or `recvfrom()` function.
+ *
+ * On a listening socket, this function waits for for a connection to be
+ * established and the socket to be ready to accept a new connection.
+ *
+ * `timeout_sec` is the timeout value in seconds.  This can be a `float`, so
+ * for example to wait for 500 ms, `0.5` can be passed.  If this is `void`
+ * (which is the default) the function will wait indefinitely.
+ *
+ * Returns a boolean indicating whether the wait operation succeeded.
+ * The return value `true` indicates that there is data available on the
+ * socket to read.  The return value `false` indicates that the timeout
+ * was reached.
+ *
+ * On error throws an exception.
  */
-static KOS_OBJ_ID kos_select(KOS_CONTEXT ctx,
-                             KOS_OBJ_ID  this_obj,
-                             KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_wait(KOS_CONTEXT ctx,
+                           KOS_OBJ_ID  this_obj,
+                           KOS_OBJ_ID  args_obj)
 {
-    /* TODO */
-    return KOS_VOID;
+#ifdef _WIN32
+    TIMEVAL            time_value;
+    TIMEVAL           *timeout_tv  = KOS_NULL;
+#else
+    struct timeval     time_value;
+    struct timeval    *timeout_tv  = KOS_NULL;
+#endif
+    KOS_NUMERIC        timeout;
+    fd_set             fds;
+    KOS_SOCKET_HOLDER *socket_holder;
+    KOS_LOCAL          args;
+    KOS_LOCAL          this_;
+    KOS_OBJ_ID         wait_obj;
+    KOS_OBJ_ID         ret_obj     = KOS_FALSE;
+    int                nfds        = 0;
+    int                saved_errno = 0;
+    int                error;
+
+    timeout.type = KOS_NON_NUMERIC;
+
+    KOS_init_local_with(ctx, &args,  args_obj);
+    KOS_init_local_with(ctx, &this_, this_obj);
+
+    TRY(acquire_socket_object(ctx, this_.o, &socket_holder));
+
+    assert(KOS_get_array_size(args.o) >= 1);
+
+    wait_obj = KOS_array_read(ctx, args.o, 0);
+    TRY_OBJID(wait_obj);
+
+    if (wait_obj != KOS_VOID)
+        TRY(KOS_get_numeric_arg(ctx, args.o, 0, &timeout));
+
+    FD_ZERO(&fds);
+    FD_SET(socket_holder->socket_fd, &fds);
+
+#ifndef _WIN32
+    nfds = socket_holder->socket_fd + 1;
+#endif
+
+    if (timeout.type != KOS_NON_NUMERIC) {
+        uint64_t tv_usec;
+
+        if (timeout.type == KOS_INTEGER_VALUE)
+            tv_usec = (uint64_t)timeout.u.i * 1000000U;
+        else
+            tv_usec = (uint64_t)floor(timeout.u.d * 1000000.0);
+
+        memset(&time_value, 0, sizeof(time_value));
+        time_value.tv_sec  = (TIME_FRAGMENT)(tv_usec / 1000000U);
+        time_value.tv_usec = (TIME_FRAGMENT)(tv_usec % 1000000U);
+
+        timeout_tv = &time_value;
+    }
+
+    KOS_suspend_context(ctx);
+
+    nfds = select(nfds, &fds, KOS_NULL, KOS_NULL, timeout_tv);
+    if (nfds < 0)
+        saved_errno = get_error();
+
+    KOS_resume_context(ctx);
+
+    if (saved_errno) {
+        KOS_raise_errno_value(ctx, "select", saved_errno);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+
+    ret_obj = KOS_BOOL(nfds);
+
+cleanup:
+    release_socket(socket_holder);
+
+    KOS_destroy_top_locals(ctx, &args, &this_);
+
+    return error ? KOS_BADPTR : ret_obj;
 }
 
 /* @item net socket.prototype.write()
@@ -1128,35 +1226,45 @@ static int setsockopt_time(KOS_CONTEXT        ctx,
                            int                option,
                            KOS_OBJ_ID         value)
 {
-    int64_t        val64;
+    KOS_NUMERIC    numeric = KOS_get_numeric(value);
+    uint64_t       tv_usec;
 #ifdef _WIN32
     DWORD          time_value;
 #else
     struct timeval time_value;
 #endif
+    int            positive    = 0;
     int            error       = 0;
     int            saved_errno = 0;
 
-    if ( ! IS_NUMERIC_OBJ(value)) {
-        KOS_raise_printf(ctx, "value argument is %s but expected integer",
-                         KOS_get_type_name(GET_OBJ_TYPE(value)));
-        return KOS_ERROR_EXCEPTION;
+    switch (numeric.type) {
+
+        case KOS_INTEGER_VALUE:
+            tv_usec  = (uint64_t)numeric.u.i * 1000000U;
+            positive = numeric.u.i >= 0;
+            break;
+
+        case KOS_FLOAT_VALUE:
+            tv_usec  = (uint64_t)floor(numeric.u.d * 1000000.0);
+            positive = numeric.u.d >= 0;
+            break;
+
+        default:
+            KOS_raise_printf(ctx, "value argument is %s but expected integer",
+                             KOS_get_type_name(GET_OBJ_TYPE(value)));
+            return KOS_ERROR_EXCEPTION;
     }
 
-    error = KOS_get_integer(ctx, value, &val64);
-    if (error)
-        return error;
-
-    if (val64 < 0 || val64 > 0x7FFFFFFF) {
-        KOS_raise_printf(ctx, "value argument %" PRId64 " is out of range", val64);
+    if ( ! positive || (tv_usec / 1000U) > 0x7FFFFFFFU) {
+        KOS_raise_printf(ctx, "value argument %" PRIu64 " us is out of range", tv_usec);
         return KOS_ERROR_EXCEPTION;
     }
 
 #ifdef _WIN32
-    time_value = (DWORD)(uint64_t)val64;
+    time_value = (DWORD)(tv_usec + 999U / 1000U);
 #else
-    time_value.tv_sec  = (unsigned)((uint64_t)val64 / 1000U);
-    time_value.tv_usec = ((uint64_t)val64 % 1000U) * 1000U;
+    time_value.tv_sec  = (TIME_FRAGMENT)(tv_usec / 1000000U);
+    time_value.tv_usec = (TIME_FRAGMENT)(tv_usec % 1000000U);
 #endif
 
     KOS_suspend_context(ctx);
@@ -1362,6 +1470,11 @@ KOS_INIT_MODULE(net, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
         KOS_DEFINE_TAIL_ARG()
     };
 
+    const KOS_CONVERT wait_args[2] = {
+        KOS_DEFINE_OPTIONAL_ARG(str_timeout_sec, KOS_VOID),
+        KOS_DEFINE_TAIL_ARG()
+    };
+
     KOS_init_debug_output();
 
     KOS_init_local_with(ctx, &module, module_obj);
@@ -1395,7 +1508,7 @@ KOS_INIT_MODULE(net, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "recv",       kos_recv,       recv_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "recvfrom",   kos_recvfrom,   KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "release",    kos_close,      KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "select",     kos_select,     KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "wait",       kos_wait,       wait_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "send",       kos_send,       KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "sendto",     kos_sendto,     KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "setsockopt", kos_setsockopt, setsockopt_args);

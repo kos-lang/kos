@@ -230,11 +230,11 @@ Table of Contents
       * [socket.prototype.recv()](#socketprototyperecv)
       * [socket.prototype.recvfrom()](#socketprototyperecvfrom)
       * [socket.prototype.release()](#socketprototyperelease)
-      * [socket.prototype.select()](#socketprototypeselect)
       * [socket.prototype.send()](#socketprototypesend)
       * [socket.prototype.sendto()](#socketprototypesendto)
       * [socket.prototype.setsockopt()](#socketprototypesetsockopt)
       * [socket.prototype.shutdown()](#socketprototypeshutdown)
+      * [socket.prototype.wait()](#socketprototypewait)
       * [socket.prototype.write()](#socketprototypewrite)
   * [os](#os)
     * [arch](#arch)
@@ -4615,11 +4615,6 @@ Returns the socket itself (`this`).
 
 On error throws an exception.
 
-socket.prototype.select()
--------------------------
-
-    socket.prototype.select()
-
 socket.prototype.send()
 -----------------------
 
@@ -4661,6 +4656,30 @@ Shuts down one or two directions of the connection.
 (`SHUT_RD` or `SHUT_WR`) or both (`SHUT_RDWR`).
 
 Returns the socket itself (`this`).
+
+On error throws an exception.
+
+socket.prototype.wait()
+-----------------------
+
+    socket.prototype.wait(timeout_sec = void)
+
+Waits for data to be available to read from the socket.
+
+On a connected or datagram socket, this function waits for data to be
+received and be ready to read via the `recv()` or `recvfrom()` function.
+
+On a listening socket, this function waits for for a connection to be
+established and the socket to be ready to accept a new connection.
+
+`timeout_sec` is the timeout value in seconds.  This can be a `float`, so
+for example to wait for 500 ms, `0.5` can be passed.  If this is `void`
+(which is the default) the function will wait indefinitely.
+
+Returns a boolean indicating whether the wait operation succeeded.
+The return value `true` indicates that there is data available on the
+socket to read.  The return value `false` indicates that the timeout
+was reached.
 
 On error throws an exception.
 
