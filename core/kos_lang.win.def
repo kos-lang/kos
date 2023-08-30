@@ -52,6 +52,7 @@ EXPORTS
     KOS_get_module
     KOS_get_named_arg
     KOS_get_num_cpus
+    KOS_get_numeric
     KOS_get_numeric_arg
     KOS_get_property_with_depth
     KOS_get_prototype

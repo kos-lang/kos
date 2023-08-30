@@ -107,13 +107,44 @@ const char *KOS_get_type_name(KOS_TYPE type)
     return type_names[(int)type >> 1];
 }
 
+KOS_NUMERIC KOS_get_numeric(KOS_OBJ_ID obj_id)
+{
+    KOS_NUMERIC numeric;
+
+    assert( ! IS_BAD_PTR(obj_id));
+
+    if (IS_SMALL_INT(obj_id)) {
+        numeric.type = KOS_INTEGER_VALUE;
+        numeric.u.i  = GET_SMALL_INT(obj_id);
+    }
+    else switch (READ_OBJ_TYPE(obj_id)) {
+
+        case OBJ_INTEGER:
+            numeric.type = KOS_INTEGER_VALUE;
+            numeric.u.i  = OBJPTR(INTEGER, obj_id)->value;
+            break;
+
+        case OBJ_FLOAT:
+            numeric.type = KOS_FLOAT_VALUE;
+            numeric.u.d  = OBJPTR(FLOAT, obj_id)->value;
+            break;
+
+        default:
+            numeric.type = KOS_NON_NUMERIC;
+            numeric.u.i  = 0;
+            break;
+    }
+
+    return numeric;
+}
+
 int KOS_get_numeric_arg(KOS_CONTEXT  ctx,
                         KOS_OBJ_ID   args_obj,
                         int          idx,
                         KOS_NUMERIC *numeric)
 {
-    int        error = KOS_SUCCESS;
     KOS_OBJ_ID arg;
+    int        error = KOS_SUCCESS;
 
     assert(GET_OBJ_TYPE(args_obj) == OBJ_ARRAY);
     assert(idx < (int)KOS_get_array_size(args_obj));
@@ -121,26 +152,10 @@ int KOS_get_numeric_arg(KOS_CONTEXT  ctx,
     arg = KOS_array_read(ctx, args_obj, idx);
     TRY_OBJID(arg);
 
-    if (IS_SMALL_INT(arg)) {
-        numeric->type = KOS_INTEGER_VALUE;
-        numeric->u.i  = GET_SMALL_INT(arg);
-    }
-    else switch (READ_OBJ_TYPE(arg)) {
+    *numeric = KOS_get_numeric(arg);
 
-        case OBJ_INTEGER:
-            numeric->type = KOS_INTEGER_VALUE;
-            numeric->u.i  = OBJPTR(INTEGER, arg)->value;
-            break;
-
-        case OBJ_FLOAT:
-            numeric->type = KOS_FLOAT_VALUE;
-            numeric->u.d  = OBJPTR(FLOAT, arg)->value;
-            break;
-
-        default:
-            RAISE_EXCEPTION(str_err_not_number);
-            break;
-    }
+    if (numeric->type == KOS_NON_NUMERIC)
+        RAISE_EXCEPTION(str_err_not_number);
 
 cleanup:
     return error;

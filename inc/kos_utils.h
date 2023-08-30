@@ -78,6 +78,9 @@ int KOS_get_numeric_arg(KOS_CONTEXT  ctx,
                         KOS_NUMERIC *numeric);
 
 KOS_API
+KOS_NUMERIC KOS_get_numeric(KOS_OBJ_ID obj_id);
+
+KOS_API
 int KOS_get_integer(KOS_CONTEXT ctx,
                     KOS_OBJ_ID  obj_id,
                     int64_t    *ret);
