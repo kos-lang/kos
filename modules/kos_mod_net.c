@@ -31,6 +31,7 @@
 #else
 #   include <arpa/inet.h>
 #   include <errno.h>
+#   include <fcntl.h>
 #   include <netdb.h>
 #   include <netinet/in.h>
 #   include <sys/socket.h>
@@ -89,6 +90,9 @@ typedef struct KOS_SOCKET_HOLDER_S {
     KOS_ATOMIC(uint32_t) socket_fd;
     KOS_ATOMIC(uint32_t) ref_count;
     int                  family;
+#ifdef _WIN32
+    int                  blocking;
+#endif
 } KOS_SOCKET_HOLDER;
 
 static int acquire_socket(KOS_SOCKET_HOLDER *socket_holder)
@@ -142,6 +146,9 @@ static KOS_SOCKET_HOLDER *make_socket_holder(KOS_CONTEXT ctx,
         socket_holder->socket_fd = (uint32_t)socket_fd;
         socket_holder->ref_count = 1;
         socket_holder->family    = family;
+#ifdef _WIN32
+        socket_holder->blocking  = 1;
+#endif
     }
     else
         KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
@@ -935,6 +942,8 @@ static KOS_OBJ_ID kos_wait(KOS_CONTEXT ctx,
 
     KOS_suspend_context(ctx);
 
+    reset_last_error();
+
     nfds = select(nfds, &fds, KOS_NULL, KOS_NULL, timeout_tv);
     if (nfds < 0)
         saved_errno = get_error();
@@ -954,6 +963,45 @@ cleanup:
     KOS_destroy_top_locals(ctx, &args, &this_);
 
     return error ? KOS_BADPTR : ret_obj;
+}
+
+static KOS_OBJ_ID get_blocking(KOS_CONTEXT ctx,
+                               KOS_OBJ_ID  this_obj,
+                               KOS_OBJ_ID  args_obj)
+{
+    KOS_SOCKET_HOLDER *socket_holder = KOS_NULL;
+    int                blocking      = 1;
+    int                saved_errno   = 0;
+    int                error         = KOS_SUCCESS;
+
+    TRY(acquire_socket_object(ctx, this_obj, &socket_holder));
+
+    KOS_suspend_context(ctx);
+
+    reset_last_error();
+
+#ifdef _WIN32
+    blocking = socket_holder->blocking;
+#else
+    error = fcntl(socket_holder->socket_fd, F_GETFL);
+
+    if (error != -1)
+        blocking = ! (error & O_NONBLOCK);
+    else
+        saved_errno = get_error();
+#endif
+
+    KOS_resume_context(ctx);
+
+    if (saved_errno) {
+        KOS_raise_errno_value(ctx, "fcntl", saved_errno);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+
+cleanup:
+    release_socket(socket_holder);
+
+    return error ? KOS_BADPTR : KOS_BOOL(blocking);
 }
 
 /* @item net socket.prototype.write()
@@ -1514,6 +1562,8 @@ KOS_INIT_MODULE(net, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "setsockopt", kos_setsockopt, setsockopt_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "shutdown",   kos_shutdown,   shutdown_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "write",      kos_send,       KOS_NULL);
+
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, socket_proto.o, "blocking",   get_blocking,   KOS_NULL);
 
 #ifndef _WIN32
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "AF_LOCAL",     AF_LOCAL);
