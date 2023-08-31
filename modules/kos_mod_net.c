@@ -1027,7 +1027,6 @@ static KOS_OBJ_ID set_blocking(KOS_CONTEXT ctx,
     KOS_LOCAL          this_;
     KOS_SOCKET_HOLDER *socket_holder = KOS_NULL;
     KOS_OBJ_ID         arg;
-    int                flags;
     int                blocking;
     int                saved_errno   = 0;
     int                error         = KOS_SUCCESS;
@@ -1063,18 +1062,20 @@ static KOS_OBJ_ID set_blocking(KOS_CONTEXT ctx,
             saved_errno = get_error();
     }
 #else
-    flags = fcntl(get_socket(socket_holder), F_GETFL);
+    {
+        int flags = fcntl(get_socket(socket_holder), F_GETFL);
 
-    if (flags == -1)
-        saved_errno = get_error();
-    else {
-        if (blocking)
-            flags &= ~O_NONBLOCK;
-        else
-            flags |= O_NONBLOCK;
-
-        if (fcntl(get_socket(socket_holder), F_SETFL, flags) == -1)
+        if (flags == -1)
             saved_errno = get_error();
+        else {
+            if (blocking)
+                flags &= ~O_NONBLOCK;
+            else
+                flags |= O_NONBLOCK;
+
+            if (fcntl(get_socket(socket_holder), F_SETFL, flags) == -1)
+                saved_errno = get_error();
+        }
     }
 #endif
 
