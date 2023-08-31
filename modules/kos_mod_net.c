@@ -78,6 +78,7 @@ static int get_error(void)
 #endif
 
 KOS_DECLARE_STATIC_CONST_STRING(str_address,               "address");
+KOS_DECLARE_STATIC_CONST_STRING(str_blocking,              "blocking");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_buffer,        "argument to socket.recv is not a buffer");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_buffer_or_str, "argument to socket.send is neither a buffer nor a string");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_too_many_to_read,  "requested read size exceeds buffer size limit");
@@ -348,6 +349,14 @@ static int get_address(KOS_CONTEXT        ctx,
     return error;
 }
 
+static KOS_OBJ_ID get_blocking(KOS_CONTEXT ctx,
+                               KOS_OBJ_ID  this_obj,
+                               KOS_OBJ_ID  args_obj);
+
+static KOS_OBJ_ID set_blocking(KOS_CONTEXT ctx,
+                               KOS_OBJ_ID  this_obj,
+                               KOS_OBJ_ID  args_obj);
+
 KOS_DECLARE_STATIC_CONST_STRING(str_domain,   "domain");
 KOS_DECLARE_STATIC_CONST_STRING(str_type,     "type");
 KOS_DECLARE_STATIC_CONST_STRING(str_protocol, "protocol");
@@ -412,6 +421,13 @@ static KOS_OBJ_ID kos_socket(KOS_CONTEXT ctx,
 
     ret.o = KOS_new_object_with_private(ctx, this_.o, &socket_priv_class, socket_finalize);
     TRY_OBJID(ret.o);
+
+    TRY(KOS_set_builtin_dynamic_property(ctx,
+                                         ret.o,
+                                         KOS_CONST_ID(str_blocking),
+                                         KOS_get_module(ctx),
+                                         get_blocking,
+                                         set_blocking));
 
     TRY(set_socket_object(ctx, ret.o, socket_fd, arg_domain));
 
@@ -903,7 +919,7 @@ static KOS_OBJ_ID kos_wait(KOS_CONTEXT ctx,
     int                saved_errno = 0;
     int                error;
 
-    timeout.type = KOS_NON_NUMERIC;
+    memset(&timeout, 0, sizeof(timeout));
 
     KOS_init_local_with(ctx, &args,  args_obj);
     KOS_init_local_with(ctx, &this_, this_obj);
@@ -983,7 +999,7 @@ static KOS_OBJ_ID get_blocking(KOS_CONTEXT ctx,
 #ifdef _WIN32
     blocking = socket_holder->blocking;
 #else
-    error = fcntl(socket_holder->socket_fd, F_GETFL);
+    error = fcntl(get_socket(socket_holder), F_GETFL);
 
     if (error != -1)
         blocking = ! (error & O_NONBLOCK);
@@ -1002,6 +1018,79 @@ cleanup:
     release_socket(socket_holder);
 
     return error ? KOS_BADPTR : KOS_BOOL(blocking);
+}
+
+static KOS_OBJ_ID set_blocking(KOS_CONTEXT ctx,
+                               KOS_OBJ_ID  this_obj,
+                               KOS_OBJ_ID  args_obj)
+{
+    KOS_LOCAL          this_;
+    KOS_SOCKET_HOLDER *socket_holder = KOS_NULL;
+    KOS_OBJ_ID         arg;
+    int                flags;
+    int                blocking;
+    int                saved_errno   = 0;
+    int                error         = KOS_SUCCESS;
+
+    assert(KOS_get_array_size(args_obj) >= 1);
+
+    KOS_init_local_with(ctx, &this_, this_obj);
+
+    TRY(acquire_socket_object(ctx, this_.o, &socket_holder));
+
+    arg = KOS_array_read(ctx, args_obj, 0);
+    TRY_OBJID(arg);
+
+    if (GET_OBJ_TYPE(arg) != OBJ_BOOLEAN) {
+        KOS_raise_printf(ctx, "blocking is a boolean, cannot set %s",
+                         KOS_get_type_name(GET_OBJ_TYPE(arg)));
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+
+    blocking = KOS_get_bool(arg);
+
+    KOS_suspend_context(ctx);
+
+    reset_last_error();
+
+#ifdef _WIN32
+    {
+        unsigned long non_blocking = blocking ? 0 : 1;
+
+        if (ioctlsocket(get_socket(socket_holder), FIONBIO, &non_blocking) == 0)
+            socket_holder->blocking = blocking;
+        else
+            saved_errno = get_error();
+    }
+#else
+    flags = fcntl(get_socket(socket_holder), F_GETFL);
+
+    if (flags == -1)
+        saved_errno = get_error();
+    else {
+        if (blocking)
+            flags &= ~O_NONBLOCK;
+        else
+            flags |= O_NONBLOCK;
+
+        if (fcntl(get_socket(socket_holder), F_SETFL, flags) == -1)
+            saved_errno = get_error();
+    }
+#endif
+
+    KOS_resume_context(ctx);
+
+    if (saved_errno) {
+        KOS_raise_errno_value(ctx, "fcntl", saved_errno);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+
+cleanup:
+    release_socket(socket_holder);
+
+    this_.o = KOS_destroy_top_local(ctx, &this_);
+
+    return error ? KOS_BADPTR : this_.o;
 }
 
 /* @item net socket.prototype.write()
