@@ -981,6 +981,17 @@ cleanup:
     return error ? KOS_BADPTR : ret_obj;
 }
 
+/* @item net socket.prototype.blocking
+ *
+ *     socket.prototype.blocking
+ *
+ * Blocking state of a socket.
+ *
+ * A newly created socket is in a blocking state.  It can be
+ * changed to non-blocking by writing `false` to this property.
+ * This property can also be read to determine whether a socket
+ * is blocking or non-blocking.
+ */
 static KOS_OBJ_ID get_blocking(KOS_CONTEXT ctx,
                                KOS_OBJ_ID  this_obj,
                                KOS_OBJ_ID  args_obj)

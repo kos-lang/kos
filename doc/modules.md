@@ -222,6 +222,7 @@ Table of Contents
     * [socket()](#socket)
       * [socket.prototype.accept()](#socketprototypeaccept)
       * [socket.prototype.bind()](#socketprototypebind)
+      * [socket.prototype.blocking](#socketprototypeblocking)
       * [socket.prototype.close()](#socketprototypeclose)
       * [socket.prototype.connect()](#socketprototypeconnect)
       * [socket.prototype.getsockopt()](#socketprototypegetsockopt)
@@ -4526,6 +4527,18 @@ are typically reserved for system services and require administrator privileges.
 Returns the socket itself (`this`).
 
 On error throws an exception.
+
+socket.prototype.blocking
+-------------------------
+
+    socket.prototype.blocking
+
+Blocking state of a socket.
+
+A newly created socket is in a blocking state.  It can be
+changed to non-blocking by writing `false` to this property.
+This property can also be read to determine whether a socket
+is blocking or non-blocking.
 
 socket.prototype.close()
 ------------------------
