@@ -4540,6 +4540,14 @@ changed to non-blocking by writing `false` to this property.
 This property can also be read to determine whether a socket
 is blocking or non-blocking.
 
+When a socket is in non-blocking state, the receiving functions
+`recv()`, `read()`, `recvfrom()` will immediately return 0 bytes
+if there was no data received.  The `wait()` function needs to be
+used to wait until any data is received.
+
+However, the sending functions `send()`, `write()`, `sendto()` will
+still block until all the data is sent.
+
 socket.prototype.close()
 ------------------------
 

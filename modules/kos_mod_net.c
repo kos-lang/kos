@@ -991,6 +991,14 @@ cleanup:
  * changed to non-blocking by writing `false` to this property.
  * This property can also be read to determine whether a socket
  * is blocking or non-blocking.
+ *
+ * When a socket is in non-blocking state, the receiving functions
+ * `recv()`, `read()`, `recvfrom()` will immediately return 0 bytes
+ * if there was no data received.  The `wait()` function needs to be
+ * used to wait until any data is received.
+ *
+ * However, the sending functions `send()`, `write()`, `sendto()` will
+ * still block until all the data is sent.
  */
 static KOS_OBJ_ID get_blocking(KOS_CONTEXT ctx,
                                KOS_OBJ_ID  this_obj,
@@ -1107,6 +1115,62 @@ cleanup:
     return error ? KOS_BADPTR : this_.o;
 }
 
+static int send_loop(KOS_SOCKET  socket,
+                     const char *data,
+                     DATA_LEN    size)
+{
+    const int send_timeout_sec = 30;
+    int       num_sent;
+
+    for (;;) {
+#ifdef _WIN32
+        TIMEVAL        timeout;
+#else
+        struct timeval timeout;
+#endif
+        fd_set         fds;
+        int            nfds = 0;
+        int            error;
+
+        reset_last_error();
+
+        num_sent = send(socket, data, size, 0);
+
+        if (num_sent >= 0)
+            break;
+
+        error = get_error();
+
+        /* If the socket is non-blocking, the error will indicate that the send
+         * buffer is full and we need to wait to send more data.
+         */
+#ifdef _WIN32
+        if (error != WSAEWOULDBLOCK)
+            break;
+#else
+        if (error != EAGAIN && error != EWOULDBLOCK)
+            break;
+
+        nfds = socket + 1;
+#endif
+
+        reset_last_error();
+
+        FD_ZERO(&fds);
+        FD_SET(socket, &fds);
+
+        timeout.tv_sec  = (TIME_FRAGMENT)send_timeout_sec;
+        timeout.tv_usec = 0;
+
+        nfds = select(nfds, KOS_NULL, &fds, KOS_NULL, &timeout);
+
+        if (nfds < 0)
+            break;
+    }
+
+    return num_sent;
+}
+
 /* @item net socket.prototype.write()
  *
  *     socket.prototype.write(values...)
@@ -1187,9 +1251,7 @@ static KOS_OBJ_ID kos_send(KOS_CONTEXT ctx,
 
                 KOS_suspend_context(ctx);
 
-                reset_last_error();
-
-                num_writ = send(get_socket(socket_holder), (const char *)data, (DATA_LEN)to_write, 0);
+                num_writ = send_loop(get_socket(socket_holder), (const char *)data, (DATA_LEN)to_write);
 
                 if (num_writ < 0)
                     saved_errno = get_error();
@@ -1211,9 +1273,7 @@ static KOS_OBJ_ID kos_send(KOS_CONTEXT ctx,
             if (cstr.size) {
                 KOS_suspend_context(ctx);
 
-                reset_last_error();
-
-                num_writ = send(get_socket(socket_holder), cstr.buffer, (DATA_LEN)(cstr.size - 1), 0);
+                num_writ = send_loop(get_socket(socket_holder), cstr.buffer, (DATA_LEN)(cstr.size - 1));
 
                 if (num_writ < 0)
                     saved_errno = get_error();
