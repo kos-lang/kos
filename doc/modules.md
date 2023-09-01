@@ -4570,7 +4570,11 @@ On error throws an exception.
 socket.prototype.getsockopt()
 -----------------------------
 
-    socket.prototype.getsockopt()
+    socket.prototype.getsockopt(option)
+
+Returns value of a socket option.
+
+`option` is an integer specifying the option to retrieve.
 
 socket.prototype.listen()
 -------------------------
@@ -4656,7 +4660,16 @@ socket.prototype.sendto()
 socket.prototype.setsockopt()
 -----------------------------
 
-    socket.prototype.setsockopt()
+    socket.prototype.setsockopt(option, value)
+
+Sets a socket option.
+
+`option` is an integer specifying the option to set and
+`value` is the value to set for this option.
+
+Returns the socket itself (`this`).
+
+On error throws an exception.
 
 socket.prototype.shutdown()
 ---------------------------

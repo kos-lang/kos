@@ -1254,6 +1254,118 @@ static KOS_OBJ_ID kos_sendto(KOS_CONTEXT ctx,
     return KOS_VOID;
 }
 
+#ifdef _WIN32
+typedef BOOL SOCK_OPT_BOOL;
+#else
+typedef int SOCK_OPT_BOOL;
+#endif
+
+static KOS_OBJ_ID getsockopt_bool(KOS_CONTEXT        ctx,
+                                  KOS_SOCKET_HOLDER *socket_holder,
+                                  int                option)
+{
+    SOCK_OPT_BOOL bool_value  = 0;
+    ADDR_LEN      opt_size    = (ADDR_LEN)sizeof(bool_value);
+    int           error       = 0;
+    int           saved_errno = 0;
+
+    KOS_suspend_context(ctx);
+
+    reset_last_error();
+
+    error = getsockopt(get_socket(socket_holder),
+                       SOL_SOCKET,
+                       option,
+                       (char *)&bool_value,
+                       &opt_size);
+
+    if (error)
+        saved_errno = get_error();
+
+    KOS_resume_context(ctx);
+
+    if (error) {
+        KOS_raise_errno_value(ctx, "setsockopt", saved_errno);
+        return KOS_BADPTR;
+    }
+
+    return KOS_BOOL(bool_value);
+}
+
+static KOS_OBJ_ID getsockopt_int(KOS_CONTEXT        ctx,
+                                 KOS_SOCKET_HOLDER *socket_holder,
+                                 int                option)
+{
+    ADDR_LEN opt_size    = (ADDR_LEN)sizeof(int);
+    int      int_value   = 0;
+    int      error       = 0;
+    int      saved_errno = 0;
+
+    KOS_suspend_context(ctx);
+
+    reset_last_error();
+
+    error = getsockopt(get_socket(socket_holder),
+                       SOL_SOCKET,
+                       option,
+                       (char *)&int_value,
+                       &opt_size);
+
+    if (error)
+        saved_errno = get_error();
+
+    KOS_resume_context(ctx);
+
+    if (error) {
+        KOS_raise_errno_value(ctx, "setsockopt", saved_errno);
+        return KOS_BADPTR;
+    }
+
+    return KOS_new_int(ctx, int_value);
+}
+
+static KOS_OBJ_ID getsockopt_time(KOS_CONTEXT        ctx,
+                                  KOS_SOCKET_HOLDER *socket_holder,
+                                  int                option)
+{
+#ifdef _WIN32
+    DWORD          time_value;
+#else
+    struct timeval time_value;
+#endif
+    ADDR_LEN       opt_size    = (ADDR_LEN)sizeof(time_value);
+    int            error       = 0;
+    int            saved_errno = 0;
+
+    memset(&time_value, 0, sizeof(time_value));
+
+    KOS_suspend_context(ctx);
+
+    reset_last_error();
+
+    error = getsockopt(get_socket(socket_holder),
+                       SOL_SOCKET,
+                       option,
+                       (char *)&time_value,
+                       &opt_size);
+
+    if (error)
+        saved_errno = get_error();
+
+    KOS_resume_context(ctx);
+
+    if (error) {
+        KOS_raise_errno_value(ctx, "setsockopt", saved_errno);
+        return KOS_BADPTR;
+    }
+
+#ifdef _WIN32
+    return KOS_new_float(ctx, (double)time_value / 1000.0);
+#else
+    return KOS_new_float(ctx, (double)time_value.tv_sec + (double)time_value.tv_usec / 1000000.0);
+#endif
+}
+
 KOS_DECLARE_STATIC_CONST_STRING(str_option, "option");
 
 static const KOS_CONVERT getsockopt_args[2] = {
@@ -1263,21 +1375,108 @@ static const KOS_CONVERT getsockopt_args[2] = {
 
 /* @item net socket.prototype.getsockopt()
  *
- *     socket.prototype.getsockopt()
+ *     socket.prototype.getsockopt(option)
+ *
+ * Returns value of a socket option.
+ *
+ * `option` is an integer specifying the option to retrieve.
  */
 static KOS_OBJ_ID kos_getsockopt(KOS_CONTEXT ctx,
                                  KOS_OBJ_ID  this_obj,
                                  KOS_OBJ_ID  args_obj)
 {
-    /* TODO */
-    return KOS_VOID;
-}
+    KOS_LOCAL          args;
+    KOS_LOCAL          this_;
+    KOS_LOCAL          value;
+    KOS_SOCKET_HOLDER *socket_holder;
+    int64_t            option;
+    int                error;
 
-#ifdef _WIN32
-typedef BOOL SOCK_OPT_BOOL;
-#else
-typedef int SOCK_OPT_BOOL;
+    assert(KOS_get_array_size(args_obj) > 0);
+
+    KOS_init_local(     ctx, &value);
+    KOS_init_local_with(ctx, &this_, this_obj);
+    KOS_init_local_with(ctx, &args,  args_obj);
+
+    TRY(acquire_socket_object(ctx, this_.o, &socket_holder));
+
+    value.o = KOS_array_read(ctx, args.o, 0);
+    TRY_OBJID(value.o);
+
+    if (GET_OBJ_TYPE(value.o) > OBJ_INTEGER) {
+        KOS_raise_printf(ctx, "option argument is %s but expected integer",
+                         KOS_get_type_name(GET_OBJ_TYPE(value.o)));
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+
+    TRY(KOS_get_integer(ctx, value.o, &option));
+
+    switch (option) {
+        case SO_BROADCAST:
+            value.o = getsockopt_bool(ctx, socket_holder, (int)option);
+            break;
+
+        case SO_DEBUG:
+            value.o = getsockopt_bool(ctx, socket_holder, (int)option);
+            break;
+
+        case SO_DONTROUTE:
+            value.o = getsockopt_bool(ctx, socket_holder, (int)option);
+            break;
+
+        case SO_KEEPALIVE:
+            value.o = getsockopt_bool(ctx, socket_holder, (int)option);
+            break;
+
+        /*
+        case SO_LINGER:
+        */
+
+        case SO_OOBINLINE:
+            value.o = getsockopt_bool(ctx, socket_holder, (int)option);
+            break;
+
+        case SO_RCVBUF:
+            value.o = getsockopt_int(ctx, socket_holder, (int)option);
+            break;
+
+        case SO_RCVTIMEO:
+            value.o = getsockopt_time(ctx, socket_holder, (int)option);
+            break;
+
+        case SO_REUSEADDR:
+            value.o = getsockopt_bool(ctx, socket_holder, (int)option);
+            break;
+
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+        case SO_REUSEPORT:
+            value.o = getsockopt_bool(ctx, socket_holder, SO_REUSEPORT);
+            break;
 #endif
+
+        case SO_SNDBUF:
+            value.o = getsockopt_int(ctx, socket_holder, (int)option);
+            break;
+
+        case SO_SNDTIMEO:
+            value.o = getsockopt_time(ctx, socket_holder, (int)option);
+            break;
+
+        default:
+            KOS_raise_printf(ctx, "unknown option %" PRId64, option);
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+
+    if (value.o == KOS_BADPTR)
+        error = KOS_ERROR_EXCEPTION;
+
+cleanup:
+    release_socket(socket_holder);
+
+    value.o = KOS_destroy_top_locals(ctx, &args, &value);
+
+    return error ? KOS_BADPTR : value.o;
+}
 
 static int setsockopt_bool(KOS_CONTEXT        ctx,
                            KOS_SOCKET_HOLDER *socket_holder,
@@ -1451,7 +1650,16 @@ static const KOS_CONVERT setsockopt_args[3] = {
 
 /* @item net socket.prototype.setsockopt()
  *
- *     socket.prototype.setsockopt()
+ *     socket.prototype.setsockopt(option, value)
+ *
+ * Sets a socket option.
+ *
+ * `option` is an integer specifying the option to set and
+ * `value` is the value to set for this option.
+ *
+ * Returns the socket itself (`this`).
+ *
+ * On error throws an exception.
  */
 static KOS_OBJ_ID kos_setsockopt(KOS_CONTEXT ctx,
                                  KOS_OBJ_ID  this_obj,
