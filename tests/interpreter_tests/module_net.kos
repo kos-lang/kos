@@ -42,19 +42,21 @@ do {
     const port = 11005
 
     const server_sock = net.socket(net.AF_INET, net.SOCK_STREAM)
+    assert server_sock.blocking
     assert server_sock.setsockopt(net.SO_REUSEADDR, true) == server_sock
     assert server_sock.bind("0.0.0.0", port)              == server_sock
     assert server_sock.listen()                           == server_sock
 
     const recv_thread = async do {
         const recv_sock = server_sock.accept().socket
+        assert recv_sock.blocking
         assert recv_sock instanceof net.socket
 
         assert server_sock.close() == server_sock
 
         assert recv_sock.shutdown(net.SHUT_WR) == recv_sock
 
-        const b = recv_sock.recv(5)
+        const b = recv_sock.recv(128)
         assert typeof b == "buffer"
 
         assert recv_sock.shutdown(net.SHUT_RD) == recv_sock
@@ -68,6 +70,58 @@ do {
     assert send_sock.connect("localhost", port) == send_sock
     assert send_sock.shutdown(net.SHUT_RD)      == send_sock
     assert send_sock.send("hello")              == send_sock
+
+    recv_thread.wait()
+
+    assert send_sock.shutdown(net.SHUT_WR)      == send_sock
+    assert send_sock.close()                    == send_sock
+}
+
+##############################################################################
+
+do {
+    const port = 11006
+
+    const server_sock = net.socket()
+    server_sock.blocking = false
+    assert ! server_sock.blocking
+    assert server_sock.setsockopt(net.SO_REUSEADDR, true) == server_sock
+    assert server_sock.bind("0.0.0.0", port)              == server_sock
+    assert server_sock.listen()                           == server_sock
+
+    expect_fail(() => server_sock.accept())
+    assert ! server_sock.wait(0)
+
+    const recv_thread = async do {
+        assert server_sock.wait()
+        const recv_sock = server_sock.accept().socket
+        recv_sock.blocking = false
+        assert ! recv_sock.blocking
+        assert recv_sock instanceof net.socket
+
+        assert server_sock.close() == server_sock
+
+        assert recv_sock.shutdown(net.SHUT_WR) == recv_sock
+
+        assert recv_sock.wait()
+
+        const b = recv_sock.recv(128)
+        assert typeof b == "buffer"
+
+        assert recv_sock.shutdown(net.SHUT_RD) == recv_sock
+        assert recv_sock.close()               == recv_sock
+
+        assert b.size == 5
+        assert base.string(b) == "world"
+    }
+
+    const send_sock = net.socket()
+    assert send_sock.connect("localhost", port) == send_sock
+
+    assert ! send_sock.wait(0)
+
+    assert send_sock.shutdown(net.SHUT_RD) == send_sock
+    assert send_sock.send("world")         == send_sock
 
     recv_thread.wait()
 
