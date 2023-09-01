@@ -999,7 +999,6 @@ static KOS_OBJ_ID get_blocking(KOS_CONTEXT ctx,
     KOS_SOCKET_HOLDER *socket_holder = KOS_NULL;
     int                blocking      = 1;
     int                saved_errno   = 0;
-    int                flags;
     int                error         = KOS_SUCCESS;
 
     TRY(acquire_socket_object(ctx, this_obj, &socket_holder));
@@ -1011,12 +1010,14 @@ static KOS_OBJ_ID get_blocking(KOS_CONTEXT ctx,
 #ifdef _WIN32
     blocking = socket_holder->blocking;
 #else
-    flags = fcntl(get_socket(socket_holder), F_GETFL);
+    {
+        const int flags = fcntl(get_socket(socket_holder), F_GETFL);
 
-    if (flags != -1)
-        blocking = ! (flags & O_NONBLOCK);
-    else
-        saved_errno = get_error();
+        if (flags != -1)
+            blocking = ! (flags & O_NONBLOCK);
+        else
+            saved_errno = get_error();
+    }
 #endif
 
     KOS_resume_context(ctx);
@@ -1029,7 +1030,6 @@ static KOS_OBJ_ID get_blocking(KOS_CONTEXT ctx,
 cleanup:
     release_socket(socket_holder);
 
-    /* TODO returning error results in crash */
     return error ? KOS_BADPTR : KOS_BOOL(blocking);
 }
 
