@@ -266,8 +266,12 @@ endif
 
 builtin_modules ?= 1
 
-ifeq ($(UNAME), Windows)
-    ifeq ($(builtin_modules), 1)
+ifeq ($(builtin_modules), 1)
+    ifeq ($(UNAME), Haiku)
+        # Needed for net module
+        EXE_LDFLAGS += -lnet
+    endif
+    ifeq ($(UNAME), Windows)
         # Needed for net module
         EXE_LDFLAGS += ws2_32.lib
     endif

@@ -40,8 +40,11 @@ endif
 c_files_math = kos_mod_math.c
 $(eval $(call EXTERNAL_MODULE,math))
 
-ifeq ($(UNAME), Windows)
-    ifneq ($(builtin_modules), 1)
+ifneq ($(builtin_modules), 1)
+    ifeq ($(UNAME), Haiku)
+        $(call SHARED_TARGET,net): SHARED_LDFLAGS += -lnet
+    endif
+    ifeq ($(UNAME), Windows)
         $(call SHARED_TARGET,net): SHARED_LDFLAGS += ws2_32.lib
     endif
 endif
