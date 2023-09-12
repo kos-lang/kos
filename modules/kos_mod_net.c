@@ -79,10 +79,12 @@ static int get_error(void)
 
 KOS_DECLARE_STATIC_CONST_STRING(str_address,               "address");
 KOS_DECLARE_STATIC_CONST_STRING(str_blocking,              "blocking");
+KOS_DECLARE_STATIC_CONST_STRING(str_data,                  "data");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_buffer,        "argument to socket.recv is not a buffer");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_buffer_or_str, "argument to socket.send is neither a buffer nor a string");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_too_many_to_read,  "requested read size exceeds buffer size limit");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_socket_not_open,   "socket not open or not a socket object");
+KOS_DECLARE_STATIC_CONST_STRING(str_flags,                 "flags");
 KOS_DECLARE_STATIC_CONST_STRING(str_port,                  "port");
 KOS_DECLARE_STATIC_CONST_STRING(str_socket,                "socket");
 KOS_DECLARE_STATIC_CONST_STRING(str_timeout_sec,           "timeout_sec");
@@ -762,25 +764,27 @@ KOS_DECLARE_STATIC_CONST_STRING(str_size,   "size");
 
 /* @item net socket.prototype.read()
  *
- *     socket.prototype.read(size = 4096 [, buffer])
+ *     socket.prototype.read(size = 4096, buffer = void, flags = 0)
  *
  * This is the same function as `socket.prototype.recv()`.
  */
 /* @item net socket.prototype.recv()
  *
- *     socket.prototype.recv(size = 4096 [, buffer])
+ *     socket.prototype.recv(size = 4096, buffer = void, flags = 0)
  *
  * Receives a variable number of bytes from a connected socket object.
+ * Returns a buffer containing the bytes read.
  *
  * Receives as many bytes as it can, up to the specified `size`.
  *
  * `size` is the maximum bytes to receive.  `size` defaults to 4096.  Fewer
  * bytes can be received if no more bytes are available.
  *
- * If `buffer` is specified, bytes are appended to it and that buffer is
+ * If `buffer` is specified and non-void, bytes are appended to it and that buffer is
  * returned instead of creating a new buffer.
  *
- * Returns a buffer containing the bytes read.
+ * `flags` specifies bit flag options for receiving data.  Possible bit flags are
+ * `MSG_OOB`, `MSG_PEEK` and `MSG_WAITALL`.
  *
  * On error throws an exception.
  */
@@ -792,6 +796,7 @@ static KOS_OBJ_ID kos_recv(KOS_CONTEXT ctx,
     KOS_LOCAL          buf;
     int64_t            num_read;
     int64_t            to_read;
+    int64_t            flags64;
     KOS_SOCKET_HOLDER *socket_holder = KOS_NULL;
     uint8_t           *data;
     KOS_OBJ_ID         arg;
@@ -799,7 +804,7 @@ static KOS_OBJ_ID kos_recv(KOS_CONTEXT ctx,
     int                error         = KOS_SUCCESS;
     int                saved_errno   = 0;
 
-    assert(KOS_get_array_size(args_obj) >= 2);
+    assert(KOS_get_array_size(args_obj) >= 3);
 
     KOS_init_local(     ctx, &buf);
     KOS_init_local_with(ctx, &args, args_obj);
@@ -813,6 +818,22 @@ static KOS_OBJ_ID kos_recv(KOS_CONTEXT ctx,
 
     if (to_read < 1)
         to_read = 1;
+
+    arg = KOS_array_read(ctx, args.o, 2);
+    TRY_OBJID(arg);
+
+    if ( ! IS_NUMERIC_OBJ(arg)) {
+        KOS_raise_printf(ctx, "flags argument is %s but expected integer",
+                         KOS_get_type_name(GET_OBJ_TYPE(arg)));
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+    else
+        TRY(KOS_get_integer(ctx, arg, &flags64));
+
+    if (flags64 & (MSG_OOB | MSG_PEEK | MSG_WAITALL)) {
+        KOS_raise_printf(ctx, "flags argument 0x%" PRIx64 " contains unrecognized bits", flags64);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
 
     buf.o = KOS_array_read(ctx, args.o, 1);
     TRY_OBJID(buf.o);
@@ -838,7 +859,7 @@ static KOS_OBJ_ID kos_recv(KOS_CONTEXT ctx,
 
     reset_last_error();
 
-    num_read = recv(get_socket(socket_holder), (char *)(data + offset), (DATA_LEN)to_read, 0);
+    num_read = recv(get_socket(socket_holder), (char *)(data + offset), (DATA_LEN)to_read, (int)flags64);
 
     if (num_read < -1)
         saved_errno = get_error();
@@ -1117,7 +1138,8 @@ cleanup:
 
 static int send_loop(KOS_SOCKET  socket,
                      const char *data,
-                     DATA_LEN    size)
+                     DATA_LEN    size,
+                     int         flags)
 {
     const int send_timeout_sec = 30;
     int       num_sent;
@@ -1125,34 +1147,39 @@ static int send_loop(KOS_SOCKET  socket,
     for (;;) {
 #ifdef _WIN32
         TIMEVAL        timeout;
+        int            nfds = 0;
 #else
         struct timeval timeout;
+        int            nfds = socket + 1;
 #endif
         fd_set         fds;
-        int            nfds = 0;
-        int            error;
 
         reset_last_error();
 
-        num_sent = send(socket, data, size, 0);
+        num_sent = send(socket, data, size, flags);
 
-        if (num_sent >= 0)
+        if ((DATA_LEN)num_sent == size)
             break;
 
-        error = get_error();
+        if (num_sent >= 0) {
+            data += num_sent;
+            size -= num_sent;
+        }
 
-        /* If the socket is non-blocking, the error will indicate that the send
-         * buffer is full and we need to wait to send more data.
-         */
+        if (num_sent < 0) {
+            const int error = get_error();
+
+            /* If the socket is non-blocking, the error will indicate that the send
+             * buffer is full and we need to wait to send more data.
+             */
 #ifdef _WIN32
-        if (error != WSAEWOULDBLOCK)
-            break;
+            if (error != WSAEWOULDBLOCK)
+                break;
 #else
-        if (error != EAGAIN && error != EWOULDBLOCK)
-            break;
-
-        nfds = socket + 1;
+            if (error != EAGAIN && error != EWOULDBLOCK)
+                break;
 #endif
+        }
 
         reset_last_error();
 
@@ -1171,15 +1198,100 @@ static int send_loop(KOS_SOCKET  socket,
     return num_sent;
 }
 
+static int send_one_object(KOS_CONTEXT        ctx,
+                           KOS_OBJ_ID         obj_id,
+                           int                flags,
+                           KOS_SOCKET_HOLDER *socket_holder,
+                           KOS_VECTOR        *cstr,
+                           KOS_LOCAL         *print_args)
+{
+    KOS_LOCAL obj;
+    int       saved_errno = 0;
+    int       error       = KOS_SUCCESS;
+
+    KOS_init_local_with(ctx, &obj, obj_id);
+
+    if (GET_OBJ_TYPE(obj.o) == OBJ_BUFFER) {
+
+        const size_t to_write = (size_t)KOS_get_buffer_size(obj.o);
+
+        if (to_write > 0) {
+
+            int64_t        num_writ = 0;
+            const uint8_t *data     = KOS_buffer_data_const(obj.o);
+
+            /* Make a copy in case GC moves the buffer storage when context is suspended */
+            if (kos_is_heap_object(KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, obj.o)->data))) {
+
+                if (KOS_vector_resize(cstr, to_write)) {
+                    KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+                    RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                }
+
+                memcpy(cstr->buffer, data, to_write);
+                data = (uint8_t *)cstr->buffer;
+            }
+            else {
+                assert(kos_is_tracked_object(KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, obj.o)->data)));
+            }
+
+            KOS_suspend_context(ctx);
+
+            num_writ = send_loop(get_socket(socket_holder), (const char *)data, (DATA_LEN)to_write, flags);
+
+            assert((num_writ < 0) || ((size_t)num_writ == to_write));
+
+            if (num_writ < 0)
+                saved_errno = get_error();
+
+            KOS_resume_context(ctx);
+        }
+    }
+    else if (GET_OBJ_TYPE(obj.o) == OBJ_STRING) {
+
+        int64_t num_writ = 0;
+
+        if (IS_BAD_PTR(print_args->o)) {
+            print_args->o = KOS_new_array(ctx, 1);
+            TRY_OBJID(print_args->o);
+        }
+
+        TRY(KOS_array_write(ctx, print_args->o, 0, obj.o));
+
+        TRY(KOS_print_to_cstr_vec(ctx, print_args->o, KOS_DONT_QUOTE, cstr, " ", 1));
+
+        if (cstr->size) {
+            KOS_suspend_context(ctx);
+
+            num_writ = send_loop(get_socket(socket_holder), cstr->buffer, (DATA_LEN)(cstr->size - 1), flags);
+
+            assert((num_writ < 0) || ((size_t)num_writ == cstr->size - 1));
+
+            if (num_writ < 0)
+                saved_errno = get_error();
+
+            KOS_resume_context(ctx);
+        }
+    }
+    else
+        RAISE_EXCEPTION_STR(str_err_not_buffer_or_str);
+
+    cstr->size = 0;
+
+    if (saved_errno) {
+        KOS_raise_errno_value(ctx, "send", saved_errno);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+
+cleanup:
+    KOS_destroy_top_local(ctx, &obj);
+
+    return error;
+}
+
 /* @item net socket.prototype.write()
  *
  *     socket.prototype.write(values...)
- *
- * This is the same function as `socket.prototype.send()`.
- */
-/* @item net socket.prototype.send()
- *
- *     socket.prototype.send(values...)
  *
  * Sends strings or buffers containing bytes through a connected socket.
  *
@@ -1196,13 +1308,12 @@ static int send_loop(KOS_SOCKET  socket,
  *
  * On error throws an exception.
  */
-static KOS_OBJ_ID kos_send(KOS_CONTEXT ctx,
-                           KOS_OBJ_ID  this_obj,
-                           KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
+                            KOS_OBJ_ID  this_obj,
+                            KOS_OBJ_ID  args_obj)
 {
     KOS_VECTOR         cstr;
     KOS_LOCAL          print_args;
-    KOS_LOCAL          arg;
     KOS_LOCAL          args;
     KOS_LOCAL          this_;
     KOS_SOCKET_HOLDER *socket_holder = KOS_NULL;
@@ -1212,7 +1323,7 @@ static KOS_OBJ_ID kos_send(KOS_CONTEXT ctx,
 
     KOS_vector_init(&cstr);
 
-    KOS_init_locals(ctx, &print_args, &arg, &args, &this_, kos_end_locals);
+    KOS_init_locals(ctx, &print_args, &args, &this_, kos_end_locals);
 
     args.o  = args_obj;
     this_.o = this_obj;
@@ -1221,76 +1332,91 @@ static KOS_OBJ_ID kos_send(KOS_CONTEXT ctx,
 
     for (i_arg = 0; i_arg < num_args; i_arg++) {
 
-        int64_t num_writ    = 0;
-        int     saved_errno = 0;
+        const KOS_OBJ_ID arg = KOS_array_read(ctx, args.o, i_arg);
+        TRY_OBJID(arg);
 
-        arg.o = KOS_array_read(ctx, args.o, i_arg);
-        TRY_OBJID(arg.o);
-
-        if (GET_OBJ_TYPE(arg.o) == OBJ_BUFFER) {
-
-            const size_t to_write = (size_t)KOS_get_buffer_size(arg.o);
-
-            if (to_write > 0) {
-
-                const uint8_t *data = KOS_buffer_data_const(arg.o);
-
-                if (kos_is_heap_object(KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, arg.o)->data))) {
-
-                    if (KOS_vector_resize(&cstr, to_write)) {
-                        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
-                        RAISE_ERROR(KOS_ERROR_EXCEPTION);
-                    }
-
-                    memcpy(cstr.buffer, data, to_write);
-                    data = (uint8_t *)cstr.buffer;
-                }
-                else {
-                    assert(kos_is_tracked_object(KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, arg.o)->data)));
-                }
-
-                KOS_suspend_context(ctx);
-
-                num_writ = send_loop(get_socket(socket_holder), (const char *)data, (DATA_LEN)to_write);
-
-                if (num_writ < 0)
-                    saved_errno = get_error();
-
-                KOS_resume_context(ctx);
-            }
-        }
-        else if (GET_OBJ_TYPE(arg.o) == OBJ_STRING) {
-
-            if (IS_BAD_PTR(print_args.o)) {
-                print_args.o = KOS_new_array(ctx, 1);
-                TRY_OBJID(print_args.o);
-            }
-
-            TRY(KOS_array_write(ctx, print_args.o, 0, arg.o));
-
-            TRY(KOS_print_to_cstr_vec(ctx, print_args.o, KOS_DONT_QUOTE, &cstr, " ", 1));
-
-            if (cstr.size) {
-                KOS_suspend_context(ctx);
-
-                num_writ = send_loop(get_socket(socket_holder), cstr.buffer, (DATA_LEN)(cstr.size - 1));
-
-                if (num_writ < 0)
-                    saved_errno = get_error();
-
-                KOS_resume_context(ctx);
-            }
-
-            cstr.size = 0;
-        }
-        else
-            RAISE_EXCEPTION_STR(str_err_not_buffer_or_str);
-
-        if (saved_errno) {
-            KOS_raise_errno_value(ctx, "send", saved_errno);
-            RAISE_ERROR(KOS_ERROR_EXCEPTION);
-        }
+        TRY(send_one_object(ctx, arg, 0, socket_holder, &cstr, &print_args));
     }
+
+cleanup:
+    release_socket(socket_holder);
+
+    KOS_vector_destroy(&cstr);
+
+    this_.o = KOS_destroy_top_locals(ctx, &print_args, &this_);
+
+    return error ? KOS_BADPTR : this_.o;
+}
+
+static const KOS_CONVERT send_args[3] = {
+    KOS_DEFINE_MANDATORY_ARG(str_data                  ),
+    KOS_DEFINE_OPTIONAL_ARG( str_flags, TO_SMALL_INT(0)),
+    KOS_DEFINE_TAIL_ARG()
+};
+
+/* @item net socket.prototype.send()
+ *
+ *     socket.prototype.send(data, flags = 0)
+ *
+ * Send a string or a buffer containing bytes through a connected socket.
+ *
+ * `data` is either a buffer or a string object.  Empty buffers
+ * or strings are ignored and nothing is sent through the socket.
+ *
+ * If `data` is a string, it is converted to UTF-8 bytes representation
+ * before being sent.
+ *
+ * `flags` specifies bit flag options for receiving data.  Possible bit flags are
+ * `MSG_OOB` and `MSG_PEEK`.
+ *
+ * Returns the socket itself (`this`).
+ *
+ * On error throws an exception.
+ */
+static KOS_OBJ_ID kos_send(KOS_CONTEXT ctx,
+                           KOS_OBJ_ID  this_obj,
+                           KOS_OBJ_ID  args_obj)
+{
+    KOS_VECTOR         cstr;
+    KOS_LOCAL          print_args;
+    KOS_LOCAL          args;
+    KOS_LOCAL          this_;
+    KOS_OBJ_ID         arg;
+    KOS_SOCKET_HOLDER *socket_holder = KOS_NULL;
+    int64_t            flags64       = 0;
+    int                error;
+
+    assert(KOS_get_array_size(args_obj) >= 2);
+
+    KOS_vector_init(&cstr);
+
+    KOS_init_locals(ctx, &print_args, &args, &this_, kos_end_locals);
+
+    args.o  = args_obj;
+    this_.o = this_obj;
+
+    TRY(acquire_socket_object(ctx, this_.o, &socket_holder));
+
+    arg = KOS_array_read(ctx, args.o, 1);
+    TRY_OBJID(arg);
+
+    if ( ! IS_NUMERIC_OBJ(arg)) {
+        KOS_raise_printf(ctx, "flags argument is %s but expected integer",
+                         KOS_get_type_name(GET_OBJ_TYPE(arg)));
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+    else
+        TRY(KOS_get_integer(ctx, arg, &flags64));
+
+    if (flags64 & (MSG_OOB | MSG_PEEK)) {
+        KOS_raise_printf(ctx, "flags argument 0x%" PRIx64 " contains unrecognized bits", flags64);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+
+    arg = KOS_array_read(ctx, args.o, 0);
+    TRY_OBJID(arg);
+
+    TRY(send_one_object(ctx, arg, (int)flags64, socket_holder, &cstr, &print_args));
 
 cleanup:
     release_socket(socket_holder);
@@ -1473,51 +1599,35 @@ static KOS_OBJ_ID kos_getsockopt(KOS_CONTEXT ctx,
 
     switch (option) {
         case SO_BROADCAST:
-            value.o = getsockopt_bool(ctx, socket_holder, (int)option);
-            break;
-
+            /* fall through */
         case SO_DEBUG:
-            value.o = getsockopt_bool(ctx, socket_holder, (int)option);
-            break;
-
+            /* fall through */
         case SO_DONTROUTE:
-            value.o = getsockopt_bool(ctx, socket_holder, (int)option);
-            break;
-
+            /* fall through */
         case SO_KEEPALIVE:
+            /* fall through */
+        case SO_OOBINLINE:
+            /* fall through */
+        case SO_REUSEADDR:
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+            /* fall through */
+        case SO_REUSEPORT:
+#endif
             value.o = getsockopt_bool(ctx, socket_holder, (int)option);
             break;
 
-        /*
+        /* TODO
         case SO_LINGER:
         */
 
-        case SO_OOBINLINE:
-            value.o = getsockopt_bool(ctx, socket_holder, (int)option);
-            break;
-
         case SO_RCVBUF:
-            value.o = getsockopt_int(ctx, socket_holder, (int)option);
-            break;
-
-        case SO_RCVTIMEO:
-            value.o = getsockopt_time(ctx, socket_holder, (int)option);
-            break;
-
-        case SO_REUSEADDR:
-            value.o = getsockopt_bool(ctx, socket_holder, (int)option);
-            break;
-
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
-        case SO_REUSEPORT:
-            value.o = getsockopt_bool(ctx, socket_holder, SO_REUSEPORT);
-            break;
-#endif
-
+            /* fall through */
         case SO_SNDBUF:
             value.o = getsockopt_int(ctx, socket_holder, (int)option);
             break;
 
+        case SO_RCVTIMEO:
+            /* fall through */
         case SO_SNDTIMEO:
             value.o = getsockopt_time(ctx, socket_holder, (int)option);
             break;
@@ -1756,51 +1866,35 @@ static KOS_OBJ_ID kos_setsockopt(KOS_CONTEXT ctx,
 
     switch (option) {
         case SO_BROADCAST:
-            TRY(setsockopt_bool(ctx, socket_holder, (int)option, value.o));
-            break;
-
+            /* fall through */
         case SO_DEBUG:
-            TRY(setsockopt_bool(ctx, socket_holder, (int)option, value.o));
-            break;
-
+            /* fall through */
         case SO_DONTROUTE:
-            TRY(setsockopt_bool(ctx, socket_holder, (int)option, value.o));
-            break;
-
+            /* fall through */
         case SO_KEEPALIVE:
+            /* fall through */
+        case SO_OOBINLINE:
+            /* fall through */
+        case SO_REUSEADDR:
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+            /* fall through */
+        case SO_REUSEPORT:
+#endif
             TRY(setsockopt_bool(ctx, socket_holder, (int)option, value.o));
             break;
 
-        /*
+        /* TODO
         case SO_LINGER:
         */
 
-        case SO_OOBINLINE:
-            TRY(setsockopt_bool(ctx, socket_holder, (int)option, value.o));
-            break;
-
         case SO_RCVBUF:
-            TRY(setsockopt_int(ctx, socket_holder, (int)option, value.o));
-            break;
-
-        case SO_RCVTIMEO:
-            TRY(setsockopt_time(ctx, socket_holder, (int)option, value.o));
-            break;
-
-        case SO_REUSEADDR:
-            TRY(setsockopt_bool(ctx, socket_holder, (int)option, value.o));
-            break;
-
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
-        case SO_REUSEPORT:
-            TRY(setsockopt_bool(ctx, socket_holder, SO_REUSEPORT, value.o));
-            break;
-#endif
-
+            /* fall through */
         case SO_SNDBUF:
             TRY(setsockopt_int(ctx, socket_holder, (int)option, value.o));
             break;
 
+        case SO_RCVTIMEO:
+            /* fall through */
         case SO_SNDTIMEO:
             TRY(setsockopt_time(ctx, socket_holder, (int)option, value.o));
             break;
@@ -1883,9 +1977,10 @@ KOS_INIT_MODULE(net, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     KOS_LOCAL module;
     KOS_LOCAL socket_proto;
 
-    const KOS_CONVERT recv_args[3] = {
+    const KOS_CONVERT recv_args[4] = {
         KOS_DEFINE_OPTIONAL_ARG(str_size,   TO_SMALL_INT(4096)),
         KOS_DEFINE_OPTIONAL_ARG(str_buffer, KOS_VOID          ),
+        KOS_DEFINE_OPTIONAL_ARG(str_flags,  TO_SMALL_INT(0)   ),
         KOS_DEFINE_TAIL_ARG()
     };
 
@@ -1928,11 +2023,11 @@ KOS_INIT_MODULE(net, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "recvfrom",   kos_recvfrom,   KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "release",    kos_close,      KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "wait",       kos_wait,       wait_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "send",       kos_send,       KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "send",       kos_send,       send_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "sendto",     kos_sendto,     KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "setsockopt", kos_setsockopt, setsockopt_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "shutdown",   kos_shutdown,   shutdown_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "write",      kos_send,       KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "write",      kos_write,      KOS_NULL);
 
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, socket_proto.o, "blocking",   get_blocking,   KOS_NULL);
 
@@ -1964,6 +2059,10 @@ KOS_INIT_MODULE(net, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 #endif
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SO_SNDBUF",    SO_SNDBUF);
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SO_SNDTIMEO",  SO_SNDTIMEO);
+
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "MSG_OOB",      MSG_OOB);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "MSG_PEEK",     MSG_PEEK);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "MSG_WAITALL",  MSG_WAITALL);
 
 cleanup:
     KOS_destroy_top_locals(ctx, &socket_proto, &module);

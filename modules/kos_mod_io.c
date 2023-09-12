@@ -958,6 +958,7 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
 
                 const uint8_t *data = KOS_buffer_data_const(arg.o);
 
+                /* Make a copy in case GC moves the buffer storage when context is suspended */
                 if (kos_is_heap_object(KOS_atomic_read_relaxed_obj(OBJPTR(BUFFER, arg.o)->data))) {
 
                     if (KOS_vector_resize(&cstr, to_write)) {

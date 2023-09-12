@@ -4600,26 +4600,28 @@ On error throws an exception.
 socket.prototype.read()
 -----------------------
 
-    socket.prototype.read(size = 4096 [, buffer])
+    socket.prototype.read(size = 4096, buffer = void, flags = 0)
 
 This is the same function as `socket.prototype.recv()`.
 
 socket.prototype.recv()
 -----------------------
 
-    socket.prototype.recv(size = 4096 [, buffer])
+    socket.prototype.recv(size = 4096, buffer = void, flags = 0)
 
 Receives a variable number of bytes from a connected socket object.
+Returns a buffer containing the bytes read.
 
 Receives as many bytes as it can, up to the specified `size`.
 
 `size` is the maximum bytes to receive.  `size` defaults to 4096.  Fewer
 bytes can be received if no more bytes are available.
 
-If `buffer` is specified, bytes are appended to it and that buffer is
+If `buffer` is specified and non-void, bytes are appended to it and that buffer is
 returned instead of creating a new buffer.
 
-Returns a buffer containing the bytes read.
+`flags` specifies bit flag options for receiving data.  Possible bit flags are
+`MSG_OOB`, `MSG_PEEK` and `MSG_WAITALL`.
 
 On error throws an exception.
 
@@ -4643,18 +4645,18 @@ On error throws an exception.
 socket.prototype.send()
 -----------------------
 
-    socket.prototype.send(values...)
+    socket.prototype.send(data, flags = 0)
 
-Sends strings or buffers containing bytes through a connected socket.
+Send a string or a buffer containing bytes through a connected socket.
 
-Each argument is either a buffer or a string object.  Empty buffers
+`data` is either a buffer or a string object.  Empty buffers
 or strings are ignored and nothing is sent through the socket.
 
-If an argument is a string, it is converted to UTF-8 bytes representation
+If `data` is a string, it is converted to UTF-8 bytes representation
 before being sent.
 
-Invoking this function without any arguments doesn't send anything
-through the socket but ensures that the socket object is correct.
+`flags` specifies bit flag options for receiving data.  Possible bit flags are
+`MSG_OOB` and `MSG_PEEK`.
 
 Returns the socket itself (`this`).
 
@@ -4722,7 +4724,20 @@ socket.prototype.write()
 
     socket.prototype.write(values...)
 
-This is the same function as `socket.prototype.send()`.
+Sends strings or buffers containing bytes through a connected socket.
+
+Each argument is either a buffer or a string object.  Empty buffers
+or strings are ignored and nothing is sent through the socket.
+
+If an argument is a string, it is converted to UTF-8 bytes representation
+before being sent.
+
+Invoking this function without any arguments doesn't send anything
+through the socket but ensures that the socket object is correct.
+
+Returns the socket itself (`this`).
+
+On error throws an exception.
 
 os
 ==
