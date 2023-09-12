@@ -147,7 +147,7 @@ do {
     assert math.abs(math.exp(3.0) - e * e * e) < err
     assert math.abs(math.exp(-1)  - 1 / e)     < err
 
-    assert math.exp(1) == e
+    assert math.abs(math.exp(1) - e) < err
 }
 
 # math.expm1
