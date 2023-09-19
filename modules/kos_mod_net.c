@@ -1136,10 +1136,12 @@ cleanup:
     return error ? KOS_BADPTR : this_.o;
 }
 
-static int send_loop(KOS_SOCKET  socket,
-                     const char *data,
-                     DATA_LEN    size,
-                     int         flags)
+static int send_loop(KOS_SOCKET              socket,
+                     const char             *data,
+                     DATA_LEN                size,
+                     int                     flags,
+                     const KOS_GENERIC_ADDR *addr,
+                     ADDR_LEN                addr_len)
 {
     const int send_timeout_sec = 30;
     int       num_sent;
@@ -1156,7 +1158,10 @@ static int send_loop(KOS_SOCKET  socket,
 
         reset_last_error();
 
-        num_sent = send(socket, data, size, flags);
+        if (addr)
+            num_sent = sendto(socket, data, size, flags, &addr->addr, addr_len);
+        else
+            num_sent = send(socket, data, size, flags);
 
         if ((DATA_LEN)num_sent == size)
             break;
@@ -1198,12 +1203,14 @@ static int send_loop(KOS_SOCKET  socket,
     return num_sent;
 }
 
-static int send_one_object(KOS_CONTEXT        ctx,
-                           KOS_OBJ_ID         obj_id,
-                           int                flags,
-                           KOS_SOCKET_HOLDER *socket_holder,
-                           KOS_VECTOR        *cstr,
-                           KOS_LOCAL         *print_args)
+static int send_one_object(KOS_CONTEXT             ctx,
+                           KOS_OBJ_ID              obj_id,
+                           int                     flags,
+                           KOS_SOCKET_HOLDER      *socket_holder,
+                           KOS_VECTOR             *cstr,
+                           KOS_LOCAL              *print_args,
+                           const KOS_GENERIC_ADDR *addr,
+                           ADDR_LEN                addr_len)
 {
     KOS_LOCAL obj;
     int       saved_errno = 0;
@@ -1237,7 +1244,12 @@ static int send_one_object(KOS_CONTEXT        ctx,
 
             KOS_suspend_context(ctx);
 
-            num_writ = send_loop(get_socket(socket_holder), (const char *)data, (DATA_LEN)to_write, flags);
+            num_writ = send_loop(get_socket(socket_holder),
+                                 (const char *)data,
+                                 (DATA_LEN)to_write,
+                                 flags,
+                                 addr,
+                                 addr_len);
 
             assert((num_writ < 0) || ((size_t)num_writ == to_write));
 
@@ -1263,7 +1275,12 @@ static int send_one_object(KOS_CONTEXT        ctx,
         if (cstr->size) {
             KOS_suspend_context(ctx);
 
-            num_writ = send_loop(get_socket(socket_holder), cstr->buffer, (DATA_LEN)(cstr->size - 1), flags);
+            num_writ = send_loop(get_socket(socket_holder),
+                                 cstr->buffer,
+                                 (DATA_LEN)(cstr->size - 1),
+                                 flags,
+                                 addr,
+                                 addr_len);
 
             assert((num_writ < 0) || ((size_t)num_writ == cstr->size - 1));
 
@@ -1335,7 +1352,7 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
         const KOS_OBJ_ID arg = KOS_array_read(ctx, args.o, i_arg);
         TRY_OBJID(arg);
 
-        TRY(send_one_object(ctx, arg, 0, socket_holder, &cstr, &print_args));
+        TRY(send_one_object(ctx, arg, 0, socket_holder, &cstr, &print_args, KOS_NULL, 0));
     }
 
 cleanup:
@@ -1416,7 +1433,7 @@ static KOS_OBJ_ID kos_send(KOS_CONTEXT ctx,
     arg = KOS_array_read(ctx, args.o, 0);
     TRY_OBJID(arg);
 
-    TRY(send_one_object(ctx, arg, (int)flags64, socket_holder, &cstr, &print_args));
+    TRY(send_one_object(ctx, arg, (int)flags64, socket_holder, &cstr, &print_args, KOS_NULL, 0));
 
 cleanup:
     release_socket(socket_holder);
@@ -1428,16 +1445,102 @@ cleanup:
     return error ? KOS_BADPTR : this_.o;
 }
 
+static const KOS_CONVERT sendto_args[5] = {
+    { KOS_CONST_ID(str_address), KOS_BADPTR,      0, 0, KOS_NATIVE_STRING_PTR },
+    { KOS_CONST_ID(str_port),    KOS_BADPTR,      0, 0, KOS_NATIVE_UINT16     },
+    { KOS_CONST_ID(str_data),    KOS_BADPTR,      0, 0, KOS_NATIVE_SKIP       },
+    { KOS_CONST_ID(str_flags),   TO_SMALL_INT(0), 0, 0, KOS_NATIVE_SKIP       },
+    KOS_DEFINE_TAIL_ARG()
+};
+
 /* @item net socket.prototype.sendto()
  *
- *     socket.prototype.sendto()
+ *     socket.prototype.sendto(address, port, data, flags = 0)
+ *
+ * Send a string or a buffer containing bytes through a remote address.
+ *
+ * `address` specifies the IP address to send data to.  For IPv4 and IPv6 sockets this is
+ * a hostname or a numeric IP address.
+ *
+ * `port` specifies the remote port.  It is an integer value from 1 to 65535.
+ *
+ * `data` is either a buffer or a string object.  Empty buffers
+ * or strings are ignored and nothing is sent through the socket.
+ *
+ * If `data` is a string, it is converted to UTF-8 bytes representation
+ * before being sent.
+ *
+ * `flags` specifies bit flag options for receiving data.  Possible bit flags are
+ * `MSG_OOB` and `MSG_PEEK`.
+ *
+ * Returns the socket itself (`this`).
+ *
+ * On error throws an exception.
  */
 static KOS_OBJ_ID kos_sendto(KOS_CONTEXT ctx,
                              KOS_OBJ_ID  this_obj,
                              KOS_OBJ_ID  args_obj)
 {
-    /* TODO */
-    return KOS_VOID;
+    struct KOS_MEMPOOL_S alloc;
+    KOS_VECTOR           cstr;
+    KOS_GENERIC_ADDR     addr;
+    KOS_LOCAL            print_args;
+    KOS_LOCAL            args;
+    KOS_LOCAL            this_;
+    int64_t              flags64       = 0;
+    KOS_OBJ_ID           arg;
+    char                *address_cstr  = KOS_NULL;
+    KOS_SOCKET_HOLDER   *socket_holder = KOS_NULL;
+    ADDR_LEN             addr_len;
+    int                  error;
+    uint16_t             port          = 0;
+
+    assert(KOS_get_array_size(args_obj) >= 4);
+
+    KOS_vector_init(&cstr);
+    KOS_mempool_init_small(&alloc, 512U);
+
+    KOS_init_locals(ctx, &print_args, &args, &this_, kos_end_locals);
+
+    args.o  = args_obj;
+    this_.o = this_obj;
+
+    TRY(KOS_extract_native_from_array(ctx, args_obj, "argument", sendto_args, &alloc, &address_cstr, &port));
+
+    TRY(acquire_socket_object(ctx, this_.o, &socket_holder));
+
+    TRY(get_address(ctx, socket_holder, address_cstr, port, &addr, &addr_len));
+
+    arg = KOS_array_read(ctx, args.o, 3);
+    TRY_OBJID(arg);
+
+    if ( ! IS_NUMERIC_OBJ(arg)) {
+        KOS_raise_printf(ctx, "flags argument is %s but expected integer",
+                         KOS_get_type_name(GET_OBJ_TYPE(arg)));
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+    else
+        TRY(KOS_get_integer(ctx, arg, &flags64));
+
+    if (flags64 & (MSG_OOB | MSG_PEEK)) {
+        KOS_raise_printf(ctx, "flags argument 0x%" PRIx64 " contains unrecognized bits", flags64);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+
+    arg = KOS_array_read(ctx, args.o, 2);
+    TRY_OBJID(arg);
+
+    TRY(send_one_object(ctx, arg, (int)flags64, socket_holder, &cstr, &print_args, &addr, addr_len));
+
+cleanup:
+    release_socket(socket_holder);
+
+    KOS_mempool_destroy(&alloc);
+    KOS_vector_destroy(&cstr);
+
+    this_.o = KOS_destroy_top_locals(ctx, &print_args, &this_);
+
+    return error ? KOS_BADPTR : this_.o;
 }
 
 #ifdef _WIN32
@@ -2042,7 +2145,7 @@ KOS_INIT_MODULE(net, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "release",    kos_close,      KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "wait",       kos_wait,       wait_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "send",       kos_send,       send_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "sendto",     kos_sendto,     KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "sendto",     kos_sendto,     sendto_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "setsockopt", kos_setsockopt, setsockopt_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "shutdown",   kos_shutdown,   shutdown_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "write",      kos_write,      KOS_NULL);
