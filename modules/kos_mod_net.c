@@ -450,7 +450,7 @@ cleanup:
  *
  * Returns an object with two properties:
  * - `socket`: new socket with the accepted connection,
- * - `address`: address of the remote host from which the connetion has been made.
+ * - `address`: address of the remote host from which the connection has been made.
  *
  * On error throws an exception.
  */
@@ -1566,6 +1566,21 @@ static const KOS_CONVERT getsockopt_args[2] = {
  * Returns value of a socket option.
  *
  * `option` is an integer specifying the option to retrieve.
+ *
+ * Possible options include the following constants in the `net` module,
+ * and return values of the following types:
+ *
+ *  - SO_BROADCAST - bool
+ *  - SO_DEBUG - bool
+ *  - SO_DONTROUTE - bool
+ *  - SO_KEEPALIVE - bool
+ *  - SO_OOBINLINE - bool
+ *  - SO_RCVBUF - integer
+ *  - SO_RCVTIMEO - float (milliseconds)
+ *  - SO_REUSEADDR - bool
+ *  - SO_REUSEPORT - bool
+ *  - SO_SNDBUF - integer
+ *  - SO_SNDTIMEO - float (milliseconds)
  */
 static KOS_OBJ_ID kos_getsockopt(KOS_CONTEXT ctx,
                                  KOS_OBJ_ID  this_obj,
@@ -1826,6 +1841,9 @@ static const KOS_CONVERT setsockopt_args[3] = {
  *
  * `option` is an integer specifying the option to set and
  * `value` is the value to set for this option.
+ *
+ * See `socket.prototype.getsockopt()` for list of possible
+ * options and corresponding `value` types.
  *
  * Returns the socket itself (`this`).
  *
