@@ -4643,7 +4643,27 @@ On error throws an exception.
 socket.prototype.recvfrom()
 ---------------------------
 
-    socket.prototype.recvfrom()
+    socket.prototype.recvfrom(size = 4096, buffer = void, flags = 0)
+
+Receives a variable number of bytes from a connected socket object.
+
+Returns an object with two properties:
+ - `data` - buffer containing the bytes read,
+ - `address` - address of the sender,
+ - `port` - port of the sender.
+
+Receives as many bytes as it can, up to the specified `size`.
+
+`size` is the maximum bytes to receive.  `size` defaults to 4096.  Fewer
+bytes can be received if no more bytes are available.
+
+If `buffer` is specified and non-void, bytes are appended to it and that buffer is
+returned instead of creating a new buffer.
+
+`flags` specifies bit flag options for receiving data.  Possible bit flags are
+`MSG_OOB`, `MSG_PEEK` and `MSG_WAITALL`.
+
+On error throws an exception.
 
 socket.prototype.release()
 --------------------------
@@ -4680,7 +4700,27 @@ On error throws an exception.
 socket.prototype.sendto()
 -------------------------
 
-    socket.prototype.sendto()
+    socket.prototype.sendto(address, port, data, flags = 0)
+
+Send a string or a buffer containing bytes through a remote address.
+
+`address` specifies the IP address to send data to.  For IPv4 and IPv6 sockets this is
+a hostname or a numeric IP address.
+
+`port` specifies the remote port.  It is an integer value from 1 to 65535.
+
+`data` is either a buffer or a string object.  Empty buffers
+or strings are ignored and nothing is sent through the socket.
+
+If `data` is a string, it is converted to UTF-8 bytes representation
+before being sent.
+
+`flags` specifies bit flag options for receiving data.  Possible bit flags are
+`MSG_OOB` and `MSG_PEEK`.
+
+Returns the socket itself (`this`).
+
+On error throws an exception.
 
 socket.prototype.setsockopt()
 -----------------------------
