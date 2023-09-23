@@ -20,6 +20,7 @@
 #include <inttypes.h>
 #include <math.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 #ifdef _WIN32
@@ -309,20 +310,126 @@ static int get_address(KOS_CONTEXT        ctx,
 
     memset(addr, 0, sizeof(*addr));
 
-    if (socket_holder->family == AF_INET ||
-        socket_holder->family == AF_INET6) {
+    switch (socket_holder->family) {
 
-        error = get_ip_address(ctx,
-                               socket_holder,
-                               addr_cstr,
-                               port,
-                               addr,
-                               addr_len);
-    }
-    else {
+        case AF_INET:
+            /* fall through */
+        case AF_INET6:
+            error = get_ip_address(ctx,
+                                   socket_holder,
+                                   addr_cstr,
+                                   port,
+                                   addr,
+                                   addr_len);
+            break;
+
         /* TODO AF_LOCAL */
-        assert(0);
+
+        default:
+            assert(!"unexpected address family");
+            break;
     }
+
+    return error;
+}
+
+static int add_address_desc(KOS_CONTEXT             ctx,
+                            KOS_OBJ_ID              ret_id,
+                            const KOS_GENERIC_ADDR *addr,
+                            ADDR_LEN                addr_len)
+{
+    KOS_LOCAL ret;
+    KOS_LOCAL val;
+    int       error = KOS_ERROR_EXCEPTION;
+
+    KOS_init_local_with(ctx, &ret, ret_id);
+    KOS_init_local(     ctx, &val);
+
+    switch (addr->addr.sa_family) {
+
+        case AF_INET:
+            TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_port),
+                                 TO_SMALL_INT(ntohs(addr->inet.sin_port))));
+            {
+                char     buf[16];
+                uint32_t inet_addr = ntohl(addr->inet.sin_addr.s_addr);
+                unsigned len;
+
+                len = (unsigned)snprintf(buf, sizeof(buf), "%u.%u.%u.%u",
+                                         (uint8_t)(inet_addr >> 24),
+                                         (uint8_t)(inet_addr >> 16),
+                                         (uint8_t)(inet_addr >> 8),
+                                         (uint8_t)inet_addr);
+
+                val.o = KOS_new_string(ctx, buf, len);
+                TRY_OBJID(val.o);
+
+                TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_address), val.o));
+            }
+            break;
+
+        case AF_INET6:
+            TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_port),
+                                 TO_SMALL_INT(ntohs(addr->inet6.sin6_port))));
+            {
+                char           buf[40];
+                const uint8_t *byte = (const uint8_t *)&addr->inet6.sin6_addr.s6_addr[0];
+                unsigned       pos  = 0;
+                unsigned       len;
+                unsigned       i;
+
+                for (i = 0; i < 16; i += 2) {
+
+                    if (byte[i] == 0 && byte[i + 1] == 0) {
+                        unsigned j;
+
+                        if (pos == 0) {
+                            buf[pos++] = ':';
+                            buf[pos++] = ':';
+                            continue;
+                        }
+
+                        if (pos == 2 && buf[1] == ':')
+                            continue;
+
+                        for (j = i + 2; j < 16; j++)
+                            if (byte[j])
+                                break;
+
+                        if (j == 16) {
+                            if (buf[pos - 1] != ':') {
+                                buf[pos++] = ':';
+                                buf[pos++] = ':';
+                            }
+                            break;
+                        }
+                    }
+
+                    if (pos && buf[pos - 1] != ':')
+                        buf[pos++] = ':';
+
+                    len = (unsigned)snprintf(&buf[pos], sizeof(buf) - pos, "%02X%02X",
+                                             byte[i], byte[i + 1]);
+
+                    pos += len;
+                }
+
+                val.o = KOS_new_string(ctx, buf, pos);
+                TRY_OBJID(val.o);
+
+                TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_address), val.o));
+            }
+            break;
+
+        /* TODO AF_LOCAL */
+
+        default:
+            KOS_raise_printf(ctx, "unsupported family %u", (unsigned)addr->addr.sa_family);
+            break;
+    }
+
+cleanup:
+    KOS_destroy_top_locals(ctx, &val, &ret);
 
     return error;
 }
@@ -861,14 +968,156 @@ cleanup:
 
 /* @item net socket.prototype.recvfrom()
  *
- *     socket.prototype.recvfrom()
+ *     socket.prototype.recvfrom(size = 4096, buffer = void, flags = 0)
+ *
+ * Receives a variable number of bytes from a connected socket object.
+ *
+ * Returns an object with two properties:
+ *  - `data` - buffer containing the bytes read,
+ *  - `address` - address of the sender,
+ *  - `port` - port of the sender.
+ *
+ * Receives as many bytes as it can, up to the specified `size`.
+ *
+ * `size` is the maximum bytes to receive.  `size` defaults to 4096.  Fewer
+ * bytes can be received if no more bytes are available.
+ *
+ * If `buffer` is specified and non-void, bytes are appended to it and that buffer is
+ * returned instead of creating a new buffer.
+ *
+ * `flags` specifies bit flag options for receiving data.  Possible bit flags are
+ * `MSG_OOB`, `MSG_PEEK` and `MSG_WAITALL`.
+ *
+ * On error throws an exception.
  */
 static KOS_OBJ_ID kos_recvfrom(KOS_CONTEXT ctx,
                                KOS_OBJ_ID  this_obj,
                                KOS_OBJ_ID  args_obj)
 {
-    /* TODO */
-    return KOS_VOID;
+    KOS_GENERIC_ADDR   addr;
+    KOS_LOCAL          args;
+    KOS_LOCAL          buf;
+    KOS_LOCAL          ret;
+    int64_t            num_read;
+    int64_t            to_read;
+    int64_t            flags64;
+    KOS_SOCKET_HOLDER *socket_holder = KOS_NULL;
+    uint8_t           *data;
+    KOS_OBJ_ID         arg;
+    ADDR_LEN           addr_len      = 0;
+    uint32_t           offset;
+    int                error         = KOS_SUCCESS;
+    int                saved_errno   = 0;
+
+    assert(KOS_get_array_size(args_obj) >= 3);
+
+    KOS_init_local(     ctx, &ret);
+    KOS_init_local(     ctx, &buf);
+    KOS_init_local_with(ctx, &args, args_obj);
+
+    TRY(acquire_socket_object(ctx, this_obj, &socket_holder));
+
+    arg = KOS_array_read(ctx, args.o, 0);
+    TRY_OBJID(arg);
+
+    TRY(KOS_get_integer(ctx, arg, &to_read));
+
+    if (to_read < 1)
+        to_read = 1;
+
+    arg = KOS_array_read(ctx, args.o, 2);
+    TRY_OBJID(arg);
+
+    if ( ! IS_NUMERIC_OBJ(arg)) {
+        KOS_raise_printf(ctx, "flags argument is %s but expected integer",
+                         KOS_get_type_name(GET_OBJ_TYPE(arg)));
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+    else
+        TRY(KOS_get_integer(ctx, arg, &flags64));
+
+    if (flags64 & (MSG_OOB | MSG_PEEK | MSG_WAITALL)) {
+        KOS_raise_printf(ctx, "flags argument 0x%" PRIx64 " contains unrecognized bits", flags64);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+
+    buf.o = KOS_array_read(ctx, args.o, 1);
+    TRY_OBJID(buf.o);
+
+    if (buf.o == KOS_VOID)
+        buf.o = KOS_new_buffer(ctx, 0);
+    else if (GET_OBJ_TYPE(buf.o) != OBJ_BUFFER)
+        RAISE_EXCEPTION_STR(str_err_not_buffer);
+
+    offset = KOS_get_buffer_size(buf.o);
+
+    if (to_read > (int64_t)(0xFFFFFFFFU - offset))
+        RAISE_EXCEPTION_STR(str_err_too_many_to_read);
+
+    TRY(KOS_buffer_resize(ctx, buf.o, (unsigned)(offset + to_read)));
+
+    data = KOS_buffer_data(ctx, buf.o);
+
+    if ( ! data)
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+
+    KOS_suspend_context(ctx);
+
+    memset(&addr, 0, sizeof(addr));
+    addr.addr.sa_family = socket_holder->family;
+    switch (socket_holder->family) {
+
+        case AF_INET:
+            addr_len = (ADDR_LEN)sizeof(addr.inet);
+            break;
+
+        case AF_INET6:
+            addr_len = (ADDR_LEN)sizeof(addr.inet6);
+            break;
+
+        /* TODO AF_LOCAL */
+
+        default:
+            assert(!"unexpected address family");
+            break;
+    }
+
+    reset_last_error();
+
+    num_read = recvfrom(get_socket(socket_holder),
+                        (char *)(data + offset),
+                        (DATA_LEN)to_read,
+                        (int)flags64,
+                        &addr.addr,
+                        &addr_len);
+
+    if (num_read < -1)
+        saved_errno = get_error();
+
+    KOS_resume_context(ctx);
+
+    assert(num_read <= to_read);
+
+    TRY(KOS_buffer_resize(ctx, buf.o, (unsigned)(offset + num_read)));
+
+    if (saved_errno) {
+        KOS_raise_errno_value(ctx, "recv", saved_errno);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+
+    ret.o = KOS_new_object(ctx);
+    TRY_OBJID(ret.o);
+
+    TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_data), buf.o));
+
+    TRY(add_address_desc(ctx, ret.o, &addr, addr_len));
+
+cleanup:
+    release_socket(socket_holder);
+
+    ret.o = KOS_destroy_top_locals(ctx, &args, &ret);
+
+    return error ? KOS_BADPTR : ret.o;
 }
 
 /* @item net socket.prototype.wait()
@@ -2117,7 +2366,7 @@ KOS_INIT_MODULE(net, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "listen",     kos_listen,     listen_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "read",       kos_recv,       recv_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "recv",       kos_recv,       recv_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "recvfrom",   kos_recvfrom,   KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "recvfrom",   kos_recvfrom,   recv_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "release",    kos_close,      KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "wait",       kos_wait,       wait_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "send",       kos_send,       send_args);
