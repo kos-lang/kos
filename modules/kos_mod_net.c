@@ -226,7 +226,6 @@ static int get_ip_address(KOS_CONTEXT        ctx,
 {
     int error = KOS_SUCCESS;
 
-#if 1
     if (addr_cstr[0]) {
         struct addrinfo  hint;
         struct addrinfo *info = KOS_NULL;
@@ -282,29 +281,6 @@ static int get_ip_address(KOS_CONTEXT        ctx,
 
         freeaddrinfo(info);
     }
-#else
-    if (addr_cstr[0]) {
-        struct hostent *ent;
-
-        KOS_suspend_context(ctx);
-
-        ent = gethostbyname(addr_cstr);
-
-        error = ent ? KOS_SUCCESS : h_errno;
-
-        KOS_resume_context(ctx);
-
-        if (error) {
-            KOS_raise_printf(ctx, "gethostbyname: %s", hstrerror(error));
-            RAISE_ERROR(KOS_ERROR_EXCEPTION);
-        }
-
-        addr->inet.sin_family = AF_INET;
-        addr->inet.sin_addr   = *(struct in_addr *)ent->h_addr;
-        addr->inet.sin_port   = htons(port);
-        *addr_len             = sizeof(addr->inet);
-    }
-#endif
     else {
         if (socket_holder->family == AF_INET) {
             addr->inet.sin_family = AF_INET;
