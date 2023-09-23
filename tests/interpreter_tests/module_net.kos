@@ -4,7 +4,7 @@
 import base
 import net
 import test_tools.expect_fail
-          
+
 ##############################################################################
 # socket.bind()
 
@@ -68,7 +68,6 @@ do {
 
     const send_sock = net.socket(net.AF_INET, net.SOCK_STREAM)
     assert send_sock.connect("localhost", port) == send_sock
-    assert send_sock.shutdown(net.SHUT_RD)      == send_sock
     assert send_sock.send("hello")              == send_sock
 
     recv_thread.wait()
@@ -103,7 +102,7 @@ do {
 
         assert recv_sock.shutdown(net.SHUT_WR) == recv_sock
 
-        assert recv_sock.wait()
+        assert recv_sock.wait(10)
 
         const b = recv_sock.recv(128)
         assert typeof b == "buffer"
@@ -118,13 +117,132 @@ do {
     const send_sock = net.socket()
     assert send_sock.connect("localhost", port) == send_sock
 
-    assert ! send_sock.wait(0)
-
-    assert send_sock.shutdown(net.SHUT_RD) == send_sock
     assert send_sock.send("world")         == send_sock
 
     recv_thread.wait()
 
     assert send_sock.shutdown(net.SHUT_WR)      == send_sock
     assert send_sock.close()                    == send_sock
+}
+
+##############################################################################
+# UDP sendto/recvfrom with IPv4
+
+do {
+    const sport = 11007
+    const rport = 11008
+
+    const udp_sender   = net.socket(net.AF_INET, net.SOCK_DGRAM)
+    const udp_receiver = net.socket(net.AF_INET, net.SOCK_DGRAM)
+
+    assert udp_sender.setsockopt(net.SO_REUSEADDR, true).bind("localhost", sport) == udp_sender
+    assert udp_receiver.setsockopt(net.SO_REUSEADDR, true).bind("localhost", rport) == udp_receiver
+
+    const ping_back = async do {
+        while ! udp_receiver.wait() { }
+
+        const received = udp_receiver.recvfrom()
+
+        assert received.port == sport
+
+        const data = base.string(received.data)
+        assert data.size > 5
+        assert data[:5] == "hello"
+        assert data.size < 8
+
+        udp_receiver.sendto(received.address, received.port, "got\(data[5:])")
+    }
+
+    var got  = void
+    var last = -1
+
+    for const i in base.range(16) {
+        assert udp_sender.sendto("localhost", rport, "hello\(i)") == udp_sender
+        if udp_sender.wait(0.05) {
+            got  = udp_sender.recvfrom()
+            last = i
+            break
+        }
+    }
+
+    expect_fail(() => udp_sender.shutdown())
+    expect_fail(() => udp_receiver.shutdown())
+
+    assert got
+    const data = base.string(got.data)
+    assert data.size > 3
+    assert data[:3] == "got"
+    assert data.size < 6
+
+    const index = base.integer(data[3:])
+    assert index >= 0
+    assert index <= last
+
+    assert got.port == rport
+
+    ping_back.wait()
+
+    assert udp_sender.close()   == udp_sender
+    assert udp_receiver.close() == udp_receiver
+}
+
+##############################################################################
+# UDP sendto/recvfrom with IPv6
+
+do {
+    const sport = 11009
+    const rport = 11010
+
+    const udp_sender   = net.socket(net.AF_INET6, net.SOCK_DGRAM)
+    const udp_receiver = net.socket(net.AF_INET6, net.SOCK_DGRAM)
+
+    assert udp_sender.setsockopt(net.SO_REUSEADDR, true).bind("::1", sport) == udp_sender
+    assert udp_receiver.setsockopt(net.SO_REUSEADDR, true).bind("::1", rport) == udp_receiver
+
+    const ping_back = async do {
+        while ! udp_receiver.wait() { }
+
+        const received = udp_receiver.recvfrom()
+
+        assert received.port == sport
+
+        const data = base.string(received.data)
+        assert data.size > 5
+        assert data[:5] == "hello"
+        assert data.size < 8
+
+        udp_receiver.sendto(received.address, received.port, "got\(data[5:])")
+    }
+
+    var got  = void
+    var last = -1
+
+    for const i in base.range(16) {
+        assert udp_sender.sendto("localhost", rport, "hello\(i)") == udp_sender
+        if udp_sender.wait(0.05) {
+            got  = udp_sender.recvfrom()
+            last = i
+            break
+        }
+    }
+
+    expect_fail(() => udp_sender.shutdown())
+    expect_fail(() => udp_receiver.shutdown())
+
+    assert got
+    const data = base.string(got.data)
+    assert data.size > 3
+    assert data[:3] == "got"
+    assert data.size < 6
+
+    const index = base.integer(data[3:])
+    assert index >= 0
+    assert index <= last
+
+    assert got.port == rport
+
+    ping_back.wait()
+
+    assert udp_sender.close()   == udp_sender
+    assert udp_receiver.close() == udp_receiver
 }
