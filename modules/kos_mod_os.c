@@ -1764,6 +1764,19 @@ KOS_INIT_MODULE(os, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
      *
      * Constant string representing Operating System's name where Kos is running.
      *
+     * Possible values include:
+     *
+     * - "Android"
+     * - "FreeBSD"
+     * - "Haiku"
+     * - "Linux"
+     * - "NetBSD"
+     * - "OpenBSD"
+     * - "QNX"
+     * - "Windows"
+     * - "iOS"
+     * - "macOS"
+     *
      * Example:
      *
      *     > sysname

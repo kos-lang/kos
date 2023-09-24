@@ -4958,6 +4958,19 @@ sysname
 
 Constant string representing Operating System's name where Kos is running.
 
+Possible values include:
+
+- "Android"
+- "FreeBSD"
+- "Haiku"
+- "Linux"
+- "NetBSD"
+- "OpenBSD"
+- "QNX"
+- "Windows"
+- "iOS"
+- "macOS"
+
 Example:
 
     > sysname
