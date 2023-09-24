@@ -3,6 +3,7 @@
 
 import base
 import net
+import os
 import test_tools.expect_fail
 
 ##############################################################################
@@ -165,8 +166,10 @@ do {
         }
     }
 
-    expect_fail(() => udp_sender.shutdown())
-    expect_fail(() => udp_receiver.shutdown())
+    if os.sysname != "Windows" {
+        expect_fail(() => udp_sender.shutdown())
+        expect_fail(() => udp_receiver.shutdown())
+    }
 
     assert got
     const data = base.string(got.data)
@@ -226,8 +229,10 @@ do {
         }
     }
 
-    expect_fail(() => udp_sender.shutdown())
-    expect_fail(() => udp_receiver.shutdown())
+    if os.sysname != "Windows" {
+        expect_fail(() => udp_sender.shutdown())
+        expect_fail(() => udp_receiver.shutdown())
+    }
 
     assert got
     const data = base.string(got.data)
