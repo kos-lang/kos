@@ -1090,7 +1090,7 @@ static KOS_OBJ_ID kos_recvfrom(KOS_CONTEXT ctx,
                         (char *)(data + offset),
                         (DATA_LEN)to_read,
                         (int)flags64,
-                        &addr.addr,
+                        (struct sockaddr *)&addr,
                         &addr_len);
 
     if (num_read < -1)
