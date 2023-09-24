@@ -44,10 +44,11 @@
 #endif
 
 #ifdef _WIN32
-typedef SOCKET KOS_SOCKET;
-typedef int    DATA_LEN;
-typedef int    ADDR_LEN;
-typedef long   TIME_FRAGMENT;
+typedef SOCKET         KOS_SOCKET;
+typedef ADDRESS_FAMILY KOS_ADDR_FAMILY;
+typedef int            DATA_LEN;
+typedef int            ADDR_LEN;
+typedef long           TIME_FRAGMENT;
 
 #define KOS_INVALID_SOCKET ((KOS_SOCKET)INVALID_SOCKET)
 
@@ -59,6 +60,7 @@ static int get_error(void)
 }
 #else
 typedef int       KOS_SOCKET;
+typedef int       KOS_ADDR_FAMILY;
 typedef size_t    DATA_LEN;
 typedef socklen_t ADDR_LEN;
 typedef unsigned  TIME_FRAGMENT;
@@ -1064,7 +1066,7 @@ static KOS_OBJ_ID kos_recvfrom(KOS_CONTEXT ctx,
     KOS_suspend_context(ctx);
 
     memset(&addr, 0, sizeof(addr));
-    addr.addr.sa_family = socket_holder->family;
+    addr.addr.sa_family = (KOS_ADDR_FAMILY)socket_holder->family;
     switch (socket_holder->family) {
 
         case AF_INET:
