@@ -4488,8 +4488,11 @@ Socket object class.
 Returns created socket object.
 
 `domain` is the communication domain, e.g. `AF_INET`, `AF_INET6` or `AF_LOCAL`.
+
 `type` specifies the semantics of communication, e.g. `SOCK_STREAM`, `SOCK_DGRAM` or `SOCK_RAW`.
-`protocol` specifies particular protocol, 0 typically indicates default protocol.
+
+`protocol` specifies particular protocol, 0 typically indicates default protocol, but it can
+be a specific protocol, for example `IPPROTO_TCP` or `IPPROTO_UDP`.
 
 On error throws an exception.
 
@@ -4578,9 +4581,12 @@ On error throws an exception.
 socket.prototype.getsockopt()
 -----------------------------
 
-    socket.prototype.getsockopt(option)
+    socket.prototype.getsockopt(level, option)
 
 Returns value of a socket option.
+
+`level` is protocol level at which the option is set, e.g.:
+`SOL_SOCKET`, `IPPROTO_IP`, `IPPROTO_TCP`, `IPPROTO_UDP`.
 
 `option` is an integer specifying the option to retrieve.
 
@@ -4725,11 +4731,15 @@ On error throws an exception.
 socket.prototype.setsockopt()
 -----------------------------
 
-    socket.prototype.setsockopt(option, value)
+    socket.prototype.setsockopt(level, option, value)
 
 Sets a socket option.
 
+`level` is protocol level at which the option is set, e.g.:
+`SOL_SOCKET`, `IPPROTO_IP`, `IPPROTO_TCP`, `IPPROTO_UDP`.
+
 `option` is an integer specifying the option to set and
+
 `value` is the value to set for this option.
 
 See `socket.prototype.getsockopt()` for list of possible

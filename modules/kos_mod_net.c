@@ -88,6 +88,7 @@ KOS_DECLARE_STATIC_CONST_STRING(str_err_not_buffer_or_str, "argument to socket.s
 KOS_DECLARE_STATIC_CONST_STRING(str_err_too_many_to_read,  "requested read size exceeds buffer size limit");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_socket_not_open,   "socket not open or not a socket object");
 KOS_DECLARE_STATIC_CONST_STRING(str_flags,                 "flags");
+KOS_DECLARE_STATIC_CONST_STRING(str_level,                 "level");
 KOS_DECLARE_STATIC_CONST_STRING(str_port,                  "port");
 KOS_DECLARE_STATIC_CONST_STRING(str_socket,                "socket");
 KOS_DECLARE_STATIC_CONST_STRING(str_timeout_sec,           "timeout_sec");
@@ -464,8 +465,11 @@ static const KOS_CONVERT socket_args[4] = {
  * Returns created socket object.
  *
  * `domain` is the communication domain, e.g. `AF_INET`, `AF_INET6` or `AF_LOCAL`.
+ *
  * `type` specifies the semantics of communication, e.g. `SOCK_STREAM`, `SOCK_DGRAM` or `SOCK_RAW`.
- * `protocol` specifies particular protocol, 0 typically indicates default protocol.
+ *
+ * `protocol` specifies particular protocol, 0 typically indicates default protocol, but it can
+ * be a specific protocol, for example `IPPROTO_TCP` or `IPPROTO_UDP`.
  *
  * On error throws an exception.
  */
@@ -1778,6 +1782,7 @@ typedef int SOCK_OPT_BOOL;
 
 static KOS_OBJ_ID getsockopt_bool(KOS_CONTEXT        ctx,
                                   KOS_SOCKET_HOLDER *socket_holder,
+                                  int                level,
                                   int                option)
 {
     SOCK_OPT_BOOL bool_value  = 0;
@@ -1790,7 +1795,7 @@ static KOS_OBJ_ID getsockopt_bool(KOS_CONTEXT        ctx,
     reset_last_error();
 
     error = getsockopt(get_socket(socket_holder),
-                       SOL_SOCKET,
+                       level,
                        option,
                        (char *)&bool_value,
                        &opt_size);
@@ -1810,6 +1815,7 @@ static KOS_OBJ_ID getsockopt_bool(KOS_CONTEXT        ctx,
 
 static KOS_OBJ_ID getsockopt_int(KOS_CONTEXT        ctx,
                                  KOS_SOCKET_HOLDER *socket_holder,
+                                 int                level,
                                  int                option)
 {
     ADDR_LEN opt_size    = (ADDR_LEN)sizeof(int);
@@ -1822,7 +1828,7 @@ static KOS_OBJ_ID getsockopt_int(KOS_CONTEXT        ctx,
     reset_last_error();
 
     error = getsockopt(get_socket(socket_holder),
-                       SOL_SOCKET,
+                       level,
                        option,
                        (char *)&int_value,
                        &opt_size);
@@ -1842,6 +1848,7 @@ static KOS_OBJ_ID getsockopt_int(KOS_CONTEXT        ctx,
 
 static KOS_OBJ_ID getsockopt_time(KOS_CONTEXT        ctx,
                                   KOS_SOCKET_HOLDER *socket_holder,
+                                  int                level,
                                   int                option)
 {
 #ifdef _WIN32
@@ -1860,7 +1867,7 @@ static KOS_OBJ_ID getsockopt_time(KOS_CONTEXT        ctx,
     reset_last_error();
 
     error = getsockopt(get_socket(socket_holder),
-                       SOL_SOCKET,
+                       level,
                        option,
                        (char *)&time_value,
                        &opt_size);
@@ -1884,16 +1891,20 @@ static KOS_OBJ_ID getsockopt_time(KOS_CONTEXT        ctx,
 
 KOS_DECLARE_STATIC_CONST_STRING(str_option, "option");
 
-static const KOS_CONVERT getsockopt_args[2] = {
+static const KOS_CONVERT getsockopt_args[3] = {
+    KOS_DEFINE_MANDATORY_ARG(str_level),
     KOS_DEFINE_MANDATORY_ARG(str_option),
     KOS_DEFINE_TAIL_ARG()
 };
 
 /* @item net socket.prototype.getsockopt()
  *
- *     socket.prototype.getsockopt(option)
+ *     socket.prototype.getsockopt(level, option)
  *
  * Returns value of a socket option.
+ *
+ * `level` is protocol level at which the option is set, e.g.:
+ * `SOL_SOCKET`, `IPPROTO_IP`, `IPPROTO_TCP`, `IPPROTO_UDP`.
  *
  * `option` is an integer specifying the option to retrieve.
  *
@@ -1920,6 +1931,7 @@ static KOS_OBJ_ID kos_getsockopt(KOS_CONTEXT ctx,
     KOS_LOCAL          this_;
     KOS_LOCAL          value;
     KOS_SOCKET_HOLDER *socket_holder;
+    int64_t            level;
     int64_t            option;
     int                error;
 
@@ -1932,6 +1944,17 @@ static KOS_OBJ_ID kos_getsockopt(KOS_CONTEXT ctx,
     TRY(acquire_socket_object(ctx, this_.o, &socket_holder));
 
     value.o = KOS_array_read(ctx, args.o, 0);
+    TRY_OBJID(value.o);
+
+    if (GET_OBJ_TYPE(value.o) > OBJ_INTEGER) {
+        KOS_raise_printf(ctx, "level argument is %s but expected integer",
+                         KOS_get_type_name(GET_OBJ_TYPE(value.o)));
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+
+    TRY(KOS_get_integer(ctx, value.o, &level));
+
+    value.o = KOS_array_read(ctx, args.o, 1);
     TRY_OBJID(value.o);
 
     if (GET_OBJ_TYPE(value.o) > OBJ_INTEGER) {
@@ -1958,7 +1981,7 @@ static KOS_OBJ_ID kos_getsockopt(KOS_CONTEXT ctx,
             /* fall through */
         case SO_REUSEPORT:
 #endif
-            value.o = getsockopt_bool(ctx, socket_holder, (int)option);
+            value.o = getsockopt_bool(ctx, socket_holder, (int)level, (int)option);
             break;
 
         /* TODO
@@ -1968,13 +1991,13 @@ static KOS_OBJ_ID kos_getsockopt(KOS_CONTEXT ctx,
         case SO_RCVBUF:
             /* fall through */
         case SO_SNDBUF:
-            value.o = getsockopt_int(ctx, socket_holder, (int)option);
+            value.o = getsockopt_int(ctx, socket_holder, (int)level, (int)option);
             break;
 
         case SO_RCVTIMEO:
             /* fall through */
         case SO_SNDTIMEO:
-            value.o = getsockopt_time(ctx, socket_holder, (int)option);
+            value.o = getsockopt_time(ctx, socket_holder, (int)level, (int)option);
             break;
 
         default:
@@ -1995,6 +2018,7 @@ cleanup:
 
 static int setsockopt_bool(KOS_CONTEXT        ctx,
                            KOS_SOCKET_HOLDER *socket_holder,
+                           int                level,
                            int                option,
                            KOS_OBJ_ID         value)
 {
@@ -2023,7 +2047,7 @@ static int setsockopt_bool(KOS_CONTEXT        ctx,
     reset_last_error();
 
     error = setsockopt(get_socket(socket_holder),
-                       SOL_SOCKET,
+                       level,
                        option,
                        (const char *)&bool_value,
                        (ADDR_LEN)sizeof(bool_value));
@@ -2043,6 +2067,7 @@ static int setsockopt_bool(KOS_CONTEXT        ctx,
 
 static int setsockopt_int(KOS_CONTEXT        ctx,
                           KOS_SOCKET_HOLDER *socket_holder,
+                          int                level,
                           int                option,
                           KOS_OBJ_ID         value)
 {
@@ -2068,7 +2093,7 @@ static int setsockopt_int(KOS_CONTEXT        ctx,
     reset_last_error();
 
     error = setsockopt(get_socket(socket_holder),
-                       SOL_SOCKET,
+                       level,
                        option,
                        (const char *)&int_value,
                        (ADDR_LEN)sizeof(int_value));
@@ -2088,6 +2113,7 @@ static int setsockopt_int(KOS_CONTEXT        ctx,
 
 static int setsockopt_time(KOS_CONTEXT        ctx,
                            KOS_SOCKET_HOLDER *socket_holder,
+                           int                level,
                            int                option,
                            KOS_OBJ_ID         value)
 {
@@ -2137,7 +2163,7 @@ static int setsockopt_time(KOS_CONTEXT        ctx,
     reset_last_error();
 
     error = setsockopt(get_socket(socket_holder),
-                       SOL_SOCKET,
+                       level,
                        option,
                        (const char *)&time_value,
                        (ADDR_LEN)sizeof(time_value));
@@ -2157,7 +2183,8 @@ static int setsockopt_time(KOS_CONTEXT        ctx,
 
 KOS_DECLARE_STATIC_CONST_STRING(str_value, "value");
 
-static const KOS_CONVERT setsockopt_args[3] = {
+static const KOS_CONVERT setsockopt_args[4] = {
+    KOS_DEFINE_MANDATORY_ARG(str_level),
     KOS_DEFINE_MANDATORY_ARG(str_option),
     KOS_DEFINE_MANDATORY_ARG(str_value),
     KOS_DEFINE_TAIL_ARG()
@@ -2165,11 +2192,15 @@ static const KOS_CONVERT setsockopt_args[3] = {
 
 /* @item net socket.prototype.setsockopt()
  *
- *     socket.prototype.setsockopt(option, value)
+ *     socket.prototype.setsockopt(level, option, value)
  *
  * Sets a socket option.
  *
+ * `level` is protocol level at which the option is set, e.g.:
+ * `SOL_SOCKET`, `IPPROTO_IP`, `IPPROTO_TCP`, `IPPROTO_UDP`.
+ *
  * `option` is an integer specifying the option to set and
+ *
  * `value` is the value to set for this option.
  *
  * See `socket.prototype.getsockopt()` for list of possible
@@ -2187,6 +2218,7 @@ static KOS_OBJ_ID kos_setsockopt(KOS_CONTEXT ctx,
     KOS_LOCAL          value;
     KOS_LOCAL          this_;
     KOS_SOCKET_HOLDER *socket_holder;
+    int64_t            level;
     int64_t            option;
     int                error;
 
@@ -2202,6 +2234,17 @@ static KOS_OBJ_ID kos_setsockopt(KOS_CONTEXT ctx,
     TRY_OBJID(value.o);
 
     if (GET_OBJ_TYPE(value.o) > OBJ_INTEGER) {
+        KOS_raise_printf(ctx, "level argument is %s but expected integer",
+                         KOS_get_type_name(GET_OBJ_TYPE(value.o)));
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+
+    TRY(KOS_get_integer(ctx, value.o, &level));
+
+    value.o = KOS_array_read(ctx, args.o, 1);
+    TRY_OBJID(value.o);
+
+    if (GET_OBJ_TYPE(value.o) > OBJ_INTEGER) {
         KOS_raise_printf(ctx, "option argument is %s but expected integer",
                          KOS_get_type_name(GET_OBJ_TYPE(value.o)));
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
@@ -2209,7 +2252,7 @@ static KOS_OBJ_ID kos_setsockopt(KOS_CONTEXT ctx,
 
     TRY(KOS_get_integer(ctx, value.o, &option));
 
-    value.o = KOS_array_read(ctx, args.o, 1);
+    value.o = KOS_array_read(ctx, args.o, 2);
     TRY_OBJID(value.o);
 
     switch (option) {
@@ -2228,7 +2271,7 @@ static KOS_OBJ_ID kos_setsockopt(KOS_CONTEXT ctx,
             /* fall through */
         case SO_REUSEPORT:
 #endif
-            TRY(setsockopt_bool(ctx, socket_holder, (int)option, value.o));
+            TRY(setsockopt_bool(ctx, socket_holder, (int)level, (int)option, value.o));
             break;
 
         /* TODO
@@ -2238,13 +2281,13 @@ static KOS_OBJ_ID kos_setsockopt(KOS_CONTEXT ctx,
         case SO_RCVBUF:
             /* fall through */
         case SO_SNDBUF:
-            TRY(setsockopt_int(ctx, socket_holder, (int)option, value.o));
+            TRY(setsockopt_int(ctx, socket_holder, (int)level, (int)option, value.o));
             break;
 
         case SO_RCVTIMEO:
             /* fall through */
         case SO_SNDTIMEO:
-            TRY(setsockopt_time(ctx, socket_holder, (int)option, value.o));
+            TRY(setsockopt_time(ctx, socket_holder, (int)level, (int)option, value.o));
             break;
 
         default:
@@ -2392,6 +2435,11 @@ KOS_INIT_MODULE(net, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SHUT_RD",      SHUT_RD);
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SHUT_RDWR",    SHUT_RDWR);
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SHUT_WR",      SHUT_WR);
+
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SOL_SOCKET",   SOL_SOCKET);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "IPPROTO_IP",   IPPROTO_IP);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "IPPROTO_TCP",  IPPROTO_TCP);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "IPPROTO_UDP",  IPPROTO_UDP);
 
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SO_BROADCAST", SO_BROADCAST);
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SO_DEBUG",     SO_DEBUG);

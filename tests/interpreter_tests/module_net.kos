@@ -16,13 +16,13 @@ do {
     net.socket().bind("")
     net.socket().bind("localhost")
     net.socket().bind("127.0.0.1")
-    net.socket().setsockopt(net.SO_REUSEADDR, true).bind("localhost", 11000)
-    net.socket().setsockopt(net.SO_REUSEADDR, true).bind("127.0.0.1", 11001)
-    net.socket().setsockopt(net.SO_REUSEADDR, true).bind(port = 11002)
+    net.socket().setsockopt(net.SOL_SOCKET, net.SO_REUSEADDR, true).bind("localhost", 11000)
+    net.socket().setsockopt(net.SOL_SOCKET, net.SO_REUSEADDR, true).bind("127.0.0.1", 11001)
+    net.socket().setsockopt(net.SOL_SOCKET, net.SO_REUSEADDR, true).bind(port = 11002)
 
     net.socket(net.AF_INET6).bind()
     net.socket(net.AF_INET6).bind("")
-    net.socket(net.AF_INET6).setsockopt(net.SO_REUSEADDR, true).bind(port = 11003)
+    net.socket(net.AF_INET6).setsockopt(net.SOL_SOCKET, net.SO_REUSEADDR, true).bind(port = 11003)
 
     var ok = true
     try {
@@ -33,7 +33,7 @@ do {
     }
     if ipv6 {
         net.socket(net.AF_INET6).bind("::1")
-        net.socket(net.AF_INET6).setsockopt(net.SO_REUSEADDR, true).bind("::1", 11004)
+        net.socket(net.AF_INET6).setsockopt(net.SOL_SOCKET, net.SO_REUSEADDR, true).bind("::1", 11004)
     }
 }
 
@@ -44,9 +44,9 @@ do {
 
     const server_sock = net.socket(net.AF_INET, net.SOCK_STREAM)
     assert server_sock.blocking
-    assert server_sock.setsockopt(net.SO_REUSEADDR, true) == server_sock
-    assert server_sock.bind("0.0.0.0", port)              == server_sock
-    assert server_sock.listen()                           == server_sock
+    assert server_sock.setsockopt(net.SOL_SOCKET, net.SO_REUSEADDR, true) == server_sock
+    assert server_sock.bind("0.0.0.0", port) == server_sock
+    assert server_sock.listen()              == server_sock
 
     const recv_thread = async do {
         const recv_sock = server_sock.accept().socket
@@ -85,9 +85,9 @@ do {
     const server_sock = net.socket()
     server_sock.blocking = false
     assert ! server_sock.blocking
-    assert server_sock.setsockopt(net.SO_REUSEADDR, true) == server_sock
-    assert server_sock.bind("0.0.0.0", port)              == server_sock
-    assert server_sock.listen()                           == server_sock
+    assert server_sock.setsockopt(net.SOL_SOCKET, net.SO_REUSEADDR, true) == server_sock
+    assert server_sock.bind("0.0.0.0", port) == server_sock
+    assert server_sock.listen()              == server_sock
 
     expect_fail(() => server_sock.accept())
     assert ! server_sock.wait(0)
@@ -136,8 +136,8 @@ do {
     const udp_sender   = net.socket(net.AF_INET, net.SOCK_DGRAM)
     const udp_receiver = net.socket(net.AF_INET, net.SOCK_DGRAM)
 
-    assert udp_sender.setsockopt(net.SO_REUSEADDR, true).bind("localhost", sport) == udp_sender
-    assert udp_receiver.setsockopt(net.SO_REUSEADDR, true).bind("localhost", rport) == udp_receiver
+    assert udp_sender.setsockopt(net.SOL_SOCKET, net.SO_REUSEADDR, true).bind("localhost", sport) == udp_sender
+    assert udp_receiver.setsockopt(net.SOL_SOCKET, net.SO_REUSEADDR, true).bind("localhost", rport) == udp_receiver
 
     const ping_back = async do {
         while ! udp_receiver.wait() { }
@@ -199,8 +199,8 @@ do {
     const udp_sender   = net.socket(net.AF_INET6, net.SOCK_DGRAM)
     const udp_receiver = net.socket(net.AF_INET6, net.SOCK_DGRAM)
 
-    assert udp_sender.setsockopt(net.SO_REUSEADDR, true).bind("::1", sport) == udp_sender
-    assert udp_receiver.setsockopt(net.SO_REUSEADDR, true).bind("::1", rport) == udp_receiver
+    assert udp_sender.setsockopt(net.SOL_SOCKET, net.SO_REUSEADDR, true).bind("::1", sport) == udp_sender
+    assert udp_receiver.setsockopt(net.SOL_SOCKET, net.SO_REUSEADDR, true).bind("::1", rport) == udp_receiver
 
     const ping_back = async do {
         while ! udp_receiver.wait() { }
