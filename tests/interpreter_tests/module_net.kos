@@ -7,6 +7,32 @@ import os
 import test_tools.expect_fail
 
 ##############################################################################
+# Invalid inputs
+
+do {
+    expect_fail(() => net.socket(domain = ~net.AF_INET))
+    expect_fail(() => net.socket(type = ~net.SOCK_STREAM))
+    expect_fail(() => net.socket(protocol = 0x87654123))
+
+    const sock = net.socket()
+
+    expect_fail(() => sock.bind(address = -1))
+    expect_fail(() => sock.bind(port = 0x1_0000))
+
+    expect_fail(() => sock.connect(address = -1))
+    expect_fail(() => sock.connect(port = 0x1_0000))
+
+    expect_fail(() => sock.listen(-1))
+    expect_fail(() => sock.listen(0x1_0000))
+
+    expect_fail(() => sock.getsockopt(~net.SOL_SOCKET, net.SO_REUSEADDR))
+    expect_fail(() => sock.getsockopt(net.SOL_SOCKET, ~net.SO_REUSEADDR))
+
+    expect_fail(() => sock.setsockopt(~net.SOL_SOCKET, net.SO_REUSEADDR, true))
+    expect_fail(() => sock.setsockopt(net.SOL_SOCKET, ~net.SO_REUSEADDR, true))
+}
+
+##############################################################################
 # socket.bind()
 
 var ipv6 = true
