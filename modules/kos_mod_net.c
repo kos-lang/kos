@@ -823,6 +823,11 @@ static KOS_OBJ_ID kos_listen(KOS_CONTEXT ctx,
 
     TRY(KOS_extract_native_from_array(ctx, args_obj, "argument", listen_args, KOS_NULL, &backlog));
 
+    if (backlog < 1 || backlog >= 0x10000) {
+        KOS_raise_printf(ctx, "backlog argument %d is out of range", backlog);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+
     TRY(acquire_socket_object(ctx, this_.o, &socket_holder));
 
     KOS_suspend_context(ctx);
@@ -1965,44 +1970,50 @@ static KOS_OBJ_ID kos_getsockopt(KOS_CONTEXT ctx,
 
     TRY(KOS_get_integer(ctx, value.o, &option));
 
-    switch (option) {
-        case SO_BROADCAST:
-            /* fall through */
-        case SO_DEBUG:
-            /* fall through */
-        case SO_DONTROUTE:
-            /* fall through */
-        case SO_KEEPALIVE:
-            /* fall through */
-        case SO_OOBINLINE:
-            /* fall through */
-        case SO_REUSEADDR:
+    if (level == SOL_SOCKET) {
+        switch (option) {
+            case SO_BROADCAST:
+                /* fall through */
+            case SO_DEBUG:
+                /* fall through */
+            case SO_DONTROUTE:
+                /* fall through */
+            case SO_KEEPALIVE:
+                /* fall through */
+            case SO_OOBINLINE:
+                /* fall through */
+            case SO_REUSEADDR:
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
-            /* fall through */
-        case SO_REUSEPORT:
+                /* fall through */
+            case SO_REUSEPORT:
 #endif
-            value.o = getsockopt_bool(ctx, socket_holder, (int)level, (int)option);
-            break;
+                value.o = getsockopt_bool(ctx, socket_holder, (int)level, (int)option);
+                break;
 
-        /* TODO
-        case SO_LINGER:
-        */
+            /* TODO
+            case SO_LINGER:
+            */
 
-        case SO_RCVBUF:
-            /* fall through */
-        case SO_SNDBUF:
-            value.o = getsockopt_int(ctx, socket_holder, (int)level, (int)option);
-            break;
+            case SO_RCVBUF:
+                /* fall through */
+            case SO_SNDBUF:
+                value.o = getsockopt_int(ctx, socket_holder, (int)level, (int)option);
+                break;
 
-        case SO_RCVTIMEO:
-            /* fall through */
-        case SO_SNDTIMEO:
-            value.o = getsockopt_time(ctx, socket_holder, (int)level, (int)option);
-            break;
+            case SO_RCVTIMEO:
+                /* fall through */
+            case SO_SNDTIMEO:
+                value.o = getsockopt_time(ctx, socket_holder, (int)level, (int)option);
+                break;
 
-        default:
-            KOS_raise_printf(ctx, "unknown option %" PRId64, option);
-            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+            default:
+                KOS_raise_printf(ctx, "unknown option %" PRId64, option);
+                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+    }
+    else {
+        KOS_raise_printf(ctx, "unknown level %" PRId64, level);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
     if (value.o == KOS_BADPTR)
@@ -2255,44 +2266,50 @@ static KOS_OBJ_ID kos_setsockopt(KOS_CONTEXT ctx,
     value.o = KOS_array_read(ctx, args.o, 2);
     TRY_OBJID(value.o);
 
-    switch (option) {
-        case SO_BROADCAST:
-            /* fall through */
-        case SO_DEBUG:
-            /* fall through */
-        case SO_DONTROUTE:
-            /* fall through */
-        case SO_KEEPALIVE:
-            /* fall through */
-        case SO_OOBINLINE:
-            /* fall through */
-        case SO_REUSEADDR:
+    if (level == SOL_SOCKET) {
+        switch (option) {
+            case SO_BROADCAST:
+                /* fall through */
+            case SO_DEBUG:
+                /* fall through */
+            case SO_DONTROUTE:
+                /* fall through */
+            case SO_KEEPALIVE:
+                /* fall through */
+            case SO_OOBINLINE:
+                /* fall through */
+            case SO_REUSEADDR:
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
-            /* fall through */
-        case SO_REUSEPORT:
+                /* fall through */
+            case SO_REUSEPORT:
 #endif
-            TRY(setsockopt_bool(ctx, socket_holder, (int)level, (int)option, value.o));
-            break;
+                TRY(setsockopt_bool(ctx, socket_holder, (int)level, (int)option, value.o));
+                break;
 
-        /* TODO
-        case SO_LINGER:
-        */
+            /* TODO
+            case SO_LINGER:
+            */
 
-        case SO_RCVBUF:
-            /* fall through */
-        case SO_SNDBUF:
-            TRY(setsockopt_int(ctx, socket_holder, (int)level, (int)option, value.o));
-            break;
+            case SO_RCVBUF:
+                /* fall through */
+            case SO_SNDBUF:
+                TRY(setsockopt_int(ctx, socket_holder, (int)level, (int)option, value.o));
+                break;
 
-        case SO_RCVTIMEO:
-            /* fall through */
-        case SO_SNDTIMEO:
-            TRY(setsockopt_time(ctx, socket_holder, (int)level, (int)option, value.o));
-            break;
+            case SO_RCVTIMEO:
+                /* fall through */
+            case SO_SNDTIMEO:
+                TRY(setsockopt_time(ctx, socket_holder, (int)level, (int)option, value.o));
+                break;
 
-        default:
-            KOS_raise_printf(ctx, "unknown option %" PRId64, option);
-            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+            default:
+                KOS_raise_printf(ctx, "unknown option %" PRId64, option);
+                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+    }
+    else {
+        KOS_raise_printf(ctx, "unknown level %" PRId64, level);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
 cleanup:
