@@ -18,9 +18,11 @@ do {
 
     expect_fail(() => sock.bind(address = -1))
     expect_fail(() => sock.bind(port = 0x1_0000))
+    expect_fail(() => sock.bind(address = "https://$&%,"))
 
     expect_fail(() => sock.connect(address = -1))
     expect_fail(() => sock.connect(port = 0x1_0000))
+    expect_fail(() => sock.bind().connect("invalid.address"))
 
     expect_fail(() => sock.listen(-1))
     expect_fail(() => sock.listen(0x1_0000))
@@ -30,6 +32,31 @@ do {
 
     expect_fail(() => sock.setsockopt(~net.SOL_SOCKET, net.SO_REUSEADDR, true))
     expect_fail(() => sock.setsockopt(net.SOL_SOCKET, ~net.SO_REUSEADDR, true))
+
+    expect_fail(() => sock.recv(flags = {}))
+    expect_fail(() => sock.recv(flags = 0xFFFF_FFFF))
+    expect_fail(() => sock.recv(buffer = []))
+    expect_fail(() => sock.recv(size = 0x1_0000_0000))
+
+    expect_fail(() => sock.recvfrom(flags = {}))
+    expect_fail(() => sock.recvfrom(flags = 0xFFFF_FFFF))
+    expect_fail(() => sock.recvfrom(buffer = []))
+    expect_fail(() => sock.recvfrom(size = 0x1_0000_0000))
+
+    expect_fail(() => sock.wait(-0.001))
+
+    expect_fail(() => sock.send(123))
+
+    expect_fail(fun { sock.blocking = "abc" })
+
+    assert sock.setsockopt(net.SOL_SOCKET, net.SO_REUSEADDR, true) == sock
+    assert sock.close() == sock
+    expect_fail(() => sock.bind(port = 11000))
+
+    expect_fail(() => sock.bind.apply(void, []))
+    expect_fail(() => sock.bind.apply(123, []))
+    expect_fail(() => sock.close.apply(void, []))
+    expect_fail(() => sock.close.apply(123, []))
 }
 
 ##############################################################################
@@ -44,7 +71,9 @@ do {
     net.socket().bind("127.0.0.1")
     net.socket().setsockopt(net.SOL_SOCKET, net.SO_REUSEADDR, true).bind("localhost", 11000)
     net.socket().setsockopt(net.SOL_SOCKET, net.SO_REUSEADDR, true).bind("127.0.0.1", 11001)
-    net.socket().setsockopt(net.SOL_SOCKET, net.SO_REUSEADDR, true).bind(port = 11002)
+    const sock = net.socket().setsockopt(net.SOL_SOCKET, net.SO_REUSEADDR, true).bind(port = 11002)
+
+    expect_fail(() => net.socket().bind(port = 11002))
 
     net.socket(net.AF_INET6).bind()
     net.socket(net.AF_INET6).bind("")
@@ -69,7 +98,13 @@ do {
     const port = 11005
 
     const server_sock = net.socket(net.AF_INET, net.SOCK_STREAM)
+
     assert server_sock.blocking
+    server_sock.blocking = false
+    assert ! server_sock.blocking
+    server_sock.blocking = true
+    assert server_sock.blocking
+
     assert server_sock.setsockopt(net.SOL_SOCKET, net.SO_REUSEADDR, true) == server_sock
     assert server_sock.bind("0.0.0.0", port) == server_sock
     assert server_sock.listen()              == server_sock
@@ -144,7 +179,7 @@ do {
     const send_sock = net.socket()
     assert send_sock.connect("localhost", port) == send_sock
 
-    assert send_sock.send("world")         == send_sock
+    assert send_sock.send(base.buffer("world")) == send_sock
 
     recv_thread.wait()
 
