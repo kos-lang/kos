@@ -44,6 +44,7 @@ do {
     expect_fail(() => sock.recvfrom(size = 0x1_0000_0000))
 
     expect_fail(() => sock.wait(-0.001))
+    expect_fail(() => sock.wait(-1))
 
     expect_fail(() => sock.send(123))
 
@@ -52,6 +53,7 @@ do {
     assert sock.setsockopt(net.SOL_SOCKET, net.SO_REUSEADDR, true) == sock
     assert sock.close() == sock
     expect_fail(() => sock.bind(port = 11000))
+    expect_fail(() => sock.wait(0.001))
 
     expect_fail(() => sock.bind.apply(void, []))
     expect_fail(() => sock.bind.apply(123, []))

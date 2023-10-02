@@ -1201,10 +1201,22 @@ static KOS_OBJ_ID kos_wait(KOS_CONTEXT ctx,
     if (timeout.type != KOS_NON_NUMERIC) {
         uint64_t tv_usec;
 
-        if (timeout.type == KOS_INTEGER_VALUE)
+        if (timeout.type == KOS_INTEGER_VALUE) {
+            if (timeout.u.i < 0 || timeout.u.i > 2147483647) {
+                KOS_raise_printf(ctx, "timeout_sec argument %" PRId64 " is out of range",
+                                 timeout.u.i);
+                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+            }
             tv_usec = (uint64_t)timeout.u.i * 1000000U;
-        else
+        }
+        else {
+            if (timeout.u.d < 0 || timeout.u.d > 2147483647.0) {
+                KOS_raise_printf(ctx, "timeout_sec argument %.6f is out of range",
+                                 timeout.u.d);
+                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+            }
             tv_usec = (uint64_t)floor(timeout.u.d * 1000000.0);
+        }
 
         memset(&time_value, 0, sizeof(time_value));
         time_value.tv_sec  = (TIME_FRAGMENT)(tv_usec / 1000000U);
