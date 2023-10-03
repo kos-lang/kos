@@ -329,7 +329,8 @@ static int get_address(KOS_CONTEXT        ctx,
         /* TODO AF_LOCAL */
 
         default:
-            assert(!"unexpected address family");
+            KOS_raise_printf(ctx, "unexpected address family %d\n", socket_holder->family);
+            error = KOS_ERROR_EXCEPTION;
             break;
     }
 
@@ -1089,8 +1090,9 @@ static KOS_OBJ_ID kos_recvfrom(KOS_CONTEXT ctx,
         /* TODO AF_LOCAL */
 
         default:
-            assert(!"unexpected address family");
-            break;
+            KOS_resume_context(ctx);
+            KOS_raise_printf(ctx, "unexpected address family %d\n", socket_holder->family);
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
     reset_last_error();
