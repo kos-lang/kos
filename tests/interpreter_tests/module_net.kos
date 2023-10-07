@@ -179,8 +179,12 @@ do {
 
         assert recv_sock.shutdown(net.SHUT_WR) == recv_sock
 
-        const b = recv_sock.recv(128)
-        assert typeof b == "buffer"
+        const b = base.buffer()
+        while b.size < 12 {
+            const br = recv_sock.recv(128, b)
+            assert typeof br == "buffer"
+            assert br == b
+        }
 
         assert recv_sock.shutdown(net.SHUT_RD) == recv_sock
         assert recv_sock.close()               == recv_sock
