@@ -65,58 +65,59 @@ do {
 # socket.getsockopt()
 
 do {
-    const sock = net.socket(type = net.SOCK_DGRAM)
+    const socktcp = net.socket(type = net.SOCK_STREAM)
+    const sockudp = net.socket(type = net.SOCK_DGRAM)
 
-    expect_fail(() => sock.getsockopt(~net.SOL_SOCKET, net.SO_REUSEADDR))
-    expect_fail(() => sock.getsockopt(net.SOL_SOCKET, ~net.SO_REUSEADDR))
-    expect_fail(() => sock.getsockopt("hello", net.SO_REUSEADDR))
-    expect_fail(() => sock.getsockopt(net.SOL_SOCKET, "hello"))
+    expect_fail(() => socktcp.getsockopt(~net.SOL_SOCKET, net.SO_REUSEADDR))
+    expect_fail(() => socktcp.getsockopt(net.SOL_SOCKET, ~net.SO_REUSEADDR))
+    expect_fail(() => socktcp.getsockopt("hello", net.SO_REUSEADDR))
+    expect_fail(() => socktcp.getsockopt(net.SOL_SOCKET, "hello"))
 
-    assert typeof sock.getsockopt(net.SOL_SOCKET, net.SO_BROADCAST) == "boolean"
-    assert typeof sock.getsockopt(net.SOL_SOCKET, net.SO_DEBUG)     == "boolean"
-    assert typeof sock.getsockopt(net.SOL_SOCKET, net.SO_DONTROUTE) == "boolean"
-    assert typeof sock.getsockopt(net.SOL_SOCKET, net.SO_KEEPALIVE) == "boolean"
-    assert typeof sock.getsockopt(net.SOL_SOCKET, net.SO_OOBINLINE) == "boolean"
-    assert typeof sock.getsockopt(net.SOL_SOCKET, net.SO_RCVBUF)    == "integer"
-    assert typeof sock.getsockopt(net.SOL_SOCKET, net.SO_RCVTIMEO)  == "float"
-    assert typeof sock.getsockopt(net.SOL_SOCKET, net.SO_REUSEADDR) == "boolean"
-    assert typeof sock.getsockopt(net.SOL_SOCKET, net.SO_REUSEPORT) == "boolean"
-    assert typeof sock.getsockopt(net.SOL_SOCKET, net.SO_SNDBUF)    == "integer"
-    assert typeof sock.getsockopt(net.SOL_SOCKET, net.SO_SNDTIMEO)  == "float"
+    assert typeof sockudp.getsockopt(net.SOL_SOCKET, net.SO_BROADCAST) == "boolean"
+    assert typeof socktcp.getsockopt(net.SOL_SOCKET, net.SO_DEBUG)     == "boolean"
+    assert typeof socktcp.getsockopt(net.SOL_SOCKET, net.SO_DONTROUTE) == "boolean"
+    assert typeof socktcp.getsockopt(net.SOL_SOCKET, net.SO_KEEPALIVE) == "boolean"
+    assert typeof socktcp.getsockopt(net.SOL_SOCKET, net.SO_OOBINLINE) == "boolean"
+    assert typeof socktcp.getsockopt(net.SOL_SOCKET, net.SO_RCVBUF)    == "integer"
+    assert typeof socktcp.getsockopt(net.SOL_SOCKET, net.SO_RCVTIMEO)  == "float"
+    assert typeof socktcp.getsockopt(net.SOL_SOCKET, net.SO_REUSEADDR) == "boolean"
+    assert typeof socktcp.getsockopt(net.SOL_SOCKET, net.SO_REUSEPORT) == "boolean"
+    assert typeof socktcp.getsockopt(net.SOL_SOCKET, net.SO_SNDBUF)    == "integer"
+    assert typeof socktcp.getsockopt(net.SOL_SOCKET, net.SO_SNDTIMEO)  == "float"
 }
 
 ##############################################################################
 # socket.setsockopt()
 
 do {
-    const sock = net.socket(type = net.SOCK_DGRAM)
+    const socktcp = net.socket(type = net.SOCK_STREAM)
+    const sockudp = net.socket(type = net.SOCK_DGRAM)
 
-    expect_fail(() => sock.setsockopt(~net.SOL_SOCKET, net.SO_REUSEADDR,  true))
-    expect_fail(() => sock.setsockopt(net.SOL_SOCKET,  ~net.SO_REUSEADDR, true))
-    expect_fail(() => sock.setsockopt("hello",         net.SO_REUSEADDR,  true))
-    expect_fail(() => sock.setsockopt(net.SOL_SOCKET,  "hello",           true))
-    expect_fail(() => sock.setsockopt(net.SOL_SOCKET,  net.SO_REUSEADDR,  "hello"))
-    expect_fail(() => sock.setsockopt(net.SOL_SOCKET,  net.SO_REUSEADDR,  92233720368547758090.0))
-    expect_fail(() => sock.setsockopt(net.SOL_SOCKET,  net.SO_RCVBUF,     "hello"))
-    expect_fail(() => sock.setsockopt(net.SOL_SOCKET,  net.SO_RCVBUF,     92233720368547758090.0))
-    expect_fail(() => sock.setsockopt(net.SOL_SOCKET,  net.SO_RCVTIMEO,   "hello"))
-    expect_fail(() => sock.setsockopt(net.SOL_SOCKET,  net.SO_RCVTIMEO,   92233720368547758090.0))
-    expect_fail(() => sock.setsockopt(net.SOL_SOCKET,  net.SO_RCVTIMEO,   -1))
-    expect_fail(() => sock.setsockopt(net.SOL_SOCKET,  net.SO_RCVTIMEO,   0x1_0000_0000_0000))
+    expect_fail(() => socktcp.setsockopt(~net.SOL_SOCKET, net.SO_REUSEADDR,  true))
+    expect_fail(() => socktcp.setsockopt(net.SOL_SOCKET,  ~net.SO_REUSEADDR, true))
+    expect_fail(() => socktcp.setsockopt("hello",         net.SO_REUSEADDR,  true))
+    expect_fail(() => socktcp.setsockopt(net.SOL_SOCKET,  "hello",           true))
+    expect_fail(() => socktcp.setsockopt(net.SOL_SOCKET,  net.SO_REUSEADDR,  "hello"))
+    expect_fail(() => socktcp.setsockopt(net.SOL_SOCKET,  net.SO_REUSEADDR,  9223372036854775809.0))
+    expect_fail(() => socktcp.setsockopt(net.SOL_SOCKET,  net.SO_RCVBUF,     "hello"))
+    expect_fail(() => socktcp.setsockopt(net.SOL_SOCKET,  net.SO_RCVBUF,     9223372036854775809.0))
+    expect_fail(() => socktcp.setsockopt(net.SOL_SOCKET,  net.SO_RCVTIMEO,   "hello"))
+    expect_fail(() => socktcp.setsockopt(net.SOL_SOCKET,  net.SO_RCVTIMEO,   -1))
+    expect_fail(() => socktcp.setsockopt(net.SOL_SOCKET,  net.SO_RCVTIMEO,   0x1_0000_0000_0000))
 
-    sock.setsockopt(net.SOL_SOCKET, net.SO_BROADCAST, true)
-    sock.setsockopt(net.SOL_SOCKET, net.SO_DEBUG,     true)
-    sock.setsockopt(net.SOL_SOCKET, net.SO_DONTROUTE, true)
-    sock.setsockopt(net.SOL_SOCKET, net.SO_KEEPALIVE, true)
-    sock.setsockopt(net.SOL_SOCKET, net.SO_OOBINLINE, true)
-    sock.setsockopt(net.SOL_SOCKET, net.SO_RCVBUF,    4096)
-    sock.setsockopt(net.SOL_SOCKET, net.SO_RCVTIMEO,  10)
-    sock.setsockopt(net.SOL_SOCKET, net.SO_RCVTIMEO,  10.0)
-    sock.setsockopt(net.SOL_SOCKET, net.SO_REUSEADDR, true)
-    sock.setsockopt(net.SOL_SOCKET, net.SO_REUSEPORT, true)
-    sock.setsockopt(net.SOL_SOCKET, net.SO_SNDBUF,    4096)
-    sock.setsockopt(net.SOL_SOCKET, net.SO_SNDTIMEO,  10)
-    sock.setsockopt(net.SOL_SOCKET, net.SO_SNDTIMEO,  10.0)
+    sockudp.setsockopt(net.SOL_SOCKET, net.SO_BROADCAST, true)
+    socktcp.setsockopt(net.SOL_SOCKET, net.SO_DEBUG,     true)
+    socktcp.setsockopt(net.SOL_SOCKET, net.SO_DONTROUTE, true)
+    socktcp.setsockopt(net.SOL_SOCKET, net.SO_KEEPALIVE, true)
+    socktcp.setsockopt(net.SOL_SOCKET, net.SO_OOBINLINE, true)
+    socktcp.setsockopt(net.SOL_SOCKET, net.SO_RCVBUF,    4096)
+    socktcp.setsockopt(net.SOL_SOCKET, net.SO_RCVTIMEO,  10)
+    socktcp.setsockopt(net.SOL_SOCKET, net.SO_RCVTIMEO,  10.0)
+    socktcp.setsockopt(net.SOL_SOCKET, net.SO_REUSEADDR, true)
+    socktcp.setsockopt(net.SOL_SOCKET, net.SO_REUSEPORT, true)
+    socktcp.setsockopt(net.SOL_SOCKET, net.SO_SNDBUF,    4096)
+    socktcp.setsockopt(net.SOL_SOCKET, net.SO_SNDTIMEO,  10)
+    socktcp.setsockopt(net.SOL_SOCKET, net.SO_SNDTIMEO,  10.0)
 }
 
 ##############################################################################
