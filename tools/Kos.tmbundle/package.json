@@ -1,0 +1,20 @@
+{
+     "name": "Kos",
+     "version": "1.0.0",
+     "engines": {
+         "vscode": ">=0.9.0-pre.1"
+     },
+     "publisher": "Chris Dragan",
+     "contributes": {
+         "languages": [{
+             "id": "kos",
+             "aliases": ["Kos", "kos"],
+             "extensions": [".kos"]
+         }],
+         "grammars": [{
+             "language": "kos",
+             "scopeName": "source.kos",
+             "path": "./Syntaxes/Kos.tmLanguage"
+         }]
+     }
+}
