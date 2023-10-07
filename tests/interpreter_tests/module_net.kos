@@ -319,7 +319,7 @@ do {
 ##############################################################################
 # UDP sendto/recvfrom with IPv6
 
-do {
+if ipv6 {
     const sport = 11009
     const rport = 11010
 
