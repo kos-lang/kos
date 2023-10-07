@@ -44,6 +44,7 @@ Documentation
 To find out more about Kos, follow these links:
 
 * [Quick Start](doc/quickstart.md)
+* [Syntax Highlighting](doc/highlighting.md)
 * [Tutorial](doc/tutorial.md)
 * [Library Reference](doc/modules.md)
 * [How to compile Kos from source](doc/building.md)
