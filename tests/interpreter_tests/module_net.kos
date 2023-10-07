@@ -184,13 +184,14 @@ do {
         assert recv_sock.shutdown(net.SHUT_RD) == recv_sock
         assert recv_sock.close()               == recv_sock
 
-        assert b.size == 5
-        assert base.string(b) == "hello"
+        assert b.size == 12
+        assert base.string(b) == "hello, world"
     }
 
     const send_sock = net.socket(net.AF_INET, net.SOCK_STREAM)
     assert send_sock.connect("localhost", port) == send_sock
     assert send_sock.send("hello")              == send_sock
+    assert send_sock.write(", ", "world")       == send_sock
 
     recv_thread.wait()
 
