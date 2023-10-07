@@ -66,11 +66,16 @@ collect_package()
     else
         mkdir -p "$PKGDIR_LOCAL"/bin
         mkdir -p "$PKGDIR_LOCAL"/share/kos/modules
-        ln "$BUILDDIR_LOCAL"/share/kos/modules/* "$PKGDIR_LOCAL"/share/kos/modules/
         if [ "$UNAME" = "Darwin" ]; then
+            ln "$BUILDDIR_LOCAL"/share/kos/modules/*.kos "$PKGDIR_LOCAL"/share/kos/modules/
+            local FILE
+            for FILE in "$BUILDDIR_LOCAL"/share/kos/modules/*.dylib; do
+                lipo -create -output "$PKGDIR_LOCAL"/share/kos/modules/"$(basename "$FILE")" "$FILE" "$BUILDDIR_LOCAL"-arm64/share/kos/modules/"$(basename "$FILE")"
+            done
             lipo -create -output "$PKGDIR_LOCAL"/bin/kos "$BUILDDIR_LOCAL"/interpreter/kos "$BUILDDIR_LOCAL"-arm64/interpreter/kos
         else
             ln "$BUILDDIR_LOCAL"/interpreter/kos "$PKGDIR_LOCAL"/bin/
+            ln "$BUILDDIR_LOCAL"/share/kos/modules/* "$PKGDIR_LOCAL"/share/kos/modules/
         fi
     fi
 }
