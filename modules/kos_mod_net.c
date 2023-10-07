@@ -43,6 +43,10 @@
 #   include <unistd.h>
 #endif
 
+#if !defined(SO_REUSEPORT) && !(defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__))
+#define SO_REUSEPORT (SO_REUSEADDR + 0x10000)
+#endif
+
 #ifdef _WIN32
 typedef SOCKET         KOS_SOCKET;
 typedef ADDRESS_FAMILY KOS_ADDR_FAMILY;
@@ -1997,11 +2001,15 @@ static KOS_OBJ_ID kos_getsockopt(KOS_CONTEXT ctx,
             case SO_OOBINLINE:
                 /* fall through */
             case SO_REUSEADDR:
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
-                /* fall through */
-            case SO_REUSEPORT:
-#endif
                 value.o = getsockopt_bool(ctx, socket_holder, (int)level, (int)option);
+                break;
+
+            case SO_REUSEPORT:
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+                value.o = getsockopt_bool(ctx, socket_holder, (int)level, (int)option);
+#else
+                value.o = KOS_FALSE;
+#endif
                 break;
 
             /* TODO
@@ -2027,7 +2035,7 @@ static KOS_OBJ_ID kos_getsockopt(KOS_CONTEXT ctx,
     }
     else {
         KOS_raise_printf(ctx, "unknown level %" PRId64, level);
-        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        value.o = KOS_BADPTR;
     }
 
     if (value.o == KOS_BADPTR)
@@ -2293,11 +2301,14 @@ static KOS_OBJ_ID kos_setsockopt(KOS_CONTEXT ctx,
             case SO_OOBINLINE:
                 /* fall through */
             case SO_REUSEADDR:
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
-                /* fall through */
-            case SO_REUSEPORT:
-#endif
                 TRY(setsockopt_bool(ctx, socket_holder, (int)level, (int)option, value.o));
+                break;
+
+            case SO_REUSEPORT:
+                /* Ignore on OSes which don't support this */
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+                TRY(setsockopt_bool(ctx, socket_holder, (int)level, (int)option, value.o));
+#endif
                 break;
 
             /* TODO
@@ -2481,9 +2492,7 @@ KOS_INIT_MODULE(net, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SO_RCVBUF",    SO_RCVBUF);
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SO_RCVTIMEO",  SO_RCVTIMEO);
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SO_REUSEADDR", SO_REUSEADDR);
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SO_REUSEPORT", SO_REUSEPORT);
-#endif
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SO_SNDBUF",    SO_SNDBUF);
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "SO_SNDTIMEO",  SO_SNDTIMEO);
 
