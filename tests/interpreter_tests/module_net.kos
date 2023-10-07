@@ -106,7 +106,7 @@ do {
     expect_fail(() => socktcp.setsockopt(net.SOL_SOCKET,  net.SO_RCVTIMEO,   0x1_0000_0000_0000))
 
     sockudp.setsockopt(net.SOL_SOCKET, net.SO_BROADCAST, true)
-    socktcp.setsockopt(net.SOL_SOCKET, net.SO_DEBUG,     true)
+    socktcp.setsockopt(net.SOL_SOCKET, net.SO_DEBUG,     false)
     socktcp.setsockopt(net.SOL_SOCKET, net.SO_DONTROUTE, true)
     socktcp.setsockopt(net.SOL_SOCKET, net.SO_KEEPALIVE, true)
     socktcp.setsockopt(net.SOL_SOCKET, net.SO_OOBINLINE, true)
