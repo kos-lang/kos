@@ -78,6 +78,7 @@
 		<dict>
 			<key>begin</key>
 			<string>\?</string>
+	<!--
 			<key>beginCaptures</key>
 			<dict>
 				<key>0</key>
@@ -86,8 +87,10 @@
 					<string>keyword.operator.ternary.kos</string>
 				</dict>
 			</dict>
+	-->
 			<key>end</key>
-			<string>([^:"'`\[\]{}()]*)(:)</string>
+			<string>([^:"'`\[\]{}(\)]*)(:)</string>
+	<!--
 			<key>endCaptures</key>
 			<dict>
 				<key>1</key>
@@ -106,6 +109,7 @@
 					<string>keyword.operator.ternary.kos</string>
 				</dict>
 			</dict>
+	-->
 			<key>name</key>
 			<string>meta.ternary-if.kos</string>
 			<key>patterns</key>
@@ -304,14 +308,14 @@
 				<dict>
 					<key>match</key>
 					<string>(?x)
-        				(?&lt;!\w|\$)							    # Ensure word boundry
-                        [+-]?                                   # Optional sign
-        				(?&gt;
-        					(0|[1-9][0-9]*)(\.[0-9]*)?		    # 0 or 1 or 1. or 1.0
-        					([eEpP][+-]?[0-9]+)?				# Exponent
-        				)
-        				(?!\w)									# Ensure word boundry
-        			</string>
+					(?&lt;!\w|\$)							    # Ensure word boundary
+					[+-]?                                   # Optional sign
+					(?&gt;
+						(0|[1-9][0-9]*)(\.[0-9]*)?		    # 0 or 1 or 1. or 1.0
+						([eEpP][+-]?[0-9]+)?				# Exponent
+					)
+					(?!\w)									# Ensure word boundary
+				</string>
 					<key>name</key>
 					<string>constant.numeric.decimal.kos</string>
 				</dict>
