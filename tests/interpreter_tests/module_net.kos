@@ -65,7 +65,7 @@ do {
 # socket.getsockopt()
 
 do {
-    const sock = net.socket()
+    const sock = net.socket(type = net.SOCK_DGRAM)
 
     expect_fail(() => sock.getsockopt(~net.SOL_SOCKET, net.SO_REUSEADDR))
     expect_fail(() => sock.getsockopt(net.SOL_SOCKET, ~net.SO_REUSEADDR))
@@ -89,18 +89,18 @@ do {
 # socket.setsockopt()
 
 do {
-    const sock = net.socket()
+    const sock = net.socket(type = net.SOCK_DGRAM)
 
     expect_fail(() => sock.setsockopt(~net.SOL_SOCKET, net.SO_REUSEADDR,  true))
     expect_fail(() => sock.setsockopt(net.SOL_SOCKET,  ~net.SO_REUSEADDR, true))
     expect_fail(() => sock.setsockopt("hello",         net.SO_REUSEADDR,  true))
     expect_fail(() => sock.setsockopt(net.SOL_SOCKET,  "hello",           true))
     expect_fail(() => sock.setsockopt(net.SOL_SOCKET,  net.SO_REUSEADDR,  "hello"))
-    expect_fail(() => sock.setsockopt(net.SOL_SOCKET,  net.SO_REUSEADDR,  9223372036854775809.0))
+    expect_fail(() => sock.setsockopt(net.SOL_SOCKET,  net.SO_REUSEADDR,  92233720368547758090.0))
     expect_fail(() => sock.setsockopt(net.SOL_SOCKET,  net.SO_RCVBUF,     "hello"))
-    expect_fail(() => sock.setsockopt(net.SOL_SOCKET,  net.SO_RCVBUF,     9223372036854775809.0))
+    expect_fail(() => sock.setsockopt(net.SOL_SOCKET,  net.SO_RCVBUF,     92233720368547758090.0))
     expect_fail(() => sock.setsockopt(net.SOL_SOCKET,  net.SO_RCVTIMEO,   "hello"))
-    expect_fail(() => sock.setsockopt(net.SOL_SOCKET,  net.SO_RCVTIMEO,   9223372036854775809.0))
+    expect_fail(() => sock.setsockopt(net.SOL_SOCKET,  net.SO_RCVTIMEO,   92233720368547758090.0))
     expect_fail(() => sock.setsockopt(net.SOL_SOCKET,  net.SO_RCVTIMEO,   -1))
     expect_fail(() => sock.setsockopt(net.SOL_SOCKET,  net.SO_RCVTIMEO,   0x1_0000_0000_0000))
 
