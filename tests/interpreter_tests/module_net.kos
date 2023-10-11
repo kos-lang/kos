@@ -78,12 +78,14 @@ do {
     assert typeof socktcp.getsockopt(net.SOL_SOCKET, net.SO_DONTROUTE) == "boolean"
     assert typeof socktcp.getsockopt(net.SOL_SOCKET, net.SO_KEEPALIVE) == "boolean"
     assert typeof socktcp.getsockopt(net.SOL_SOCKET, net.SO_OOBINLINE) == "boolean"
-    assert typeof socktcp.getsockopt(net.SOL_SOCKET, net.SO_RCVBUF)    == "integer"
-    assert typeof socktcp.getsockopt(net.SOL_SOCKET, net.SO_RCVTIMEO)  == "float"
     assert typeof socktcp.getsockopt(net.SOL_SOCKET, net.SO_REUSEADDR) == "boolean"
     assert typeof socktcp.getsockopt(net.SOL_SOCKET, net.SO_REUSEPORT) == "boolean"
-    assert typeof socktcp.getsockopt(net.SOL_SOCKET, net.SO_SNDBUF)    == "integer"
-    assert typeof socktcp.getsockopt(net.SOL_SOCKET, net.SO_SNDTIMEO)  == "float"
+    if os.sysname != "Haiku" {
+        assert typeof socktcp.getsockopt(net.SOL_SOCKET, net.SO_RCVBUF)    == "integer"
+        assert typeof socktcp.getsockopt(net.SOL_SOCKET, net.SO_RCVTIMEO)  == "float"
+        assert typeof socktcp.getsockopt(net.SOL_SOCKET, net.SO_SNDBUF)    == "integer"
+        assert typeof socktcp.getsockopt(net.SOL_SOCKET, net.SO_SNDTIMEO)  == "float"
+    }
 }
 
 ##############################################################################
@@ -110,14 +112,16 @@ do {
     socktcp.setsockopt(net.SOL_SOCKET, net.SO_DONTROUTE, true)
     socktcp.setsockopt(net.SOL_SOCKET, net.SO_KEEPALIVE, true)
     socktcp.setsockopt(net.SOL_SOCKET, net.SO_OOBINLINE, true)
-    socktcp.setsockopt(net.SOL_SOCKET, net.SO_RCVBUF,    4096)
-    socktcp.setsockopt(net.SOL_SOCKET, net.SO_RCVTIMEO,  10)
-    socktcp.setsockopt(net.SOL_SOCKET, net.SO_RCVTIMEO,  10.0)
     socktcp.setsockopt(net.SOL_SOCKET, net.SO_REUSEADDR, true)
     socktcp.setsockopt(net.SOL_SOCKET, net.SO_REUSEPORT, true)
-    socktcp.setsockopt(net.SOL_SOCKET, net.SO_SNDBUF,    4096)
-    socktcp.setsockopt(net.SOL_SOCKET, net.SO_SNDTIMEO,  10)
-    socktcp.setsockopt(net.SOL_SOCKET, net.SO_SNDTIMEO,  10.0)
+    if os.sysname != "Haiku" {
+        socktcp.setsockopt(net.SOL_SOCKET, net.SO_RCVBUF,    4096)
+        socktcp.setsockopt(net.SOL_SOCKET, net.SO_RCVTIMEO,  10)
+        socktcp.setsockopt(net.SOL_SOCKET, net.SO_RCVTIMEO,  10.0)
+        socktcp.setsockopt(net.SOL_SOCKET, net.SO_SNDBUF,    4096)
+        socktcp.setsockopt(net.SOL_SOCKET, net.SO_SNDTIMEO,  10)
+        socktcp.setsockopt(net.SOL_SOCKET, net.SO_SNDTIMEO,  10.0)
+    }
 }
 
 ##############################################################################
