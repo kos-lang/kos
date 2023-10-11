@@ -3165,7 +3165,8 @@ The returned object contains the following properties:
  * device     - array containing major and minor device numbers if the object is a device
  * atime      - last access time, in microseconds since Epoch
  * mtime      - last modification time, in microseconds since Epoch
- * ctime      - creation time, in microseconds since Epoch
+ * ctime      - last status change time, in microseconds since Epoch
+ * btime      - creation time, in microseconds since Epoch
 
 The precision of time properties is OS-dependent.  For example,
 on POSIX-compatible OS-es these properties have 1 second precision.
@@ -3429,7 +3430,8 @@ The property is an object containing the following properties:
  * device     - array containing major and minor device numbers if the object is a device
  * atime      - last access time, in microseconds since Epoch
  * mtime      - last modification time, in microseconds since Epoch
- * ctime      - creation time, in microseconds since Epoch
+ * ctime      - last status change time, in microseconds since Epoch
+ * btime      - creation time, in microseconds since Epoch
 
 The precision of time properties is OS-dependent.  For example,
 on POSIX-compatible OS-es these properties have 1 second precision.

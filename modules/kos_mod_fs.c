@@ -153,7 +153,8 @@ static int64_t get_epoch_time_us(const FILETIME *time)
  *  * device     - array containing major and minor device numbers if the object is a device
  *  * atime      - last access time, in microseconds since Epoch
  *  * mtime      - last modification time, in microseconds since Epoch
- *  * ctime      - creation time, in microseconds since Epoch
+ *  * ctime      - last status change time, in microseconds since Epoch
+ *  * btime      - creation time, in microseconds since Epoch
  *
  * The precision of time properties is OS-dependent.  For example,
  * on POSIX-compatible OS-es these properties have 1 second precision.
@@ -227,7 +228,8 @@ static KOS_OBJ_ID info(KOS_CONTEXT ctx,
         SET_INT_PROPERTY("size",  ((uint64_t)(uint32_t)attr.nFileSizeHigh << 32) | (uint32_t)attr.nFileSizeLow);
         SET_INT_PROPERTY("atime", get_epoch_time_us(&attr.ftLastAccessTime));
         SET_INT_PROPERTY("mtime", get_epoch_time_us(&attr.ftLastWriteTime));
-        SET_INT_PROPERTY("ctime", get_epoch_time_us(&attr.ftCreationTime));
+        SET_INT_PROPERTY("ctime", get_epoch_time_us(&attr.ftLastWriteTime));
+        SET_INT_PROPERTY("btime", get_epoch_time_us(&attr.ftCreationTime));
 
         if (attr.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
             TRY(KOS_set_property(ctx, data.o, KOS_CONST_ID(str_type), KOS_CONST_ID(str_type_dir)));

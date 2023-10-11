@@ -613,6 +613,19 @@ LIB_FUNCTION KOS_get_library_function(KOS_SHARED_LIB lib, const char *func_name,
             TRY(KOS_set_property(ctx, info.o, KOS_CONST_ID(str_name), obj_id)); \
         } while (0)
 
+static int64_t get_epoch_time_us(const struct timespec* ts)
+{
+    return (int64_t)ts->tv_sec * 1000000 +
+           (int64_t)ts->tv_nsec / 1000;
+}
+
+#if defined(__APPLE__)
+#   define st_atim     st_atimespec
+#   define st_mtim     st_mtimespec
+#   define st_ctim     st_ctimespec
+#   define st_birthtim st_birthtimespec
+#endif
+
 KOS_OBJ_ID kos_stat(KOS_CONTEXT ctx, struct stat *st)
 {
     KOS_LOCAL info;
@@ -643,9 +656,14 @@ KOS_OBJ_ID kos_stat(KOS_CONTEXT ctx, struct stat *st)
     SET_INT_PROPERTY("size",       st->st_size);
     SET_INT_PROPERTY("blocks",     st->st_blocks);
     SET_INT_PROPERTY("block_size", st->st_blksize);
-    SET_INT_PROPERTY("atime",      st->st_atime * (int64_t)1000000);
-    SET_INT_PROPERTY("mtime",      st->st_mtime * (int64_t)1000000);
-    SET_INT_PROPERTY("ctime",      st->st_ctime * (int64_t)1000000);
+    SET_INT_PROPERTY("atime",      get_epoch_time_us(&st->st_atim));
+    SET_INT_PROPERTY("mtime",      get_epoch_time_us(&st->st_mtim));
+    SET_INT_PROPERTY("ctime",      get_epoch_time_us(&st->st_ctim));
+#if defined(__linux__) || (defined(__APPLE__) && ! defined(_DARWIN_FEATURE_64_BIT_INODE))
+    SET_INT_PROPERTY("btime",      0);
+#else
+    SET_INT_PROPERTY("btime",      get_epoch_time_us(&st->st_birthtim));
+#endif
 
 #if !defined(__HAIKU__)
     if (S_ISCHR(st->st_mode) || S_ISBLK(st->st_mode)) {
