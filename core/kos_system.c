@@ -626,6 +626,10 @@ static int64_t get_epoch_time_us(const struct timespec* ts)
 #   define st_birthtim st_birthtimespec
 #endif
 
+#if defined(__HAIKU__)
+#   define st_birthtim st_crtim
+#endif
+
 KOS_OBJ_ID kos_stat(KOS_CONTEXT ctx, struct stat *st)
 {
     KOS_LOCAL info;
