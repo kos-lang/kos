@@ -360,14 +360,14 @@ static int add_address_desc(KOS_CONTEXT             ctx,
                                  TO_SMALL_INT(ntohs(addr->inet.sin_port))));
             {
                 char     buf[16];
-                uint32_t inet_addr = ntohl(addr->inet.sin_addr.s_addr);
+                uint32_t ipv4_addr = ntohl(addr->inet.sin_addr.s_addr);
                 unsigned len;
 
                 len = (unsigned)snprintf(buf, sizeof(buf), "%u.%u.%u.%u",
-                                         (uint8_t)(inet_addr >> 24),
-                                         (uint8_t)(inet_addr >> 16),
-                                         (uint8_t)(inet_addr >> 8),
-                                         (uint8_t)inet_addr);
+                                         (uint8_t)(ipv4_addr >> 24),
+                                         (uint8_t)(ipv4_addr >> 16),
+                                         (uint8_t)(ipv4_addr >> 8),
+                                         (uint8_t)ipv4_addr);
 
                 val.o = KOS_new_string(ctx, buf, len);
                 TRY_OBJID(val.o);
@@ -1390,7 +1390,7 @@ cleanup:
     return error ? KOS_BADPTR : this_.o;
 }
 
-static int send_loop(KOS_SOCKET              socket,
+static int send_loop(KOS_SOCKET              socket_fd,
                      const char             *data,
                      DATA_LEN                size,
                      int                     flags,
@@ -1406,16 +1406,16 @@ static int send_loop(KOS_SOCKET              socket,
         int            nfds = 0;
 #else
         struct timeval timeout;
-        int            nfds = socket + 1;
+        int            nfds = socket_fd + 1;
 #endif
         fd_set         fds;
 
         reset_last_error();
 
         if (addr)
-            num_sent = sendto(socket, data, size, flags, &addr->addr, addr_len);
+            num_sent = sendto(socket_fd, data, size, flags, &addr->addr, addr_len);
         else
-            num_sent = send(socket, data, size, flags);
+            num_sent = send(socket_fd, data, size, flags);
 
         if ((DATA_LEN)num_sent == size)
             break;
@@ -1443,7 +1443,7 @@ static int send_loop(KOS_SOCKET              socket,
         reset_last_error();
 
         FD_ZERO(&fds);
-        FD_SET(socket, &fds);
+        FD_SET(socket_fd, &fds);
 
         timeout.tv_sec  = (TIME_FRAGMENT)send_timeout_sec;
         timeout.tv_usec = 0;
