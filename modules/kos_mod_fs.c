@@ -44,7 +44,7 @@ static const KOS_CONVERT path_arg[2] = {
     KOS_DEFINE_TAIL_ARG()
 };
 
-static const KOS_CONVERT info_args[3] = {
+static const KOS_CONVERT stat_args[3] = {
     KOS_DEFINE_MANDATORY_ARG(str_filename         ),
     KOS_DEFINE_OPTIONAL_ARG( str_follow, KOS_FALSE),
     KOS_DEFINE_TAIL_ARG()
@@ -125,9 +125,9 @@ static int64_t get_epoch_time_us(const FILETIME *time)
 }
 #endif
 
-/* @item fs info()
+/* @item fs stat()
  *
- *     info(filename, follow = false)
+ *     stat(filename, follow = false)
  *
  * Returns object containing information about the object pointed by `filename`.
  *
@@ -165,9 +165,9 @@ static int64_t get_epoch_time_us(const FILETIME *time)
  * The `device` property is only produced for device objects on some
  * OS-es, for example Linux, *BSD, or MacOSX.
  */
-static KOS_OBJ_ID info(KOS_CONTEXT ctx,
-                       KOS_OBJ_ID  this_obj,
-                       KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID get_stat(KOS_CONTEXT ctx,
+                           KOS_OBJ_ID  this_obj,
+                           KOS_OBJ_ID  args_obj)
 {
     KOS_LOCAL  data;
     KOS_OBJ_ID filename_obj = KOS_array_read(ctx, args_obj, 0);
@@ -1005,7 +1005,7 @@ int kos_module_fs_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     KOS_init_local_with(ctx, &module, module_obj);
 
     TRY_ADD_FUNCTION(ctx,  module.o, "file_exists", file_exists, filename_arg);
-    TRY_ADD_FUNCTION(ctx,  module.o, "info",        info,        info_args);
+    TRY_ADD_FUNCTION(ctx,  module.o, "stat",        get_stat,    stat_args);
     TRY_ADD_FUNCTION(ctx,  module.o, "remove",      kos_remove,  filename_arg);
     TRY_ADD_FUNCTION(ctx,  module.o, "cwd",         cwd,         KOS_NULL);
     TRY_ADD_FUNCTION(ctx,  module.o, "tempdir",     tempdir,     KOS_NULL);

@@ -44,14 +44,14 @@ do {
 }
 
 ##############################################################################
-# fs.info()
+# fs.stat()
 
 do {
-    const name = "./__fs_info"
+    const name = "./__fs_stat"
     fs.remove(name)
     assert ! fs.file_exists(name)
 
-    expect_fail(() => fs.info(name))
+    expect_fail(() => fs.stat(name))
 
     const time_before = datetime.now()
 
@@ -59,7 +59,7 @@ do {
         base.buffer(5001) -> f.write
     }
 
-    const info = fs.info(name)
+    const info = fs.stat(name)
 
     const time_after = datetime.now()
 
@@ -88,7 +88,7 @@ do {
 
     assert fs.remove(name)
     assert ! fs.file_exists(name)
-    expect_fail(() => fs.info(name))
+    expect_fail(() => fs.stat(name))
 }
 
 ##############################################################################
@@ -109,7 +109,7 @@ do {
     fs.remove(file_inner)
     fs.rmdir(dir_inner)
     fs.rmdir(dir_outer)
-    expect_fail(() => fs.info(dir_outer))
+    expect_fail(() => fs.stat(dir_outer))
 
     expect_fail(() => fs.mkdir(dir_inner))
     expect_fail(() => fs.mkdir(dir_inner, false))
@@ -117,14 +117,14 @@ do {
     const actual_path = fs.mkdir(dir_inner, true)
     assert actual_path == dir_inner
 
-    assert fs.info(dir_outer).type == "directory"
-    assert fs.info(dir_inner).type == "directory"
+    assert fs.stat(dir_outer).type == "directory"
+    assert fs.stat(dir_inner).type == "directory"
 
     with const f = io.create(file_inner) {
         f.print("Hello, Kos!")
     }
 
-    assert fs.info(file_inner).type == "file"
+    assert fs.stat(file_inner).type == "file"
 
     expect_fail(() => fs.rmdir(dir_outer))
     expect_fail(() => fs.rmdir(dir_inner))
@@ -139,7 +139,7 @@ do {
     assert fs.rmdir(dir_outer) == true
     assert fs.rmdir(dir_outer) == false
 
-    expect_fail(() => fs.info(dir_outer))
+    expect_fail(() => fs.stat(dir_outer))
 }
 
 do {
@@ -173,5 +173,5 @@ do {
 
 do {
     assert typeof fs.tempdir() == "string"
-    assert fs.info(fs.tempdir() + "/").type == "directory"
+    assert fs.stat(fs.tempdir() + "/").type == "directory"
 }

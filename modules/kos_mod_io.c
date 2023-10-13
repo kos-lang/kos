@@ -1152,9 +1152,9 @@ static int64_t get_epoch_time_us(const LARGE_INTEGER *time)
 }
 #endif
 
-/* @item io file.prototype.info
+/* @item io file.prototype.stat
  *
- *     file.prototype.info
+ *     file.prototype.stat
  *
  * A read-only property which returns information about the file.
  *
@@ -1188,7 +1188,7 @@ static int64_t get_epoch_time_us(const LARGE_INTEGER *time)
  * The `device` property is only produced for device objects on some
  * OS-es, for example Linux, *BSD, or MacOSX.
  */
-static KOS_OBJ_ID get_file_info(KOS_CONTEXT ctx,
+static KOS_OBJ_ID get_file_stat(KOS_CONTEXT ctx,
                                 KOS_OBJ_ID  this_obj,
                                 KOS_OBJ_ID  args_obj)
 {
@@ -1897,7 +1897,7 @@ int kos_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "eof",       get_file_eof,     KOS_NULL);
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "error",     get_file_error,   KOS_NULL);
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "fd",        get_file_fd,      KOS_NULL);
-    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "info",      get_file_info,    KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "stat",      get_file_stat,    KOS_NULL);
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "path",      get_file_path,    KOS_NULL);
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "position",  get_file_pos,     KOS_NULL);
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "size",      get_file_size,    KOS_NULL);
