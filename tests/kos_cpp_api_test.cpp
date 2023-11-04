@@ -31,8 +31,10 @@ class test_class {
 
 void throw_string(const std::string& str)
 {
+#if KOS_USE_EXCEPTIONS
     if (!str.empty())
         throw std::runtime_error(str);
+#endif
 }
 
 #define TEST(test) do { if ( ! (test)) { std::cout << "Failed: line " << __LINE__ << ": " << #test "\n"; return 1; } } while (0)
@@ -74,6 +76,7 @@ static int main_inner(kos::context ctx)
         TEST(a.type() == OBJ_BUFFER);
     }
 
+#if KOS_USE_EXCEPTIONS
     {
         bool exception = false;
         try {
@@ -143,6 +146,7 @@ static int main_inner(kos::context ctx)
         }
         TEST(exception);
     }
+#endif
 
     {
         kos::array a = ctx.new_array(2);
@@ -152,6 +156,7 @@ static int main_inner(kos::context ctx)
         TEST(static_cast<int>(a2[0]) == 100);
     }
 
+#if KOS_USE_EXCEPTIONS
     {
         bool exception = false;
         try {
@@ -177,6 +182,7 @@ static int main_inner(kos::context ctx)
         }
         TEST(exception);
     }
+#endif
 
     {
         kos::object o = ctx.new_object();
@@ -185,6 +191,7 @@ static int main_inner(kos::context ctx)
         TEST(static_cast<int>(o2["a"]) == 24);
     }
 
+#if KOS_USE_EXCEPTIONS
     {
         bool exception = false;
         try {
@@ -210,6 +217,7 @@ static int main_inner(kos::context ctx)
         }
         TEST(exception);
     }
+#endif
 
     {
         const std::string a = from_object_ptr(ctx, to_object_ptr(ctx, "abc"));
@@ -357,6 +365,7 @@ static int main_inner(kos::context ctx)
             TEST(a12 == 12);
         }
 
+#if KOS_USE_EXCEPTIONS
         /* Test insufficient number of args */
         {
             bool exception = false;
@@ -369,6 +378,7 @@ static int main_inner(kos::context ctx)
             }
             TEST(exception);
         }
+#endif
 
         /* Set up default args and argument map for testing */
         {
@@ -452,6 +462,7 @@ static int main_inner(kos::context ctx)
             TEST(a101 == 101);
         }
 
+#if KOS_USE_EXCEPTIONS
         /* Test named args - missing non-default arg */
         {
             kos::object args = ctx.new_object();
@@ -468,6 +479,7 @@ static int main_inner(kos::context ctx)
             }
             TEST(exception);
         }
+#endif
 
         /* Lookup invalid arg index */
         TEST(IS_BAD_PTR(KOS_get_named_arg(ctx, add, 3)));
@@ -588,6 +600,7 @@ static int main_inner(kos::context ctx)
 #endif
     }
 
+#if KOS_USE_EXCEPTIONS
     {
         bool exception = false;
         try {
@@ -624,6 +637,7 @@ static int main_inner(kos::context ctx)
         }
         TEST(exception);
     }
+#endif
 
     {
         kos::string name = to_object_ptr(ctx, "my_global");
@@ -640,6 +654,7 @@ static int main_inner(kos::context ctx)
         TEST(value == 42);
     }
 
+#if KOS_USE_EXCEPTIONS
     /* Test signal_error() */
     {
         KOS_DECLARE_STATIC_CONST_STRING(str_test, "test");
@@ -653,6 +668,7 @@ static int main_inner(kos::context ctx)
             TEST(std::string(e.what()) == "test");
         }
     }
+#endif
 
     /* Test context ctor */
     {
@@ -666,6 +682,7 @@ static int main_inner(kos::context ctx)
         TEST(hstr == str);
     }
 
+#if KOS_USE_EXCEPTIONS
     /* Test check_error(obj) */
     {
         kos::array a = ctx.new_array(0);
@@ -678,6 +695,7 @@ static int main_inner(kos::context ctx)
         }
         TEST(exception);
     }
+#endif
 
     return 0;
 }
@@ -687,6 +705,7 @@ int main()
     kos::instance inst;
     kos::context  ctx(inst);
 
+#if KOS_USE_EXCEPTIONS
     try {
         return main_inner(ctx);
     }
@@ -694,4 +713,7 @@ int main()
         std::cout << "exception: " << e.what() << "\n";
         return 1;
     }
+#else
+    return main_inner(ctx);
+#endif
 }

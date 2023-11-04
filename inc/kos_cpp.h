@@ -238,13 +238,20 @@ class instance {
             KOS_CONTEXT ctx;
 
             int error = KOS_instance_init(&inst_, flags, &ctx);
-            if (error)
+            if (error) {
+#if KOS_USE_EXCEPTIONS
                 throw std::runtime_error("failed to initialize Kos instance");
+#else
+                return;
+#endif
+            }
 
             error = KOS_modules_init(ctx);
             if (error) {
                 KOS_instance_destroy(&inst_);
+#if KOS_USE_EXCEPTIONS
                 throw std::runtime_error("failed to initialize Kos modules");
+#endif
             }
         }
 
@@ -265,7 +272,11 @@ class instance {
         instance(const instance&);
         instance& operator=(const instance&);
 
+#if KOS_CPP11
+        KOS_INSTANCE inst_ = { };
+#else
         KOS_INSTANCE inst_;
+#endif
 };
 
 class thread_ctx {
@@ -1007,8 +1018,13 @@ class buffer: public object {
                 operator char() const {
                     const uint32_t size = KOS_get_buffer_size(elem_);
                     const uint32_t idx = static_cast<uint32_t>(idx_ < 0 ? (idx_ + static_cast<int>(size)) : idx_);
-                    if (idx >= size)
+                    if (idx >= size) {
+#if KOS_USE_EXCEPTIONS
                         throw std::out_of_range("buffer index out of range");
+#else
+                        return 0;
+#endif
+                    }
                     const uint8_t* const buf = KOS_buffer_data_const(elem_);
                     assert(buf);
                     return static_cast<char>(buf[idx]);
@@ -1069,8 +1085,13 @@ class buffer: public object {
                 element& operator=(char v) {
                     const uint32_t size = KOS_get_buffer_size(elem_);
                     const uint32_t idx = static_cast<uint32_t>(idx_ < 0 ? (idx_ + static_cast<int>(size)) : idx_);
-                    if (idx >= size)
+                    if (idx >= size) {
+#if KOS_USE_EXCEPTIONS
                         throw std::out_of_range("buffer index out of range");
+#else
+                        return *this;
+#endif
+                    }
                     uint8_t* const buf = KOS_buffer_data_volatile(elem_.get_context(), elem_);
                     assert(buf);
                     if ( ! buf)
@@ -1314,7 +1335,9 @@ class exception: public std::runtime_error, public handle {
 inline void context::signal_error()
 {
     assert(KOS_is_exception_pending(*this));
+#if KOS_USE_EXCEPTIONS
     throw exception(*this);
+#endif
 }
 
 inline handle context::get_global(KOS_OBJ_ID module, KOS_OBJ_ID name, unsigned* idx)
@@ -1841,6 +1864,7 @@ template<typename T, T fun>
 KOS_OBJ_ID wrapper(KOS_CONTEXT frame_ptr, KOS_OBJ_ID this_obj, KOS_OBJ_ID args_obj) NOEXCEPT
 {
     context ctx = frame_ptr;
+#if KOS_USE_EXCEPTIONS
     try {
         array args(ctx, args_obj);
         return ctx.invoke_native(fun, this_obj, args);
@@ -1855,6 +1879,10 @@ KOS_OBJ_ID wrapper(KOS_CONTEXT frame_ptr, KOS_OBJ_ID this_obj, KOS_OBJ_ID args_o
         ctx.raise("native exception");
     }
     return KOS_BADPTR;
+#else
+    array args(ctx, args_obj);
+    return ctx.invoke_native(fun, this_obj, args);
+#endif
 }
 
 #if __cplusplus >= 201703L
