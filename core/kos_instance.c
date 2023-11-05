@@ -56,7 +56,7 @@ struct KOS_LIB_LIST_S {
 
 #ifdef CONFIG_PERF
 struct KOS_PERF_S kos_perf = {
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, { 0, 0, 0, 0 },
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, { 0, 0, 0, 0 },
     0, 0,
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
     0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -559,7 +559,6 @@ void KOS_instance_destroy(KOS_INSTANCE *inst)
     } while (0)
 #   define PERF_VALUE(a) PERF_VALUE_NAME(a, a)
     fprintf(stderr, "Performance stats:\n");
-    PERF_VALUE(object_key_identical);
     PERF_VALUE(object_key_diff_hash);
     PERF_RATIO(object_key_compare);
     PERF_RATIO(object_get);

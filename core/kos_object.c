@@ -174,30 +174,24 @@ static int is_key_equal(KOS_OBJ_ID key,
                         KOS_OBJ_ID prop_key,
                         KOS_PITEM *prop_item)
 {
-    if (key == prop_key) {
-        KOS_PERF_CNT(object_key_identical);
-        return 1;
+    const uint32_t prop_hash = KOS_atomic_read_relaxed_u32(prop_item->hash.hash);
+
+    if (prop_hash && hash != prop_hash) {
+        KOS_PERF_CNT(object_key_diff_hash);
+        return 0;
     }
-    else {
-        const uint32_t prop_hash = KOS_atomic_read_relaxed_u32(prop_item->hash.hash);
 
-        if (prop_hash && hash != prop_hash) {
-            KOS_PERF_CNT(object_key_diff_hash);
-            return 0;
+    {
+        const int cmp = KOS_string_compare(key, prop_key);
+
+        if (cmp) {
+            KOS_PERF_CNT(object_key_compare_fail);
+        }
+        else {
+            KOS_PERF_CNT(object_key_compare_success);
         }
 
-        {
-            const int cmp = KOS_string_compare(key, prop_key);
-
-            if (cmp) {
-                KOS_PERF_CNT(object_key_compare_fail);
-            }
-            else {
-                KOS_PERF_CNT(object_key_compare_success);
-            }
-
-            return ! cmp;
-        }
+        return ! cmp;
     }
 }
 

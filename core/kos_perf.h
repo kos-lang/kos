@@ -47,7 +47,6 @@
 #   define KOS_PERF_ADD(stat, num)       KOS_atomic_add_u64(kos_perf.stat, (num))
 
 struct KOS_PERF_S {
-    KOS_ATOMIC(uint64_t) object_key_identical;
     KOS_ATOMIC(uint64_t) object_key_diff_hash;
     KOS_ATOMIC(uint64_t) object_key_compare_success;
     KOS_ATOMIC(uint64_t) object_key_compare_fail;
