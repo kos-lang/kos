@@ -19,9 +19,7 @@ class Handle {
     public:
         Handle() : handle_(INVALID_HANDLE_VALUE) { }
 
-        Handle(const Handle& h) : handle_(INVALID_HANDLE_VALUE) {
-            *this = h;
-        }
+        Handle(const Handle& h) : handle_(h.handle_) { }
 
         ~Handle() {
             close();
