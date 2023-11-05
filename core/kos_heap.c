@@ -1131,6 +1131,7 @@ void *kos_alloc_object(KOS_CONTEXT    ctx,
     void *obj;
 
     assert(KOS_atomic_read_relaxed_u32(ctx->gc_state) == GC_INACTIVE);
+    assert((object_type > 0) && (object_type <= OBJ_LAST_POSSIBLE) && ! (object_type & 1U));
 
     if (kos_trigger_mad_gc(ctx))
         return KOS_NULL;
@@ -1157,6 +1158,9 @@ void *kos_alloc_object(KOS_CONTEXT    ctx,
         KOS_PERF_CNT(alloc_object_size[2]);
     else
         KOS_PERF_CNT(alloc_object_size[3]);
+
+    assert(sizeof(kos_perf.new_object) == sizeof(kos_perf.new_object[0]) * (OBJ_LAST_POSSIBLE >> 1));
+    KOS_PERF_CNT(new_object[(object_type >> 1) - 1]);
 #endif
 
     return obj;

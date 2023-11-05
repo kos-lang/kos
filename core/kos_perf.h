@@ -66,6 +66,8 @@ struct KOS_PERF_S {
     KOS_ATOMIC(uint64_t) array_salvage_success;
     KOS_ATOMIC(uint64_t) array_salvage_fail;
 
+    KOS_ATOMIC(uint64_t) new_object[19];
+
     KOS_ATOMIC(uint64_t) alloc_object;
     KOS_ATOMIC(uint64_t) alloc_huge_object;
     KOS_ATOMIC(uint64_t) non_full_seek;

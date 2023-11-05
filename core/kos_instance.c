@@ -58,6 +58,7 @@ struct KOS_LIB_LIST_S {
 struct KOS_PERF_S kos_perf = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, { 0, 0, 0, 0 },
     0, 0,
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
     0, 0, 0, 0, 0, 0, 0, 0, 0,
     { 0, 0, 0, 0 },
     { 0, 0, 0, 0 },
@@ -572,6 +573,25 @@ void KOS_instance_destroy(KOS_INSTANCE *inst)
     PERF_VALUE(object_collision[3]);
     PERF_RATIO(array_salvage);
     PERF_VALUE(alloc_object);
+    PERF_VALUE_NAME(new_object_integer,        new_object[0]);
+    PERF_VALUE_NAME(new_object_float,          new_object[1]);
+    PERF_VALUE_NAME(new_object_void,           new_object[2]);
+    PERF_VALUE_NAME(new_object_boolean,        new_object[3]);
+    PERF_VALUE_NAME(new_object_string,         new_object[4]);
+    PERF_VALUE_NAME(new_object_object,         new_object[5]);
+    PERF_VALUE_NAME(new_object_array,          new_object[6]);
+    PERF_VALUE_NAME(new_object_buffer,         new_object[7]);
+    PERF_VALUE_NAME(new_object_function,       new_object[8]);
+    PERF_VALUE_NAME(new_object_class,          new_object[9]);
+    PERF_VALUE_NAME(new_object_module,         new_object[10]);
+    PERF_VALUE_NAME(new_object_opaque,         new_object[11]);
+    PERF_VALUE_NAME(new_object_huge_tracker,   new_object[12]);
+    PERF_VALUE_NAME(new_object_object_storage, new_object[13]);
+    PERF_VALUE_NAME(new_object_array_storage,  new_object[14]);
+    PERF_VALUE_NAME(new_object_buffer_storage, new_object[15]);
+    PERF_VALUE_NAME(new_object_dynamic_prop,   new_object[16]);
+    PERF_VALUE_NAME(new_object_iterator,       new_object[17]);
+    PERF_VALUE_NAME(new_object_stack,          new_object[18]);
     PERF_VALUE_NAME(alloc_object_32,        alloc_object_size[0]);
     PERF_VALUE_NAME(alloc_object_64_128,    alloc_object_size[1]);
     PERF_VALUE_NAME(alloc_object_160_256,   alloc_object_size[2]);
