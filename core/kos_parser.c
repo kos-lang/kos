@@ -3105,7 +3105,8 @@ static int fallthrough_stmt(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
 static int import_stmt(KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
-    int error = KOS_SUCCESS;
+    KOS_AST_NODE *path  = KOS_NULL;
+    int           error = KOS_SUCCESS;
 
     TRY(new_node(parser, ret, NT_IMPORT));
 
@@ -3117,9 +3118,26 @@ static int import_stmt(KOS_PARSER *parser, KOS_AST_NODE **ret)
         goto cleanup;
     }
 
-    TRY(push_node(parser, *ret, NT_IDENTIFIER, KOS_NULL));
+    TRY(push_node(parser, *ret, NT_ARRAY_LITERAL, &path));
+
+    TRY(push_node(parser, path, NT_IDENTIFIER, KOS_NULL));
 
     TRY(next_token(parser));
+
+    while (parser->token.op == OT_DIV) {
+
+        TRY(next_token(parser));
+
+        if (parser->token.type != TT_IDENTIFIER) {
+            parser->error_str = str_err_expected_identifier;
+            error = KOS_ERROR_PARSE_FAILED;
+            goto cleanup;
+        }
+
+        TRY(push_node(parser, path, NT_IDENTIFIER, KOS_NULL));
+
+        TRY(next_token(parser));
+    }
 
     if (parser->token.op == OT_DOT) {
 
@@ -3460,6 +3478,7 @@ int kos_parser_import_base(KOS_PARSER            *parser,
 {
     KOS_AST_NODE *import_node;
     KOS_AST_NODE *ident_node;
+    KOS_AST_NODE *path_node;
     KOS_TOKEN     token;
     int           error = KOS_SUCCESS;
 
@@ -3471,7 +3490,9 @@ int kos_parser_import_base(KOS_PARSER            *parser,
 
     TRY(new_node(parser, &import_node, NT_IMPORT));
 
-    TRY(push_node(parser, import_node, NT_IDENTIFIER, &ident_node));
+    TRY(push_node(parser, import_node, NT_ARRAY_LITERAL, &path_node));
+
+    TRY(push_node(parser, path_node, NT_IDENTIFIER, &ident_node));
     token.begin       = "base";
     token.length      = 4;
     token.type        = TT_IDENTIFIER;

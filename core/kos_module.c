@@ -57,7 +57,7 @@ static unsigned rfind_path(const char *path,
     unsigned i;
 
     for (i = length; i > 0; i--) {
-        const char c = path[i-1];
+        const char c = path[i - 1];
         if (c == '/' || c == '\\' || c == dot)
             break;
     }
@@ -178,7 +178,7 @@ static int find_module(KOS_CONTEXT            ctx,
     unsigned   i;
     int        error           = KOS_ERROR_INTERNAL;
     int        native_mod_init = 1;
-    int        has_dot         = 0;
+    unsigned   sep_pos         = 0;
 
     KOS_vector_init(&cpath);
 
@@ -199,13 +199,13 @@ static int find_module(KOS_CONTEXT            ctx,
     }
 
     /* Check if module name is a path and a path is allowed */
-    has_dot = rfind_path(maybe_path, length, '.') > 0;
-    if (has_dot && ! is_path)
+    sep_pos = rfind_path(maybe_path, length, '.');
+    if (sep_pos && maybe_path[sep_pos - 1] == '.' && ! is_path)
         RAISE_ERROR(KOS_ERROR_NOT_FOUND);
 
     /* Check if file exists */
     if (is_path) {
-        TRY(KOS_vector_resize(&cpath, length+1));
+        TRY(KOS_vector_resize(&cpath, length + 1));
         memcpy(cpath.buffer, maybe_path, length);
         cpath.buffer[length] = 0;
 
@@ -216,7 +216,7 @@ static int find_module(KOS_CONTEXT            ctx,
              * exist.  Check if we can load module written in native code
              * (built-in or shared library) without source code.
              */
-            if (has_dot) {
+            if (sep_pos) {
                 if (native_mod_init)
                     RAISE_ERROR(KOS_SUCCESS_RETURN);
 
@@ -250,8 +250,24 @@ static int find_module(KOS_CONTEXT            ctx,
     }
     else {
 
-        KOS_INSTANCE *inst      = ctx->inst;
-        uint32_t      num_paths = KOS_get_array_size(inst->modules.search_paths);
+        KOS_INSTANCE *const inst      = ctx->inst;
+        const uint32_t      num_paths = KOS_get_array_size(inst->modules.search_paths);
+
+        /* Update path used to find modules with subdirectories */
+        if (sep_pos) {
+            TRY(KOS_vector_resize(&cpath, length + 1));
+
+            memcpy(cpath.buffer, maybe_path, length);
+
+            for (i = 0; i < length; i++) {
+                const char c = cpath.buffer[i];
+                if (c == '/' || c == '\\')
+                    cpath.buffer[i] = KOS_PATH_SEPARATOR;
+            }
+
+            components[2].o = KOS_new_string(ctx, cpath.buffer, length);
+            TRY_OBJID(components[2].o);
+        }
 
         if (!num_paths)
             RAISE_ERROR(native_mod_init ? KOS_SUCCESS_RETURN : KOS_ERROR_NOT_FOUND);
@@ -1478,7 +1494,7 @@ cleanup:
 
 static KOS_OBJ_ID import_module(KOS_CONTEXT ctx,
                                 const char *module_name,
-                                unsigned    name_size,
+                                unsigned    name_len,
                                 int         is_path,
                                 const char *data,
                                 unsigned    data_size,
@@ -1553,7 +1569,7 @@ static void handle_interpreter_error(KOS_CONTEXT ctx, int error)
 
 static KOS_OBJ_ID import_module(KOS_CONTEXT ctx,
                                 const char *module_name, /* Module name or path, ASCII or UTF-8    */
-                                unsigned    name_size,   /* Length of module name or path in bytes */
+                                unsigned    name_len,    /* Length of module name or path in bytes */
                                 int         is_path,     /* Module name can be a path              */
                                 const char *data,        /* Module data or 0 if load from file     */
                                 unsigned    data_size,   /* Data length if data is not 0           */
@@ -1577,14 +1593,14 @@ static KOS_OBJ_ID import_module(KOS_CONTEXT ctx,
 
     KOS_filebuf_init(&file_buf);
 
-    get_module_name(module_name, name_size, &loading);
+    get_module_name(module_name, name_len, &loading);
     PROF_ZONE_NAME(loading.module_name, loading.length)
 
     KOS_init_locals(ctx, &actual_module_name, &module_dir, &module_path, &mod_init, &module,
                     kos_end_locals);
 
-    if (name_size > 0xFFFFU) {
-        KOS_raise_printf(ctx, "Module name length %u exceeds 65535 bytes\n", name_size);
+    if (name_len > 0xFFFFU) {
+        KOS_raise_printf(ctx, "Module name length %u exceeds 65535 bytes\n", name_len);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
@@ -1610,7 +1626,7 @@ static KOS_OBJ_ID import_module(KOS_CONTEXT ctx,
             TRY(find_module(ctx,
                             actual_module_name.o,
                             module_name,
-                            name_size,
+                            name_len,
                             is_path,
                             &loading,
                             (KOS_OBJ_ID *)&module_dir.o,
@@ -1628,7 +1644,7 @@ static KOS_OBJ_ID import_module(KOS_CONTEXT ctx,
     }
 
     /* Load base module first, so that it ends up at index 0 */
-    TRY(load_base_module(ctx, module_name, name_size));
+    TRY(load_base_module(ctx, module_name, name_len));
 
     /* Add module to the load chain to prevent and detect circular dependencies */
     {
@@ -1639,7 +1655,7 @@ static KOS_OBJ_ID import_module(KOS_CONTEXT ctx,
                     0 == memcmp(loading.module_name, chain->module_name, loading.length)) {
 
                 KOS_raise_printf(ctx, "circular dependencies detected for module \"%.*s\"",
-                                 (int)name_size, module_name);
+                                 (int)name_len, module_name);
                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
             }
         }
@@ -1670,7 +1686,7 @@ static KOS_OBJ_ID import_module(KOS_CONTEXT ctx,
         TRY(find_module(ctx,
                         actual_module_name.o,
                         module_name,
-                        name_size,
+                        name_len,
                         is_path,
                         &loading,
                         (KOS_OBJ_ID *)&module_dir.o,
@@ -1772,7 +1788,7 @@ KOS_OBJ_ID KOS_load_module_from_memory(KOS_CONTEXT ctx,
 
 int kos_comp_import_module(void       *vframe,
                            const char *name,
-                           uint16_t    length,
+                           uint16_t    name_len,
                            int        *module_idx)
 {
     struct KOS_COMP_CTX *comp_ctx = (struct KOS_COMP_CTX *)vframe;
@@ -1782,7 +1798,7 @@ int kos_comp_import_module(void       *vframe,
 
     assert(module_idx);
 
-    module_obj = import_module(ctx, name, length, 0, KOS_NULL, 0, &already_loaded, module_idx);
+    module_obj = import_module(ctx, name, name_len, 0, KOS_NULL, 0, &already_loaded, module_idx);
 
     if (IS_BAD_PTR(module_obj)) {
         assert(KOS_is_exception_pending(ctx));

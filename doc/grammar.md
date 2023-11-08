@@ -207,7 +207,7 @@ Keywords `true`, `false`, `void` and `_` are output by the lexer as special lite
 types.
 
     TrueLiteral         ::= "t" "r" "u" "e"
-    
+
     FalseLiteral        ::= "f" "a" "l" "s" "e"
 
     BOOLEAN_LITERAL     ::= TrueLiteral | FalseLiteral
@@ -491,13 +491,15 @@ Import statement
 
     ImportStatement  ::= "import" ( ImportModule | ImportGlobal | ImportAllGlobals | ImportList ) OptSemicolon
 
-    ImportModule     ::= Identifier
+    ImportModule     ::= ModulePath
 
-    ImportGlobal     ::= Identifier "." Identifier
+    ImportGlobal     ::= ModulePath "." Identifier
 
-    ImportAllGlobals ::= Identifier "." "*"
+    ImportAllGlobals ::= ModulePath "." "*"
 
-    ImportList       ::= Identifier ":" Identifier ( "," Identifier )*
+    ImportList       ::= ModulePath ":" Identifier ( "," Identifier )*
+
+    ModulePath       ::= ( Identifier "/" )* Identifier
 
 
 Compound statement
@@ -1059,16 +1061,16 @@ Expressions
 
     BitwiseOrExpression ::= UnaryExpression BitwiseOrOperator UnaryExpression
                             ( BitwiseOrOperator UnaryExpression )*
-                            
+
     BitwiseAndExpression ::= UnaryExpression BitwiseAndOperator UnaryExpression
                              ( BitwiseAndOperator UnaryExpression )*
-                            
+
     BitwiseXorExpression ::= UnaryExpression BitwiseXorOperator UnaryExpression
                              ( BitwiseXorOperator UnaryExpression )*
-                            
+
     BitwiseShiftExpression ::= UnaryExpression BitwiseShiftOperator UnaryExpression
                                ( BitwiseShiftOperator UnaryExpression )*
-                            
+
     ArithExpression ::= AdditiveExpression
 
     AdditiveExpression ::= MultiplicativeExpression

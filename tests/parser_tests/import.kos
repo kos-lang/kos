@@ -10,20 +10,26 @@ import     sixth : one , two
 
 (scope 1 1 
     (import 2 1 import
-        (identifier 2 12 first))
+        (array 2 12 first
+            (identifier 2 12 first)))
     (import 3 1 import
-        (identifier 3 12 second)
+        (array 3 12 second
+            (identifier 3 12 second))
         (identifier 3 21 *))
     (import 4 1 import
-        (identifier 4 12 third)
+        (array 4 12 third
+            (identifier 4 12 third))
         (identifier 4 18 max))
     (import 5 1 import
-        (identifier 5 12 fourth))
+        (array 5 12 fourth
+            (identifier 5 12 fourth)))
     (import 6 1 import
-        (identifier 6 12 fifth)
+        (array 6 12 fifth
+            (identifier 6 12 fifth))
         (identifier 6 20 one))
     (import 7 1 import
-        (identifier 7 12 sixth)
+        (array 7 12 sixth
+            (identifier 7 12 sixth))
         (identifier 7 20 one)
         (identifier 7 26 two)))
 
@@ -39,9 +45,11 @@ import module;
 
 (scope 1 1
     (import 3 3 import
-        (identifier 3 10 module))
+        (array 3 10 module
+            (identifier 3 10 module)))
     (import 4 1 import
-        (identifier 4 8 module))
+        (array 4 8 module
+            (identifier 4 8 module)))
     (number 6 3 0)
     (empty 6 6 ;))
 

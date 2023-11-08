@@ -450,6 +450,79 @@ static int visit_child_nodes(KOS_COMP_UNIT *program,
     return error;
 }
 
+static uint16_t get_module_path_len(const KOS_AST_NODE *node)
+{
+    uint32_t total_len = 0;
+
+    for ( ; node; node = node->next) {
+        assert(node->type == NT_IDENTIFIER);
+
+        /* Include path separators */
+        if (total_len)
+            ++total_len;
+
+        total_len += node->token.length;
+    }
+
+    if (total_len > 0xFFFFU)
+        total_len = 0;
+
+    return (uint16_t)total_len;
+}
+
+int kos_get_module_path_name(KOS_COMP_UNIT *program,
+                             KOS_AST_NODE  *node,
+                             const char   **module_name,
+                             uint16_t      *name_len,
+                             KOS_AST_NODE **mod_name_node)
+{
+    assert(node->type == NT_ARRAY_LITERAL);
+
+    node = node->children;
+
+    assert(node);
+    assert(node->type == NT_IDENTIFIER);
+
+    if (node->next) {
+
+        char *path = "";
+        char *dst;
+
+        *name_len = get_module_path_len(node);
+
+        path = (char *)KOS_mempool_alloc(&program->allocator, *name_len + 1);
+        dst  = path;
+
+        if ( ! path)
+            return KOS_ERROR_OUT_OF_MEMORY;
+
+        for ( ; node; node = node->next) {
+            const uint16_t len = node->token.length;
+
+            if (path != dst)
+                *(dst++) = '/';
+
+            memcpy(dst, node->token.begin, len);
+            dst += len;
+
+            *mod_name_node = node;
+        }
+
+        assert((uint32_t)(dst - path) == *name_len);
+
+        *module_name = path;
+        return KOS_SUCCESS;
+    }
+
+    assert(node->type == NT_IDENTIFIER);
+
+    *module_name   = node->token.begin;
+    *name_len      = node->token.length;
+    *mod_name_node = node;
+
+    return KOS_SUCCESS;
+}
+
 typedef struct KOS_IMPORT_INFO_V_S {
     KOS_COMP_UNIT      *program;
     const KOS_AST_NODE *node;
@@ -501,8 +574,11 @@ static int import_global(const char *global_name,
 static int import(KOS_COMP_UNIT *program,
                   KOS_AST_NODE  *node)
 {
-    int error;
-    int module_idx;
+    KOS_AST_NODE *mod_name_node = KOS_NULL;
+    const char   *module_name;
+    int           error;
+    int           module_idx;
+    uint16_t      name_len;
 
     assert(program->scope_stack);
     assert( ! program->scope_stack->parent_scope);
@@ -510,31 +586,33 @@ static int import(KOS_COMP_UNIT *program,
     node = node->children;
     assert(node);
 
+    TRY(kos_get_module_path_name(program, node, &module_name, &name_len, &mod_name_node));
+
     TRY(kos_comp_import_module(program->ctx,
-                               node->token.begin,
-                               node->token.length,
+                               module_name,
+                               name_len,
                                &module_idx));
 
     if (module_idx < 0 || module_idx > 0xFFFF) {
-        program->error_token = &node->token;
+        program->error_token = &mod_name_node->token;
         program->error_str   = str_err_too_many_modules;
         RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
     }
 
     if ( ! node->next) {
 
-        KOS_VAR *var = kos_find_var(program->scope_stack->vars, &node->token);
+        KOS_VAR *var = kos_find_var(program->scope_stack->vars, &mod_name_node->token);
 
         /* Importing the same module multiple times is allowed. */
         if (var) {
             if (var->type != VAR_MODULE) {
-                program->error_token = &node->token;
+                program->error_token = &mod_name_node->token;
                 program->error_str   = str_err_module_global_conflict;
                 RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
             }
         }
         else {
-            var = alloc_var(program, VAR_MODULE, 1, node);
+            var = alloc_var(program, VAR_MODULE, 1, mod_name_node);
             if (!var)
                 RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
 
@@ -542,10 +620,10 @@ static int import(KOS_COMP_UNIT *program,
             var->next        = program->modules;
             program->modules = var;
         }
-        assert( ! node->is_scope);
-        assert( ! node->is_var);
-        node->u.var  = var;
-        node->is_var = 1;
+        assert( ! mod_name_node->is_scope);
+        assert( ! mod_name_node->is_var);
+        mod_name_node->u.var  = var;
+        mod_name_node->is_var = 1;
     }
 
     node = node->next;

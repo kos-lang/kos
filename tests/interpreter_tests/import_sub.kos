@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2014-2023 Chris Dragan
+
+import sub / submodule
+import sub / submodule . add2
+
+do {
+    assert submodule.add1(42) == 43
+    assert add2(100) == 102
+}

@@ -1359,14 +1359,19 @@ static int import(KOS_COMP_UNIT      *program,
 
     if (node->next) {
 
-        int             module_idx;
+        KOS_AST_NODE   *mod_name_node = KOS_NULL;
+        const char     *module_name;
         KOS_IMPORT_INFO info;
+        int             module_idx;
+        uint16_t        name_len;
 
         info.program = program;
 
+        TRY(kos_get_module_path_name(program, node, &module_name, &name_len, &mod_name_node));
+
         TRY(kos_comp_import_module(program->ctx,
-                                   node->token.begin,
-                                   node->token.length,
+                                   module_name,
+                                   name_len,
                                    &module_idx));
 
         node = node->next;
