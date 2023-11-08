@@ -470,11 +470,11 @@ static uint16_t get_module_path_len(const KOS_AST_NODE *node)
     return (uint16_t)total_len;
 }
 
-int kos_get_module_path_name(KOS_COMP_UNIT *program,
-                             KOS_AST_NODE  *node,
-                             const char   **module_name,
-                             uint16_t      *name_len,
-                             KOS_AST_NODE **mod_name_node)
+int kos_get_module_path_name(KOS_COMP_UNIT       *program,
+                             const KOS_AST_NODE  *node,
+                             const char         **module_name,
+                             uint16_t            *name_len,
+                             const KOS_AST_NODE **mod_name_node)
 {
     assert(node->type == NT_ARRAY_LITERAL);
 
@@ -485,7 +485,8 @@ int kos_get_module_path_name(KOS_COMP_UNIT *program,
 
     if (node->next) {
 
-        char *path = "";
+        static char empty[1] = "";
+        char *path = empty;
         char *dst;
 
         *name_len = get_module_path_len(node);
@@ -586,7 +587,7 @@ static int import(KOS_COMP_UNIT *program,
     node = node->children;
     assert(node);
 
-    TRY(kos_get_module_path_name(program, node, &module_name, &name_len, &mod_name_node));
+    TRY(kos_get_module_path_name(program, node, &module_name, &name_len, (const KOS_AST_NODE **)&mod_name_node));
 
     TRY(kos_comp_import_module(program->ctx,
                                module_name,

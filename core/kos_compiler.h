@@ -331,11 +331,11 @@ void kos_deactivate_vars(KOS_SCOPE *scope);
 KOS_SCOPE_REF *kos_find_scope_ref(KOS_FRAME *frame,
                                   KOS_SCOPE *closure);
 
-int kos_get_module_path_name(KOS_COMP_UNIT *program,
-                             KOS_AST_NODE  *node,
-                             const char   **module_name,
-                             uint16_t      *name_len,
-                             KOS_AST_NODE **mod_name_node);
+int kos_get_module_path_name(KOS_COMP_UNIT       *program,
+                             const KOS_AST_NODE  *node,
+                             const char         **module_name,
+                             uint16_t            *name_len,
+                             const KOS_AST_NODE **mod_name_node);
 
 /* Interface between the compiler and the code driving it */
 
