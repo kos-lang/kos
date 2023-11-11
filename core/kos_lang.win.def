@@ -140,6 +140,7 @@ EXPORTS
     KOS_set_builtin_dynamic_property
     KOS_set_properties_from_native
     KOS_set_property
+    KOS_sleep
     KOS_str_backtrace DATA
     KOS_str_empty DATA
     KOS_str_file DATA

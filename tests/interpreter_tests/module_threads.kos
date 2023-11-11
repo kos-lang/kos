@@ -178,3 +178,13 @@ fun {
         assert out[i] == mid * 2 - 1 - i
     }
 }()
+
+do {
+    assert threads.sleep() == void
+    assert threads.sleep(0.001) == void
+    expect_fail(() => threads.sleep(void))
+    expect_fail(() => threads.sleep(""))
+    expect_fail(() => threads.sleep(-1))
+    expect_fail(() => threads.sleep(1_000_001))
+    expect_fail(() => threads.sleep(1_000_000.1))
+}

@@ -744,3 +744,19 @@ unsigned KOS_get_num_cpus(void)
     return 1;
 #endif
 }
+
+void KOS_sleep(uint64_t sleep_ns)
+{
+#ifdef _WIN32
+    Sleep((DWORD)(sleep_ns / 1000000U));
+#else
+    {
+        struct timespec ts;
+
+        ts.tv_sec  = (time_t)(sleep_ns / 1000000000U);
+        ts.tv_nsec = (int)(sleep_ns % 1000000000U);
+
+        nanosleep(&ts, KOS_NULL);
+    }
+#endif
+}

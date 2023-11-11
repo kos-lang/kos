@@ -139,6 +139,7 @@
     KOS_set_builtin_dynamic_property;
     KOS_set_properties_from_native;
     KOS_set_property;
+    KOS_sleep;
     KOS_str_backtrace;
     KOS_str_empty;
     KOS_str_file;

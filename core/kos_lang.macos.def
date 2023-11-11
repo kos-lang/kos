@@ -138,6 +138,7 @@ _KOS_run_module
 _KOS_set_builtin_dynamic_property
 _KOS_set_properties_from_native
 _KOS_set_property
+_KOS_sleep
 _KOS_str_backtrace
 _KOS_str_empty
 _KOS_str_file

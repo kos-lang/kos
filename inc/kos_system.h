@@ -82,6 +82,9 @@ LIB_FUNCTION KOS_get_library_function(KOS_SHARED_LIB lib, const char *func_name,
 KOS_API
 unsigned KOS_get_num_cpus(void);
 
+KOS_API
+void KOS_sleep(uint64_t sleep_ns);
+
 #ifdef __cplusplus
 }
 #endif

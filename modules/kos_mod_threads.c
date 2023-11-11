@@ -9,11 +9,15 @@
 #include "../inc/kos_malloc.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_object.h"
+#include "../inc/kos_system.h"
 #include "../inc/kos_threads.h"
 #include "../inc/kos_utils.h"
 #include "../core/kos_debug.h"
 #include "../core/kos_misc.h"
 #include "../core/kos_try.h"
+
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 
 #define KOS_MAX_SEM 0x7FFFFFFF
 
@@ -26,6 +30,7 @@ KOS_DECLARE_STATIC_CONST_STRING(str_err_mutex_failed,    "failed to create a mut
 KOS_DECLARE_STATIC_CONST_STRING(str_err_init_too_large,  "init argument exceeds 0x7FFFFFFF");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_init_too_small,  "init argument is less than 0");
 KOS_DECLARE_STATIC_CONST_STRING(str_init,                "init");
+KOS_DECLARE_STATIC_CONST_STRING(str_seconds,             "seconds");
 
 KOS_DECLARE_PRIVATE_CLASS(mutex_priv_class);
 
@@ -448,6 +453,60 @@ static KOS_OBJ_ID semaphore_value(KOS_CONTEXT ctx,
     return KOS_VOID;
 }
 
+const KOS_CONVERT sleep_args[2] = {
+    KOS_DEFINE_OPTIONAL_ARG(str_seconds, TO_SMALL_INT(0)),
+    KOS_DEFINE_TAIL_ARG()
+};
+
+/* @item threads sleep()
+ *
+ *     sleep(seconds = 0)
+ *
+ * Sleeps the current thread for the specified number of seconds
+ *
+ * `seconds` specifies how long to sleep.  This can be an `integer` or a `float`.
+ *
+ * Returns `void`.
+ */
+static KOS_OBJ_ID kos_sleep(KOS_CONTEXT ctx,
+                            KOS_OBJ_ID  this_obj,
+                            KOS_OBJ_ID  args_obj)
+{
+    KOS_NUMERIC arg;
+    uint64_t    sleep_ns;
+    int         error = KOS_SUCCESS;
+
+    assert(KOS_get_array_size(args_obj) > 0);
+
+    TRY(KOS_get_numeric_arg(ctx, args_obj, 0, &arg));
+
+    if (arg.type == KOS_INTEGER_VALUE) {
+        if (arg.u.i < 0 || arg.u.i > 1000000) {
+            KOS_raise_printf(ctx, "invalid sleep time %" PRId64 " seconds", arg.u.i);
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+        sleep_ns = (uint64_t)(arg.u.i * 1000000000);
+    }
+    else {
+        assert(arg.type == KOS_FLOAT_VALUE);
+
+        if (arg.u.d < 0 || arg.u.d > 1000000.0) {
+            KOS_raise_printf(ctx, "invalid sleep time %f seconds", arg.u.d);
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+        sleep_ns = (uint64_t)(arg.u.d * 1000000000.0);
+    }
+
+    KOS_suspend_context(ctx);
+
+    KOS_sleep(sleep_ns);
+
+    KOS_resume_context(ctx);
+
+cleanup:
+    return error ? KOS_BADPTR : KOS_VOID;
+}
+
 int kos_module_threads_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 {
     int       error = KOS_SUCCESS;
@@ -472,6 +531,8 @@ int kos_module_threads_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, semaphore_proto.o, "acquire",   semaphore_acquire, count_arg);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, semaphore_proto.o, "release",   semaphore_release, count_arg);
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, semaphore_proto.o, "value",     semaphore_value,   KOS_NULL);
+
+    TRY_ADD_FUNCTION(       ctx, module.o,                    "sleep",     kos_sleep,         sleep_args);
 
     TRY(KOS_array_write(ctx, priv.o, 0, mutex_proto.o));
     TRY(KOS_array_write(ctx, priv.o, 1, semaphore_proto.o));

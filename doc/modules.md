@@ -265,6 +265,7 @@ Table of Contents
     * [semaphore()](#semaphore)
       * [semaphore.prototype.acquire()](#semaphoreprototypeacquire)
       * [semaphore.prototype.release()](#semaphoreprototyperelease)
+    * [sleep()](#sleep)
 <!--te-->
 base
 ====
@@ -5254,4 +5255,15 @@ Increments the semaphore value and signals other threads that may be
 waiting on `acquire()`.
 
 Returns `this` semaphore object.
+
+sleep()
+-------
+
+    sleep(seconds = 0)
+
+Sleeps the current thread for the specified number of seconds
+
+`seconds` specifies how long to sleep.  This can be an `integer` or a `float`.
+
+Returns `void`.
 
