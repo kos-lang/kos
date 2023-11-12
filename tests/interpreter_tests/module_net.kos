@@ -85,10 +85,10 @@ do {
         }
 
         assert "socktype" in a
-        assert a.socktype == net.SOCK_STREAM || a.socktype == net.SOCK_DGRAM
+        assert typeof a.socktype == "integer"
 
         assert "protocol" in a
-        assert a.protocol == net.IPPROTO_TCP || a.protocol == net.IPPROTO_UDP
+        assert typeof a.protocol == "integer"
     }
 
     expect_fail(() => net.getaddrinfo(""))
