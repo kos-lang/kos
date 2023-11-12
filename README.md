@@ -77,10 +77,10 @@ var   a     = 0
 var   b     = 1
 
 print("Fib series:")
-print("    \(a)")
 
-for var i in range(terms - 1) {
-    print("    \(b)")
+for var i in range(terms) {
+    print("    \(a)")
+
     const next = a + b
     a = b
     b = next
@@ -91,10 +91,11 @@ This program prints the first 1000 prime numbers:
 
 ```javascript
 #!/usr/bin/env kos
-import base: print, range
+import base: print, range, enumerate
+import math.sqrt
 
 # Prime number generator with a fixed-size sieve
-fun primes(max_number)
+fun primes(sieve_size)
 {
     yield 2 # Yield the only even prime number from the generator
 
@@ -103,21 +104,31 @@ fun primes(max_number)
     # Set array size, fills with 'void' values.
     # We set to half of the max number checked, because
     # we ignore even numbers and only check odd numbers.
-    const len = max_number >> 1
+    const len = sieve_size / 2
     sieve.resize(len)
 
-    # Find and yield all odd primes
-    for var value in range(3, max_number, 2) {
+    const sqrt_sieve_size = sqrt(sieve_size)
 
-        const idx = value >> 1
+    # Find and yield all odd primes
+    for var number in range(3, sieve_size, 2) {
+
+        const idx = number >> 1
 
         # Yield this number as prime if it hasn't been sifted-out
         if ! sieve[idx] {
 
-            yield value
+            yield number
+
+            # Don't clear above square root of sieve size, because
+            # these numbers have already been cleared by lower primes
+            if number > sqrt_sieve_size {
+                continue
+            }
 
             # Mark all multiplicities of this prime as non-primes
-            for var i in range(idx + value, len, value) {
+            # Start from square of prime, because lower numbers have
+            # already been cleared
+            for var i in range(number * number / 2, len, number) {
                 sieve[i] = true # Mark a non-prime
             }
         }
@@ -130,8 +141,8 @@ public fun main
 
     var count = 0
 
-    for var value in primes(7920) {
-        print("    \(value)")
+    for var idx, prime in enumerate(primes(7920)) {
+        print("    prime \(idx + 1) is: \(prime)")
         count += 1
     }
 
