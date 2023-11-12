@@ -38,3 +38,10 @@ jobs:
         arch: s390x
         script:
           - tests/run cpp14
+
+      - name: "FreeBSD"
+        if: branch != coverity_scan
+        os: freebsd
+        compiler: clang
+        script:
+          - tests/run cpp14
