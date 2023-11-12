@@ -225,6 +225,7 @@ Table of Contents
       * [socket.prototype.blocking](#socketprototypeblocking)
       * [socket.prototype.close()](#socketprototypeclose)
       * [socket.prototype.connect()](#socketprototypeconnect)
+      * [socket.prototype.getaddrinfo()](#socketprototypegetaddrinfo)
       * [socket.prototype.getsockopt()](#socketprototypegetsockopt)
       * [socket.prototype.listen()](#socketprototypelisten)
       * [socket.prototype.read()](#socketprototyperead)
@@ -4580,6 +4581,38 @@ a hostname or a numeric IP address.
 Returns the socket itself (`this`).
 
 On error throws an exception.
+
+socket.prototype.getaddrinfo()
+------------------------------
+
+    socket.prototype.getaddrinfo(address, port = void)
+
+Returns information about an address.
+
+`address` is a string with a hostname or a numeric IPv4 or IPv6 address.
+`address` can be an empty string, in which case only port is looked up.
+
+`port` is a string with port number or service name.
+`port` can be an empty string, in which case only address is looked up.
+
+Returns an array of objects describing translated numeric address and port
+for each address family and protocol.  Each entry in the returned array has
+the following properties:
+ - address - a string containing numeric address (depending on family).
+ - port - integer with numeric port.
+ - family - integer with numeric address family, for example `net.AF_INET` or `net.AF_INET6`.
+ - socktype - integer with possible socket type, for example `net.SOCK_STREAM` or `net.SOCK_DGRAM`.
+ - protocol - integer with possible protocol, for example `net.IPPROTO_TCP` or `net.IPPROTO_UDP`.
+
+On error throws an exception.
+
+Example:
+
+    > getaddrinfo("localhost", "http") -> each(print)
+    {"socktype": 2, "family": 30, "port": 80, "address": "::1", "protocol": 17}
+    {"socktype": 1, "family": 30, "port": 80, "address": "::1", "protocol": 6}
+    {"socktype": 2, "family": 2, "port": 80, "address": "127.0.0.1", "protocol": 17}
+    {"socktype": 1, "family": 2, "port": 80, "address": "127.0.0.1", "protocol": 6}
 
 socket.prototype.getsockopt()
 -----------------------------

@@ -62,6 +62,49 @@ do {
 }
 
 ##############################################################################
+# getaddrinfo
+
+var ipv6 = false
+
+do {
+    const addr = net.getaddrinfo("localhost", "http")
+    assert typeof addr == "array"
+    assert addr.size > 0
+    for const a in addr {
+        assert "address" in a
+        assert typeof a.address == "string"
+
+        assert "port" in a
+        assert a.port == 80
+
+        assert "family" in a
+        assert a.family == net.AF_INET || a.family == net.AF_INET6
+
+        if a.family == net.AF_INET6 {
+            ipv6 = true
+        }
+
+        assert "socktype" in a
+        assert a.socktype == net.SOCK_STREAM || a.socktype == net.SOCK_DGRAM
+
+        assert "protocol" in a
+        assert a.protocol == net.IPPROTO_TCP || a.protocol == net.IPPROTO_UDP
+    }
+
+    expect_fail(() => net.getaddrinfo(""))
+    expect_fail(() => net.getaddrinfo(100))
+    expect_fail(() => net.getaddrinfo("", []))
+}
+
+do {
+    const addr = net.getaddrinfo(void, 80)
+    assert addr.size > 0
+    for const a in addr {
+        assert a.port == 80
+    }
+}
+
+##############################################################################
 # socket.getsockopt()
 
 do {
@@ -127,8 +170,6 @@ do {
 ##############################################################################
 # socket.bind()
 
-var ipv6 = true
-
 do {
     net.socket().bind()
     net.socket().bind("")
@@ -140,18 +181,12 @@ do {
 
     expect_fail(() => net.socket().bind(port = 11002))
 
-    net.socket(net.AF_INET6).bind()
-    net.socket(net.AF_INET6).bind("")
-    net.socket(net.AF_INET6).setsockopt(net.SOL_SOCKET, net.SO_REUSEADDR, true).bind(port = 11003)
-
-    var ok = true
-    try {
-        net.socket(net.AF_INET6).bind("localhost")
-    }
-    catch (const e) {
-        ipv6 = false
-    }
     if ipv6 {
+        net.socket(net.AF_INET6).bind()
+        net.socket(net.AF_INET6).bind("")
+        net.socket(net.AF_INET6).setsockopt(net.SOL_SOCKET, net.SO_REUSEADDR, true).bind(port = 11003)
+
+        net.socket(net.AF_INET6).bind("localhost")
         net.socket(net.AF_INET6).bind("::1")
         net.socket(net.AF_INET6).setsockopt(net.SOL_SOCKET, net.SO_REUSEADDR, true).bind("::1", 11004)
     }

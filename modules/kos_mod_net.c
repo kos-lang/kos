@@ -91,10 +91,12 @@ KOS_DECLARE_STATIC_CONST_STRING(str_err_not_buffer,        "argument to socket.r
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_buffer_or_str, "argument to socket.send is neither a buffer nor a string");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_too_many_to_read,  "requested read size exceeds buffer size limit");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_socket_not_open,   "socket not open or not a socket object");
+KOS_DECLARE_STATIC_CONST_STRING(str_family,                "family");
 KOS_DECLARE_STATIC_CONST_STRING(str_flags,                 "flags");
 KOS_DECLARE_STATIC_CONST_STRING(str_level,                 "level");
 KOS_DECLARE_STATIC_CONST_STRING(str_port,                  "port");
 KOS_DECLARE_STATIC_CONST_STRING(str_socket,                "socket");
+KOS_DECLARE_STATIC_CONST_STRING(str_socktype,              "socktype");
 KOS_DECLARE_STATIC_CONST_STRING(str_timeout_sec,           "timeout_sec");
 
 typedef struct KOS_SOCKET_HOLDER_S {
@@ -341,27 +343,22 @@ static int get_address(KOS_CONTEXT        ctx,
     return error;
 }
 
-static int add_address_desc(KOS_CONTEXT             ctx,
-                            KOS_OBJ_ID              ret_id,
-                            const KOS_GENERIC_ADDR *addr,
-                            ADDR_LEN                addr_len)
+static KOS_OBJ_ID address_to_string(KOS_CONTEXT             ctx,
+                                    const KOS_GENERIC_ADDR *addr,
+                                    ADDR_LEN                addr_len)
 {
-    KOS_LOCAL ret;
-    KOS_LOCAL val;
-    int       error = KOS_ERROR_EXCEPTION;
+    KOS_LOCAL  val;
+    KOS_OBJ_ID str_id = KOS_BADPTR;
+    char       buf[40];
 
-    KOS_init_local_with(ctx, &ret, ret_id);
-    KOS_init_local(     ctx, &val);
+    KOS_init_local(ctx, &val);
 
     switch (addr->addr.sa_family) {
 
         case AF_INET:
-            TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_port),
-                                 TO_SMALL_INT(ntohs(addr->inet.sin_port))));
             {
-                char     buf[16];
-                uint32_t ipv4_addr = ntohl(addr->inet.sin_addr.s_addr);
-                unsigned len;
+                const uint32_t ipv4_addr = ntohl(addr->inet.sin_addr.s_addr);
+                unsigned       len;
 
                 len = (unsigned)snprintf(buf, sizeof(buf), "%u.%u.%u.%u",
                                          (uint8_t)(ipv4_addr >> 24),
@@ -369,18 +366,12 @@ static int add_address_desc(KOS_CONTEXT             ctx,
                                          (uint8_t)(ipv4_addr >> 8),
                                          (uint8_t)ipv4_addr);
 
-                val.o = KOS_new_string(ctx, buf, len);
-                TRY_OBJID(val.o);
-
-                TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_address), val.o));
+                str_id = KOS_new_string(ctx, buf, len);
             }
             break;
 
         case AF_INET6:
-            TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_port),
-                                 TO_SMALL_INT(ntohs(addr->inet6.sin6_port))));
             {
-                char           buf[40];
                 const uint8_t *byte = (const uint8_t *)&addr->inet6.sin6_addr.s6_addr[0];
                 unsigned       pos  = 0;
                 unsigned       len;
@@ -422,10 +413,7 @@ static int add_address_desc(KOS_CONTEXT             ctx,
                     pos += len;
                 }
 
-                val.o = KOS_new_string(ctx, buf, pos);
-                TRY_OBJID(val.o);
-
-                TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_address), val.o));
+                str_id = KOS_new_string(ctx, buf, pos);
             }
             break;
 
@@ -435,6 +423,48 @@ static int add_address_desc(KOS_CONTEXT             ctx,
             KOS_raise_printf(ctx, "unsupported family %u", (unsigned)addr->addr.sa_family);
             break;
     }
+
+    KOS_destroy_top_local(ctx, &val);
+
+    return str_id;
+}
+
+static int add_address_desc(KOS_CONTEXT             ctx,
+                            KOS_OBJ_ID              ret_id,
+                            const KOS_GENERIC_ADDR *addr,
+                            ADDR_LEN                addr_len)
+{
+    KOS_LOCAL ret;
+    KOS_LOCAL val;
+    uint16_t  port;
+    int       error = KOS_ERROR_EXCEPTION;
+
+    KOS_init_local_with(ctx, &ret, ret_id);
+    KOS_init_local(     ctx, &val);
+
+    val.o = address_to_string(ctx, addr, addr_len);
+    TRY_OBJID(val.o);
+
+    TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_address), val.o));
+
+    switch (addr->addr.sa_family) {
+
+        case AF_INET:
+            port = ntohs(addr->inet.sin_port);
+            break;
+
+        case AF_INET6:
+            port = ntohs(addr->inet6.sin6_port);
+            break;
+
+        /* TODO AF_LOCAL */
+
+        default:
+            KOS_raise_printf(ctx, "unsupported family %u", (unsigned)addr->addr.sa_family);
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+
+    TRY(KOS_set_property(ctx, ret.o, KOS_CONST_ID(str_port), TO_SMALL_INT(port)));
 
 cleanup:
     KOS_destroy_top_locals(ctx, &val, &ret);
@@ -1912,6 +1942,174 @@ static KOS_OBJ_ID getsockopt_time(KOS_CONTEXT        ctx,
 #endif
 }
 
+static const KOS_CONVERT getaddrinfo_args[3] = {
+    KOS_DEFINE_MANDATORY_ARG(str_address),
+    KOS_DEFINE_OPTIONAL_ARG( str_port, KOS_CONST_ID(str_empty)),
+    KOS_DEFINE_TAIL_ARG()
+};
+
+/* @item net socket.prototype.getaddrinfo()
+ *
+ *     socket.prototype.getaddrinfo(address, port = void)
+ *
+ * Returns information about an address.
+ *
+ * `address` is a string with a hostname or a numeric IPv4 or IPv6 address.
+ * `address` can be an empty string, in which case only port is looked up.
+ *
+ * `port` is a string with port number or service name.
+ * `port` can be an empty string, in which case only address is looked up.
+ *
+ * Returns an array of objects describing translated numeric address and port
+ * for each address family and protocol.  Each entry in the returned array has
+ * the following properties:
+ *  - address - a string containing numeric address (depending on family).
+ *  - port - integer with numeric port.
+ *  - family - integer with numeric address family, for example `net.AF_INET` or `net.AF_INET6`.
+ *  - socktype - integer with possible socket type, for example `net.SOCK_STREAM` or `net.SOCK_DGRAM`.
+ *  - protocol - integer with possible protocol, for example `net.IPPROTO_TCP` or `net.IPPROTO_UDP`.
+ *
+ * On error throws an exception.
+ *
+ * Example:
+ *
+ *     > getaddrinfo("localhost", "http") -> each(print)
+ *     {"socktype": 2, "family": 30, "port": 80, "address": "::1", "protocol": 17}
+ *     {"socktype": 1, "family": 30, "port": 80, "address": "::1", "protocol": 6}
+ *     {"socktype": 2, "family": 2, "port": 80, "address": "127.0.0.1", "protocol": 17}
+ *     {"socktype": 1, "family": 2, "port": 80, "address": "127.0.0.1", "protocol": 6}
+ */
+static KOS_OBJ_ID kos_getaddrinfo(KOS_CONTEXT ctx,
+                                  KOS_OBJ_ID  this_obj,
+                                  KOS_OBJ_ID  args_obj)
+{
+    KOS_LOCAL            addr_infos;
+    KOS_LOCAL            val;
+    KOS_LOCAL            one_info;
+    struct addrinfo     *info      = KOS_NULL;
+    struct addrinfo     *cur_info;
+    KOS_VECTOR           address_cstr;
+    KOS_VECTOR           port_cstr;
+    unsigned             num_addrs = 0;
+    int                  i;
+    int                  error;
+
+    assert(KOS_get_array_size(args_obj) >= 2);
+
+    KOS_vector_init(&address_cstr);
+    KOS_vector_init(&port_cstr);
+
+    KOS_init_locals(ctx, &one_info, &val, &addr_infos, kos_end_locals);
+
+    one_info.o = args_obj;
+
+    val.o = KOS_array_read(ctx, one_info.o, 0);
+    TRY_OBJID(val.o);
+
+    if (val.o != KOS_VOID) {
+        if (GET_OBJ_TYPE(val.o) != OBJ_STRING) {
+            KOS_raise_printf(ctx, "address argument is %s but expected string",
+                             KOS_get_type_name(GET_OBJ_TYPE(val.o)));
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+
+        TRY(KOS_string_to_cstr_vec(ctx, val.o, &address_cstr));
+    }
+    if ( ! address_cstr.size || ! address_cstr.buffer[0])
+        address_cstr.buffer = KOS_NULL;
+
+    val.o = KOS_array_read(ctx, one_info.o, 1);
+    TRY_OBJID(val.o);
+
+    if (val.o != KOS_VOID) {
+        if (GET_OBJ_TYPE(val.o) == OBJ_STRING)
+            TRY(KOS_string_to_cstr_vec(ctx, val.o, &port_cstr));
+        else if (GET_OBJ_TYPE(val.o) <= OBJ_INTEGER) {
+            int64_t  int_value;
+            unsigned len;
+
+            TRY(KOS_get_integer(ctx, val.o, &int_value));
+
+            if (int_value < 0 || int_value > 0xFFFF) {
+                KOS_raise_printf(ctx, "port %" PRId64 " is out of range", int_value);
+                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+            }
+
+            TRY(KOS_vector_resize(&port_cstr, 6));
+
+            len = (unsigned)snprintf(port_cstr.buffer, 6, "%u", (unsigned)(int)int_value);
+            TRY(KOS_vector_resize(&port_cstr, len + 1));
+        }
+        else {
+            KOS_raise_printf(ctx, "port argument is %s but expected string or integer",
+                             KOS_get_type_name(GET_OBJ_TYPE(val.o)));
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+    }
+
+    if ( ! port_cstr.size || ! port_cstr.buffer[0])
+        port_cstr.buffer = KOS_NULL;
+
+    KOS_suspend_context(ctx);
+
+    error = getaddrinfo(address_cstr.buffer,
+                        port_cstr.buffer,
+                        KOS_NULL,
+                        &info);
+
+    KOS_resume_context(ctx);
+
+    if (error) {
+        KOS_raise_printf(ctx, "getaddrinfo: %s", gai_strerror(error));
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
+
+    for (cur_info = info; cur_info; cur_info = cur_info->ai_next)
+        ++num_addrs;
+
+    addr_infos.o = KOS_new_array(ctx, num_addrs);
+    TRY_OBJID(addr_infos.o);
+
+    for (cur_info = info, i = 0; cur_info; cur_info = cur_info->ai_next, ++i) {
+
+        one_info.o = KOS_new_object(ctx);
+        TRY_OBJID(one_info.o);
+
+        TRY(KOS_array_write(ctx, addr_infos.o, i, one_info.o));
+
+        TRY(add_address_desc(ctx,
+                             one_info.o,
+                             (const KOS_GENERIC_ADDR *)cur_info->ai_addr,
+                             (ADDR_LEN)cur_info->ai_addrlen));
+
+        val.o = KOS_new_int(ctx, (int64_t)cur_info->ai_family);
+        TRY_OBJID(val.o);
+
+        TRY(KOS_set_property(ctx, one_info.o, KOS_CONST_ID(str_family), val.o));
+
+        val.o = KOS_new_int(ctx, (int64_t)cur_info->ai_socktype);
+        TRY_OBJID(val.o);
+
+        TRY(KOS_set_property(ctx, one_info.o, KOS_CONST_ID(str_socktype), val.o));
+
+        val.o = KOS_new_int(ctx, (int64_t)cur_info->ai_protocol);
+        TRY_OBJID(val.o);
+
+        TRY(KOS_set_property(ctx, one_info.o, KOS_CONST_ID(str_protocol), val.o));
+    }
+
+cleanup:
+    if (info)
+        freeaddrinfo(info);
+
+    addr_infos.o = KOS_destroy_top_locals(ctx, &one_info, &addr_infos);
+
+    KOS_vector_destroy(&port_cstr);
+    KOS_vector_destroy(&address_cstr);
+
+    return error ? KOS_BADPTR : addr_infos.o;
+}
+
 KOS_DECLARE_STATIC_CONST_STRING(str_option, "option");
 
 static const KOS_CONVERT getsockopt_args[3] = {
@@ -2444,25 +2642,27 @@ KOS_INIT_MODULE(net, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     }
 #endif
 
-    TRY_ADD_CONSTRUCTOR(    ctx, module.o,                 "socket",     kos_socket,     socket_args, &socket_proto.o);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "accept",     kos_accept,     KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "bind",       kos_bind,       bind_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "close",      kos_close,      KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "connect",    kos_connect,    connect_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "getsockopt", kos_getsockopt, getsockopt_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "listen",     kos_listen,     listen_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "read",       kos_recv,       recv_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "recv",       kos_recv,       recv_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "recvfrom",   kos_recvfrom,   recv_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "release",    kos_close,      KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "wait",       kos_wait,       wait_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "send",       kos_send,       send_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "sendto",     kos_sendto,     sendto_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "setsockopt", kos_setsockopt, setsockopt_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "shutdown",   kos_shutdown,   shutdown_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "write",      kos_write,      KOS_NULL);
+    TRY_ADD_CONSTRUCTOR(    ctx, module.o,                 "socket",      kos_socket,      socket_args, &socket_proto.o);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "accept",      kos_accept,      KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "bind",        kos_bind,        bind_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "close",       kos_close,       KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "connect",     kos_connect,     connect_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "getsockopt",  kos_getsockopt,  getsockopt_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "listen",      kos_listen,      listen_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "read",        kos_recv,        recv_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "recv",        kos_recv,        recv_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "recvfrom",    kos_recvfrom,    recv_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "release",     kos_close,       KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "wait",        kos_wait,        wait_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "send",        kos_send,        send_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "sendto",      kos_sendto,      sendto_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "setsockopt",  kos_setsockopt,  setsockopt_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "shutdown",    kos_shutdown,    shutdown_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "write",       kos_write,       KOS_NULL);
 
-    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, socket_proto.o, "blocking",   get_blocking,   KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, socket_proto.o, "blocking",    get_blocking,    KOS_NULL);
+
+    TRY_ADD_FUNCTION(       ctx, module.o,                 "getaddrinfo", kos_getaddrinfo, getaddrinfo_args);
 
 #ifndef _WIN32
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "AF_LOCAL",     AF_LOCAL);
