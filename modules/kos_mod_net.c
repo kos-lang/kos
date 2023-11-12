@@ -407,8 +407,16 @@ static KOS_OBJ_ID address_to_string(KOS_CONTEXT             ctx,
                     if (pos && buf[pos - 1] != ':')
                         buf[pos++] = ':';
 
-                    len = (unsigned)snprintf(&buf[pos], sizeof(buf) - pos, "%02X%02X",
+                    len = (unsigned)snprintf(&buf[pos], sizeof(buf) - pos, "%02x%02x",
                                              byte[i], byte[i + 1]);
+                    assert(len == 4);
+
+                    while (buf[pos] == '0' && len > 1) {
+                        unsigned k = 1;
+                        for (k = 1; k < len; k++)
+                            buf[pos + k - 1] = buf[pos + k];
+                        --len;
+                    }
 
                     pos += len;
                 }
