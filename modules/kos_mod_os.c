@@ -83,6 +83,7 @@
 #endif
 
 KOS_DECLARE_STATIC_CONST_STRING(str_args,               "args");
+KOS_DECLARE_STATIC_CONST_STRING(str_code,               "code");
 KOS_DECLARE_STATIC_CONST_STRING(str_cwd,                "cwd");
 KOS_DECLARE_STATIC_CONST_STRING(str_default_value,      "default_value");
 KOS_DECLARE_STATIC_CONST_STRING(str_env,                "env");
@@ -1535,6 +1536,51 @@ cleanup:
     return error ? KOS_BADPTR : pid;
 }
 
+static const KOS_CONVERT exit_args[2] = {
+    KOS_DEFINE_OPTIONAL_ARG(str_code, TO_SMALL_INT(0)),
+    KOS_DEFINE_TAIL_ARG()
+};
+
+/* @item os exit()
+ *
+ *     exit(code = 0)
+ *
+ * Terminates the current process immediately.
+ *
+ * `code` is the process exit code.  It is a numeric value from 0 to 255.
+ * If it's a float, it is converted to integer using floor operation.
+ *
+ * Example:
+ *
+ *      > exit(1)
+ */
+static KOS_OBJ_ID kos_exit(KOS_CONTEXT ctx,
+                           KOS_OBJ_ID  this_obj,
+                           KOS_OBJ_ID  args_obj)
+{
+    int64_t    exit_code;
+    KOS_OBJ_ID exit_code_obj;
+    int        error = KOS_SUCCESS;
+
+    assert(KOS_get_array_size(args_obj) > 0);
+
+    exit_code_obj = KOS_array_read(ctx, args_obj, 0);
+    TRY_OBJID(exit_code_obj);
+
+    if (KOS_get_integer(ctx, exit_code_obj, &exit_code)) {
+        KOS_clear_exception(ctx);
+        exit_code = 0;
+    }
+
+    if (exit_code < 0 || exit_code > 255)
+        exit_code = 1;
+
+    exit((int)exit_code);
+
+cleanup:
+    return error ? KOS_BADPTR : KOS_VOID;
+}
+
 /* @item os getenv()
  *
  *     getenv(key, default_value = void)
@@ -1751,6 +1797,7 @@ KOS_INIT_MODULE(os, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     KOS_atomic_write_relaxed_ptr(OBJPTR(MODULE, module.o)->priv, priv.o);
 
     TRY_ADD_FUNCTION(       ctx, module.o,               "spawn",      spawn,          spawn_args);
+    TRY_ADD_FUNCTION(       ctx, module.o,               "exit",       kos_exit,       exit_args);
     TRY_ADD_FUNCTION(       ctx, module.o,               "getenv",     kos_getenv,     getenv_args);
     TRY_ADD_FUNCTION(       ctx, module.o,               "getloadavg", kos_getloadavg, KOS_NULL);
 

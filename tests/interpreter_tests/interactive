@@ -503,6 +503,17 @@ if [ $EC -ne 43 ]; then
 fi
 
 ##############################################################################
+# Exit code via os.exit()
+
+EC=0
+"$KOS" -c 'import os ; os.exit(44)' || EC=$?
+
+if [ $EC -ne 44 ]; then
+    echo "$LINENO: Error: Expected exit code 44 but got $EC" >&2
+    exit 1
+fi
+
+##############################################################################
 # Empty input
 
 echo '' | "$KOS" | remove_cr > "$OUTPUT"

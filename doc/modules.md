@@ -241,6 +241,7 @@ Table of Contents
   * [os](#os)
     * [arch](#arch)
     * [cpus](#cpus)
+    * [exit()](#exit)
     * [getenv()](#getenv)
     * [getloadavg()](#getloadavg)
     * [process()](#process)
@@ -4882,6 +4883,20 @@ Example:
 
     > cpus
     4
+
+exit()
+------
+
+    exit(code = 0)
+
+Terminates the current process immediately.
+
+`code` is the process exit code.  It is a numeric value from 0 to 255.
+If it's a float, it is converted to integer using floor operation.
+
+Example:
+
+     > exit(1)
 
 getenv()
 --------
