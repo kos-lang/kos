@@ -72,6 +72,8 @@
 #   define KOS_ARCH "aarch32"
 #elif defined(__powerpc64__)
 #   define KOS_ARCH "ppc64"
+#elif defined(__riscv)
+#   define KOS_ARCH "riscv"
 #elif defined(_M_AMD64) || defined(__x86_64)
 #   define KOS_ARCH "x86_64"
 #elif defined(_M_IX86) || defined(__i386)
