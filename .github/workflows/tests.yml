@@ -23,7 +23,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Test
         run: tests/run ${{ matrix.test }}
 
@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-20.04
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Test
@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-20.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Install Valgrind
         if: ${{ matrix.test == 'valgrind' }}
         run: |
@@ -86,7 +86,7 @@ jobs:
         with:
           path-type: inherit
           install: diffutils
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Remove link.exe from MSYS2
         shell: msys2 {0}
         run: rm -f /bin/link.exe
@@ -112,7 +112,7 @@ jobs:
         with:
           path-type: inherit
           install: diffutils
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Remove link.exe from MSYS2
         shell: msys2 {0}
         run: rm -f /bin/link.exe
