@@ -26,7 +26,7 @@ Vim
 Copy the contents of `tools/vim` directory to:
 
 * `$HOME\.vim` (Linux, macOS).
-* `%USERPROFILE%\_vim` (Windows).
+* `%USERPROFILE%/_vim` (Windows).
 
 Visual Studio Code
 ------------------

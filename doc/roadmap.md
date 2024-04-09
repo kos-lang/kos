@@ -14,9 +14,8 @@ The following features are planned before first release:
     - Use linear search for small objects
 * Modules:
     - debug
-    - fs improvements (e.g. directory scanning)
     - datetime improvements (e.g. timestamp formatting)
-    - net
+    - ssl - secure socket implemented using OS-specific API
 * Debugger:
     - Build symbol table for debugger
     - Export debugger API (debug module)
