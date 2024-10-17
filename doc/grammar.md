@@ -90,9 +90,10 @@ character sequence is either `LF`, `CR-LF`, or `CR`, if it's not followed by
 `LF`.
 
     Eol                ::= ( "\r" "\n" ) | "\r" | "\n"
+                         | "\x{2028}" | "\x{2029}"
 
     WhitespaceChar     ::= " " | "\f" | "\v"
-                         | "\x{A0}" | "\x{2028}" | "\x{2029}" | "\x{FEFF}"
+                         | "\x{A0}" | "\x{FEFF}"
 
     WHITESPACE_LITERAL ::= ( WhitespaceChar ( WhitespaceChar )* ) | Eol
 
@@ -235,7 +236,7 @@ A decimal floating-point number consists of base, mantissa and exponent.
 
 Base is a `0` or a decimal integer number.  Base is followed by a `.`.
 
-The optional mantissa following the `.` conists of any number of digits.
+The optional mantissa following the `.` consists of any number of digits.
 
 Exponent is `e`, `E`, `p` or `P` followed by an optional sign `+` or `-`,
 followed by a decimal number.
@@ -324,7 +325,7 @@ sequence.
 
     EscapedStringLiteral ::= """ ( StringChar )* """
 
-    RawStringLiteral     ::= ( "r" | "R" ) """ ( UTF8_CHARACTER except """ ) """
+    RawStringLiteral     ::= ( "r" | "R" ) """ ( UTF8_CHARACTER except """ )* """
 
     STRING_LITERAL       ::= EscapedStringLiteral | RawStringLiteral
 
@@ -469,7 +470,6 @@ Statement
                 | ReturnStatement
                 | ThrowStatement
                 | AssertStatement
-                | PublicStatement
 
 
 Semicolons
@@ -1158,7 +1158,7 @@ Member specification
     FunctionLiteral ::= SimpleFunctionLiteral
                       | CompoundFunctionLiteral
 
-    SimpleFunctionLiteral   ::= ( Identifier | [ ParameterList] ) "=>" RHSExpression
+    SimpleFunctionLiteral   ::= ( Identifier | ParameterList ) "=>" RHSExpression
 
     CompoundFunctionLiteral ::= "fun" [ ParameterList ] CompoundStatement
 
