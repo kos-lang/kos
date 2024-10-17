@@ -347,6 +347,11 @@ static unsigned prefetch_next(KOS_LEXER *lexer, const char **begin, const char *
                 e  = lexer->buf_end;
             }
             else {
+                const unsigned code_nbsp     = 0x00A0;
+                const unsigned code_bom      = 0xFEFF;
+                const unsigned code_line_sep = 0x2028;
+                const unsigned code_par_sep  = 0x2029;
+
                 unsigned code = ((((unsigned char)*b) << len) & 0xFFU) >> len;
                 unsigned i;
                 for (i = 1; i < len; ++i) {
@@ -359,12 +364,12 @@ static unsigned prefetch_next(KOS_LEXER *lexer, const char **begin, const char *
                 }
                 e = b + i;
 
-                if (code == 0x00A0 || /* NBSP */
-                    code == 0x2028 || /* line separator */
-                    code == 0x2029 || /* paragraph separator */
-                    code == 0xFEFF    /* BOM */ )
-
-                    lt = LT_WHITESPACE;
+                if (lt != LT_INVALID_UTF8) {
+                    if (code == code_nbsp || code == code_bom)
+                        lt = LT_WHITESPACE;
+                    else if (code == code_line_sep || code == code_par_sep)
+                        lt = LT_EOL;
+                }
             }
         }
         else

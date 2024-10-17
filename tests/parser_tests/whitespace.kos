@@ -6,8 +6,8 @@
 
 (scope 1 1
     (identifier 1 9 tab)
-    (identifier 3 20 line3)
-    (string 4 1 "x")
+    (identifier 5 2 line3)
+    (string 6 1 "x")
 )
 
 @------------------------------------------------------------------------------
