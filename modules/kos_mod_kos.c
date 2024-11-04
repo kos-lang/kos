@@ -591,6 +591,7 @@ int kos_module_kos_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 
     TRY(KOS_module_add_global(ctx, module.o, KOS_CONST_ID(str_version), version.o, KOS_NULL));
 
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "token_invalid",        TT_INVALID);
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "token_whitespace",     TT_WHITESPACE);
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "token_eol",            TT_EOL);
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "token_comment",        TT_COMMENT);
