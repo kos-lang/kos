@@ -1069,7 +1069,6 @@ Expressions
                              ( BitwiseXorOperator UnaryExpression )*
 
     BitwiseShiftExpression ::= UnaryExpression BitwiseShiftOperator UnaryExpression
-                               ( BitwiseShiftOperator UnaryExpression )*
 
     ArithExpression ::= AdditiveExpression
 
