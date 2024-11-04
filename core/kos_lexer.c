@@ -322,6 +322,22 @@ static const char *const keywords[] = {
     "yield"
 };
 
+static int report_error(KOS_LEXER *lexer, const KOS_FILE_POS *pos, uint32_t length, const char* error_str)
+{
+    if ( ! lexer->error_str)
+        lexer->error_str = error_str;
+
+    if (lexer->report_error)
+        lexer->report_error(lexer->report_cookie,
+                            pos->file_id,
+                            pos->line,
+                            pos->column,
+                            length,
+                            error_str);
+
+    return KOS_ERROR_SCANNING_FAILED;
+}
+
 static unsigned prefetch_next(KOS_LEXER *lexer, const char **begin, const char **end)
 {
     unsigned lt;
@@ -448,64 +464,62 @@ static int char_is_bin_or_underscore(char c)
 
 static int collect_escape(KOS_LEXER *lexer, int *format)
 {
-    const char *begin, *end;
+    const KOS_FILE_POS esc_pos   = lexer->old_pos;
+    const char        *esc_begin = lexer->prefetch_end - 1;
+    const char        *begin;
+    const char        *end;
+    int                error     = KOS_SUCCESS;
+    unsigned           c;
 
-    int error = KOS_SUCCESS;
+    assert(*esc_begin == '\\');
 
-    unsigned c = prefetch_next(lexer, &begin, &end);
+    c = prefetch_next(lexer, &begin, &end);
 
     if (c == LT_EOF) {
-        lexer->error_str = str_err_eof_esc;
-        error = KOS_ERROR_SCANNING_FAILED;
+        error = report_error(lexer, &lexer->old_pos, 0, str_err_eof_esc);
     }
     else {
         const char esc_type = kos_escape_sequence_map[(unsigned char)*begin];
         if (esc_type == KOS_ET_HEX) {
             c = prefetch_next(lexer, &begin, &end);
             if (c == LT_EOF) {
-                lexer->error_str = str_err_eof_esc;
-                error = KOS_ERROR_SCANNING_FAILED;
+                error = report_error(lexer, &lexer->old_pos, 0, str_err_eof_esc);
             }
             else if (*begin == '{') {
                 int count = 0;
+
                 for (;; ++count) {
                     c = prefetch_next(lexer, &begin, &end);
                     if (c == LT_EOF) {
-                        lexer->error_str = str_err_eof_esc;
-                        error = KOS_ERROR_SCANNING_FAILED;
+                        error = report_error(lexer, &lexer->old_pos, 0, str_err_eof_esc);
                         break;
                     }
-                    else if (*begin == '}')
+                    else if (*begin == '}') {
+                        if ( ! count) {
+                            error = report_error(lexer, &lexer->old_pos, 1, str_err_no_hex_digits);
+                        }
                         break;
+                    }
                     else if (!char_is_hex(*begin)) {
-                        lexer->error_str = str_err_hex;
-                        error = KOS_ERROR_SCANNING_FAILED;
+                        error = report_error(lexer, &lexer->old_pos, end - begin, str_err_hex);
                         break;
                     }
                 }
-                if (count == 0) {
-                    lexer->error_str = str_err_no_hex_digits;
-                    error = KOS_ERROR_SCANNING_FAILED;
-                }
-                else if (count > 6) {
-                    lexer->error_str = str_err_too_many_hex_digits;
-                    error = KOS_ERROR_SCANNING_FAILED;
+                if (count > 6) {
+                    error = report_error(lexer, &esc_pos, end - esc_begin, str_err_too_many_hex_digits);
                 }
             }
             else if (char_is_hex(*begin)) {
                 c = prefetch_next(lexer, &begin, &end);
                 if (c == LT_EOF) {
-                    lexer->error_str = str_err_eof_esc;
-                    error = KOS_ERROR_SCANNING_FAILED;
+                    error = report_error(lexer, &lexer->old_pos, 0, str_err_eof_esc);
                 }
                 else if (!char_is_hex(*begin)) {
-                    lexer->error_str = str_err_hex;
-                    error = KOS_ERROR_SCANNING_FAILED;
+                    error = report_error(lexer, &lexer->old_pos, end - begin, str_err_hex);
                 }
             }
             else {
-                lexer->error_str = str_err_hex;
-                error = KOS_ERROR_SCANNING_FAILED;
+                error = report_error(lexer, &lexer->old_pos, end - begin, str_err_hex);
             }
         }
         else if (esc_type == KOS_ET_INTERPOLATE)
@@ -517,12 +531,11 @@ static int collect_escape(KOS_LEXER *lexer, int *format)
 
 static int collect_string(KOS_LEXER *lexer)
 {
-    const char *begin, *end;
-
-    int error = KOS_SUCCESS;
-
-    unsigned   c      = prefetch_next(lexer, &begin, &end);
-    int        format = 0;
+    const char *begin;
+    const char *end;
+    int         error  = KOS_SUCCESS;
+    int         format = 0;
+    unsigned    c      = prefetch_next(lexer, &begin, &end);
 
     while ((c != LT_EOF) && (c != LT_INVALID_UTF8) && (c != LT_STRING)) {
 
@@ -532,22 +545,19 @@ static int collect_string(KOS_LEXER *lexer)
                 break;
         }
         else if (c == LT_EOL) {
-            lexer->error_str = str_err_eol_str;
-            error            = KOS_ERROR_SCANNING_FAILED;
+            error = report_error(lexer, &lexer->old_pos, end - begin, str_err_eol_str);
             break;
         }
 
         c = prefetch_next(lexer, &begin, &end);
     }
 
-    if (!error) {
+    if ( ! error) {
         if (c == LT_EOF) {
-            lexer->error_str = str_err_eof_str;
-            error = KOS_ERROR_SCANNING_FAILED;
+            error = report_error(lexer, &lexer->old_pos, 0, str_err_eof_str);
         }
         else if (c == LT_INVALID_UTF8) {
-            lexer->error_str = str_err_invalid_utf8;
-            error = KOS_ERROR_SCANNING_FAILED;
+            error = report_error(lexer, &lexer->old_pos, end - begin, str_err_invalid_utf8);
         }
     }
 
@@ -574,12 +584,10 @@ static int collect_raw_string(KOS_LEXER *lexer)
     }
 
     if (c == LT_EOF) {
-        lexer->error_str = str_err_eof_str;
-        error = KOS_ERROR_SCANNING_FAILED;
+        error = report_error(lexer, &lexer->old_pos, 0, str_err_eof_str);
     }
     else if (c == LT_INVALID_UTF8) {
-        lexer->error_str = str_err_invalid_utf8;
-        error = KOS_ERROR_SCANNING_FAILED;
+        error = report_error(lexer, &lexer->old_pos, end - begin, str_err_invalid_utf8);
     }
 
     return error;
@@ -625,7 +633,11 @@ static int is_digit_or_underscore(unsigned c)
 
 static int collect_decimal(KOS_LEXER *lexer)
 {
-    const char *begin, *end;
+    const KOS_FILE_POS dec_pos   = lexer->pos;
+    const char        *dec_begin = lexer->prefetch_begin;
+
+    const char *begin;
+    const char *end;
     unsigned    c;
     int         error = KOS_SUCCESS;
 
@@ -664,8 +676,7 @@ static int collect_decimal(KOS_LEXER *lexer)
     retract(lexer, begin);
 
     if ((c & LT_ALPHANUMERIC) != 0) {
-        lexer->error_str = str_err_invalid_dec;
-        error = KOS_ERROR_SCANNING_FAILED;
+        error = report_error(lexer, &dec_pos, end - dec_begin, str_err_invalid_dec);
     }
 
     return error;
@@ -679,12 +690,10 @@ static int collect_hex(KOS_LEXER *lexer)
     unsigned c = prefetch_next(lexer, &begin, &end);
 
     if (c == LT_EOF) {
-        lexer->error_str = str_err_eof_hex;
-        error = KOS_ERROR_SCANNING_FAILED;
+        error = report_error(lexer, &lexer->old_pos, 0, str_err_eof_hex);
     }
     else if (!char_is_hex_or_underscore(*begin)) {
-        lexer->error_str = str_err_hex;
-        error = KOS_ERROR_SCANNING_FAILED;
+        error = report_error(lexer, &lexer->old_pos, end - begin, str_err_hex);
     }
     else {
         do
@@ -704,12 +713,10 @@ static int collect_bin(KOS_LEXER *lexer)
     unsigned c = prefetch_next(lexer, &begin, &end);
 
     if (c == LT_EOF) {
-        lexer->error_str = str_err_eof_bin;
-        error = KOS_ERROR_SCANNING_FAILED;
+        error = report_error(lexer, &lexer->old_pos, 0, str_err_eof_bin);
     }
     else if (!char_is_bin_or_underscore(*begin)) {
-        lexer->error_str = str_err_bin;
-        error = KOS_ERROR_SCANNING_FAILED;
+        error = report_error(lexer, &lexer->old_pos, end - begin, str_err_bin);
     }
     else {
         do
@@ -796,6 +803,37 @@ static KOS_KEYWORD_TYPE find_keyword(const char *begin, const char *end)
     return kw;
 }
 
+static int report_and_collect(KOS_LEXER    *lexer,
+                              KOS_FILE_POS  pos,
+                              const char   *invalid_begin,
+                              unsigned char invalid_lt)
+{
+    const char   *error_str;
+    const char   *begin;
+    const char   *end;
+    unsigned char c;
+
+    if (invalid_lt == LT_TAB)
+        error_str = str_err_tab;
+    else if (invalid_lt == LT_INVALID)
+        error_str = str_err_invalid_char;
+    else {
+        error_str = str_err_char;
+        invalid_lt = LT_UTF8_MULTI;
+    }
+
+    do {
+        c = prefetch_next(lexer, &begin, &end);
+
+        if ((invalid_lt == LT_UTF8_MULTI) && (c >= LT_UTF8_2) && (c <= LT_UTF8_4))
+            c = LT_UTF8_MULTI;
+    } while (c == invalid_lt);
+
+    retract(lexer, begin);
+
+    return report_error(lexer, &pos, begin - invalid_begin, error_str);
+}
+
 #if defined(CONFIG_SEQFAIL) || defined(CONFIG_FUZZ)
 static void set_seq_fail(const char *begin, const char *end)
 {
@@ -857,6 +895,8 @@ void kos_lexer_init(KOS_LEXER  *lexer,
     lexer->old_pos.file_id = file_id;
     lexer->old_pos.line    = 0;
     lexer->old_pos.column  = 0;
+    lexer->report_error    = KOS_NULL;
+    lexer->report_cookie   = KOS_NULL;
 
     /* Ignore UTF-8 byte order mark at the beginning of a file */
     skip_bom(lexer);
@@ -881,8 +921,8 @@ int kos_lexer_next_token(KOS_LEXER          *lexer,
                          KOS_NEXT_TOKEN_MODE mode,
                          KOS_TOKEN          *token)
 {
-    int error = KOS_SUCCESS;
     const char *begin, *end;
+    int error = KOS_SUCCESS;
 
     token->keyword = KW_NONE;
     token->op      = OT_NONE;
@@ -898,14 +938,12 @@ int kos_lexer_next_token(KOS_LEXER          *lexer,
         if (begin >= lexer->buf_end) {
             token->type      = TT_EOF;
             end              = begin;
-            lexer->error_str = str_err_eof_cont;
-            error            = KOS_ERROR_SCANNING_FAILED;
+            error = report_error(lexer, &lexer->pos, 0, str_err_eof_cont);
         }
         else if (*begin != ')') {
             end                 = begin + 1;
             lexer->prefetch_end = end;
-            lexer->error_str    = str_err_cont;
-            error               = KOS_ERROR_SCANNING_FAILED;
+            error = report_error(lexer, &lexer->pos, 0, str_err_cont);
         }
         else {
             error = collect_string(lexer);
@@ -1024,21 +1062,13 @@ int kos_lexer_next_token(KOS_LEXER          *lexer,
             case LT_EOF:
                 token->type = TT_EOF;
                 break;
-            case LT_TAB:
-                lexer->error_str = str_err_tab;
-                error = KOS_ERROR_SCANNING_FAILED;
-                break;
-            case LT_INVALID:
-                lexer->error_str = str_err_invalid_char;
-                error = KOS_ERROR_SCANNING_FAILED;
-                break;
             case LT_INVALID_UTF8:
-                lexer->error_str = str_err_invalid_utf8;
-                error = KOS_ERROR_SCANNING_FAILED;
+                token->type = TT_INVALID;
+                error = report_error(lexer, &lexer->old_pos, end - begin, str_err_invalid_utf8);
                 break;
             default:
-                lexer->error_str = str_err_char;
-                error = KOS_ERROR_SCANNING_FAILED;
+                token->type = TT_INVALID;
+                error = report_and_collect(lexer, lexer->old_pos, begin, c);
                 break;
         }
     }
@@ -1050,8 +1080,8 @@ int kos_lexer_next_token(KOS_LEXER          *lexer,
     if (end - begin > 0xFFFF) {
         token->length = 0xFFFFU;
         if ( ! error) {
-            lexer->error_str = str_err_token_too_long;
-            error            = KOS_ERROR_SCANNING_FAILED;
+            const KOS_FILE_POS pos = { token->line, token->column, token->file_id };
+            error = report_error(lexer, &pos, end - begin, str_err_token_too_long);
         }
     }
     else

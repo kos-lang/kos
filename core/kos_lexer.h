@@ -13,17 +13,22 @@ typedef struct KOS_FILE_POS_S {
     uint16_t file_id;
 } KOS_FILE_POS;
 
+typedef void (* KOS_REPORT_ERROR)(void *cookie, uint16_t file_id, uint32_t line, uint32_t column, uint32_t length, const char *error_str);
+
 typedef struct KOS_LEXER_S {
-    const char  *buf;
-    const char  *buf_end;
-    const char  *prefetch_begin;
-    const char  *prefetch_end;
-    const char  *error_str;
-    KOS_FILE_POS pos;
-    KOS_FILE_POS old_pos;
+    const char      *buf;
+    const char      *buf_end;
+    const char      *prefetch_begin;
+    const char      *prefetch_end;
+    const char      *error_str;
+    KOS_REPORT_ERROR report_error;
+    void            *report_cookie;
+    KOS_FILE_POS     pos;
+    KOS_FILE_POS     old_pos;
 } KOS_LEXER;
 
 typedef enum KOS_TOKEN_TYPE_E {
+    TT_INVALID,
     TT_WHITESPACE,
     TT_EOL,
     TT_COMMENT,
