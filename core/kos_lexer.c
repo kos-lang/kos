@@ -324,9 +324,6 @@ static const char *const keywords[] = {
 
 static int report_error(KOS_LEXER *lexer, const KOS_FILE_POS *pos, uint32_t length, const char* error_str)
 {
-    if ( ! lexer->error_str)
-        lexer->error_str = error_str;
-
     if (lexer->report_error)
         lexer->report_error(lexer->report_cookie,
                             pos->file_id,
@@ -888,7 +885,6 @@ void kos_lexer_init(KOS_LEXER  *lexer,
     lexer->buf_end         = end;
     lexer->prefetch_begin  = begin;
     lexer->prefetch_end    = begin;
-    lexer->error_str       = KOS_NULL;
     lexer->pos.file_id     = file_id;
     lexer->pos.line        = 1;
     lexer->pos.column      = 1;
@@ -907,7 +903,6 @@ void kos_lexer_update(KOS_LEXER  *lexer,
                       const char *end)
 {
     assert(lexer->pos.line >= 1);
-    assert(lexer->error_str == KOS_NULL);
 
     lexer->buf             = begin;
     lexer->buf_end         = end;

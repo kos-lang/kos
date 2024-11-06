@@ -20,7 +20,6 @@ typedef struct KOS_LEXER_S {
     const char      *buf_end;
     const char      *prefetch_begin;
     const char      *prefetch_end;
-    const char      *error_str;
     KOS_REPORT_ERROR report_error;
     void            *report_cookie;
     KOS_FILE_POS     pos;

@@ -44,14 +44,21 @@ KOS_DECLARE_STATIC_CONST_STRING(str_token,                    "token");
 KOS_DECLARE_STATIC_CONST_STRING(str_type,                     "type");
 KOS_DECLARE_STATIC_CONST_STRING(str_version,                  "version");
 
+typedef struct LEXER_ERROR_S {
+    const char *error_str;
+    uint32_t    line;
+    uint32_t    column;
+} LEXER_ERROR;
+
 typedef struct KOS_LEXER_OBJ_S {
-    KOS_LEXER lexer;
-    KOS_TOKEN token;
-    char     *own_buf;
-    uint32_t  own_buf_size;
-    uint8_t   ignore_errors;
-    uint8_t   from_generator;
-    char      buf[1];
+    KOS_LEXER   lexer;
+    KOS_TOKEN   token;
+    char       *own_buf;
+    LEXER_ERROR error;
+    uint32_t    own_buf_size;
+    uint8_t     ignore_errors;
+    uint8_t     from_generator;
+    char        buf[1];
 } KOS_LEXER_OBJ;
 
 static void finalize(KOS_CONTEXT ctx,
@@ -65,6 +72,20 @@ static void finalize(KOS_CONTEXT ctx,
 
         KOS_free(priv);
     }
+}
+
+static void report_error(void       *cookie,
+                         uint16_t    file_id,
+                         uint32_t    line,
+                         uint32_t    column,
+                         uint32_t    length,
+                         const char *error_str)
+{
+    KOS_LEXER_OBJ *const lexer = (KOS_LEXER_OBJ *)cookie;
+
+    lexer->error.error_str = error_str;
+    lexer->error.line      = line;
+    lexer->error.column    = column;
 }
 
 KOS_DECLARE_PRIVATE_CLASS(lexer_priv_class);
@@ -196,9 +217,12 @@ static KOS_OBJ_ID raw_lexer(KOS_CONTEXT ctx,
 
         kos_lexer_init(&kos_lexer->lexer, 0, &kos_lexer->buf[0], &kos_lexer->buf[buf_size]);
 
-        kos_lexer->ignore_errors = 0;
-        kos_lexer->own_buf       = KOS_NULL;
-        kos_lexer->own_buf_size  = 0;
+        kos_lexer->ignore_errors       = 0;
+        kos_lexer->own_buf             = KOS_NULL;
+        kos_lexer->own_buf_size        = 0;
+        kos_lexer->error.error_str     = KOS_NULL;
+        kos_lexer->lexer.report_error  = report_error;
+        kos_lexer->lexer.report_cookie = kos_lexer;
 
         assert(KOS_get_array_size(regs.o) > 1);
         ignore_errors = KOS_array_read(ctx, regs.o, 1);
@@ -241,7 +265,7 @@ static KOS_OBJ_ID raw_lexer(KOS_CONTEXT ctx,
         }
     }
 
-    assert( ! kos_lexer->lexer.error_str);
+    assert( ! kos_lexer->error.error_str);
 
     init.o = KOS_BADPTR;
 
@@ -292,7 +316,7 @@ static KOS_OBJ_ID raw_lexer(KOS_CONTEXT ctx,
 
             KOS_TOKEN *cur_token = &kos_lexer->token;
 
-            kos_lexer->lexer.error_str = KOS_NULL;
+            kos_lexer->error.error_str = KOS_NULL;
 
             cur_token->type    = TT_WHITESPACE;
             cur_token->keyword = KW_NONE;
@@ -304,9 +328,9 @@ static KOS_OBJ_ID raw_lexer(KOS_CONTEXT ctx,
         else {
             KOS_raise_printf(ctx,
                              "parse error %u:%u: %s",
-                             kos_lexer->lexer.pos.line,
-                             kos_lexer->lexer.pos.column,
-                             kos_lexer->lexer.error_str);
+                             kos_lexer->error.line,
+                             kos_lexer->error.column,
+                             kos_lexer->error.error_str);
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
     }

@@ -3409,6 +3409,18 @@ static int handle_imports(KOS_PARSER *parser, KOS_AST_NODE *root)
     return error;
 }
 
+static void report_error(void       *cookie,
+                         uint16_t    file_id,
+                         uint32_t    line,
+                         uint32_t    column,
+                         uint32_t    length,
+                         const char *error_str)
+{
+    KOS_PARSER *const parser = (KOS_PARSER *)cookie;
+
+    parser->error_str = error_str;
+}
+
 void kos_parser_init(KOS_PARSER           *parser,
                      struct KOS_MEMPOOL_S *mempool,
                      uint16_t              file_id,
@@ -3416,6 +3428,9 @@ void kos_parser_init(KOS_PARSER           *parser,
                      const char           *end)
 {
     kos_lexer_init(&parser->lexer, file_id, begin, end);
+
+    parser->lexer.report_error  = report_error;
+    parser->lexer.report_cookie = parser;
 
     parser->ast_buf                 = mempool;
     parser->error_str               = KOS_NULL;
@@ -3467,8 +3482,6 @@ int kos_parser_parse(KOS_PARSER    *parser,
 cleanup:
     if (!error)
         *ret = root;
-    else if (error == KOS_ERROR_SCANNING_FAILED)
-        parser->error_str = parser->lexer.error_str;
 
     return error;
 }
