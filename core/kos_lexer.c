@@ -808,10 +808,10 @@ static int report_and_collect(KOS_LEXER    *lexer,
                               const char   *invalid_begin,
                               unsigned char invalid_lt)
 {
-    const char   *error_str;
-    const char   *begin;
-    const char   *end;
-    unsigned char c;
+    const char *error_str;
+    const char *begin;
+    const char *end;
+    unsigned    c;
 
     if (invalid_lt == LT_TAB)
         error_str = str_err_tab;
