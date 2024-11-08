@@ -800,10 +800,10 @@ static KOS_KEYWORD_TYPE find_keyword(const char *begin, const char *end)
     return kw;
 }
 
-static int report_and_collect(KOS_LEXER    *lexer,
-                              KOS_FILE_POS  pos,
-                              const char   *invalid_begin,
-                              unsigned char invalid_lt)
+static int report_and_collect(KOS_LEXER   *lexer,
+                              KOS_FILE_POS pos,
+                              const char  *invalid_begin,
+                              unsigned     invalid_lt)
 {
     const char *error_str;
     const char *begin;
