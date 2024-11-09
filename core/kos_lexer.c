@@ -498,12 +498,12 @@ static int collect_escape(KOS_LEXER *lexer, int *format)
                         break;
                     }
                     else if (!char_is_hex(*begin)) {
-                        error = report_error(lexer, &lexer->old_pos, end - begin, str_err_hex);
+                        error = report_error(lexer, &lexer->old_pos, (uint32_t)(end - begin), str_err_hex);
                         break;
                     }
                 }
                 if (count > 6) {
-                    error = report_error(lexer, &esc_pos, end - esc_begin, str_err_too_many_hex_digits);
+                    error = report_error(lexer, &esc_pos, (uint32_t)(end - esc_begin), str_err_too_many_hex_digits);
                 }
             }
             else if (char_is_hex(*begin)) {
@@ -516,7 +516,7 @@ static int collect_escape(KOS_LEXER *lexer, int *format)
                 }
             }
             else {
-                error = report_error(lexer, &lexer->old_pos, end - begin, str_err_hex);
+                error = report_error(lexer, &lexer->old_pos, (uint32_t)(end - begin), str_err_hex);
             }
         }
         else if (esc_type == KOS_ET_INTERPOLATE)
@@ -542,7 +542,7 @@ static int collect_string(KOS_LEXER *lexer)
                 break;
         }
         else if (c == LT_EOL) {
-            error = report_error(lexer, &lexer->old_pos, end - begin, str_err_eol_str);
+            error = report_error(lexer, &lexer->old_pos, (uint32_t)(end - begin), str_err_eol_str);
             break;
         }
 
@@ -551,10 +551,10 @@ static int collect_string(KOS_LEXER *lexer)
 
     if ( ! error) {
         if (c == LT_EOF) {
-            error = report_error(lexer, &lexer->old_pos, 0, str_err_eof_str);
+            error = report_error(lexer, &lexer->old_pos, (uint32_t)(0), str_err_eof_str);
         }
         else if (c == LT_INVALID_UTF8) {
-            error = report_error(lexer, &lexer->old_pos, end - begin, str_err_invalid_utf8);
+            error = report_error(lexer, &lexer->old_pos, (uint32_t)(end - begin), str_err_invalid_utf8);
         }
     }
 
@@ -584,7 +584,7 @@ static int collect_raw_string(KOS_LEXER *lexer)
         error = report_error(lexer, &lexer->old_pos, 0, str_err_eof_str);
     }
     else if (c == LT_INVALID_UTF8) {
-        error = report_error(lexer, &lexer->old_pos, end - begin, str_err_invalid_utf8);
+        error = report_error(lexer, &lexer->old_pos, (uint32_t)(end - begin), str_err_invalid_utf8);
     }
 
     return error;
@@ -673,7 +673,7 @@ static int collect_decimal(KOS_LEXER *lexer)
     retract(lexer, begin);
 
     if ((c & LT_ALPHANUMERIC) != 0) {
-        error = report_error(lexer, &dec_pos, end - dec_begin, str_err_invalid_dec);
+        error = report_error(lexer, &dec_pos, (uint32_t)(end - dec_begin), str_err_invalid_dec);
     }
 
     return error;
@@ -690,7 +690,7 @@ static int collect_hex(KOS_LEXER *lexer)
         error = report_error(lexer, &lexer->old_pos, 0, str_err_eof_hex);
     }
     else if (!char_is_hex_or_underscore(*begin)) {
-        error = report_error(lexer, &lexer->old_pos, end - begin, str_err_hex);
+        error = report_error(lexer, &lexer->old_pos, (uint32_t)(end - begin), str_err_hex);
     }
     else {
         do
@@ -713,7 +713,7 @@ static int collect_bin(KOS_LEXER *lexer)
         error = report_error(lexer, &lexer->old_pos, 0, str_err_eof_bin);
     }
     else if (!char_is_bin_or_underscore(*begin)) {
-        error = report_error(lexer, &lexer->old_pos, end - begin, str_err_bin);
+        error = report_error(lexer, &lexer->old_pos, (uint32_t)(end - begin), str_err_bin);
     }
     else {
         do
@@ -828,7 +828,7 @@ static int report_and_collect(KOS_LEXER   *lexer,
 
     retract(lexer, begin);
 
-    return report_error(lexer, &pos, begin - invalid_begin, error_str);
+    return report_error(lexer, &pos, (uint32_t)(begin - invalid_begin), error_str);
 }
 
 #if defined(CONFIG_SEQFAIL) || defined(CONFIG_FUZZ)
