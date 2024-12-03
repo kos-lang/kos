@@ -1,0 +1,137 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Copyright (c) 2014-2024 Chris Dragan
+
+import math.pi
+
+##############################################################################
+
+public var a = "a"
+var b = "b"
+var c = "c"
+
+do {
+    assert a == "a"
+    assert b == "b"
+    assert c == "c"
+
+    a = "aa"
+    b = "bb"
+    c = "cc"
+
+    var a = "aaa"
+    var b = "bbb"
+    var c = "ccc"
+
+    fun myfunc(a, b)
+    {
+        return a + b
+    }
+
+    assert myfunc(1, 2) == 3
+
+    assert a == "aaa"
+    assert b == "bbb"
+    assert c == "ccc"
+}
+
+assert a == "aa"
+assert b == "bb"
+assert c == "cc"
+
+##############################################################################
+
+do {
+    fun check_and_assign(na, nb)
+    {
+        assert a == "aa"
+        assert b == "bb"
+        a = na
+        b = nb
+    }
+
+    check_and_assign("a1", "b1")
+    assert a == "a1"
+    assert b == "b1"
+    assert c == "cc"
+}
+
+##############################################################################
+
+do {
+    assert a == "a1"
+    b = ""
+
+    fun deep1(a)
+    {
+        b += a
+
+        var a = a + "d1"
+
+        b += "_" + a
+
+        fun deep2(a)
+        {
+            b += "_" + a
+
+            do {
+                var a = a + "d2"
+
+                b += "_" + a
+            }
+
+            b += "_" + a
+        }
+
+        deep2("Y")
+
+        fun deep3(a...)
+        {
+            b += "_" + a[0]
+
+            do {
+                var a = a[0] + "d3"
+
+                b += "_" + a
+            }
+
+            b += "_" + a[0]
+        }
+
+        deep3("Z")
+    }
+
+    deep1("X")
+
+    assert a == "a1"
+    assert b == "X_Xd1_Y_Yd2_Y_Z_Zd3_Z"
+}
+
+##############################################################################
+
+assert pi > 3.1415 && pi < 3.1416
+
+do {
+    var pi = 1
+    assert pi == 1
+}
+
+assert pi > 3.1415 && pi < 3.1416
+
+do {
+    fun hide_pi(pi)
+    {
+        assert pi == 3
+
+        do {
+            var pi = 4
+
+            assert pi == 4
+        }
+
+        assert pi == 3
+    }
+
+    hide_pi(3)
+
+    assert pi > 3.1415 && pi < 3.1416
+}

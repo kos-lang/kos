@@ -7,6 +7,7 @@ standalone_tests  = kos_array_test
 standalone_tests += kos_atomic_test
 standalone_tests += kos_basic_object_test
 standalone_tests += kos_buffer_test
+standalone_tests += kos_compiler_hash_table_test
 standalone_tests += kos_convert_test
 standalone_tests += kos_cpp_api_test
 standalone_tests += kos_gc_test

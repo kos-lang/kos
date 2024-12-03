@@ -44,10 +44,11 @@ static void update_scope_ref(KOS_COMP_UNIT *program,
         }
 }
 
-static void lookup_var(KOS_COMP_UNIT      *program,
-                       const KOS_AST_NODE *node,
-                       int                 only_active,
-                       KOS_VAR           **out_var)
+/* TODO why do we need this?
+ * This is done only to update exported_args and exported_local counts in refs.
+ */
+static void mark_independent_var(KOS_COMP_UNIT      *program,
+                                 const KOS_AST_NODE *node)
 {
     KOS_VAR *var = node->u.var;
 
@@ -57,10 +58,6 @@ static void lookup_var(KOS_COMP_UNIT      *program,
 
     if ( ! node->is_local_var && ! node->is_const_fun) {
 
-        if (only_active) {
-            assert(var->is_active);
-        }
-
         assert(var->type == VAR_INDEPENDENT_LOCAL    ||
                var->type == VAR_INDEPENDENT_ARGUMENT ||
                var->type == VAR_INDEPENDENT_ARG_IN_REG);
@@ -69,8 +66,6 @@ static void lookup_var(KOS_COMP_UNIT      *program,
 
         update_scope_ref(program, var->type, var->scope);
     }
-
-    *out_var = var;
 }
 
 static KOS_SCOPE *push_scope(KOS_COMP_UNIT      *program,
@@ -82,8 +77,6 @@ static KOS_SCOPE *push_scope(KOS_COMP_UNIT      *program,
     assert(scope);
 
     assert(scope->parent_scope == program->scope_stack);
-
-    kos_deactivate_vars(scope);
 
     program->scope_stack = scope;
 
@@ -182,7 +175,6 @@ static void update_arguments(KOS_COMP_UNIT *program,
         assert(ident_node->is_var);
         var = ident_node->u.var;
         assert(var);
-        assert(var == kos_find_var(scope->vars, &ident_node->token));
 
         if (var->num_reads || var->num_assignments) {
             if (arg_node->type == NT_ELLIPSIS)
@@ -207,7 +199,6 @@ static void update_arguments(KOS_COMP_UNIT *program,
         assert(ident_node->is_var);
         assert(ident_node->type == NT_IDENTIFIER);
         assert(var);
-        assert(var == kos_find_var(scope->vars, &ident_node->token));
 
         assert(var->type == VAR_ARGUMENT || var->type == VAR_INDEPENDENT_ARGUMENT);
 
@@ -296,11 +287,7 @@ static int function_literal(KOS_COMP_UNIT *program,
     assert(node->next->type == NT_LANDMARK);
     assert( ! node->next->next);
 
-    kos_activate_self_ref_func(program, fun_var);
-
     error = visit_node(program, node);
-
-    kos_deactivate_self_ref_func(program, fun_var);
 
     pop_scope(program);
 
@@ -361,24 +348,19 @@ cleanup:
 static void identifier(KOS_COMP_UNIT      *program,
                        const KOS_AST_NODE *node)
 {
-    KOS_VAR *var = KOS_NULL;
-    lookup_var(program, node, 1, &var);
-    assert(var);
+    mark_independent_var(program, node);
 }
 
 static int assignment(KOS_COMP_UNIT *program,
                       KOS_AST_NODE  *node)
 {
     int           error     = KOS_SUCCESS;
-    int           is_lhs;
     KOS_AST_NODE *lhs_node  = node->children;
     KOS_AST_NODE *rhs_node;
 
     assert(lhs_node);
     assert(lhs_node->next);
     assert( ! lhs_node->next->next);
-
-    is_lhs = lhs_node->type == NT_LEFT_HAND_SIDE ? 1 : 0;
 
     assert(lhs_node->type == NT_LEFT_HAND_SIDE ||
            lhs_node->type == NT_VAR            ||
@@ -400,7 +382,6 @@ static int assignment(KOS_COMP_UNIT *program,
         assert( ! lhs_node->children->is_scope);
         assert(lhs_node->children->is_var);
         assert(fun_var);
-        assert( ! fun_var->is_active);
 
         if (rhs_node->type == NT_FUNCTION_LITERAL)
             TRY(function_literal(program, rhs_node, fun_var));
@@ -414,15 +395,8 @@ static int assignment(KOS_COMP_UNIT *program,
 
     for ( ; node; node = node->next) {
 
-        if (node->type == NT_IDENTIFIER) {
-
-            KOS_VAR *var = KOS_NULL;
-
-            lookup_var(program, node, is_lhs, &var);
-
-            if ( ! is_lhs && var->is_active == VAR_INACTIVE)
-                var->is_active = VAR_ACTIVE;
-        }
+        if (node->type == NT_IDENTIFIER)
+            mark_independent_var(program, node);
         else {
             assert(node->type != NT_LINE_LITERAL &&
                    node->type != NT_THIS_LITERAL &&
@@ -455,7 +429,6 @@ static int try_stmt(KOS_COMP_UNIT *program,
 
         KOS_AST_NODE *var_node = node->children;
         KOS_AST_NODE *scope_node;
-        KOS_VAR      *var;
 
         assert(node->type == NT_CATCH);
 
@@ -473,16 +446,9 @@ static int try_stmt(KOS_COMP_UNIT *program,
         assert( ! var_node->next);
         assert(var_node->type == NT_IDENTIFIER);
 
-        lookup_var(program, var_node, 0, &var);
-
-        assert(var);
-        assert(var->is_active == VAR_INACTIVE);
-
-        var->is_active = VAR_ACTIVE;
+        mark_independent_var(program, var_node);
 
         TRY(visit_node(program, scope_node));
-
-        var->is_active = VAR_INACTIVE;
     }
     else
         TRY(visit_node(program, node));
@@ -502,7 +468,6 @@ static int for_in_stmt(KOS_COMP_UNIT *program,
 
     assert(node->children);
     assert(node->children->children);
-    kos_activate_new_vars(program, node->children->children);
 
     error = visit_child_nodes(program, node);
 

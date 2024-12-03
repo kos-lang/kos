@@ -7,6 +7,7 @@ c_files  = kos_array.c
 c_files += kos_buffer.c
 c_files += kos_compiler.c
 c_files += kos_compiler_args.c
+c_files += kos_compiler_hash.c
 c_files += kos_compiler_optim.c
 c_files += kos_compiler_vars.c
 c_files += kos_constants.c

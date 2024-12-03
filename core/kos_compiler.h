@@ -9,6 +9,7 @@
 #include "../inc/kos_memory.h"
 #include "../inc/kos_utf8.h"
 #include "kos_ast.h"
+#include "kos_compiler_hash.h"
 #include "kos_red_black.h"
 #include <stdint.h>
 
@@ -36,19 +37,15 @@ enum KOS_VAR_TYPE_E {
     VAR_IMPORTED               = 64
 };
 
-enum KOS_VAR_ACTIVE_E {
-    VAR_INACTIVE,
-    VAR_ACTIVE,
-    VAR_ALWAYS_ACTIVE
-};
-
 typedef struct KOS_VAR_S {
-    KOS_RED_BLACK_NODE  rb_tree_node;      /* Node for red-black tree holding variables in parent scope        */
+    struct KOS_VAR_S   *scope_next;        /* Pointer to next variable on the list of variables in parent scope */
     struct KOS_VAR_S   *next;              /* Pointer to next variable on the list of variables in frame scope */
     struct KOS_SCOPE_S *scope;             /* Parent scope where this variable was declared                    */
     const KOS_TOKEN    *token;
     KOS_REG            *reg;
     const KOS_AST_NODE *value;
+    struct KOS_VAR_S   *shadowed_var;      /* Shadowed variable in the hash table                   */
+    uint32_t            hash;              /* Hash used as index in the hash table                  */
     int                 num_reads;         /* Number of reads from a variable (including closures)  */
     int                 num_reads_prev;    /* num_reads from prev pass, for assignment optimization */
     int                 num_assignments;   /* Number of writes to a variable (including closures)   */
@@ -57,7 +54,6 @@ typedef struct KOS_VAR_S {
     int                 module_idx;        /* Index of module when type == VAR_IMPORTED             */
     int                 array_idx;
     unsigned            type         : 7;
-    unsigned            is_active    : 3;  /* Becomes active/searchable after the node, which declares it. */
     unsigned            is_const     : 1;
     unsigned            has_defaults : 1;
 } KOS_VAR;
@@ -88,7 +84,7 @@ typedef struct KOS_SCOPE_S {
     const KOS_AST_NODE *scope_node;
     struct KOS_SCOPE_S *parent_scope;
     struct KOS_FRAME_S *owning_frame;
-    KOS_RED_BLACK_NODE *vars;
+    KOS_VAR            *vars;
     KOS_VAR            *fun_vars_list;
     KOS_VAR            *ellipsis;
     int                 num_vars;
@@ -245,6 +241,7 @@ typedef struct KOS_COMP_UNIT_S {
     KOS_REG             *unused_regs; /* Register objects reusable without allocating memory */
 
     KOS_SCOPE           *scope_stack;
+    KOS_VAR_HASH_TABLE   variables;
 
     KOS_PRE_GLOBAL      *pre_globals;
     KOS_VAR             *globals;
@@ -309,24 +306,7 @@ int kos_optimize(KOS_COMP_UNIT *program,
 int kos_allocate_args(KOS_COMP_UNIT *program,
                       KOS_AST_NODE  *ast);
 
-KOS_VAR *kos_find_var(KOS_RED_BLACK_NODE *rb_root,
-                      const KOS_TOKEN    *token);
-
-void kos_activate_var(KOS_COMP_UNIT      *program,
-                      const KOS_AST_NODE *node);
-
-void kos_activate_new_vars(KOS_COMP_UNIT      *program,
-                           const KOS_AST_NODE *node);
-
 int kos_is_self_ref_func(const KOS_AST_NODE *node);
-
-void kos_activate_self_ref_func(KOS_COMP_UNIT *program,
-                                KOS_VAR       *fun_var);
-
-void kos_deactivate_self_ref_func(KOS_COMP_UNIT *program,
-                                  KOS_VAR       *fun_var);
-
-void kos_deactivate_vars(KOS_SCOPE *scope);
 
 KOS_SCOPE_REF *kos_find_scope_ref(KOS_FRAME *frame,
                                   KOS_SCOPE *closure);

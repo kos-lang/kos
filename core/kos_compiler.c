@@ -4,6 +4,7 @@
 
 #include "kos_compiler.h"
 #include "kos_ast.h"
+#include "kos_compiler_hash.h"
 #include "kos_config.h"
 #include "kos_disasm.h"
 #include "kos_perf.h"
@@ -284,13 +285,13 @@ static int count_used_regs(KOS_COMP_UNIT *program)
 /* Lookup variable in local scopes.
  * Arguments in registers, including ellipsis, are treated as local variables.
  * Skip other arguments, globals and modules. */
-static int lookup_local_var_even_inactive(KOS_COMP_UNIT      *program,
-                                          const KOS_AST_NODE *node,
-                                          int                 only_active,
-                                          KOS_REG           **reg)
+static int lookup_local_var(KOS_COMP_UNIT      *program,
+                            const KOS_AST_NODE *node,
+                            KOS_REG           **reg)
 {
     int error = KOS_SUCCESS;
 
+    /* Function-local variable or argument, but not a non-public global */
     if (node->is_local_var) {
 
         KOS_VAR *var = node->u.var;
@@ -302,12 +303,10 @@ static int lookup_local_var_even_inactive(KOS_COMP_UNIT      *program,
         if (var->type & VAR_LOCAL) {
 
             if (var == var->scope->ellipsis) {
-                assert(var->is_active);
                 assert(var->reg);
                 *reg = var->reg;
             }
-            else if (var->is_active || ! only_active) {
-
+            else {
                 if ( ! var->reg) {
                     error = gen_reg(program, &var->reg);
                     if ( ! error)
@@ -327,11 +326,40 @@ static int lookup_local_var_even_inactive(KOS_COMP_UNIT      *program,
     return error;
 }
 
-static int lookup_local_var(KOS_COMP_UNIT      *program,
-                            const KOS_AST_NODE *node,
-                            KOS_REG           **reg)
+static int gen_reg_for_assigned_var(KOS_COMP_UNIT      *program,
+                                    const KOS_AST_NODE *node,
+                                    int                 existing_var,
+                                    KOS_REG           **reg)
 {
-    return lookup_local_var_even_inactive(program, node, 1, reg);
+    KOS_VAR *var   = node->u.var;
+    int      error = KOS_SUCCESS;
+
+    assert(node->type == NT_IDENTIFIER);
+    assert(node->is_var);
+    assert( ! node->is_scope);
+    assert(var);
+
+    if ( ! (var->type & (VAR_LOCALS_AND_ARGS | VAR_ARGUMENT_IN_REG)) || ! node->is_local_var)
+        return KOS_SUCCESS;
+
+    if (existing_var) {
+        error = lookup_local_var(program, node, reg);
+    }
+    else {
+        assert(var->type & VAR_LOCAL);
+        assert(var != var->scope->ellipsis);
+        assert( ! var->reg || (var->type & VAR_INDEPENDENT));
+
+        if ( ! var->reg) {
+            error = gen_reg(program, &var->reg);
+            if ( ! error)
+                var->reg->tmp = 0;
+        }
+
+        *reg = var->reg;
+    }
+
+    return error;
 }
 
 static int lookup_var(KOS_COMP_UNIT      *program,
@@ -342,9 +370,6 @@ static int lookup_var(KOS_COMP_UNIT      *program,
     KOS_VAR *var = node->is_var ? node->u.var : KOS_NULL;
 
     assert( ! node->is_scope);
-
-    if (var && ! var->is_active)
-        var = KOS_NULL;
 
     if (var) {
         const int  is_var        = var->type == VAR_INDEPENDENT_LOCAL;
@@ -1262,8 +1287,6 @@ static KOS_SCOPE *push_scope(KOS_COMP_UNIT      *program,
 
     assert(scope->parent_scope == program->scope_stack);
 
-    kos_deactivate_vars(scope);
-
     program->scope_stack = scope;
 
     if (scope->has_frame)
@@ -1272,29 +1295,25 @@ static KOS_SCOPE *push_scope(KOS_COMP_UNIT      *program,
     return scope;
 }
 
-static int free_scope_regs(KOS_RED_BLACK_NODE *node,
-                           void               *cookie)
+static void free_scope_reg(KOS_COMP_UNIT *program,
+                           KOS_VAR       *var)
 {
-    KOS_VAR       *var     = (KOS_VAR *)node;
-    KOS_COMP_UNIT *program = (KOS_COMP_UNIT *)cookie;
-
     if (var->reg && var->type != VAR_INDEPENDENT_LOCAL) {
         var->reg->tmp = 1;
         free_reg(program, var->reg);
         var->reg = KOS_NULL;
     }
-
-    return KOS_SUCCESS;
 }
 
 static void pop_scope(KOS_COMP_UNIT *program)
 {
     KOS_SCOPE *const scope = program->scope_stack;
+    KOS_VAR         *var;
 
     assert(scope);
 
-    if (scope->vars)
-        kos_red_black_walk(scope->vars, free_scope_regs, (void *)program);
+    for (var = scope->vars; var; var = var->scope_next)
+        free_scope_reg(program, var);
 
     program->scope_stack = scope->parent_scope;
 
@@ -1303,8 +1322,9 @@ static void pop_scope(KOS_COMP_UNIT *program)
 }
 
 typedef struct KOS_IMPORT_INFO_S {
-    KOS_COMP_UNIT *program;
-    KOS_FILE_POS   pos;
+    KOS_COMP_UNIT      *program;
+    const KOS_AST_NODE *node;
+    const KOS_AST_NODE *next;
 } KOS_IMPORT_INFO;
 
 static int import_global(const char *global_name,
@@ -1317,18 +1337,32 @@ static int import_global(const char *global_name,
     KOS_IMPORT_INFO *info  = (KOS_IMPORT_INFO *)cookie;
     KOS_REG         *reg   = KOS_NULL;
     KOS_VAR         *var;
-    KOS_TOKEN        token;
 
-    memset(&token, 0, sizeof(token));
+    if (info->node->token.op == OT_MUL) {
 
-    token.begin   = global_name;
-    token.length  = global_length;
-    token.file_id = info->pos.file_id;
-    token.column  = info->pos.column;
-    token.line    = info->pos.line;
-    token.type    = TT_IDENTIFIER;
+        /* We expect the imports not to change between vars handling and code
+         * generation, and to be in exactly the same order.
+         */
+        assert(info->next);
+        assert(info->next->token.length == global_length);
+        assert(memcmp(info->next->token.begin, global_name, global_length) == 0);
 
-    var = kos_find_var(info->program->scope_stack->vars, &token);
+        if ( ! info->next || info->next->token.length != global_length ||
+            memcmp(info->next->token.begin, global_name, global_length) != 0) {
+
+            info->program->error_token = &info->node->token;
+            info->program->error_str   = str_err_no_such_module_variable;
+            return KOS_ERROR_COMPILE_FAILED;
+        }
+
+        assert(info->next->is_var);
+        var = info->next->u.var;
+        info->next = info->next->next;
+    }
+    else {
+        assert(info->node->is_var);
+        var = info->node->u.var;
+    }
 
     assert(var);
 
@@ -1378,7 +1412,8 @@ static int import(KOS_COMP_UNIT      *program,
 
         if (node->token.op == OT_MUL) {
 
-            info.pos = get_token_pos(&node->token);
+            info.node = node;
+            info.next = node->children;
 
             error = kos_comp_walk_globals(program->ctx,
                                           module_idx,
@@ -1391,7 +1426,8 @@ static int import(KOS_COMP_UNIT      *program,
 
                 assert(node->token.type == TT_IDENTIFIER || node->token.type == TT_KEYWORD);
 
-                info.pos = get_token_pos(&node->token);
+                info.node = node;
+                info.next = KOS_NULL;
 
                 error = kos_comp_resolve_global(program->ctx,
                                                 module_idx,
@@ -2473,8 +2509,6 @@ static int for_in(KOS_COMP_UNIT      *program,
     TRY(visit_node(program, expr_node, &iter_reg));
     assert(iter_reg);
 
-    kos_activate_new_vars(program, assg_node->children);
-
     if (iter_reg->tmp)
         reg = iter_reg;
     else {
@@ -2680,8 +2714,6 @@ static int for_range(KOS_COMP_UNIT      *program,
     assert(node);
     node = node->next;
     assert(node);
-
-    kos_activate_new_vars(program, var_node);
 
     var_node = var_node->children;
     assert(var_node);
@@ -3190,7 +3222,6 @@ static int try_stmt(KOS_COMP_UNIT      *program,
                     const KOS_AST_NODE *node)
 {
     KOS_REG            *except_reg     = KOS_NULL;
-    KOS_VAR            *except_var     = KOS_NULL;
     KOS_RETURN_OFFS    *return_offs    = program->cur_frame->return_offs;
     KOS_BREAK_OFFS     *old_break_offs = program->cur_frame->break_offs;
     const KOS_AST_NODE *try_node       = node->children;
@@ -3229,17 +3260,10 @@ static int try_stmt(KOS_COMP_UNIT      *program,
 
         assert( ! variable->is_scope);
         assert(variable->is_var);
-        except_var = variable->u.var;
-        assert(except_var);
-        assert(except_var == kos_find_var(program->scope_stack->vars, &variable->token));
-
-        assert(except_var->is_active == VAR_INACTIVE);
-        except_var->is_active = VAR_ACTIVE;
+        assert(variable->u.var);
 
         TRY(lookup_local_var(program, variable, &except_reg));
         assert(except_reg);
-
-        except_var->is_active = VAR_INACTIVE;
 
         scope->catch_ref.catch_reg = except_reg;
     }
@@ -3294,12 +3318,7 @@ static int try_stmt(KOS_COMP_UNIT      *program,
         assert(!node->next);
         assert(node->type == NT_SCOPE);
 
-        assert(except_var->is_active == VAR_INACTIVE);
-        except_var->is_active = VAR_ACTIVE;
-
         TRY(process_scope(program, node));
-
-        except_var->is_active = VAR_INACTIVE;
 
         set_jump_target(program, jump_end_entry, program->cur_offs);
     }
@@ -3728,23 +3747,6 @@ cleanup:
     return error;
 }
 
-static int find_var_by_reg(KOS_RED_BLACK_NODE *node,
-                           void               *cookie)
-{
-    KOS_VAR *var = (KOS_VAR *)node;
-    KOS_REG *reg = (KOS_REG *)cookie;
-
-    /* Handle local variables, arguments in registers and ellipsis. */
-    /* Ignore rest arguments, which are not stored in registers.    */
-    if (var->reg == reg && ! (var->type & VAR_ARGUMENT)) {
-
-        /* Technically this is not an error, but it will stop tree iteration */
-        return KOS_SUCCESS_RETURN;
-    }
-
-    return KOS_SUCCESS;
-}
-
 static int is_var_used(KOS_COMP_UNIT      *program,
                        const KOS_AST_NODE *node,
                        KOS_REG            *reg)
@@ -3760,9 +3762,16 @@ static int is_var_used(KOS_COMP_UNIT      *program,
 
             for (scope = program->scope_stack; scope && scope->parent_scope; scope = scope->parent_scope) {
 
-                const int error = kos_red_black_walk(scope->vars, find_var_by_reg, reg);
+                KOS_VAR *var;
 
-                if (error == KOS_SUCCESS_RETURN)
+                for (var = scope->vars; var; var = var->scope_next) {
+                    /* Handle local variables, arguments in registers and ellipsis. */
+                    /* Ignore rest arguments, which are not stored in registers.    */
+                    if (var->reg == reg && ! (var->type & VAR_ARGUMENT))
+                        break;
+                }
+
+                if (var)
                     return 1;
 
                 if (scope->is_function)
@@ -5154,7 +5163,7 @@ static int assignment(KOS_COMP_UNIT      *program,
                     assg_node->token.op == OT_SETADD ? CHECK_NUMERIC_OR_STRING : CHECK_NUMERIC));
 
         if (node->type == NT_IDENTIFIER)
-            TRY(lookup_local_var_even_inactive(program, node, is_lhs, &reg));
+            TRY(gen_reg_for_assigned_var(program, node, is_lhs, &reg));
 
         if (reg && assg_node->token.op == OT_SET)
             rhs = reg;
@@ -5165,7 +5174,6 @@ static int assignment(KOS_COMP_UNIT      *program,
         assert( ! lhs_node->children->is_scope);
         assert(lhs_node->children->is_var);
         assert(fun_var);
-        assert( ! fun_var->is_active);
 
         if (rhs_node->type == NT_FUNCTION_LITERAL)
             TRY(function_literal(program, rhs_node, fun_var, KOS_NULL, KOS_NULL, &rhs));
@@ -5195,7 +5203,7 @@ static int assignment(KOS_COMP_UNIT      *program,
     for ( ; node; node = node->next) {
 
         if ( ! reg && node->type == NT_IDENTIFIER)
-            TRY(lookup_local_var_even_inactive(program, node, is_lhs, &reg));
+            TRY(gen_reg_for_assigned_var(program, node, is_lhs, &reg));
 
         if (reg) {
 
@@ -5227,15 +5235,8 @@ static int assignment(KOS_COMP_UNIT      *program,
 
                 free_reg(program, rhs);
             }
-
-            if ( ! is_lhs)
-                kos_activate_var(program, node);
         }
         else {
-
-            if ( ! is_lhs)
-                kos_activate_var(program, node);
-
             if (node_type == NT_MULTI_ASSIGNMENT) {
 
                 TRY(gen_reg(program, &reg));
@@ -5557,18 +5558,13 @@ cleanup:
     return error;
 }
 
-static int free_arg_regs(KOS_RED_BLACK_NODE *node,
-                         void               *cookie)
+static void free_arg_reg(KOS_COMP_UNIT *program,
+                         KOS_VAR       *var)
 {
-    KOS_VAR       *var     = (KOS_VAR *)node;
-    KOS_COMP_UNIT *program = (KOS_COMP_UNIT *)cookie;
-
     if ((var->type & VAR_ARGUMENT_IN_REG) && var->reg && var->reg->tmp) {
         free_reg(program, var->reg);
         var->reg = KOS_NULL;
     }
-
-    return KOS_SUCCESS;
 }
 
 static int prealloc_arg_names(KOS_COMP_UNIT      *program,
@@ -5721,7 +5717,6 @@ static int gen_function(KOS_COMP_UNIT      *program,
             assert(ident_node->is_var);
             var = ident_node->u.var;
             assert(var);
-            assert(var == kos_find_var(scope->vars, &ident_node->token));
 
             assert(var->num_reads || ! var->num_assignments);
 
@@ -5881,19 +5876,16 @@ static int gen_function(KOS_COMP_UNIT      *program,
         free_reg(program, frame->args_reg);
         frame->args_reg = KOS_NULL;
     }
-    TRY(kos_red_black_walk(scope->vars, free_arg_regs, program));
+    for (var = scope->vars; var; var = var->scope_next)
+        free_arg_reg(program, var);
 
     /* Invoke super constructor if not invoked explicitly */
     if (needs_super_ctor && ! frame->uses_base_ctor)
         TRY(super_invocation(program, KOS_NULL, KOS_NULL));
 
-    kos_activate_self_ref_func(program, fun_var);
-
     /* Generate code for function body */
     TRY(visit_node(program, node, &scope_reg));
     assert(!scope_reg);
-
-    kos_deactivate_self_ref_func(program, fun_var);
 
     /* Set up constant template for LOAD.CONST */
     constant->closure_size = get_closure_size(program);
@@ -6535,6 +6527,8 @@ int kos_compiler_compile(KOS_COMP_UNIT *program,
     TRY(KOS_vector_reserve(&program->addr2line_gen_buf, 256));
     TRY(KOS_vector_reserve(&program->jump_buf,          16 * sizeof(JUMP_ENTRY)));
 
+    TRY(kos_init_hash_table(&program->variables));
+
     TRY(kos_compiler_process_vars(program, ast));
 
     do {
@@ -6569,6 +6563,8 @@ void kos_compiler_destroy(KOS_COMP_UNIT *program)
     KOS_vector_destroy(&program->addr2line_gen_buf);
     KOS_vector_destroy(&program->addr2line_buf);
     KOS_vector_destroy(&program->jump_buf);
+
+    kos_destroy_hash_table(&program->variables);
 
     KOS_mempool_destroy(&program->allocator);
 }
