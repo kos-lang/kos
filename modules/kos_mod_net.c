@@ -543,7 +543,7 @@ static KOS_OBJ_ID kos_socket(KOS_CONTEXT ctx,
 
     socket_fd = socket(arg_domain, arg_type, arg_protocol);
 
-    if (socket_fd == -1)
+    if (socket_fd == (KOS_SOCKET)-1)
         saved_errno = get_error();
 
     KOS_resume_context(ctx);
@@ -613,7 +613,7 @@ static KOS_OBJ_ID kos_accept(KOS_CONTEXT ctx,
 
     socket_fd = accept(get_socket(socket_holder), (struct sockaddr *)&addr, &addr_len);
 
-    if (socket_fd == -1)
+    if (socket_fd == (KOS_SOCKET)-1)
         saved_errno = get_error();
 
     KOS_resume_context(ctx);

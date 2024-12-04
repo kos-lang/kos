@@ -36,7 +36,7 @@ static void destroy(KOS_VAR_HASH_TABLE *table)
     num_entries = 0;
 }
 
-static ENTRY *alloc_entry()
+static ENTRY *alloc_entry(void)
 {
     ENTRY *entry;
 
@@ -160,7 +160,7 @@ static ENTRY *generate_collision(ENTRY *init)
         }                \
     } while (0)
 
-int main()
+int main(void)
 {
     KOS_VAR_HASH_TABLE table = { { KOS_NULL, 0, 0, { 0.0, 0.0 } }, 0 };
     struct KOS_RNG     rng;
