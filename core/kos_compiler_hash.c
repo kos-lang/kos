@@ -9,10 +9,10 @@
 #include <assert.h>
 #include <string.h>
 
-struct KOS_VAR_HASH_ENTRY_S {
+typedef struct KOS_VAR_HASH_ENTRY_S {
     KOS_VAR *var;
     uint32_t hash;
-};
+} KOS_VAR_HASH_ENTRY;
 
 static KOS_VAR deleted;
 
@@ -132,7 +132,7 @@ static int compare_var_against_hash(const KOS_VAR_HASH_ENTRY *entry,
     return (memcmp(var_token->begin, token->begin, token->length) == 0) ? 1 : 0;
 }
 
-int kos_add_to_hash_table(KOS_VAR_HASH_TABLE *hash_table, KOS_VAR *var)
+int kos_add_to_hash_table(KOS_VAR_HASH_TABLE *hash_table, struct KOS_VAR_S *var)
 {
     KOS_VAR_HASH_ENTRY    *entries   = (KOS_VAR_HASH_ENTRY *)hash_table->buffer.buffer;
     const KOS_TOKEN *const token     = var->token;
@@ -190,7 +190,7 @@ int kos_add_to_hash_table(KOS_VAR_HASH_TABLE *hash_table, KOS_VAR *var)
     return KOS_SUCCESS;
 }
 
-void kos_remove_from_hash_table(KOS_VAR_HASH_TABLE *hash_table, KOS_VAR *var)
+void kos_remove_from_hash_table(KOS_VAR_HASH_TABLE *hash_table, struct KOS_VAR_S *var)
 {
     KOS_VAR_HASH_ENTRY *entries   = (KOS_VAR_HASH_ENTRY *)hash_table->buffer.buffer;
     const uint32_t      size_mask = hash_table->size_mask;
@@ -220,7 +220,7 @@ void kos_remove_from_hash_table(KOS_VAR_HASH_TABLE *hash_table, KOS_VAR *var)
     }
 }
 
-KOS_VAR *kos_lookup_var(KOS_VAR_HASH_TABLE *hash_table, const KOS_TOKEN *token)
+struct KOS_VAR_S *kos_lookup_var(KOS_VAR_HASH_TABLE *hash_table, const struct KOS_TOKEN_S *token)
 {
     KOS_VAR_HASH_ENTRY *entries   = (KOS_VAR_HASH_ENTRY *)hash_table->buffer.buffer;
     const uint32_t      hash      = calculate_hash(token);

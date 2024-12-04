@@ -512,7 +512,7 @@ static int collect_escape(KOS_LEXER *lexer, int *format)
                     error = report_error(lexer, &lexer->old_pos, 0, str_err_eof_esc);
                 }
                 else if (!char_is_hex(*begin)) {
-                    error = report_error(lexer, &lexer->old_pos, end - begin, str_err_hex);
+                    error = report_error(lexer, &lexer->old_pos, (uint32_t)(end - begin), str_err_hex);
                 }
             }
             else {
@@ -1059,7 +1059,7 @@ int kos_lexer_next_token(KOS_LEXER          *lexer,
                 break;
             case LT_INVALID_UTF8:
                 token->type = TT_INVALID;
-                error = report_error(lexer, &lexer->old_pos, end - begin, str_err_invalid_utf8);
+                error = report_error(lexer, &lexer->old_pos, (uint32_t)(end - begin), str_err_invalid_utf8);
                 break;
             default:
                 token->type = TT_INVALID;
@@ -1076,7 +1076,7 @@ int kos_lexer_next_token(KOS_LEXER          *lexer,
         token->length = 0xFFFFU;
         if ( ! error) {
             const KOS_FILE_POS pos = { token->line, token->column, token->file_id };
-            error = report_error(lexer, &pos, end - begin, str_err_token_too_long);
+            error = report_error(lexer, &pos, (uint32_t)(end - begin), str_err_token_too_long);
         }
     }
     else

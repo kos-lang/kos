@@ -8,9 +8,8 @@
 #include "../inc/kos_memory.h"
 #include <stdint.h>
 
-typedef struct KOS_VAR_S KOS_VAR;
-typedef struct KOS_TOKEN_S KOS_TOKEN;
-typedef struct KOS_VAR_HASH_ENTRY_S KOS_VAR_HASH_ENTRY;
+struct KOS_VAR_S;
+struct KOS_TOKEN_S;
 
 typedef struct KOS_VAR_HASH_TABLE_S {
     KOS_VECTOR buffer;
@@ -21,10 +20,10 @@ int kos_init_hash_table(KOS_VAR_HASH_TABLE *hash_table);
 
 void kos_destroy_hash_table(KOS_VAR_HASH_TABLE *hash_table);
 
-int kos_add_to_hash_table(KOS_VAR_HASH_TABLE *hash_table, KOS_VAR *var);
+int kos_add_to_hash_table(KOS_VAR_HASH_TABLE *hash_table, struct KOS_VAR_S *var);
 
-void kos_remove_from_hash_table(KOS_VAR_HASH_TABLE *hash_table, KOS_VAR *var);
+void kos_remove_from_hash_table(KOS_VAR_HASH_TABLE *hash_table, struct KOS_VAR_S *var);
 
-KOS_VAR *kos_lookup_var(KOS_VAR_HASH_TABLE *hash_table, const KOS_TOKEN *token);
+struct KOS_VAR_S *kos_lookup_var(KOS_VAR_HASH_TABLE *hash_table, const struct KOS_TOKEN_S *token);
 
 #endif

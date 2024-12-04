@@ -163,7 +163,7 @@ static ENTRY *generate_collision(ENTRY *init)
 int main()
 {
     KOS_VAR_HASH_TABLE table = { { KOS_NULL, 0, 0, { 0.0, 0.0 } }, 0 };
-    struct KOS_RNG     rng   = { 0 };
+    struct KOS_RNG     rng;
 
     kos_rng_init(&rng);
 
