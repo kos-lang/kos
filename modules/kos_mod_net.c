@@ -24,8 +24,11 @@
 #include <string.h>
 
 #ifdef _WIN32
+#   pragma warning( push )
+#   pragma warning( disable : 4255 )
 #   include <winsock2.h>
 #   include <ws2tcpip.h>
+#   pragma warning( pop )
 #   define SHUT_RD   SD_RECEIVE
 #   define SHUT_WR   SD_SEND
 #   define SHUT_RDWR SD_BOTH
