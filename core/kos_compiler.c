@@ -5584,7 +5584,11 @@ static int prealloc_arg_names(KOS_COMP_UNIT      *program,
         int arg_str_idx;
 
         const KOS_AST_NODE *const ident_node =
-            node->type == NT_IDENTIFIER ? node : node->children;
+            node->type != NT_ASSIGNMENT ? node : node->children;
+
+        assert(node->type == NT_IDENTIFIER  ||
+               node->type == NT_PLACEHOLDER ||
+               node->type == NT_ASSIGNMENT);
 
         if (gen_str(program, &ident_node->token, &arg_str_idx))
             return 0;
@@ -5704,8 +5708,15 @@ static int gen_function(KOS_COMP_UNIT      *program,
         for (i = 0; arg_node && arg_node->type != NT_ELLIPSIS; arg_node = arg_node->next, ++i) {
 
             KOS_AST_NODE *ident_node =
-                arg_node->type == NT_IDENTIFIER ? arg_node : arg_node->children;
+                arg_node->type != NT_ASSIGNMENT ? arg_node : arg_node->children;
             int           arg_str_idx = 0;
+
+            assert(arg_node->type == NT_IDENTIFIER  ||
+                   arg_node->type == NT_PLACEHOLDER ||
+                   arg_node->type == NT_ASSIGNMENT);
+
+            assert(ident_node);
+            assert( ! ident_node->is_scope);
 
             if (i >= KOS_MAX_REGS) {
                 program->error_token = &ident_node->token;
@@ -5713,21 +5724,26 @@ static int gen_function(KOS_COMP_UNIT      *program,
                 RAISE_ERROR(KOS_ERROR_COMPILE_FAILED);
             }
 
-            assert( ! ident_node->is_scope);
-            assert(ident_node->is_var);
             var = ident_node->u.var;
-            assert(var);
 
-            assert(var->num_reads || ! var->num_assignments);
+            if (arg_node->type == NT_PLACEHOLDER) {
+                assert( ! ident_node->is_var);
+                assert( ! var);
+            }
+            else {
+                assert(ident_node->is_var);
+                assert(var);
+                assert(var->num_reads || ! var->num_assignments);
 
-            TRY(gen_str(program, &ident_node->token, &arg_str_idx));
-            assert(i < constant->num_named_args);
-            constant->arg_name_str_idx[i] = arg_str_idx;
+                TRY(gen_str(program, &ident_node->token, &arg_str_idx));
+                assert(i < constant->num_named_args);
+                constant->arg_name_str_idx[i] = arg_str_idx;
+            }
 
             /* Enumerate all args with default values, even if they are unused,
              * because we need to execute code used for initializing them,
              * even if these args will not be default-assigned in practice. */
-            if (arg_node->type != NT_IDENTIFIER) {
+            if (arg_node->type == NT_ASSIGNMENT) {
                 ++num_def_args;
                 constant->num_decl_def_args = (uint8_t)num_def_args;
                 if (var->num_reads || scope->ellipsis)
@@ -5742,10 +5758,26 @@ static int gen_function(KOS_COMP_UNIT      *program,
                  * up to the last argument which is used.  The tail of the arguments
                  * list which are not used is discarded and not enumerated.
                  * However, any following default arguments will still be counted. */
-                if (arg_node->type == NT_IDENTIFIER)
+                if (arg_node->type != NT_ASSIGNMENT)
                     ++constant->min_args;
 
-                if (var->type & VAR_ARGUMENT_IN_REG) {
+                if ( ! var) {
+
+                    /* Generate a register for this unnamed argument.
+                     * Although this argument is unused, there are other arguments
+                     * following it which are used.  If there were no other
+                     * used arguments, num_args would be smaller.
+                     */
+                    KOS_REG *reg = KOS_NULL;
+
+                    assert(arg_node->type == NT_PLACEHOLDER);
+
+                    TRY(gen_reg(program, &reg));
+
+                    ++last_reg;
+                    assert(reg->reg == last_reg);
+                }
+                else if (var->type & VAR_ARGUMENT_IN_REG) {
 
                     assert( ! var->reg);
 
@@ -5768,7 +5800,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
                 }
             }
             else {
-                assert( ! var->num_reads);
+                assert( ! var || ! var->num_reads);
             }
         }
 

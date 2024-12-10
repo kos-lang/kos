@@ -77,6 +77,9 @@ fun(a){};
 # Function literal, 2 args, empty body
 fun(c,d){};
 
+# Function literal, 3 args (1 unnamed), empty body
+fun(e,_,f){};
+
 @ 0
 
 (scope 1 1
@@ -116,6 +119,18 @@ fun(c,d){};
         (scope 11 9 {
                 (return 11 10 } (void 11 10 })))
         (landmark 11 10 })
+    )
+    (function 14 1 fun
+        (name 14 1 fun)
+        (parameters 14 4 paren_open
+            (identifier 14 5 e)
+            (placeholder 14 7 _)
+            (identifier 14 9 f)
+        )
+        (landmark 14 11 {)
+        (scope 14 11 {
+                (return 14 12 } (void 14 12 })))
+        (landmark 14 12 })
     )
 )
 
@@ -538,6 +553,14 @@ fun f(a..., b) { } # Ellipsis can only be last
 @ 10 1 11
 
 @------------------------------------------------------------------------------
+fun f(_...) { } # Cannot expand unnamed arguments
+@ 10 1 8
+
+@------------------------------------------------------------------------------
+fun f(a = 0, _ = 0) { } # Unnamed arguments cannot have default values
+@ 10 1 16
+
+@------------------------------------------------------------------------------
 ()=>(return 0) # Right-hand side expression required
 @ 10 1 6
 
@@ -558,6 +581,40 @@ fun f(a..., b) { } # Ellipsis can only be last
         (scope 1 3 =>
             (return 1 3 =>
                 (object 1 5 {)))
+        (landmark 3 1)
+))
+
+@------------------------------------------------------------------------------
+_=>void
+
+@ 0
+
+(scope 1 1
+    (function 1 2 =>
+        (name 1 2 =>)
+        (parameters 1 2 =>
+            (placeholder 1 1 _))
+        (landmark 1 2 =>)
+        (scope 1 2 =>
+            (return 1 2 =>
+                (void 1 4 void)))
+        (landmark 3 1)
+))
+
+@------------------------------------------------------------------------------
+(_)=>void
+
+@ 0
+
+(scope 1 1
+    (function 1 4 =>
+        (name 1 4 =>)
+        (parameters 1 1 paren_open
+            (placeholder 1 2 _))
+        (landmark 1 4 =>)
+        (scope 1 4 =>
+            (return 1 4 =>
+                (void 1 6 void)))
         (landmark 3 1)
 ))
 

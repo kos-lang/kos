@@ -2209,6 +2209,46 @@ do {
     assert f(unused = 1) == 42
 }
 
+# Unnamed args
+do {
+    fun add10(a, _)
+    {
+        return a + 10
+    }
+
+    assert add10(1) == 11
+    assert add10(1, 2) == 11
+}
+
+# Unnamed args
+do {
+    fun add10(a, _, b)
+    {
+        return b + 10
+    }
+
+    expect_fail(fun { add10(1) })
+    expect_fail(fun { add10(1, 2) })
+    assert add10(1, 2, 3) == 13
+}
+
+# Unnamed args
+do {
+    fun add10(a, _, b, _, _, _)
+    {
+        return b + 10
+    }
+
+    assert add10(1, 2, 3) == 13
+}
+
+# Unnamed args
+do {
+    const ultimate = _ => 42
+
+    assert ultimate() == 42
+}
+
 # Recursion
 do {
     const max_level = 5

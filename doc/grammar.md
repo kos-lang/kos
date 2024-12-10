@@ -394,7 +394,7 @@ treat it as either `<<` or `<=` operator.
                        | ( "+" "=" )
                        | ( "-" "=" )
                        | ( "*" "=" )
-                       | ( "/" "-" )
+                       | ( "/" "=" )
                        | ( "%" "=" )
                        | ( "&" "=" )
                        | ( "|" "=" )
@@ -580,11 +580,13 @@ Argument variables are assignable inside the function body.
 
     DefaultParameters   ::= DefaultParameter ( "," DefaultParameter )*
 
-    DefaultParameter    ::= Parameter "=" RHSExpression
+    DefaultParameter    ::= ParameterName "=" RHSExpression
 
-    ListParameter       ::= Parameter "..."
+    ListParameter       ::= ParameterName "..."
 
-    Parameter           ::= Identifier
+    Parameter           ::= ParameterName | "_"
+
+    ParameterName       ::= Identifier
 
 
 Class statement
@@ -1157,7 +1159,7 @@ Member specification
     FunctionLiteral ::= SimpleFunctionLiteral
                       | CompoundFunctionLiteral
 
-    SimpleFunctionLiteral   ::= ( Identifier | ParameterList ) "=>" RHSExpression
+    SimpleFunctionLiteral   ::= ( Identifier | "_" | ParameterList ) "=>" RHSExpression
 
     CompoundFunctionLiteral ::= "fun" [ ParameterList ] CompoundStatement
 

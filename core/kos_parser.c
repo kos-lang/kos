@@ -13,7 +13,9 @@
 #include <stdio.h>
 #include <string.h>
 
+static const char str_err_cannot_assign_placeholder[] = "unnamed arguments cannot have default values";
 static const char str_err_cannot_expand_named_arg[]   = "named arguments cannot be expanded";
+static const char str_err_cannot_expand_placeholder[] = "unnamed arguments cannot be expanded";
 static const char str_err_duplicate_default[]         = "multiple 'default' labels in one switch";
 static const char str_err_eol_before_par[]            = "ambiguous syntax: end of line before '(' - consider adding a ';'";
 static const char str_err_eol_before_sq[]             = "ambiguous syntax: end of line before '[' - consider adding a ';'";
@@ -306,18 +308,25 @@ static int parameters(KOS_PARSER    *parser,
 
     TRY(next_token(parser));
 
-    while (parser->token.type == TT_IDENTIFIER) {
+    while (parser->token.type == TT_IDENTIFIER || parser->token.keyword == KW_UNDERSCORE) {
 
-        KOS_NODE_TYPE node_type = NT_ASSIGNMENT;
-        KOS_AST_NODE *node      = KOS_NULL;
+        KOS_NODE_TYPE node_type   = NT_ASSIGNMENT;
+        KOS_AST_NODE *node        = KOS_NULL;
+        const int     placeholder = parser->token.keyword == KW_UNDERSCORE;
 
-        TRY(new_node(parser, &node, NT_IDENTIFIER));
+        TRY(new_node(parser, &node, placeholder ? NT_PLACEHOLDER : NT_IDENTIFIER));
 
         TRY(next_token(parser));
 
         if (parser->token.op == OT_ASSIGNMENT) {
 
             KOS_AST_NODE *assign_node;
+
+            if (placeholder) {
+                parser->error_str = str_err_cannot_assign_placeholder;
+                error = KOS_ERROR_PARSE_FAILED;
+                goto cleanup;
+            }
 
             has_defaults = 1;
 
@@ -342,6 +351,12 @@ static int parameters(KOS_PARSER    *parser,
         else if (parser->token.op == OT_MORE) {
 
             KOS_AST_NODE *new_arg;
+
+            if (placeholder) {
+                parser->error_str = str_err_cannot_expand_placeholder;
+                error = KOS_ERROR_PARSE_FAILED;
+                goto cleanup;
+            }
 
             node_type = NT_ELLIPSIS;
 
@@ -487,7 +502,7 @@ static int is_lambda_literal(KOS_PARSER *parser,
         if (parser->token.op == OT_LAMBDA)
             *is_lambda = 1;
     }
-    else if (parser->token.type == TT_IDENTIFIER) {
+    else if (parser->token.type == TT_IDENTIFIER || parser->token.keyword == KW_UNDERSCORE) {
 
         TRY(next_token(parser));
 
@@ -1028,6 +1043,20 @@ static int primary_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
                         break;
                     case KW_UNDERSCORE:
                         error = new_node(parser, ret, NT_PLACEHOLDER);
+                        if ( ! error)
+                            error = next_token(parser);
+                        if ( ! error) {
+                            if (token->op == OT_LAMBDA) {
+                                KOS_AST_NODE *args = KOS_NULL;
+                                error = new_node(parser, &args, NT_PARAMETERS);
+                                if ( ! error) {
+                                    ast_push(args, *ret);
+                                    error = lambda_literal_body(parser, args, ret);
+                                }
+                            }
+                            else
+                                parser->unget = 1;
+                        }
                         break;
                     default:
                         parser->error_str = str_err_expected_member_expr;

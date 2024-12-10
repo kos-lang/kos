@@ -144,13 +144,16 @@ static void update_arguments(KOS_COMP_UNIT *program,
 
     for (i = 0; arg_node; ++i) {
 
-        KOS_AST_NODE *ident_node;
-        KOS_VAR      *var;
+        KOS_AST_NODE *ident_node = KOS_NULL;
 
         switch (arg_node->type) {
 
             case NT_IDENTIFIER:
                 ident_node = arg_node;
+                ++num_non_def;
+                break;
+
+            case NT_PLACEHOLDER:
                 ++num_non_def;
                 break;
 
@@ -171,16 +174,21 @@ static void update_arguments(KOS_COMP_UNIT *program,
                 break;
         }
 
-        assert( ! ident_node->is_scope);
-        assert(ident_node->is_var);
-        var = ident_node->u.var;
-        assert(var);
+        if (ident_node) {
 
-        if (var->num_reads || var->num_assignments) {
-            if (arg_node->type == NT_ELLIPSIS)
-                have_ellipsis = 1;
-            else
-                max_used = i;
+            KOS_VAR *var;
+
+            assert( ! ident_node->is_scope);
+            assert(ident_node->is_var);
+            var = ident_node->u.var;
+            assert(var);
+
+            if (var->num_reads || var->num_assignments) {
+                if (arg_node->type == NT_ELLIPSIS)
+                    have_ellipsis = 1;
+                else
+                    max_used = i;
+            }
         }
 
         arg_node = arg_node->next;
@@ -192,28 +200,34 @@ static void update_arguments(KOS_COMP_UNIT *program,
 
     for (i = 0; arg_node && (arg_node->type != NT_ELLIPSIS); ++i) {
 
-        KOS_AST_NODE *ident_node = arg_node->type == NT_IDENTIFIER ? arg_node : arg_node->children;
-        KOS_VAR      *var        = ident_node->u.var;
+        if (arg_node->type != NT_PLACEHOLDER) {
 
-        assert( !  ident_node->is_scope);
-        assert(ident_node->is_var);
-        assert(ident_node->type == NT_IDENTIFIER);
-        assert(var);
+            KOS_VAR            *var;
+            KOS_AST_NODE *const ident_node =
+                arg_node->type != NT_ASSIGNMENT ? arg_node : arg_node->children;
 
-        assert(var->type == VAR_ARGUMENT || var->type == VAR_INDEPENDENT_ARGUMENT);
+            assert(ident_node);
+            assert( ! ident_node->is_scope);
+            assert(ident_node->is_var);
+            assert(ident_node->type == NT_IDENTIFIER);
+            var = ident_node->u.var;
+            assert(var);
 
-        if ( ! have_rest || (i < (int)KOS_MAX_ARGS_IN_REGS - 1)) {
+            assert(var->type == VAR_ARGUMENT || var->type == VAR_INDEPENDENT_ARGUMENT);
 
-            if (var->type == VAR_INDEPENDENT_ARGUMENT) {
-                assert(var->num_reads || var->num_assignments);
-                var->type     = VAR_INDEPENDENT_ARG_IN_REG;
-                max_indep_arg = i;
+            if ( ! have_rest || (i < (int)KOS_MAX_ARGS_IN_REGS - 1)) {
+
+                if (var->type == VAR_INDEPENDENT_ARGUMENT) {
+                    assert(var->num_reads || var->num_assignments);
+                    var->type     = VAR_INDEPENDENT_ARG_IN_REG;
+                    max_indep_arg = i;
+                }
+                else
+                    var->type = VAR_ARGUMENT_IN_REG;
             }
             else
-                var->type = VAR_ARGUMENT_IN_REG;
+                var->array_idx -= (int)KOS_MAX_ARGS_IN_REGS - 1;
         }
-        else
-            var->array_idx -= (int)KOS_MAX_ARGS_IN_REGS - 1;
 
         arg_node = arg_node->next;
     }
@@ -236,7 +250,7 @@ static int parameter_defaults(KOS_COMP_UNIT *program,
     assert(node->type == NT_PARAMETERS);
     node = node->children;
 
-    while (node && node->type == NT_IDENTIFIER)
+    while (node && (node->type == NT_IDENTIFIER || node->type == NT_PLACEHOLDER))
         node = node->next;
 
     for ( ; node && (node->type != NT_ELLIPSIS); node = node->next) {

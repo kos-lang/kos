@@ -872,6 +872,7 @@ static int function_literal(KOS_COMP_UNIT *program,
         KOS_AST_NODE *ident_node = arg_node;
 
         assert(arg_node->type == NT_IDENTIFIER ||
+               arg_node->type == NT_PLACEHOLDER ||
                arg_node->type == NT_ASSIGNMENT ||
                (arg_node->type == NT_ELLIPSIS && ! arg_node->next));
 
@@ -888,21 +889,23 @@ static int function_literal(KOS_COMP_UNIT *program,
             assert(arg_node->type == NT_IDENTIFIER);
         }
 
-        TRY(define_var(program, VARIABLE, ident_node, &var));
-        assert( ! ident_node->is_scope);
-        assert(ident_node->is_var);
-        assert(ident_node->u.var == var);
+        if (ident_node->type != NT_PLACEHOLDER) {
+            TRY(define_var(program, VARIABLE, ident_node, &var));
+            assert( ! ident_node->is_scope);
+            assert(ident_node->is_var);
+            assert(ident_node->u.var == var);
 
-        TRY(enable_var(program, var));
+            TRY(enable_var(program, var));
 
-        if (ellipsis)
-            program->scope_stack->ellipsis = var;
-        else {
-            var->type      = VAR_ARGUMENT;
-            var->array_idx = i;
+            if (ellipsis)
+                program->scope_stack->ellipsis = var;
+            else {
+                var->type      = VAR_ARGUMENT;
+                var->array_idx = i;
 
-            if (arg_node->type == NT_ASSIGNMENT)
-                var->has_defaults = 1;
+                if (arg_node->type == NT_ASSIGNMENT)
+                    var->has_defaults = 1;
+            }
         }
     }
 
