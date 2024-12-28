@@ -210,7 +210,7 @@ buffer.prototype.iterator = iterator
  *     0
  *     1
  */
-generator.prototype.iterator = () => this
+generator.prototype.iterator = _ => this
 
 /* @item base generator.prototype.next()
  *
