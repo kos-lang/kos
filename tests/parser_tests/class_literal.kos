@@ -208,6 +208,64 @@ class {
 )
 
 @------------------------------------------------------------------------------
+class myclass {
+    ;
+    constructor { };
+    ;
+    fun somefun { };
+    ;
+    var number = 42;
+    ;
+    var lambda = _ => 42;
+    ;
+}
+
+@0
+
+(scope 1 1
+    (assignment 1 1 class
+        (const 1 1 class
+        (identifier 1 7 myclass))
+        (class 1 7 myclass
+            (empty 1 15 {)
+            (object 1 15 {
+                (property 5 9 somefun
+                    (string 5 9 somefun)
+                    (function 5 9 somefun
+                        (name 5 9 somefun
+                            (identifier 5 9 somefun))
+                        (parameters 5 17 {)
+                        (landmark 5 17 {)
+                        (scope 5 17 {
+                            (return 5 19 }
+                                (void 5 19 })))
+                        (landmark 5 19 })))
+                (property 7 9 number
+                    (string 7 9 number)
+                    (number 7 18 42))
+                (property 9 9 lambda
+                    (string 9 9 lambda)
+                    (function 9 20 =>
+                        (name 9 20 =>)
+                        (parameters 9 20 =>
+                            (placeholder 9 18 _))
+                        (landmark 9 20 =>)
+                        (scope 9 20 =>
+                            (return 9 20 =>
+                                (number 9 23 42)))
+                        (landmark 9 25 ;))))
+            (constructor 3 5 constructor
+                (name_const 3 5 constructor
+                    (identifier 1 7 myclass))
+                (parameters 3 17 {)
+                (landmark 3 17 {)
+                (scope 3 17 {
+                    (return 3 19 }
+                        (this 3 19 })))
+                (landmark 3 19 }))))
+)
+
+@------------------------------------------------------------------------------
 class named {
     constructor(a, b) { this[a] = b }
 

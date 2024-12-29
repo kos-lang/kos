@@ -789,6 +789,9 @@ static int class_literal(KOS_PARSER    *parser,
 
             ast_push(prop_node, var_node);
         }
+        else if (parser->token.sep == ST_SEMICOLON) {
+            /* Ignore semicolons */
+        }
         else {
             parser->unget = 1;
             break;

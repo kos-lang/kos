@@ -1,4 +1,4 @@
-﻿Lexical grammar
+Lexical grammar
 ===============
 
 
@@ -598,7 +598,7 @@ Class statement
 
     ClassBody          ::= "{" ( ClassMember )* "}"
 
-    ClassMember        ::= ConstructorLiteral | FunctionDeclaration | DataMember
+    ClassMember        ::= ConstructorDeclaration | FunctionDeclaration | DataMember | ";"
 
     DataMember         ::= "var" Identifier "=" RHSExpression
 
@@ -623,7 +623,7 @@ or nothing.  No other value can be returned.
 
 The `yield` operator is not allowed inside a constructor function.
 
-    ConstructorLiteral ::= "constructor" [ ParameterList ] CompoundStatement
+    ConstructorDeclaration ::= "constructor" [ ParameterList ] CompoundStatement
 
 
 Do statement
