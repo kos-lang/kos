@@ -4062,7 +4062,7 @@ static int invocation(KOS_COMP_UNIT      *program,
         error = kos_comp_resolve_global(program->ctx,
                                         0,
                                         interp_str ? str_stringify : str_string,
-                                        length,
+                                        (uint16_t)length,
                                         get_global_idx,
                                         &string_idx);
         if (error && (error != KOS_ERROR_OUT_OF_MEMORY)) {
@@ -5373,7 +5373,7 @@ static int assignment(KOS_COMP_UNIT      *program,
 
                 assert(node_type == NT_ASSIGNMENT);
 
-                TRY(assign_or_concat(program, assg_node->token.op, assg_node, reg, reg, rhs));
+                TRY(assign_or_concat(program, (KOS_OPERATOR_TYPE)assg_node->token.op, assg_node, reg, reg, rhs));
 
                 free_reg(program, rhs);
             }
