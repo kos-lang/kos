@@ -1794,9 +1794,10 @@ static int gen_cond_jump_inner(KOS_COMP_UNIT      *program,
                                JUMP_ARRAY         *jump_array,
                                JUMP_ARRAY         *near_jump_array)
 {
-    int error     = KOS_SUCCESS;
-    int is_truthy = 0;
-    int is_falsy  = 0;
+    JUMP_ARRAY local_jump_array;
+    int        error     = KOS_SUCCESS;
+    int        is_truthy = 0;
+    int        is_falsy  = 0;
 
     while (node->type == NT_OPERATOR) {
 
@@ -1811,9 +1812,14 @@ static int gen_cond_jump_inner(KOS_COMP_UNIT      *program,
         else if (((op == OT_LOGOR)  && (opcode == INSTR_JUMP_COND)) ||
                  ((op == OT_LOGAND) && (opcode == INSTR_JUMP_NOT_COND))) {
 
+            init_jump_array(&local_jump_array);
+
             node = node->children;
             assert(node);
-            TRY(gen_cond_jump_inner(program, node, opcode, jump_array, near_jump_array));
+            TRY(gen_cond_jump_inner(program, node, opcode, jump_array, &local_jump_array));
+
+            update_jump_array(program, &local_jump_array, program->cur_offs);
+            /* TODO delete previous jump instruction if it has jump offset 0 */
 
             node = node->next;
             assert(node);
@@ -1822,9 +1828,14 @@ static int gen_cond_jump_inner(KOS_COMP_UNIT      *program,
         else if (((op == OT_LOGAND) && (opcode == INSTR_JUMP_COND)) ||
                  ((op == OT_LOGOR)  && (opcode == INSTR_JUMP_NOT_COND))) {
 
+            init_jump_array(&local_jump_array);
+
             node = node->children;
             assert(node);
-            TRY(gen_cond_jump_inner(program, node, negate_jump_opcode(opcode), near_jump_array, jump_array));
+            TRY(gen_cond_jump_inner(program, node, negate_jump_opcode(opcode), near_jump_array, &local_jump_array));
+
+            update_jump_array(program, &local_jump_array, program->cur_offs);
+            /* TODO delete previous jump instruction if it has jump offset 0 */
 
             node = node->next;
             assert(node);

@@ -15,6 +15,20 @@ fun expect_fail(function)
     assert failed
 }
 
+fun get_false()
+{
+    const value = ! expect_fail
+    assert ! value
+    return value
+}
+
+fun get_true()
+{
+    const value = ! get_false()
+    assert value
+    return value
+}
+
 ##############################################################################
 # typeof
 assert typeof 0        == "integer"
@@ -507,8 +521,8 @@ do {
 # ||
 do {
     const _void  = void
-    const _false = false
-    const _true  = true
+    const _false = get_false()
+    const _true  = get_true()
     assert (_void || _false) == false
     assert (_void || _true)  == true
     assert (_false || _true) == true
@@ -520,16 +534,16 @@ do {
 }
 
 do {
-    const a = false
-    const b = true
+    const a = get_false()
+    const b = get_true()
     assert a || b
     assert ! a
     assert b
 }
 
 do {
-    const a = true
-    const b = false
+    const a = get_true()
+    const b = get_false()
     assert a || b
     assert a
     assert ! b
@@ -581,8 +595,8 @@ do {
 ##############################################################################
 # &&
 do {
-    const _false = false
-    const _true  = true
+    const _false = get_false()
+    const _true  = get_true()
     assert (_true && "xyz") == "xyz"
     assert (_false && "xyz") == false
     assert _false == false
@@ -628,10 +642,88 @@ do {
 }
 
 ##############################################################################
+# && and ||
+
+do {
+    const _false = (_ => false)()
+    const _true  = (_ => true)()
+    if (_true || _true) && _false {
+        assert false
+    }
+}
+
+do {
+    const mas1 = (_ => "MS")()
+    const mas2 = (_ => "XM")()
+
+    const res1 = mas1 == "MS" || mas1 == "SM"
+    assert res1
+
+    const res2 = mas2 == "MS" || mas2 == "SM"
+    assert ! res2
+
+    const res3 = (mas1 == "MS" || mas1 == "SM") && (mas2 == "MS" || mas2 == "SM")
+    assert ! res3
+
+    const res4 = mas1 == "MS" && mas2 == "XM"
+    assert res4
+
+    const res5 = (mas1 == "MS" && mas2 == "SM") || (mas1 == "MS" && mas2 == "XM")
+    assert res5
+
+    assert mas1 == "MS" || mas1 == "SM"
+
+    assert ! ( mas2 == "MS" || mas2 == "SM" )
+
+    assert (mas1 == "MS" && mas2 == "SM") || (mas1 == "MS" && mas2 == "XM")
+
+    assert ! ( (mas1 == "MS" || mas1 == "SM") && (mas2 == "MS" || mas2 == "SM") )
+}
+
+do {
+    if (get_true() || get_false() || get_false()) && (get_false() || ! get_true()) {
+        assert false
+    }
+    if (get_false() || get_true() || get_false()) && (get_false() || ! get_true()) {
+        assert false
+    }
+    if (get_false() || get_true()) && (get_false() || ! get_true()) {
+        assert false
+    }
+    if (get_true() || get_false() || get_false()) && ( ! get_true() || get_false()) {
+        assert false
+    }
+    if get_false() && get_false() && get_false() && get_false() && get_false() && get_false() && get_false() {
+        assert false
+    }
+    if (get_false() || get_true()) && get_true() && get_false() && get_false() && get_false() && get_false() && get_false() {
+        assert false
+    }
+    if (get_false() || get_true()) && get_true() && get_false() && get_false() && get_false() && get_false() && get_false() {
+        assert false
+    }
+    if get_true() && get_true() && get_true() && get_true() && get_true() && get_true() && get_false() {
+        assert false
+    }
+    if get_false() || get_false() || get_false() || get_false() || get_false() || get_false() || get_false() {
+        assert false
+    }
+    if get_false() || get_false() || get_false() || (get_true() && get_true() && get_false()) || get_false() || get_false() || get_false() {
+        assert false
+    }
+    if get_false() || get_false() || get_false() || get_false() || get_false() || get_false() || (get_true() && get_true() && get_false()) {
+        assert false
+    }
+    if get_false() || get_false() || get_false() || get_false() || get_false() || get_false() || ((get_true() || get_false()) && (!get_true() && get_true() && get_false())) {
+        assert false
+    }
+}
+
+##############################################################################
 # ?:
 do {
-    const _false = false
-    const _true  = true
+    const _false = get_false()
+    const _true  = get_true()
     assert (_true ? 1 : 2) == 1
     assert (_false ? 1 : 2) == 2
     assert _false == false
@@ -639,7 +731,7 @@ do {
 }
 
 do {
-    const _false = false
+    const _false = get_false()
     const a      = "a"
     const b      = "b"
     const c      = _false ? a : b
@@ -778,13 +870,13 @@ do {
 ##############################################################################
 # !
 do {
-    const a = false
+    const a = get_false()
     const c = ! a
     assert c == true
     assert a == false
 }
 do {
-    const a = true
+    const a = get_true()
     const c = ! a
     assert c == false
 }
