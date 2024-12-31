@@ -28,6 +28,7 @@ static const char str_err_expected_refinement[]       = "expected .identifier or
 static const char str_err_expected_refinement_ident[] = "expected identifier";
 static const char str_err_invalid_numeric_literal[]   = "invalid numeric literal";
 static const char str_err_no_such_module_variable[]   = "no such global in module";
+static const char str_err_no_string_ctor[]            = "no 'string' constructor in module 'base'";
 static const char str_err_operand_not_numeric[]       = "operand is not a numeric constant";
 static const char str_err_operand_not_string[]        = "operand is not a string";
 static const char str_err_return_in_generator[]       = "complex return statement in a generator function, return value always ignored";
@@ -36,6 +37,8 @@ static const char str_err_too_many_registers[]        = "register capacity excee
 static const char str_err_too_many_vars_for_range[]   = "too many variables specified for a range, only one variable is supported";
 static const char str_err_unexpected_super[]          = "'super' cannot be used in this context";
 static const char str_err_unexpected_underscore[]     = "'_' cannot be used in this context";
+static const char str_string[]                        = "string";
+static const char str_stringify[]                     = "stringify";
 
 enum KOS_BOOL_E {
     KOS_FALSE_VALUE,
@@ -155,7 +158,10 @@ static int gen_reg_range(KOS_COMP_UNIT *program,
     KOS_REG   *reg       = frame->free_regs;
     int        count     = reg ? 1 : 0;
 
-    assert(num_regs > 1);
+    assert(num_regs > 0);
+
+    if (num_regs == 1)
+        return gen_reg(program, out_reg);
 
     if (reg) for (;;) {
 
@@ -4028,12 +4034,13 @@ static int invocation(KOS_COMP_UNIT      *program,
                       KOS_REG           **reg,
                       KOS_BYTECODE_INSTR  instr)
 {
-    int      error;
-    KOS_REG *args;
-    KOS_REG *obj        = KOS_NULL;
-    KOS_REG *fun        = KOS_NULL;
-    int      interp_str = node->type == NT_INTERPOLATED_STRING;
-    int      num_contig_args;
+    int       error;
+    KOS_REG  *args;
+    KOS_REG  *obj        = KOS_NULL;
+    KOS_REG  *fun        = KOS_NULL;
+    const int interp_str = node->type == NT_INTERPOLATED_STRING;
+    const int concat     = node->type == NT_OPERATOR && node->token.op == OT_CONCAT;
+    int       num_contig_args;
 
     assert(node->children);
 
@@ -4047,15 +4054,15 @@ static int invocation(KOS_COMP_UNIT      *program,
 
     node = node->children;
 
-    if (interp_str) {
+    if (interp_str || concat) {
 
-        static const char str_string[] = "stringify";
-        int               string_idx   = 0;
+        const size_t length     = interp_str ? sizeof(str_stringify) - 1 : sizeof(str_string) - 1;
+        int          string_idx = 0;
 
         error = kos_comp_resolve_global(program->ctx,
                                         0,
-                                        str_string,
-                                        sizeof(str_string)-1,
+                                        interp_str ? str_stringify : str_string,
+                                        length,
                                         get_global_idx,
                                         &string_idx);
         if (error && (error != KOS_ERROR_OUT_OF_MEMORY)) {
@@ -4681,6 +4688,13 @@ cleanup:
     return error;
 }
 
+static int process_concat(KOS_COMP_UNIT      *program,
+                          const KOS_AST_NODE *node,
+                          KOS_REG           **reg)
+{
+    return invocation(program, node, reg, INSTR_CALL);
+}
+
 static int process_operator(KOS_COMP_UNIT      *program,
                             const KOS_AST_NODE *node,
                             KOS_REG           **reg)
@@ -4700,9 +4714,6 @@ static int process_operator(KOS_COMP_UNIT      *program,
     switch (op) {
 
         case OT_LOGNOT:
-            /* fall through */
-        default:
-            assert(op == OT_LOGNOT);
             return log_not(program, node, reg);
 
         case OT_LOGAND:
@@ -4713,6 +4724,9 @@ static int process_operator(KOS_COMP_UNIT      *program,
         case OT_LOGTRI:
             return log_tri(program, node, reg);
 
+        default:
+            assert(op == OT_NONE);
+            /* fall through */
         case OT_NONE:
             switch (kw) {
 
@@ -4784,6 +4798,9 @@ static int process_operator(KOS_COMP_UNIT      *program,
         case OT_GT:   opcode = INSTR_CMP_LT; operands = 2; swap = 1; break;
         case OT_LE:   opcode = INSTR_CMP_LE; operands = 2; break;
         case OT_LT:   opcode = INSTR_CMP_LT; operands = 2; break;
+
+        case OT_CONCAT:
+            return process_concat(program, node, reg);
     }
 
     node = node->children;
@@ -4792,32 +4809,9 @@ static int process_operator(KOS_COMP_UNIT      *program,
 
         case OT_ADD:
             if (operands == 2) {
-                const KOS_AST_NODE *const_a = kos_get_const(program, node);
-                const KOS_AST_NODE *const_b;
                 assert(node->next);
-                const_b = kos_get_const(program, node->next);
-
-                if (const_a) {
-                    if (const_b) {
-                        const KOS_NODE_TYPE a_type = (KOS_NODE_TYPE)const_a->type;
-                        const KOS_NODE_TYPE b_type = (KOS_NODE_TYPE)const_b->type;
-
-                        if (a_type == NT_STRING_LITERAL ||
-                            (a_type != NT_NUMERIC_LITERAL && b_type == NT_STRING_LITERAL)) {
-                            TRY(check_const_literal(program, node,       CHECK_STRING));
-                            TRY(check_const_literal(program, node->next, CHECK_STRING));
-                        }
-                        else {
-                            TRY(check_const_literal(program, node,       CHECK_NUMERIC));
-                            TRY(check_const_literal(program, node->next, CHECK_NUMERIC));
-                        }
-                    }
-                    else
-                        TRY(check_const_literal(program, node, CHECK_NUMERIC_OR_STRING));
-                }
-                else
-                    TRY(check_const_literal(program, node->next, CHECK_NUMERIC_OR_STRING));
-
+                TRY(check_const_literal(program, node,       CHECK_NUMERIC));
+                TRY(check_const_literal(program, node->next, CHECK_NUMERIC));
                 break;
             }
             /* fall through */
@@ -4921,16 +4915,81 @@ static int assign_instr(KOS_OPERATOR_TYPE op)
     }
 }
 
+/* Generates assignment instruction.
+ *
+ * dest is the destination operand.
+ * src1 is the first source operand.
+ * src2 is the second source operand.
+ */
+static int assign_or_concat(KOS_COMP_UNIT      *program,
+                            KOS_OPERATOR_TYPE   assg_op,
+                            const KOS_AST_NODE *node,
+                            KOS_REG            *dest,
+                            KOS_REG            *src1,
+                            KOS_REG            *src2)
+{
+    KOS_REG *src[2]     = { KOS_NULL, KOS_NULL };
+    KOS_REG *fun        = KOS_NULL;
+    int      string_idx = 0;
+    int      error;
+
+    if (assg_op != OT_SETCONCAT)
+        return gen_instr3(program, assign_instr(assg_op), dest->reg, src1->reg, src2->reg);
+
+    if (src1->reg + 1 != src2->reg) {
+        TRY(gen_reg_range(program, src, 2));
+
+        TRY(gen_instr2(program, INSTR_MOVE, src[0]->reg, src1->reg));
+        TRY(gen_instr2(program, INSTR_MOVE, src[1]->reg, src2->reg));
+    }
+    else {
+        src[0] = src1;
+        src[1] = src2;
+    }
+
+    error = kos_comp_resolve_global(program->ctx,
+                                    0,
+                                    str_string,
+                                    sizeof(str_string) - 1,
+                                    get_global_idx,
+                                    &string_idx);
+    if (error) {
+        if (error != KOS_ERROR_OUT_OF_MEMORY) {
+            program->error_token = &node->token;
+            program->error_str   = str_err_no_string_ctor;
+            error = KOS_ERROR_COMPILE_FAILED;
+        }
+        goto cleanup;
+    }
+
+    TRY(gen_reg(program, &fun));
+
+    TRY(gen_instr3(program, INSTR_GET_MOD_ELEM, fun->reg, 0, string_idx));
+
+    TRY(gen_instr4(program, INSTR_CALL_FUN, dest->reg, fun->reg, src[0]->reg, 2));
+
+    free_reg(program, fun);
+
+    if (src[0] != src1) {
+        free_reg(program, src[1]);
+        free_reg(program, src[0]);
+    }
+
+cleanup:
+    return error;
+}
+
 static int assign_member(KOS_COMP_UNIT      *program,
                          KOS_OPERATOR_TYPE   assg_op,
                          const KOS_AST_NODE *node,
-                         KOS_REG            *src)
+                         KOS_REG            *src,
+                         KOS_REG           **aux)
 {
-    int      error;
-    int      str_idx = 0;
-    int64_t  idx     = 0;
     KOS_REG *obj     = KOS_NULL;
-    KOS_REG *tmp_reg = KOS_NULL;
+    KOS_REG *aux2    = KOS_NULL;
+    int64_t  idx     = 0;
+    int      str_idx = 0;
+    int      error;
 
     assert(node->type == NT_REFINEMENT);
 
@@ -4944,18 +5003,41 @@ static int assign_member(KOS_COMP_UNIT      *program,
     assert(node);
     assert(!node->next);
 
+    if (assg_op != OT_SET) {
+        if ( ! *aux) {
+
+            if (assg_op == OT_SETCONCAT) {
+
+                KOS_REG *tmp[2] = { KOS_NULL, KOS_NULL };
+
+                TRY(gen_reg_range(program, tmp, 2));
+
+                *aux = tmp[0];
+                aux2 = tmp[1];
+
+                TRY(gen_instr2(program, INSTR_MOVE, aux2->reg, src->reg));
+                src  = aux2;
+            }
+            else
+                TRY(gen_reg(program, aux));
+        }
+    }
+
     if (node->type == NT_STRING_LITERAL) {
         TRY(gen_str(program, &node->token, &str_idx));
 
         if (assg_op != OT_SET) {
 
-            TRY(gen_reg(program, &tmp_reg));
+            TRY(gen_get_prop_instr(program, NT_REFINEMENT, (*aux)->reg, obj->reg, str_idx));
 
-            TRY(gen_get_prop_instr(program, NT_REFINEMENT, tmp_reg->reg, obj->reg, str_idx));
+            TRY(assign_or_concat(program, assg_op, node, *aux, *aux, src));
 
-            TRY(gen_instr3(program, assign_instr(assg_op), tmp_reg->reg, tmp_reg->reg, src->reg));
+            src = *aux;
 
-            src = tmp_reg;
+            if (aux2) {
+                free_reg(program, aux2);
+                aux2 = KOS_NULL;
+            }
         }
 
         TRY(gen_set_prop_instr(program, obj->reg, str_idx, src->reg));
@@ -4966,13 +5048,16 @@ static int assign_member(KOS_COMP_UNIT      *program,
 
         if (assg_op != OT_SET) {
 
-            TRY(gen_reg(program, &tmp_reg));
+            TRY(gen_instr3(program, INSTR_GET_ELEM8, (*aux)->reg, obj->reg, (int)idx));
 
-            TRY(gen_instr3(program, INSTR_GET_ELEM8, tmp_reg->reg, obj->reg, (int)idx));
+            TRY(assign_or_concat(program, assg_op, node, *aux, *aux, src));
 
-            TRY(gen_instr3(program, assign_instr(assg_op), tmp_reg->reg, tmp_reg->reg, src->reg));
+            src = *aux;
 
-            src = tmp_reg;
+            if (aux2) {
+                free_reg(program, aux2);
+                aux2 = KOS_NULL;
+            }
         }
 
         TRY(gen_instr3(program, INSTR_SET_ELEM8, obj->reg, (int)idx, src->reg));
@@ -4986,13 +5071,16 @@ static int assign_member(KOS_COMP_UNIT      *program,
 
         if (assg_op != OT_SET) {
 
-            TRY(gen_reg(program, &tmp_reg));
+            TRY(gen_instr3(program, INSTR_GET, (*aux)->reg, obj->reg, prop->reg));
 
-            TRY(gen_instr3(program, INSTR_GET, tmp_reg->reg, obj->reg, prop->reg));
+            TRY(assign_or_concat(program, assg_op, node, *aux, *aux, src));
 
-            TRY(gen_instr3(program, assign_instr(assg_op), tmp_reg->reg, tmp_reg->reg, src->reg));
+            src = *aux;
 
-            src = tmp_reg;
+            if (aux2) {
+                free_reg(program, aux2);
+                aux2 = KOS_NULL;
+            }
         }
 
         TRY(gen_instr3(program, INSTR_SET, obj->reg, prop->reg, src->reg));
@@ -5000,8 +5088,12 @@ static int assign_member(KOS_COMP_UNIT      *program,
         free_reg(program, prop);
     }
 
-    if (tmp_reg)
-        free_reg(program, tmp_reg);
+    assert( ! aux2);
+
+    if (*aux) {
+        free_reg(program, *aux);
+        *aux = KOS_NULL;
+    }
 
     free_reg(program, obj);
 
@@ -5012,12 +5104,12 @@ cleanup:
 static int assign_non_local(KOS_COMP_UNIT      *program,
                             KOS_OPERATOR_TYPE   assg_op,
                             const KOS_AST_NODE *node,
-                            KOS_REG            *src)
+                            KOS_REG            *src,
+                            KOS_REG           **aux)
 {
-    int      error;
-    KOS_VAR *var     = KOS_NULL;
-    KOS_REG *tmp_reg = KOS_NULL;
+    KOS_VAR *var = KOS_NULL;
     KOS_REG *container_reg;
+    int      error;
 
     assert(node->type == NT_IDENTIFIER);
 
@@ -5029,22 +5121,45 @@ static int assign_non_local(KOS_COMP_UNIT      *program,
 
     if (assg_op != OT_SET) {
 
-        TRY(gen_reg(program, &tmp_reg));
+        KOS_REG *aux2 = KOS_NULL;
+
+        if ( ! *aux) {
+
+            if (assg_op == OT_SETCONCAT) {
+
+                KOS_REG *tmp[2] = { KOS_NULL, KOS_NULL };
+
+                TRY(gen_reg_range(program, tmp, 2));
+
+                *aux = tmp[0];
+                aux2 = tmp[1];
+
+                TRY(gen_instr2(program, INSTR_MOVE, aux2->reg, src->reg));
+                src  = aux2;
+            }
+            else
+                TRY(gen_reg(program, aux));
+        }
 
         if (var->type == VAR_GLOBAL)
-            TRY(gen_instr2(program, INSTR_GET_GLOBAL, tmp_reg->reg, var->array_idx));
+            TRY(gen_instr2(program, INSTR_GET_GLOBAL, (*aux)->reg, var->array_idx));
         else
-            TRY(gen_instr_get_elem(program, node, tmp_reg->reg, container_reg->reg, var->array_idx));
+            TRY(gen_instr_get_elem(program, node, (*aux)->reg, container_reg->reg, var->array_idx));
 
-        TRY(gen_instr3(program, assign_instr(assg_op), tmp_reg->reg, tmp_reg->reg, src->reg));
+        TRY(assign_or_concat(program, assg_op, node, *aux, *aux, src));
 
-        src = tmp_reg;
+        src = *aux;
+
+        if (aux2)
+            free_reg(program, aux2);
     }
 
     TRY(gen_instr_set_array_var_elem(program, node, var, container_reg, src->reg));
 
-    if (tmp_reg)
-        free_reg(program, tmp_reg);
+    if (*aux) {
+        free_reg(program, *aux);
+        *aux = KOS_NULL;
+    }
 
 cleanup:
     return error;
@@ -5137,6 +5252,7 @@ static int assignment(KOS_COMP_UNIT      *program,
     const KOS_AST_NODE *rhs_node;
     KOS_REG            *reg       = KOS_NULL;
     KOS_REG            *rhs       = KOS_NULL;
+    KOS_REG            *aux       = KOS_NULL;
     const KOS_NODE_TYPE node_type = (KOS_NODE_TYPE)assg_node->type;
 
     assert(node_type == NT_ASSIGNMENT || node_type == NT_MULTI_ASSIGNMENT);
@@ -5152,6 +5268,8 @@ static int assignment(KOS_COMP_UNIT      *program,
     assert(node->type == NT_LEFT_HAND_SIDE ||
            node->type == NT_VAR ||
            node->type == NT_CONST);
+
+    assert(node->type == NT_LEFT_HAND_SIDE || assg_node->token.op == OT_SET);
 
     is_lhs = (node->type == NT_LEFT_HAND_SIDE) ? 1 : 0;
 
@@ -5171,7 +5289,7 @@ static int assignment(KOS_COMP_UNIT      *program,
         if (assg_node->token.op != OT_SET)
             /* TODO check lhs variable type */
             TRY(check_const_literal(program, rhs_node,
-                    assg_node->token.op == OT_SETADD ? CHECK_NUMERIC_OR_STRING : CHECK_NUMERIC));
+                    assg_node->token.op == OT_SETCONCAT ? CHECK_STRING : CHECK_NUMERIC));
 
         if (node->type == NT_IDENTIFIER)
             TRY(gen_reg_for_assigned_var(program, node, is_lhs, &reg));
@@ -5193,8 +5311,25 @@ static int assignment(KOS_COMP_UNIT      *program,
             TRY(class_literal(program, rhs_node, fun_var, &rhs));
         }
     }
-    else
+    else {
+        KOS_REG *tmp[2] = { KOS_NULL, KOS_NULL };
+
+        if (node_type == NT_ASSIGNMENT && assg_node->token.op == OT_SETCONCAT && node->type != NT_IDENTIFIER) {
+            TRY(gen_reg_range(program, tmp, 2));
+            rhs = tmp[1];
+        }
+
         TRY(visit_node(program, rhs_node, &rhs));
+
+        if (tmp[1]) {
+            if (rhs != tmp[1]) {
+                free_reg(program, tmp[1]);
+                free_reg(program, tmp[0]);
+            }
+            else
+                aux = tmp[0];
+        }
+    }
     assert(rhs);
 
     if (node_type == NT_MULTI_ASSIGNMENT) {
@@ -5238,11 +5373,7 @@ static int assignment(KOS_COMP_UNIT      *program,
 
                 assert(node_type == NT_ASSIGNMENT);
 
-                TRY(gen_instr3(program,
-                               assign_instr((KOS_OPERATOR_TYPE)assg_node->token.op),
-                               reg->reg,
-                               reg->reg,
-                               rhs->reg));
+                TRY(assign_or_concat(program, assg_node->token.op, assg_node, reg, reg, rhs));
 
                 free_reg(program, rhs);
             }
@@ -5258,10 +5389,10 @@ static int assignment(KOS_COMP_UNIT      *program,
                 reg = rhs;
 
             if (node->type == NT_REFINEMENT)
-                TRY(assign_member(program, (KOS_OPERATOR_TYPE)assg_node->token.op, node, reg));
+                TRY(assign_member(program, (KOS_OPERATOR_TYPE)assg_node->token.op, node, reg, &aux));
 
             else if (node->type == NT_IDENTIFIER)
-                TRY(assign_non_local(program, (KOS_OPERATOR_TYPE)assg_node->token.op, node, reg));
+                TRY(assign_non_local(program, (KOS_OPERATOR_TYPE)assg_node->token.op, node, reg, &aux));
 
             else if (node->type != NT_PLACEHOLDER) {
 
@@ -5271,12 +5402,16 @@ static int assignment(KOS_COMP_UNIT      *program,
                 reg = KOS_NULL; /* assign_slice frees the register */
             }
 
+            assert( ! aux);
+
             if (reg)
                 free_reg(program, reg);
         }
 
         reg = KOS_NULL;
     }
+
+    assert( ! aux);
 
     if (node_type == NT_MULTI_ASSIGNMENT)
         free_reg(program, rhs);

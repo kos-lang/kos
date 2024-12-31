@@ -173,5 +173,5 @@ do {
 
 do {
     assert typeof fs.tempdir() == "string"
-    assert fs.stat(fs.tempdir() + "/").type == "directory"
+    assert fs.stat(fs.tempdir() ++ "/").type == "directory"
 }

@@ -109,6 +109,8 @@ typedef enum KOS_OPERATOR_TYPE_E {
     OT_DIV            = 0x88, /* 1000 1001 */
     OT_MOD            = 0x8A, /* 1000 1010 */
 
+    OT_CONCAT         = 0x32, /* 0011 0010 */
+
     OT_NOT            = 0x40, /* 0100 0100 */
     OT_LOGNOT         = 0x41, /* 0100 0101 */
 
@@ -145,7 +147,8 @@ typedef enum KOS_OPERATOR_TYPE_E {
     OT_SETXOR         = 0x18, /* 0001 1000 */
     OT_SETSHL         = 0x19, /* 0001 1001 */
     OT_SETSHR         = 0x1A, /* 0001 1010 */
-    OT_SETSHRU        = 0x1B  /* 0001 1011 */
+    OT_SETSHRU        = 0x1B, /* 0001 1011 */
+    OT_SETCONCAT      = 0x1C  /* 0001 1100 */
 } KOS_OPERATOR_TYPE;
 
 typedef enum KOS_SEPARATOR_TYPE_E {

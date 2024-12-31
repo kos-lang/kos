@@ -194,7 +194,7 @@ file.prototype.read_lines = fun(keep_ends = false, gran = 0x1000)
             }
             if keep_ends {
                 if lf {
-                    yield prev + "\n"
+                    yield prev ++ "\n"
                 }
                 else {
                     yield prev
@@ -214,7 +214,7 @@ file.prototype.read_lines = fun(keep_ends = false, gran = 0x1000)
             const eol_pos = str.scan(eol, pos)
 
             if eol_pos == -1 {
-                prev += str[pos:]
+                prev ++= str[pos:]
                 break
             }
 
@@ -222,7 +222,7 @@ file.prototype.read_lines = fun(keep_ends = false, gran = 0x1000)
 
             if str[eol_pos] == "\r" {
                 if end == str.size {
-                    prev += str[pos:]
+                    prev ++= str[pos:]
                     break
                 }
 
@@ -231,7 +231,7 @@ file.prototype.read_lines = fun(keep_ends = false, gran = 0x1000)
                 }
             }
 
-            yield prev + str[pos : keep_ends ? end : eol_pos]
+            yield prev ++ str[pos : keep_ends ? end : eol_pos]
             prev = ""
 
             pos = end

@@ -2306,20 +2306,6 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx) /* lgtm [cpp/use-of-goto] */
                         out = add_float(ctx, OBJPTR(FLOAT, src[0].o)->value, src[1].o);
                         break;
 
-                    case OBJ_STRING: {
-                        if (GET_OBJ_TYPE(src[1].o) == OBJ_STRING) {
-                            KOS_init_local_with(ctx, &src[0], src[0].o);
-                            KOS_init_local_with(ctx, &src[1], src[1].o);
-
-                            out = KOS_string_add_n(ctx, src, 2);
-
-                            KOS_destroy_top_locals(ctx, &src[1], &src[0]);
-                        }
-                        else
-                            RAISE_EXCEPTION_STR(str_err_unsup_operand_types);
-                        break;
-                    }
-
                     default:
                         RAISE_EXCEPTION_STR(str_err_unsup_operand_types);
                         break;

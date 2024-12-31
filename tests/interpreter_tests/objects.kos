@@ -1081,7 +1081,7 @@ do {
             this.m = "m"
         }
     }
-    classA.prototype.constructor = fun { return this.m + "h" }
+    classA.prototype.constructor = fun { return this.m ++ "h" }
 
     const o = classA()
     assert o.m == "m"

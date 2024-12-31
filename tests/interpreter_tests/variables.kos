@@ -63,38 +63,38 @@ do {
 
     fun deep1(a)
     {
-        b += a
+        b ++= a
 
-        var a = a + "d1"
+        var a = a ++ "d1"
 
-        b += "_" + a
+        b ++= "_" ++ a
 
         fun deep2(a)
         {
-            b += "_" + a
+            b ++= "_" ++ a
 
             do {
-                var a = a + "d2"
+                var a = a ++ "d2"
 
-                b += "_" + a
+                b ++= "_" ++ a
             }
 
-            b += "_" + a
+            b ++= "_" ++ a
         }
 
         deep2("Y")
 
         fun deep3(a...)
         {
-            b += "_" + a[0]
+            b ++= "_" ++ a[0]
 
             do {
-                var a = a[0] + "d3"
+                var a = a[0] ++ "d3"
 
-                b += "_" + a
+                b ++= "_" ++ a
             }
 
-            b += "_" + a[0]
+            b ++= "_" ++ a[0]
         }
 
         deep3("Z")

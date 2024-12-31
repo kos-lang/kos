@@ -102,7 +102,7 @@ if bin_true {
     # cwd works for spawning processes
     const last_slash = bin_true.rscan(sep)
     const bin_dir    = bin_true[:last_slash]
-    const local_true = "." + bin_true[last_slash:]
+    const local_true = "." ++ bin_true[last_slash:]
     if ! fs.file_exists(local_true) {
         os.spawn(program=bin_true, cwd=bin_dir, inherit_env=false).wait()
 
@@ -240,14 +240,14 @@ if bin_cat {
 
 # Fail to spawn a program
 do {
-    const name = "__spawn_test_file3" + ext
+    const name = "__spawn_test_file3" ++ ext
     fs.remove(name)
 
     with const f = io.create(name) {
         f.write("bad stuff")
     }
 
-    expect_fail(() => os.spawn(program = "." + sep + name))
+    expect_fail(() => os.spawn(program = "." ++ sep ++ name))
 
     fs.remove(name)
 }

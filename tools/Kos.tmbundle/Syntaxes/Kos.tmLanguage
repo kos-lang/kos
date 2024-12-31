@@ -327,7 +327,7 @@
 			<array>
 				<dict>
 					<key>match</key>
-					<string>%=|\+=|\-=|\*=|/=</string>
+					<string>%=|\+=|\-=|\*=|/=|\+\+=</string>
 					<key>name</key>
 					<string>keyword.operator.assignment.compound.arithmetic.kos</string>
 				</dict>
@@ -366,6 +366,12 @@
 					<string>%|\*|/|\-|\+</string>
 					<key>name</key>
 					<string>keyword.operator.arithmetic.kos</string>
+				</dict>
+				<dict>
+					<key>match</key>
+					<string>\+\+</string>
+					<key>name</key>
+					<string>keyword.operator.concatenation.kos</string>
 				</dict>
 				<dict>
 					<key>match</key>

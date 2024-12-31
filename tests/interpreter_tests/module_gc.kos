@@ -14,7 +14,7 @@ import os
 fun find_program(name)
 {
     for const prefix in ["/bin", "/usr/bin"] {
-        const path = prefix + "/" + name
+        const path = prefix ++ "/" ++ name
         if fs.file_exists(path) {
             return path
         }

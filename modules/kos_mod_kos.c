@@ -682,6 +682,7 @@ int kos_module_kos_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "op_assignment",        OT_ASSIGNMENT);
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "op_add",               OT_ADD);
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "op_sub",               OT_SUB);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "op_concat",            OT_CONCAT);
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "op_mul",               OT_MUL);
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "op_div",               OT_DIV);
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "op_mod",               OT_MOD);
@@ -718,6 +719,7 @@ int kos_module_kos_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "op_setshl",            OT_SETSHL);
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "op_setshr",            OT_SETSHR);
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "op_setshru",           OT_SETSHRU);
+    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "op_setconcat",         OT_SETCONCAT);
 
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "sep_none",             ST_NONE);
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "sep_paren_open",       ST_PAREN_OPEN);

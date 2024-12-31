@@ -11,7 +11,7 @@ class {
     }
 
     fun pet(name) {
-        return name + "x"
+        return name ++ "x"
     }
 
     fun parrot(num_wings, color) {
@@ -98,9 +98,9 @@ class {
                     (landmark 13 19 {)
                     (scope 13 19 {
                         (return 14 9 return
-                            (operator 14 21 +
+                            (operator 14 21 ++
                                 (identifier 14 16 name)
-                                (string 14 23 "x")
+                                (string 14 24 "x")
                             )
                         )
                         (return 15 5 }

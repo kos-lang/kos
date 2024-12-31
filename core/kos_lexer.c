@@ -255,20 +255,20 @@ struct KOS_OP_SPECIFIER_S {
 
 static const struct KOS_OP_SPECIFIER_S operator_map[][7] = {
     { { KOS_NULL, OT_NONE   } },
-    { { "!",      OT_LOGNOT }, { "!=",     OT_NE     }, { KOS_NULL, OT_NONE   } },
-    { { "%",      OT_MOD    }, { "%=",     OT_SETMOD }, { KOS_NULL, OT_NONE   } },
-    { { "&",      OT_AND    }, { "&&",     OT_LOGAND }, { "&=",     OT_SETAND }, { KOS_NULL, OT_NONE   } },
-    { { "*",      OT_MUL    }, { "*=",     OT_SETMUL }, { KOS_NULL, OT_NONE } },
-    { { "+",      OT_ADD    }, { "+=",     OT_SETADD }, { KOS_NULL, OT_NONE   } },
-    { { "-",      OT_SUB    }, { "-=",     OT_SETSUB }, { "->",     OT_ARROW  }, { KOS_NULL, OT_NONE   } },
-    { { ".",      OT_DOT    }, { "...",    OT_MORE   }, { KOS_NULL, OT_NONE   } },
-    { { "/",      OT_DIV    }, { "/=",     OT_SETDIV }, { KOS_NULL, OT_NONE   } },
-    { { "<",      OT_LT     }, { "<<",     OT_SHL    }, { "<<=",    OT_SETSHL }, { "<=\0",   OT_LE     }, { KOS_NULL, OT_NONE } },
-    { { "=",      OT_SET    }, { "==",     OT_EQ     }, { "=>",     OT_LAMBDA }, { KOS_NULL, OT_NONE } },
-    { { ">",      OT_GT     }, { ">=",     OT_GE     }, { ">>",     OT_SHR    }, { ">>=",    OT_SETSHR }, { ">>>",    OT_SHRU }, { ">>>=", OT_SETSHRU }, { KOS_NULL, OT_NONE } },
+    { { "!",      OT_LOGNOT }, { "!=",     OT_NE     }, { KOS_NULL, OT_NONE      } },
+    { { "%",      OT_MOD    }, { "%=",     OT_SETMOD }, { KOS_NULL, OT_NONE      } },
+    { { "&",      OT_AND    }, { "&&",     OT_LOGAND }, { "&=",     OT_SETAND    }, { KOS_NULL, OT_NONE   } },
+    { { "*",      OT_MUL    }, { "*=",     OT_SETMUL }, { KOS_NULL, OT_NONE }    },
+    { { "+",      OT_ADD    }, { "++",     OT_CONCAT }, { "++=",    OT_SETCONCAT }, { "+=",     OT_SETADD }, { KOS_NULL, OT_NONE   } },
+    { { "-",      OT_SUB    }, { "-=",     OT_SETSUB }, { "->",     OT_ARROW     }, { KOS_NULL, OT_NONE   } },
+    { { ".",      OT_DOT    }, { "...",    OT_MORE   }, { KOS_NULL, OT_NONE      } },
+    { { "/",      OT_DIV    }, { "/=",     OT_SETDIV }, { KOS_NULL, OT_NONE      } },
+    { { "<",      OT_LT     }, { "<<",     OT_SHL    }, { "<<=",    OT_SETSHL    }, { "<=\0",   OT_LE     }, { KOS_NULL, OT_NONE } },
+    { { "=",      OT_SET    }, { "==",     OT_EQ     }, { "=>",     OT_LAMBDA    }, { KOS_NULL, OT_NONE } },
+    { { ">",      OT_GT     }, { ">=",     OT_GE     }, { ">>",     OT_SHR       }, { ">>=",    OT_SETSHR }, { ">>>",    OT_SHRU }, { ">>>=", OT_SETSHRU }, { KOS_NULL, OT_NONE } },
     { { "?",      OT_LOGTRI }, { KOS_NULL, OT_NONE   } },
-    { { "^",      OT_XOR    }, { "^=",     OT_SETXOR }, { KOS_NULL, OT_NONE   } },
-    { { "|",      OT_OR     }, { "|=",     OT_SETOR  }, { "||",     OT_LOGOR  }, { KOS_NULL, OT_NONE   } },
+    { { "^",      OT_XOR    }, { "^=",     OT_SETXOR }, { KOS_NULL, OT_NONE      } },
+    { { "|",      OT_OR     }, { "|=",     OT_SETOR  }, { "||",     OT_LOGOR     }, { KOS_NULL, OT_NONE   } },
     { { "~",      OT_NOT    }, { KOS_NULL, OT_NONE   } }
 };
 

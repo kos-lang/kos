@@ -117,7 +117,7 @@ for const header_file in args[2:] {
 const defs_base_name = args[1]
 
 # Dump symbols for GNU linker
-with const f = io.create(defs_base_name + ".gnu.def") {
+with const f = io.create(defs_base_name ++ ".gnu.def") {
     f.print("{")
 
     for const t in defs.symbols {
@@ -130,7 +130,7 @@ with const f = io.create(defs_base_name + ".gnu.def") {
 }
 
 # Dump symbols for MacOS linker
-with const f = io.create(defs_base_name + ".macos.def") {
+with const f = io.create(defs_base_name ++ ".macos.def") {
     for const t in defs.symbols {
         if check_symbol(t.token, "macos") {
             f.print("_\(t.token)")
@@ -139,7 +139,7 @@ with const f = io.create(defs_base_name + ".macos.def") {
 }
 
 # Dump symbols for Windows linker
-with const f = io.create(defs_base_name + ".win.def") {
+with const f = io.create(defs_base_name ++ ".win.def") {
     f.print("EXPORTS")
     for const t in defs.symbols {
         if check_symbol(t.token, "win") {

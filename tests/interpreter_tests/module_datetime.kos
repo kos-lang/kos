@@ -96,7 +96,7 @@ do {
                 test_timestamp(date.timestamp, date)
             }
             catch const e {
-                e.value += " at year:\(year) leap:\(date.leap) month:\(date.month) day:\(date.day) hour:\(date.hour) minute:\(date.minute)"
+                e.value ++= " at year:\(year) leap:\(date.leap) month:\(date.month) day:\(date.day) hour:\(date.hour) minute:\(date.minute)"
                 throw e
             }
 

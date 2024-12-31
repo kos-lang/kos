@@ -105,27 +105,27 @@ do {
 
     fun depth1(x)
     {
-        var indep_level1_e = x + "e"
-        var indep_level1_f = x + "f"
+        var indep_level1_e = x ++ "e"
+        var indep_level1_f = x ++ "f"
 
         fun depth2(x)
         {
-            var indep_level2_g = x + "g"
-            var indep_level2_h = x + "h"
+            var indep_level2_g = x ++ "g"
+            var indep_level2_h = x ++ "h"
 
             fun depth3(x)
             {
-                global_a =  x + "A"
-                global_b += x
+                global_a =   x ++ "A"
+                global_b ++= x
 
-                indep_c =  x + "C"
-                indep_d += x
+                indep_c =   x ++ "C"
+                indep_d ++= x
 
-                indep_level1_e =  x + "E"
-                indep_level1_f += x
+                indep_level1_e =   x ++ "E"
+                indep_level1_f ++= x
 
-                indep_level2_g =  x + "G"
-                indep_level2_h += x
+                indep_level2_g =   x ++ "G"
+                indep_level2_h ++= x
 
                 return [ indep_level1_e,
                          indep_level1_f,
@@ -352,10 +352,10 @@ do {
 do {
     fun gen(a, last)
     {
-        const ret = a + "1"
+        const ret = a ++ "1"
         var b = yield ret
-        b = yield b + "2"
-        const c = yield ret + b
+        b = yield b ++ "2"
+        const c = yield ret ++ b
         last.push(yield c)
     }
 
@@ -1986,7 +1986,7 @@ do {
 # invoke with argument which generates its own register
 # (test case from fuzzer)
 do {
-    const value = ((x,y)=>x+y)("abc"[1:], "d")
+    const value = ((x,y)=>x++y)("abc"[1:], "d")
     assert value == "bcd"
 }
 

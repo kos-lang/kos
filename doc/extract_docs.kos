@@ -77,7 +77,7 @@ class create_docs {
                     comment = comment[2:-2]
 
                     if star_offs == token.column {
-                        comment = "*".rjust(star_offs + 1) + comment
+                        comment = "*".rjust(star_offs + 1) ++ comment
                     }
                 }
                 else { # //
@@ -85,7 +85,7 @@ class create_docs {
                 }
 
                 if token.line == prev_line + 1 {
-                    comments[-1] = comments[-1] + "\n" + comment
+                    comments[-1] = comments[-1] ++ "\n" ++ comment
                 }
                 else {
                     comments.push(comment)

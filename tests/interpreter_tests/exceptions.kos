@@ -647,97 +647,97 @@ do {
                             defer {
 
                                 defer {
-                                    seq += "f"
+                                    seq ++= "f"
 
                                     if x == 11 {
-                                        seq += "(11break)"
+                                        seq ++= "(11break)"
                                         break
                                     }
                                     else if x == 12 {
-                                        seq += "(12continue)"
+                                        seq ++= "(12continue)"
                                         continue
                                     }
                                     else if x == 13 {
-                                        seq += "(13fallthrough)"
+                                        seq ++= "(13fallthrough)"
                                         fallthrough
                                     }
                                     else if x == 14 {
-                                        seq += "(14return)"
+                                        seq ++= "(14return)"
                                         return 140
                                     }
                                     else if x == 15 {
-                                        seq += "(15throw)"
+                                        seq ++= "(15throw)"
                                         throw 150
                                     }
 
-                                    seq += "g"
+                                    seq ++= "g"
                                 }
 
-                                seq += "d"
+                                seq ++= "d"
 
                                 if x == 6 {
-                                    seq += "(6break)"
+                                    seq ++= "(6break)"
                                     break
                                 }
                                 else if x == 7 {
-                                    seq += "(7continue)"
+                                    seq ++= "(7continue)"
                                     continue
                                 }
                                 else if x == 8 {
-                                    seq += "(8fallthrough)"
+                                    seq ++= "(8fallthrough)"
                                     fallthrough
                                 }
                                 else if x == 9 {
-                                    seq += "(9return)"
+                                    seq ++= "(9return)"
                                     return 90
                                 }
                                 else if x == 10 {
-                                    seq += "(10throw)"
+                                    seq ++= "(10throw)"
                                     throw 100
                                 }
 
-                                seq += "e"
+                                seq ++= "e"
                             }
 
-                            seq += "b"
+                            seq ++= "b"
 
                             if x == 1 {
-                                seq += "(1break)"
+                                seq ++= "(1break)"
                                 break
                             }
                             else if x == 2 {
-                                seq += "(2continue)"
+                                seq ++= "(2continue)"
                                 continue
                             }
                             else if x == 3 {
-                                seq += "(3fallthrough)"
+                                seq ++= "(3fallthrough)"
                                 fallthrough
                             }
                             else if x == 4 {
-                                seq += "(4return)"
+                                seq ++= "(4return)"
                                 return 40
                             }
                             else if x == 5 {
-                                seq += "(5throw)"
+                                seq ++= "(5throw)"
                                 throw 50
                             }
 
-                            seq += "c"
+                            seq ++= "c"
                         }
                         default: {
-                            seq += "x"
+                            seq ++= "x"
                         }
                     }
 
-                    seq += "y"
+                    seq ++= "y"
                 }
-                seq += "z"
+                seq ++= "z"
             }
 
-            seq += "a"
+            seq ++= "a"
         }
         catch const e {
-            seq += "X\(e.value)"
+            seq ++= "X\(e.value)"
         }
 
         return 0

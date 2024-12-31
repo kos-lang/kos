@@ -997,11 +997,9 @@ int main(void)
     TEST_INSTR INSTR_ADD,        { V_EXCEPT                            }, { { V_STR0                            }, { V_FLOAT, 0,           0           } } END
     TEST_INSTR INSTR_ADD,        { V_EXCEPT                            }, { { V_ARRAY, 0                        }, { V_FLOAT, 0,           0           } } END
     TEST_INSTR INSTR_ADD,        { V_EXCEPT                            }, { { V_OBJECT                          }, { V_FLOAT, 0,           0           } } END
-    /* string */
-    TEST_INSTR INSTR_ADD,        { V_STR0,    0, 0,        "abcdef"    }, { { V_STR1,  0, 0,        "abc"       }, { V_STR2,  0, 0,        "def"       } } END
-    TEST_INSTR INSTR_ADD,        { V_STR0,    0, 0,        "abc"       }, { { V_STR1,  0, 0,        "abc"       }, { V_STR2,  0, 0,        ""          } } END
-    TEST_INSTR INSTR_ADD,        { V_STR0,    0, 0,        "def"       }, { { V_STR1,  0, 0,        ""          }, { V_STR2,  0, 0,        "def"       } } END
-    /* wrong types */
+    TEST_INSTR INSTR_ADD,        { V_EXCEPT,                           }, { { V_STR1,  0, 0,        "abc"       }, { V_STR2,  0, 0,        "def"       } } END
+    TEST_INSTR INSTR_ADD,        { V_EXCEPT,                           }, { { V_STR1,  0, 0,        "abc"       }, { V_STR2,  0, 0,        ""          } } END
+    TEST_INSTR INSTR_ADD,        { V_EXCEPT,                           }, { { V_STR1,  0, 0,        ""          }, { V_STR2,  0, 0,        "def"       } } END
     TEST_INSTR INSTR_ADD,        { V_EXCEPT                            }, { { V_STR0                            }, { V_VOID                            } } END
     TEST_INSTR INSTR_ADD,        { V_EXCEPT                            }, { { V_STR0                            }, { V_FALSE                           } } END
     TEST_INSTR INSTR_ADD,        { V_EXCEPT                            }, { { V_STR0                            }, { V_FLOAT, 0,           0           } } END

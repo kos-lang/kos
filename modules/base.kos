@@ -639,7 +639,7 @@ string.prototype.ljust = fun(size, fill = " ")
         return this
     }
 
-    return this + fill.repeats(size - this.size)
+    return this ++ fill.repeats(size - this.size)
 }
 
 /* @item base string.prototype.rjust()
@@ -677,7 +677,7 @@ string.prototype.rjust = fun(size, fill = " ")
         return this
     }
 
-    return fill.repeats(size - this.size) + this
+    return fill.repeats(size - this.size) ++ this
 }
 
 /* @item base string.prototype.zfill()
@@ -725,7 +725,7 @@ string.prototype.zfill = fun(size, fill = "0")
         return stringify(sign, fill, this[1:])
     }
     else {
-        return fill + this
+        return fill ++ this
     }
 }
 
@@ -1245,6 +1245,13 @@ public fun reduce(op, init, args...)
  */
 public fun sum(iterable, total = 0)
 {
+    if typeof total == "string" {
+        for const elem in iterable {
+            total ++= elem
+        }
+        return total
+    }
+
     for const elem in iterable {
         total += elem
     }
@@ -2031,7 +2038,7 @@ public fun count_elements(iterable)
  *     10
  *     20
  *     3
- *     > "abc" -> map(x => print(x + "_")) -> each()
+ *     > "abc" -> map(x => print(x ++ "_")) -> each()
  *     a_
  *     b_
  *     c_

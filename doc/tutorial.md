@@ -1,4 +1,4 @@
-﻿The Kos Programming Language - Tutorial
+The Kos Programming Language - Tutorial
 =======================================
 
 Kos is a dynamically typed scripting language.  It is lightweight and easy to
@@ -382,7 +382,7 @@ Strings can be added together, to concatenate them.
 
     var hello       = "Hello"
     var world       = "World"
-    var hello_world = hello + ", " + world + "!" // "Hello, World!"
+    var hello_world = hello ++ ", " ++ world ++ "!" // "Hello, World!"
 
 Escape sequences can be used to encode characters which are difficult to
 obtain otherwise.

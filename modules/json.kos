@@ -25,7 +25,7 @@ fun bad_token(token, desc = void)
         throw token
     }
     if desc {
-        desc = desc + ", but got \(token.token)"
+        desc = desc ++ ", but got \(token.token)"
     }
     else {
         desc = "invalid JSON token: \(token.token)"

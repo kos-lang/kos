@@ -2,6 +2,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2014-2024 Chris Dragan
 
 import base.range
+import base.buffer
 
 fun expect_fail(function)
 {
@@ -98,7 +99,7 @@ do {
 do {
     const a = "abc"
     const b = "def"
-    const c = a + b
+    const c = a ++ b
     assert c == "abcdef"
     assert typeof c == "string"
     assert a == "abc"
@@ -1350,7 +1351,7 @@ do {
 do {
     var   a = "abc"
     const b = "xyz\x{FFFF}"
-    a += b
+    a ++= b
     assert a == "abcxyz￿"
     assert typeof a == "string"
 }
@@ -1669,4 +1670,95 @@ do {
     a, _, b = [ 1, 2, 3 ]
     assert a == 1
     assert b == 3
+}
+
+##############################################################################
+# ++ string concatenation
+do {
+    var a = "hello" ++ "world"
+    assert a == "helloworld"
+}
+do {
+    var a = "hello" ++ "second" ++ "world"
+    assert a == "hellosecondworld"
+}
+do {
+    fun add2(a, b)
+    {
+        return a ++ b
+    }
+    assert add2("hello", "world") == "helloworld"
+    assert add2([69], "world") == "Eworld"
+    assert add2(buffer([69]), "world") == "Eworld"
+    assert add2(69, "world") == "69world"
+    assert add2("hello", [69]) == "helloE"
+    assert add2("hello", buffer([69])) == "helloE"
+    assert add2("hello", 69) == "hello69"
+
+    expect_fail(_ => add2(true, ""))
+    expect_fail(_ => add2(void, ""))
+    expect_fail(_ => add2({}, ""))
+    expect_fail(_ => add2(fun{}, ""))
+    expect_fail(_ => add2("", true))
+    expect_fail(_ => add2("", void))
+    expect_fail(_ => add2("", fun{}))
+}
+
+##############################################################################
+# ++= string concatenation
+public var global_for_concat = ""
+do {
+    fun concat_global(right)
+    {
+        global_for_concat ++= right
+        return global_for_concat
+    }
+
+    assert concat_global("abc") == "abc"
+    assert concat_global("def") == "abcdef"
+
+    fun concat_local(left, right)
+    {
+        left ++= right
+        return left
+    }
+
+    assert concat_local("abc", "def") == "abcdef"
+
+    const concat_non_local = fun(init) {
+        return fun(right)
+        {
+            init ++= right
+            return init
+        }
+    } ("")
+
+    assert concat_non_local("abc") == "abc"
+    assert concat_non_local("def") == "abcdef"
+
+    fun concat_obj(obj, right)
+    {
+        obj.value ++= right
+        return obj
+    }
+
+    assert concat_obj({value: ""}, "abc").value == "abc"
+
+    fun concat_array(obj, right)
+    {
+        obj[0] ++= right
+        return obj
+    }
+
+    assert concat_array([""], "abc")[0] == "abc"
+
+    const concat_prop = fun(prop) {
+        return fun(obj, right)
+        {
+            obj[prop] ++= right
+            return obj
+        }
+    } ("value")
+
+    assert concat_prop({value: "abc"}, "def").value == "abcdef"
 }

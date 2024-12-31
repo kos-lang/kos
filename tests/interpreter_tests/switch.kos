@@ -84,20 +84,20 @@ do {
         switch a + 1 {
 
             case 1: {
-                ret += "a"
+                ret ++= "a"
             }
             case 2: {
-                ret += "b"
+                ret ++= "b"
                 fallthrough
             }
             case 3: {
-                ret += "c"
+                ret ++= "c"
             }
             default: {
-                ret += "d"
+                ret ++= "d"
             }
             case 4, 5, 6: {
-                ret += "e"
+                ret ++= "e"
             }
         }
 
@@ -290,7 +290,7 @@ do {
         }
 
         fun push(x) {
-            this.value += x
+            this.value ++= x
         }
     }
 

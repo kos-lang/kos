@@ -4,7 +4,7 @@ try {
     }
 }
 catch var c {
-    throw c + "d";
+    throw c ++ "d";
 }
 do {
     d();
@@ -29,9 +29,9 @@ do {
             (var 6 7 var (identifier 6 11 c))
             (scope 6 13 {
                 (throw 7 5 throw
-                    (operator 7 13 +
+                    (operator 7 13 ++
                         (identifier 7 11 c)
-                        (string 7 15 "d")
+                        (string 7 16 "d")
         ))))
     )
     (scope 9 4 {

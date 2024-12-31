@@ -662,7 +662,7 @@ which sorting keys compare as equal.
 
 `key` is a single-argument function which produces a sorting key for each
 element of the array.  The array elements are then sorted by the keys using
-the '<' operator.  By default `key` is `void` and the elements themselves
+the `<` operator.  By default `key` is `void` and the elements themselves
 are used as sorting keys.
 
 `reverse` defaults to `false`.  If `reverse` is specified as `true`,
@@ -928,7 +928,7 @@ respectively, for unsigned, signed and floating point values.  They apply to
 formatting characters following them and can be used multiple times if needed.
 If neither `<` nor `>` is specified as the first formatting character, then
 initial unsigned, signed and floating point values are formatted as little
-endian until the first '>' formatting character is encountered.
+endian until the first `>` formatting character is encountered.
 
 `u#` and `i#` produce integer values, unsigned and signed, respectively.
 The available sizes for these values are 1, 2, 4 and 8 and correspond to
@@ -1231,7 +1231,7 @@ Examples:
     10
     20
     3
-    > "abc" -> map(x => print(x + "_")) -> each()
+    > "abc" -> map(x => print(x ++ "_")) -> each()
     a_
     b_
     c_
@@ -2342,7 +2342,7 @@ its `iterator()` function.
 
 `key` is a single-argument function which produces a sorting key for each
 element of the array.  The array elements are then sorted by the keys using
-the '<' operator.  By default `key` is `void` and the elements themselves
+the `<` operator.  By default `key` is `void` and the elements themselves
 are used as sorting keys.
 
 `reverse` defaults to `false`.  If `reverse` is specified as `true`,

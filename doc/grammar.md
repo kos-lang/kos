@@ -1055,6 +1055,7 @@ Expressions
 
     ArithBitwiseExpression ::= ArithExpression
                              | BitwiseExpression
+                             | ConcatExpression
 
     BitwiseExpression ::= BitwiseOrExpression
                         | BitwiseAndExpression
@@ -1077,6 +1078,9 @@ Expressions
     AdditiveExpression ::= MultiplicativeExpression
                            ( AdditiveOperator MultiplicativeExpression )*
 
+    ConcatExpression ::= UnaryExpression ConcatOperator UnaryExpression
+                         ( ConcatOperator UnaryExpression )*
+
 To avoid ambiguities, the `AdditiveOperator` cannot be the first non-whitespace,
 non-comment token on the line if the `AdditiveExpression` is part of the
 outermost `RHSExpression`.
@@ -1096,6 +1100,7 @@ Operators
 
     ArithAssignmentOperator ::= "+="
                               | "-="
+                              | "++="
                               | "*="
                               | "/="
                               | "%="
@@ -1138,6 +1143,8 @@ Operators
     MultiplicativeOperator  ::= "*"
                               | "/"
                               | "%"
+
+    ConcatOperator          ::= "++"
 
     UnaryOperator           ::= "typeof"
                               | "delete"

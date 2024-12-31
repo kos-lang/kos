@@ -1501,6 +1501,7 @@ static int add_strings(KOS_COMP_UNIT      *program,
         --b_length;
     }
 
+    assert(node);
     promote(program, node, a);
 
     new_length = a_length + b_length + (is_raw ? 3U : 2U);
@@ -1610,6 +1611,47 @@ static void collapse_typeof(KOS_COMP_UNIT      *program,
     }
 }
 
+static int optimize_concat(KOS_COMP_UNIT *program,
+                           KOS_AST_NODE  *node)
+{
+    KOS_AST_NODE       *child_1 = KOS_NULL;
+    const KOS_AST_NODE *const_1 = KOS_NULL;
+    KOS_AST_NODE       *child_2 = node->children;
+
+    while (child_2) {
+
+        const KOS_AST_NODE *const_2 = kos_get_const(program, child_2);
+        KOS_AST_NODE *const child_3 = child_2->next;
+
+        /* TODO convert numbers, buffer and array literals to strings */
+
+        if (const_1 && const_2 && (const_2->type == NT_STRING_LITERAL) &&
+            (is_raw_str(const_1) == is_raw_str(const_2))) {
+
+            const int error = add_strings(program, child_1, const_1, const_2);
+            if (error)
+                return error;
+
+            child_1->next = child_3;
+            child_2       = child_3;
+            const_2       = kos_get_const(program, child_1);
+        }
+        else {
+            child_1 = child_2;
+            child_2 = child_3;
+        }
+
+        const_1 = (const_2 && const_2->type == NT_STRING_LITERAL) ? const_2 : KOS_NULL;
+    }
+
+    assert(node->children);
+
+    if ( ! node->children->next)
+        promote(program, node, node->children);
+
+    return KOS_SUCCESS;
+}
+
 static int operator_token(KOS_COMP_UNIT *program,
                           KOS_AST_NODE  *node)
 {
@@ -1657,20 +1699,18 @@ static int operator_token(KOS_COMP_UNIT *program,
             /* fall through */
         case OT_SUB: {
             if (b) {
-
-                const KOS_OPERATOR_TYPE op = (KOS_OPERATOR_TYPE)node->token.op;
-
                 if (a_type == NT_NUMERIC_LITERAL && b_type == NT_NUMERIC_LITERAL)
                     error = optimize_binary_op(program, node, ca, cb);
-
-                else if (op == OT_ADD && a_type == NT_STRING_LITERAL && b_type == NT_STRING_LITERAL)
-                    if (is_raw_str(ca) == is_raw_str(cb))
-                        error = add_strings(program, node, ca, cb);
             }
             else {
                 if (a_type == NT_NUMERIC_LITERAL)
                     error = optimize_unary_op(program, node, ca);
             }
+            break;
+        }
+
+        case OT_CONCAT: {
+            error = optimize_concat(program, node);
             break;
         }
 

@@ -32,12 +32,12 @@ do {
 }
 
 do {
-    const str = "" + ""
+    const str = "" ++ ""
     assert str.size == 0
 }
 
 do {
-    const str = r"" + R""
+    const str = r"" ++ R""
     assert str.size == 0
 }
 
@@ -47,19 +47,19 @@ do {
 
     assert "\\\"" == r"\""
 
-    assert "\\r" + (()=>r"\n")() == R"\r" + (()=>"\\n")()
-    assert "\\r" + r"\n" == R"\r" + "\\n"
+    assert "\\r" ++ (()=>r"\n")() == R"\r" ++ (()=>"\\n")()
+    assert "\\r" ++ r"\n" == R"\r" ++ "\\n"
 }
 
 do {
-    const str = "\r" + "\n"
+    const str = "\r" ++ "\n"
     assert str.size == 2
     assert str[0] == "\r"
     assert str[1] == "\n"
 }
 
 do {
-    const str = R"\r" + r"\n"
+    const str = R"\r" ++ r"\n"
     assert str.size == 4
     assert str[0] == "\\"
     assert str[1] == "r"
@@ -111,7 +111,7 @@ do {
 }
 
 do {
-    const str = "\( r"" + R"" )"
+    const str = "\( r"" ++ R"" )"
     assert str.size == 0
 }
 
@@ -603,7 +603,7 @@ do {
 # add two strings which are too long
 do {
     expect_fail(fun {
-        base.string(base.buffer(0xF000, 0x41)) + base.string(base.buffer(0x4000, 0x42))
+        base.string(base.buffer(0xF000, 0x41)) ++ base.string(base.buffer(0x4000, 0x42))
     })
     assert "".size == 0
 
@@ -682,7 +682,7 @@ do {
 
 do {
     expect_fail(()=>"x".add_2("y"))
-    base.string.prototype.add_2 = x => this + x
+    base.string.prototype.add_2 = x => this ++ x
     assert "x".add_2("y") == "xy"
 }
 

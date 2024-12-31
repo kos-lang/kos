@@ -203,7 +203,7 @@ do {
     assert 0xfedcba .hex() == "0xfedcba"
     assert 0x9876543210 .hex() == "0x9876543210"
     for const i in base.range(16) {
-        assert 32 .hex(i) == "0x" + "20".zfill(i)
+        assert 32 .hex(i) == "0x" ++ "20".zfill(i)
     }
 
     expect_fail(()=>1.2.hex())
@@ -1041,7 +1041,7 @@ do {
 }
 
 do {
-    const iter = "mno".map(x => x + "_")
+    const iter = "mno".map(x => x ++ "_")
     assert typeof iter == "function"
     assert iter()      == "m_"
     assert iter()      == "n_"
@@ -1186,10 +1186,11 @@ do {
     assert base.sum([10, 200, 3, 4000]) == 4213
     assert base.sum([4.0, 2.0, 8.0]) == 14.0
     assert base.sum(["ab", "c", "def", "gh"], "") == "abcdefgh"
+    assert base.sum([1], "") == "1"
 
     expect_fail(base.sum)
     expect_fail(() => base.sum(fun { throw void }))
-    expect_fail(()=>base.sum([1], ""))
+    expect_fail(_=>base.sum([true], ""))
 }
 
 ##############################################################################
@@ -1696,7 +1697,7 @@ do {
     const strings = [ "kos", "sok", "cat", "dog" ]
     i = 0
     for const a, b, c in base.zip("kscd", "ooaoo", "sktg") {
-        assert a + b + c == strings[i]
+        assert a ++ b ++ c == strings[i]
         i += 1
     }
 

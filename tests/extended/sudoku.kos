@@ -91,7 +91,7 @@ fun print_board(board)
 {
     const next  = board.data.iterator()
     const len   = f_base > 3 ? 2 : 1
-    const blank = " ".repeats(len) + "."
+    const blank = " ".repeats(len) ++ "."
     for const irow in range(f_size) {
         const disp_row = []
 

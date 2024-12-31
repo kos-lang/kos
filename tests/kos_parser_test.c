@@ -100,6 +100,7 @@ struct OPERATOR_MAP {
 const struct OPERATOR_MAP operators[] = {
     { OT_ADD,        "+"      },
     { OT_SUB,        "-"      },
+    { OT_CONCAT,     "++"     },
     { OT_MUL,        "*"      },
     { OT_DIV,        "/"      },
     { OT_MOD,        "%"      },
@@ -136,6 +137,7 @@ const struct OPERATOR_MAP operators[] = {
     { OT_SETSHL,     "<<="    },
     { OT_SETSHR,     ">>="    },
     { OT_SETSHRU,    ">>>="   },
+    { OT_SETCONCAT,  "++="    },
     { OT_NONE,       "none"   }
 };
 

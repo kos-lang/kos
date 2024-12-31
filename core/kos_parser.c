@@ -1327,6 +1327,24 @@ static int arithm_bitwise_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
         ast_push(*ret, node);
         node = KOS_NULL;
     }
+    else if (parser->token.op == OT_CONCAT) {
+
+        TRY(new_node(parser, ret, NT_OPERATOR));
+
+        ast_push(*ret, node);
+        node = KOS_NULL;
+
+        do {
+            TRY(unary_expr(parser, &node));
+
+            ast_push(*ret, node);
+            node = KOS_NULL;
+
+            TRY(next_token(parser));
+        } while ((KOS_OPERATOR_TYPE)parser->token.op == OT_CONCAT);
+
+        parser->unget = 1;
+    }
     else {
         parser->unget = 1;
         *ret = node;

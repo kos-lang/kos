@@ -204,7 +204,7 @@ do {
 do {
     var sum = ""
     for const k, _ in { "1": -1, "2": -2 } {
-        sum += k
+        sum ++= k
     }
     assert sum == "12" || sum == "21"
 }
@@ -651,71 +651,71 @@ do {
 do {
     var a = ""
     try {
-        a += "a"
+        a ++= "a"
         try {
-            a += "f:("
+            a ++= "f:("
             for var fval in ["c", "m", "e"] {
-                a += "\(fval)["
+                a ++= "\(fval)["
                 try {
                     if fval == "e" {
-                        a += "F"
+                        a ++= "F"
                         break
                     }
 
-                    a += "d:("
+                    a ++= "d:("
 
                     var c = 0
                     repeat {
                         try {
                             c += 1
-                            a += "c=\(c), w:("
+                            a ++= "c=\(c), w:("
 
                             while c < 20 {
                                 c += 3
                                 try {
-                                    a += "c=\(c)"
+                                    a ++= "c=\(c)"
                                     if c > 8 {
-                                        a += "W"
+                                        a ++= "W"
                                         break
                                     }
                                     throw ", "
                                 }
                                 catch const e {
-                                    a += e.value
+                                    a ++= e.value
                                 }
                             }
 
-                            a += "):w"
+                            a ++= "):w"
 
                             throw ";"
                             a = -1000
                         }
                         catch const e {
-                            a += e.value
+                            a ++= e.value
                         }
 
                         if c > 9 {
-                            a += "D"
+                            a ++= "D"
                             break
                         }
                     } while c < 100
 
-                    a += "):d"
+                    a ++= "):d"
 
                     throw " - "
                     a = -2000
                 }
                 catch const e {
-                    a += e.value
+                    a ++= e.value
                 }
-                a += "*"
+                a ++= "*"
             }
             throw "_"
         }
         catch const e {
-            a += e.value
+            a ++= e.value
         }
-        a += "):f"
+        a ++= "):f"
     }
     catch const e {
         a = void
@@ -771,24 +771,24 @@ do {
     fun try_break
     {
         defer {
-            a += "6"
+            a ++= "6"
         }
-        a += "1"
+        a ++= "1"
         defer {
-            a += "5"
+            a ++= "5"
         }
-        a += "2"
+        a ++= "2"
         const letters = ["a", "b", "c"]
         for const i in range(100) {
             defer {
-                a += "3"
+                a ++= "3"
             }
-            a += letters[i]
+            a ++= letters[i]
             if i == 2 {
                 break
             }
         }
-        a += "4"
+        a ++= "4"
     }
 
     try_break()
@@ -802,22 +802,22 @@ do {
     fun try_break
     {
         try {
-            a += "A"
+            a ++= "A"
             for const i in range(100) {
                 defer {
-                    a += "B"
+                    a ++= "B"
                 }
                 if i == 2 {
                     break
                 }
-                a += "\(i)"
+                a ++= "\(i)"
             }
-            a += "C"
+            a ++= "C"
             throw "D"
-            a += "E"
+            a ++= "E"
         }
         catch const e {
-            a += e.value
+            a ++= e.value
         }
     }
 
@@ -832,20 +832,20 @@ do {
     try {
         for const i in range(100) {
             defer {
-                a += "e "
+                a ++= "e "
             }
-            a += "a\(i) " 
+            a ++= "a\(i) " 
             defer {
-                a += "d"
+                a ++= "d"
             }
-            a += "b\(i) "
+            a ++= "b\(i) "
             if i == 0 {
                 continue
             }
             else if i == 2 {
                 break
             }
-            a += "c"
+            a ++= "c"
         }
     }
     catch const e {
@@ -985,7 +985,7 @@ do {
         catch const e {
             continue
         }
-        a += c
+        a ++= c
     }
 
     assert a == "acd"
@@ -997,7 +997,7 @@ do {
     for var c in "xyza" {
         assert typeof c == "string"
         assert c.size == 1
-        a += c
+        a ++= c
     }
 
     assert a == "xyza"

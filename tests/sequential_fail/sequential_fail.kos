@@ -65,7 +65,7 @@ do {
             switch key {
                 case "a": { assert value == line     }
                 case "b": { assert value == line + 1 }
-                default:  { throw "invalid " + "key" }
+                default:  { throw "invalid " ++ "key" }
             }
         }
         return line + 1

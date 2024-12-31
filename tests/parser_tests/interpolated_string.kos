@@ -46,7 +46,7 @@ f="ff\((g+h(i*(j+k))*(l+m)))nn";
 )
 
 @------------------------------------------------------------------------------
-const a = "bb\(c+"dd\(e+"ff\(g)hh"+i)jj"+k)ll";
+const a = "bb\(c++"dd\(e++"ff\(g)hh"++i)jj"++k)ll";
 
 @ 0
 
@@ -55,29 +55,21 @@ const a = "bb\(c+"dd\(e+"ff\(g)hh"+i)jj"+k)ll";
         (const 1 1 const (identifier 1 7 a))
         (interpolated_string 1 11 "bb\(
             (string 1 11 "bb\()
-            (operator 1 41 +
-                (operator 1 17 +
-                    (identifier 1 16 c)
-                    (interpolated_string 1 18 "dd\(
-                        (string 1 18 "dd\()
-                        (operator 1 35 +
-                            (operator 1 24 +
-                                (identifier 1 23 e)
-                                (interpolated_string 1 25 "ff\(
-                                    (string 1 25 "ff\()
-                                    (identifier 1 30 g)
-                                    (string 1 31 )hh")
-                                )
-                            )
-                            (identifier 1 36 i)
-                        )
-                        (string 1 37 )jj")
-                    )
-                )
-                (identifier 1 42 k)
-            )
-            (string 1 43 )ll")
-)))
+            (operator 1 17 ++
+                (identifier 1 16 c)
+                (interpolated_string 1 19 "dd\(
+                    (string 1 19 "dd\()
+                    (operator 1 25 ++
+                        (identifier 1 24 e)
+                        (interpolated_string 1 27 "ff\(
+                            (string 1 27 "ff\()
+                            (identifier 1 32 g)
+                            (string 1 33 )hh"))
+                        (identifier 1 39 i))
+                    (string 1 40 )jj"))
+                (identifier 1 46 k))
+            (string 1 47 )ll")))
+)
 
 @------------------------------------------------------------------------------
 const a = b."cc\(d)ee"; # Unexpected interpolated string
