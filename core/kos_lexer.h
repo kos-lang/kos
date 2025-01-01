@@ -47,7 +47,6 @@ typedef enum KOS_KEYWORD_TYPE_E {
     KW_UNDERSCORE,
     KW_LINE,
     KW_ASSERT,
-    KW_ASYNC,
     KW_BREAK,
     KW_CASE,
     KW_CATCH,

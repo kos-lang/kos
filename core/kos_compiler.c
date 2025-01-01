@@ -4194,78 +4194,6 @@ cleanup:
     return error;
 }
 
-static int async_op(KOS_COMP_UNIT      *program,
-                    const KOS_AST_NODE *node,
-                    KOS_REG           **reg)
-{
-    KOS_TOKEN         token;
-    KOS_REG          *argn[2]     = { KOS_NULL, KOS_NULL };
-    KOS_REG          *fun         = KOS_NULL;
-    KOS_REG          *async       = KOS_NULL;
-    KOS_REG          *obj;
-    int               str_idx;
-    int               error       = KOS_SUCCESS;
-    static const char str_async[] = "async";
-
-    node = node->children;
-    assert(node);
-    assert( ! node->next);
-    assert(node->type == NT_INVOCATION);
-
-    TRY(gen_reg_range(program, &argn[0], 2));
-
-    obj = argn[0];
-
-    if (*reg)
-        fun = *reg;
-
-    node = node->children;
-    assert(node);
-
-    TRY(maybe_refinement(program, node, &fun, &obj));
-
-    node = node->next;
-
-    TRY(gen_args_array(program, node, &argn[1]));
-
-    memset(&token, 0, sizeof(token));
-    token.begin  = str_async;
-    token.length = sizeof(str_async) - 1;
-    token.type   = TT_IDENTIFIER;
-
-    TRY(gen_str(program, &token, &str_idx));
-
-    if (*reg && fun != *reg)
-        async = *reg;
-
-    if (obj && obj != argn[0]) {
-        TRY(gen_instr2(program, INSTR_MOVE, argn[0]->reg, obj->reg));
-        free_reg(program, obj);
-    }
-
-    TRY(gen_reg(program, &async));
-
-    if ( ! *reg)
-        *reg = async;
-
-    TRY(gen_get_prop_instr(program, NT_REFINEMENT, async->reg, fun->reg, str_idx));
-
-    if ( ! obj)
-        TRY(gen_instr1(program, INSTR_LOAD_VOID, argn[0]->reg));
-
-    TRY(gen_instr5(program, INSTR_CALL_N, (*reg)->reg, async->reg, fun->reg, argn[0]->reg, 2));
-
-    if (fun != *reg)
-        free_reg(program, fun);
-    if (async != *reg)
-        free_reg(program, async);
-    free_reg(program, argn[0]);
-    free_reg(program, argn[1]);
-
-cleanup:
-    return error;
-}
-
 enum CHECK_TYPE_E {
     CHECK_NUMERIC           = 1,
     CHECK_STRING            = 2,
@@ -6561,9 +6489,6 @@ static int visit_node(KOS_COMP_UNIT      *program,
             break;
         case NT_YIELD:
             error = yield(program, node, reg);
-            break;
-        case NT_ASYNC:
-            error = async_op(program, node, reg);
             break;
         case NT_THROW:
             error = throw_op(program, node);

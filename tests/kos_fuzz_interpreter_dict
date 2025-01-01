@@ -1,7 +1,6 @@
 # Keywords
 "__line__"
 "assert"
-"async"
 "break"
 "case"
 "catch"
@@ -116,7 +115,6 @@
 "apply"
 "args"
 "array"
-"async"
 "boolean"
 "buffer"
 "cas"

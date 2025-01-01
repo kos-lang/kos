@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: Copyright (c) 2014-2024 Chris Dragan
 
-import base: thread, range
+import base: thread, range, print
 
 fun expect_fail(function)
 {
@@ -20,7 +20,7 @@ const unoptimized = x => x
 # Test basic async do
 do {
     var a = void
-    ;(async do { a = 10 }).wait()
+    ;(fun { a = 10 }.async(void, [])).wait()
     assert a == 10
 }
 
@@ -31,7 +31,7 @@ do {
     var c = { setb: fun(x) { b = x } }
     var d = 3
 
-    const t = async c.setb(10)
+    const t = fun { c.setb(10) }.async(void, [])
     t.wait()
 
     unoptimized(a)
@@ -69,7 +69,7 @@ do {
         return x + 1
     }
 
-    const t = async 101 -> aa -> bb -> cc
+    const t = fun { return 101 -> aa -> bb -> cc }.async(void, [])
     const result = t.wait()
 
     assert t instanceof thread
@@ -84,7 +84,7 @@ do {
     const o = { value: 10,
                 doit:  fun(x) { this.value = x; return x + 1 } }
 
-    const val = (async 42 -> o.doit).wait()
+    const val = (fun { return 42 -> o.doit }.async(void, [])).wait()
 
     assert o.value == 42
     assert val == 43
@@ -100,7 +100,7 @@ do {
         }
         else {
             o[0] = count - 1
-            async f(f, o)
+            fun { f(f, o) }.async(void, [])
         }
     }
 
@@ -114,17 +114,12 @@ do {
 
 # Run a generator on a new thread
 do {
-    fun run_async(f)
-    {
-        return async f()
-    }
-
     fun gen_10
     {
         yield 10
     }
 
-    const th = run_async(gen_10())
+    const th = gen_10().async(void, [])
     assert th.wait() == 10
 }
 
@@ -135,7 +130,7 @@ do {
         yield x
     }
 
-    (async gen(0)).wait()
+    (gen(0).async(void, [])).wait()
 }
 
 # Ellipsis on a new thread
@@ -167,20 +162,20 @@ do {
             var thread = void
 
             if count == 0 {
-                thread = async f()
+                thread = f.async(void, [])
             }
             else {
-                thread = async r(r, f, count - 1)
+                thread = r.async(void, [r, f, count - 1])
             }
 
             thread.wait()
         }
 
         try {
-            async respawn(respawn, f, count)
+            respawn.async(void, [respawn, f, count])
         }
         catch const e { }
     }
 
-    async start(thread, 16)
+    start.async(void, [thread, 16])
 }

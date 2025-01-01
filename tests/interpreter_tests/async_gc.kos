@@ -16,7 +16,7 @@ fun go_deeper
 {
     try {
         kos.collect_garbage()
-        const thread = async spawn()
+        const thread = spawn.async(void, [])
         thread.wait()
     }
     catch const e { }
@@ -35,6 +35,6 @@ fun thread_func
 }
 
 range(num_threads)
-    -> map(() => async thread_func())
+    -> map(() => thread_func.async(void, []))
     -> array
     -> each(thread => thread.wait())

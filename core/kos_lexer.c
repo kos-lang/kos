@@ -277,7 +277,6 @@ static const char *const keywords[] = {
     "_",
     "__line__",
     "assert",
-    "async",
     "break",
     "case",
     "catch",

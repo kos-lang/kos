@@ -37,7 +37,6 @@ static const char str_err_expected_expression[]       = "expected expression";
 static const char str_err_expected_ident_or_str[]     = "expected identifier or string literal";
 static const char str_err_expected_identifier[]       = "expected identifier";
 static const char str_err_expected_in[]               = "expected 'in' keyword";
-static const char str_err_expected_invocation[]       = "expected invocation";
 static const char str_err_expected_lambda_op[]        = "expected '=>'";
 static const char str_err_expected_member_expr[]      = "expected literal, identifier or '('";
 static const char str_err_expected_multi_assignment[] = "expected '=' after comma-separated variables or members";
@@ -1567,90 +1566,6 @@ cleanup:
     return error;
 }
 
-static int async_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
-{
-    int           error      = KOS_SUCCESS;
-    KOS_AST_NODE *node       = KOS_NULL;
-    KOS_TOKEN     name_token = parser->token;
-
-    TRY(new_node(parser, ret, NT_ASYNC));
-
-    TRY(next_token(parser));
-
-    if (parser->token.keyword == KW_DO) {
-
-        KOS_AST_NODE    *fun_node = KOS_NULL;
-        KOS_AST_NODE    *tmp_node = KOS_NULL;
-        KOS_AST_NODE    *sub_node = KOS_NULL;
-        KOS_PARSER_STATE state;
-
-        save_function_state(parser, &state);
-
-        TRY(new_node(parser, &node, NT_INVOCATION));
-
-        TRY(new_node(parser, &fun_node, NT_FUNCTION_LITERAL));
-        ast_push(node, fun_node);
-
-        TRY(new_node(parser, &tmp_node, NT_NAME));
-        tmp_node->token = name_token;
-        ast_push(fun_node, tmp_node);
-
-        TRY(new_node(parser, &sub_node, NT_IDENTIFIER));
-        sub_node->token = name_token;
-        ast_push(tmp_node, sub_node);
-        sub_node = KOS_NULL;
-        tmp_node = KOS_NULL;
-
-        TRY(new_node(parser, &tmp_node, NT_PARAMETERS));
-        ast_push(fun_node, tmp_node);
-        tmp_node = KOS_NULL;
-
-        TRY(new_node(parser, &tmp_node, NT_LANDMARK));
-        ast_push(fun_node, tmp_node);
-        tmp_node = KOS_NULL;
-
-        TRY(new_node(parser, &sub_node, NT_RETURN));
-
-        parser->state.unary_depth = 0;
-
-        error = do_stmt(parser, &tmp_node);
-        assert(error || parser->state.unary_depth == 0);
-        restore_function_state(parser, &state);
-        if (error)
-            goto cleanup;
-
-        assert(tmp_node->type == NT_SCOPE);
-        ast_push(tmp_node, sub_node);
-        ast_push(fun_node, tmp_node);
-        tmp_node = KOS_NULL;
-        sub_node = KOS_NULL;
-
-        TRY(new_node(parser, &tmp_node, NT_LANDMARK));
-        ast_push(fun_node, tmp_node);
-        tmp_node = KOS_NULL;
-    }
-    else {
-        KOS_TOKEN saved_token = parser->token;
-
-        parser->unget = 1;
-
-        TRY(stream_expr(parser, &node));
-
-        if (node->type != NT_INVOCATION) {
-            parser->token     = saved_token;
-            parser->error_str = str_err_expected_invocation;
-            error = KOS_ERROR_PARSE_FAILED;
-            goto cleanup;
-        }
-    }
-
-    ast_push(*ret, node);
-    node = KOS_NULL;
-
-cleanup:
-    return error;
-}
-
 static int right_hand_side_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
 {
     int error = KOS_SUCCESS;
@@ -1669,21 +1584,10 @@ static int right_hand_side_expr(KOS_PARSER *parser, KOS_AST_NODE **ret)
 
         TRY(new_node(parser, ret, NT_YIELD));
 
-        TRY(next_token(parser));
-
-        if (parser->token.keyword == KW_ASYNC)
-            TRY(async_expr(parser, &node));
-        else {
-            parser->unget = 1;
-            TRY(stream_expr(parser, &node));
-        }
+        TRY(stream_expr(parser, &node));
 
         ast_push(*ret, node);
         node = KOS_NULL;
-    }
-    else if (parser->token.keyword == KW_ASYNC) {
-
-        TRY(async_expr(parser, ret));
     }
     else {
 

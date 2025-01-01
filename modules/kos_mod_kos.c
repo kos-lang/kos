@@ -631,7 +631,6 @@ int kos_module_kos_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "keyword_none",         KW_NONE);
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "keyword_line",         KW_LINE);
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "keyword_assert",       KW_ASSERT);
-    TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "keyword_async",        KW_ASYNC);
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "keyword_break",        KW_BREAK);
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "keyword_case",         KW_CASE);
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "keyword_catch",        KW_CATCH);

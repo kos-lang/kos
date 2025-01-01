@@ -590,8 +590,6 @@ static int visit_node(KOS_COMP_UNIT *program,
             /* fall through */
         case NT_YIELD:
             /* fall through */
-        case NT_ASYNC:
-            /* fall through */
         case NT_PROPERTY:
             /* fall through */
         case NT_EXPAND:

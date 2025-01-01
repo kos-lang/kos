@@ -156,7 +156,7 @@
 		</dict>
 		<dict>
 			<key>match</key>
-			<string>(?&lt;!\.)\b(assert|async|break|case|catch|continue|default|defer|do|else|fallthrough|for|if|loop|repeat|return|switch|throw|try|while|with)\b(?!\$)</string>
+			<string>(?&lt;!\.)\b(assert|break|case|catch|continue|default|defer|do|else|fallthrough|for|if|loop|repeat|return|switch|throw|try|while|with)\b(?!\$)</string>
 			<key>name</key>
 			<string>keyword.control.kos</string>
 		</dict>

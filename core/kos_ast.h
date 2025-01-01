@@ -33,7 +33,6 @@ typedef enum KOS_NODE_TYPE_U {
     NT_EXPORT,
     NT_OPERATOR,
     NT_YIELD,
-    NT_ASYNC,
     NT_ASSIGNMENT,          /* single variable assignment */
     NT_MULTI_ASSIGNMENT,    /* multiple variable assignment */
     NT_INTERPOLATED_STRING, /* string interpolation */

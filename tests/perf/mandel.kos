@@ -116,7 +116,7 @@ public fun main(use_float = false)
         const threads = []
 
         for const job in range(jobs) {
-            threads.push(async generate_mandelbrot_range(job, mandel_func))
+            threads.push(generate_mandelbrot_range.async(void, [job, mandel_func]))
         }
 
         for const thread in threads {

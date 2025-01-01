@@ -48,7 +48,7 @@ kos.collect_garbage()
 # async
 
 do {
-    var thread = async sleep(1)
+    var thread = sleep.async(void, [1])
     thread = void
 
     kos.collect_garbage()

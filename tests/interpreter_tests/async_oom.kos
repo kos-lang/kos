@@ -19,7 +19,7 @@ fun thread
             alloc_size >>= 1
             if alloc_size > 8 {
                 try {
-                    async a.push(0)
+                    a.push.async(a, [0])
                 }
                 catch const e { }
             }
@@ -31,7 +31,7 @@ fun thread
 }
 
 for const i in range(2) {
-    async thread()
+    thread.async(void, [])
 }
 
 while ! a[0] { }

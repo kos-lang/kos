@@ -17,11 +17,11 @@ do {
     mtx.acquire()
     var value = 0
 
-    const th = async do {
+    const th = fun {
         with mtx {
             value += 1
         }
-    }
+    }.async(void, [])
 
     assert th
     assert value == 0
@@ -98,7 +98,7 @@ do {
 fun {
     const que = threads.queue()
     const out = []
-    const thr = async do {
+    const thr = fun {
         loop {
             const val = que.pop()
             if val == void {
@@ -106,7 +106,7 @@ fun {
             }
             out.push(val)
         }
-    }
+    }.async(void, [])
 
     const mid = 10
     que.push(base.range(mid)..., void, base.range(mid, mid * 2)...)
@@ -158,7 +158,7 @@ do {
 fun {
     const stack = threads.stack()
     const out = []
-    const thr = async do {
+    const thr = fun {
         loop {
             const val = stack.pop()
             if val == void {
@@ -166,7 +166,7 @@ fun {
             }
             out.push(val)
         }
-    }
+    }.async(void, [])
 
     const mid = 10
     stack.push(base.range(mid)..., void, base.range(mid, mid * 2)...)

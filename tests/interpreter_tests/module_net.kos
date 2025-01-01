@@ -209,7 +209,7 @@ do {
     assert server_sock.bind("0.0.0.0", port) == server_sock
     assert server_sock.listen()              == server_sock
 
-    const recv_thread = async do {
+    const recv_thread = fun {
         const recv_sock = server_sock.accept().socket
         assert recv_sock.blocking
         assert recv_sock instanceof net.socket
@@ -230,7 +230,7 @@ do {
 
         assert b.size == 12
         assert base.string(b) == "hello, world"
-    }
+    }.async(void, [])
 
     const send_sock = net.socket(net.AF_INET, net.SOCK_STREAM)
     assert send_sock.connect("localhost", port) == send_sock
@@ -258,7 +258,7 @@ do {
     expect_fail(() => server_sock.accept())
     assert ! server_sock.wait(0)
 
-    const recv_thread = async do {
+    const recv_thread = fun {
         assert server_sock.wait()
         const recv_sock = server_sock.accept().socket
         recv_sock.blocking = false
@@ -279,7 +279,7 @@ do {
 
         assert b.size == 5
         assert base.string(b) == "world"
-    }
+    }.async(void, [])
 
     const send_sock = net.socket()
     assert send_sock.connect("localhost", port) == send_sock
@@ -305,7 +305,7 @@ do {
     assert udp_sender.setsockopt(net.SOL_SOCKET, net.SO_REUSEADDR, true).bind("localhost", sport) == udp_sender
     assert udp_receiver.setsockopt(net.SOL_SOCKET, net.SO_REUSEADDR, true).bind("localhost", rport) == udp_receiver
 
-    const ping_back = async do {
+    const ping_back = fun {
         while ! udp_receiver.wait() { }
 
         const received = udp_receiver.recvfrom()
@@ -318,7 +318,7 @@ do {
         assert data.size < 8
 
         udp_receiver.sendto(received.address, received.port, "got\(data[5:])")
-    }
+    }.async(void, [])
 
     var got  = void
     var last = -1
@@ -368,7 +368,7 @@ if ipv6 {
     assert udp_sender.setsockopt(net.SOL_SOCKET, net.SO_REUSEADDR, true).bind("::1", sport) == udp_sender
     assert udp_receiver.setsockopt(net.SOL_SOCKET, net.SO_REUSEADDR, true).bind("::1", rport) == udp_receiver
 
-    const ping_back = async do {
+    const ping_back = fun {
         while ! udp_receiver.wait() { }
 
         const received = udp_receiver.recvfrom()
@@ -381,7 +381,7 @@ if ipv6 {
         assert data.size < 8
 
         udp_receiver.sendto(received.address, received.port, "got\(data[5:])")
-    }
+    }.async(void, [])
 
     var got  = void
     var last = -1

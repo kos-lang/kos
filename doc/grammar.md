@@ -160,7 +160,6 @@ The following reserved keywords are defined:
 * `_`
 * `__line__`
 * `assert`
-* `async`
 * `break`
 * `case`
 * `catch`
@@ -1020,20 +1019,9 @@ Expressions
                          PLACEHOLDER_LITERAL
 
     RHSExpression ::= StreamExpression
-                    | AsyncExpression
                     | YieldExpression
 
-    YieldExpression ::= "yield" ( StreamExpression | AsyncExpression )
-
-    AsyncExpression ::= AsyncInvocation
-                      | AsyncStreamExpression
-                      | AsyncDoStatement
-
-    AsyncInvocation ::= "async" MemberExpression Invocation
-
-    AsyncStreamExpression ::= "async" StreamExpression "->" ConditionalExpression
-
-    AsyncDoStatement  ::= "async" DoStatement
+    YieldExpression ::= "yield" StreamExpression
 
     StreamExpression ::= [ StreamExpression "->" ] ConditionalExpression
 

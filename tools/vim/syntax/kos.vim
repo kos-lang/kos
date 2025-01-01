@@ -37,7 +37,7 @@ syn keyword kosConditional      if else switch
 syn keyword kosLabel            case default
 syn keyword kosRepeat           while for repeat loop
 syn keyword kosBranch           break continue fallthrough
-syn keyword kosOperator         delete instanceof propertyof typeof yield async in extends
+syn keyword kosOperator         delete instanceof propertyof typeof yield in extends
 syn keyword kosStatement        return with import defer do
 syn keyword kosBoolean          true false
 syn keyword kosVoid             void _

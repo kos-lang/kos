@@ -1228,8 +1228,6 @@ static int visit_node(KOS_COMP_UNIT *program,
         case NT_ARRAY_LITERAL:
             /* fall through */
         case NT_OBJECT_LITERAL:
-            /* fall through */
-        case NT_ASYNC:
             error = visit_child_nodes(program, node);
             break;
     }
