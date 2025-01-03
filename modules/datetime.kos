@@ -90,6 +90,8 @@ fun date_check(name, value, min, max)
  *  * `leap` - indicates whether it is a leap year (`false` or `true`)
  *  * `timestamp` - in microseconds
  *
+ * The `timestamp` is expressed in microseconds since Epoch (1970-01-01 00:00).
+ *
  * Examples:
  *
  *     > datetime(now())
@@ -103,7 +105,7 @@ fun date_check(name, value, min, max)
  */
 public class datetime
 {
-    constructor(year = void, month = void, day = void,
+    constructor(year, month = void, day = void,
                 hour = void, minute = void, second = void, us = void,
                 timestamp = void) {
 

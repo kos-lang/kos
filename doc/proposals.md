@@ -4,8 +4,6 @@ Enhancement proposals
 Strings
 -------
 
-* Add separate operator for string concatenation, e.g. `++`.
-
 * Add dsl (domain-specific language) literals; what keyword?:
 
         const buf = dsl(buffer)(1234abc)
@@ -31,8 +29,6 @@ Strings
 
 Threads
 -------
-
-* Remove async keyword, spawn threads via `function.prototype.async()`.
 
 * ? Ctrl-C does not interrupt a mutex.
 

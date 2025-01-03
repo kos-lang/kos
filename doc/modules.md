@@ -3067,6 +3067,8 @@ The created object has the following properties:
  * `leap` - indicates whether it is a leap year (`false` or `true`)
  * `timestamp` - in microseconds
 
+The `timestamp` is expressed in microseconds since Epoch (1970-01-01 00:00).
+
 Examples:
 
     > datetime(now())
