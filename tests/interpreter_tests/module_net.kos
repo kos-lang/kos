@@ -230,7 +230,7 @@ do {
 
         assert b.size == 12
         assert base.string(b) == "hello, world"
-    }.async(void, [])
+    }.async()
 
     const send_sock = net.socket(net.AF_INET, net.SOCK_STREAM)
     assert send_sock.connect("localhost", port) == send_sock
@@ -279,7 +279,7 @@ do {
 
         assert b.size == 5
         assert base.string(b) == "world"
-    }.async(void, [])
+    }.async()
 
     const send_sock = net.socket()
     assert send_sock.connect("localhost", port) == send_sock
@@ -318,7 +318,7 @@ do {
         assert data.size < 8
 
         udp_receiver.sendto(received.address, received.port, "got\(data[5:])")
-    }.async(void, [])
+    }.async()
 
     var got  = void
     var last = -1
@@ -381,7 +381,7 @@ if ipv6 {
         assert data.size < 8
 
         udp_receiver.sendto(received.address, received.port, "got\(data[5:])")
-    }.async(void, [])
+    }.async()
 
     var got  = void
     var last = -1

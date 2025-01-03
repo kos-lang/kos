@@ -1393,14 +1393,14 @@ The prototype of `function.prototype` is `object.prototype`.
 function.prototype.apply()
 --------------------------
 
-    function.prototype.apply(this, args)
+    function.prototype.apply(this_obj = void, args = [])
 
 Invokes a function with the specified this object and arguments.
 
 Returns the value returned by the function.
 
-The `this` argument is the object which is bound to the function as
-`this` for this invocation.  It can be any object or `void`.
+The `this_obj` argument is the object which is bound to the function as
+`this` for the invocation.  It can be any object or `void`.
 
 The `args` argument is an array (can be empty) containing arguments for
 the function.
@@ -1414,14 +1414,14 @@ Example:
 function.prototype.async()
 --------------------------
 
-    function.prototype.async(this, args)
+    function.prototype.async(this_obj = void, args = [])
 
 Invokes a function asynchronously on a new thread.
 
 Returns the created thread object.
 
-The `this` argument is the object which is bound to the function as
-`this` for this invocation.  It can be any object or `void`.
+The `this_obj` argument is the object which is bound to the function as
+`this` for the invocation.  It can be any object or `void`.
 
 The `args` argument is an array (can be empty) containing arguments for
 the function.

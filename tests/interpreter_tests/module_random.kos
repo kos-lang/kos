@@ -59,7 +59,7 @@ do {
 
 # random.random.prototype.integer
 do {
-    expect_fail(()=>random.random.prototype.integer.apply(void, []))
+    expect_fail(()=>random.random.prototype.integer.apply())
     expect_fail(()=>random.random.prototype.integer.apply({}, []))
 }
 

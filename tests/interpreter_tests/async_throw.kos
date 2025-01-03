@@ -13,10 +13,10 @@ do {
 
     var i = 20
     while i {
-        const t1 = thrower.async(void, [])
-        const t2 = thrower.async(void, [])
-        const t3 = thrower.async(void, [])
-        const t4 = thrower.async(void, [])
+        const t1 = thrower.async()
+        const t2 = thrower.async()
+        const t3 = thrower.async()
+        const t4 = thrower.async()
         t1.wait()
         t2.wait()
         t3.wait()

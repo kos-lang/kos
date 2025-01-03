@@ -112,7 +112,7 @@ do {
         defer {
             f.close()
         }
-        f.close.apply(void, [])
+        f.close.apply()
     }
     catch const e {
         failed = false

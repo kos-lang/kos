@@ -21,7 +21,7 @@ do {
         with mtx {
             value += 1
         }
-    }.async(void, [])
+    }.async()
 
     assert th
     assert value == 0
@@ -106,7 +106,7 @@ fun {
             }
             out.push(val)
         }
-    }.async(void, [])
+    }.async()
 
     const mid = 10
     que.push(base.range(mid)..., void, base.range(mid, mid * 2)...)
@@ -166,7 +166,7 @@ fun {
             }
             out.push(val)
         }
-    }.async(void, [])
+    }.async()
 
     const mid = 10
     stack.push(base.range(mid)..., void, base.range(mid, mid * 2)...)

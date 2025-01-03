@@ -1106,7 +1106,7 @@ do {
     assert o.x == 42
     assert o.x_plus_1() == 43
 
-    const p = Abc.apply(void, [])
+    const p = Abc.apply()
     assert p.x == 42
     assert p.x_plus_1() == 43
 

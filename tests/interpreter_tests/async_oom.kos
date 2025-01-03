@@ -31,7 +31,7 @@ fun thread
 }
 
 for const i in range(2) {
-    thread.async(void, [])
+    thread.async()
 }
 
 while ! a[0] { }

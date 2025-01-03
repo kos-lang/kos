@@ -2469,7 +2469,7 @@ do {
         throw ""
     }
 
-    expect_fail(()=>method.apply(void, []))
+    expect_fail(()=>method.apply())
 }
 
 do {
@@ -2534,7 +2534,7 @@ do {
 
 do {
     expect_fail(fun {
-        (()=>void) . apply . apply(void, [])
+        (()=>void) . apply . apply()
     })
 }
 
@@ -2576,7 +2576,9 @@ do {
     const str = "abcd"
     assert str.size == 4
     assert some.apply(str, []) == 4
-    assert some.apply(args = [], obj = str) == 4
+    assert some.apply(str) == 4
+    assert some.apply(args = [], this_obj = str) == 4
+    assert (_ => 42).apply() == 42
 }
 
 ##############################################################################

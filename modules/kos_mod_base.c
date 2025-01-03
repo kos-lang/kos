@@ -78,6 +78,7 @@ KOS_DECLARE_STATIC_CONST_STRING(str_size,                         "size");
 KOS_DECLARE_STATIC_CONST_STRING(str_source,                       "source");
 KOS_DECLARE_STATIC_CONST_STRING(str_str,                          "str");
 KOS_DECLARE_STATIC_CONST_STRING(str_substr,                       "substr");
+KOS_DECLARE_STATIC_CONST_STRING(str_this_obj,                     "this_obj");
 KOS_DECLARE_STATIC_CONST_STRING(str_value,                        "value");
 KOS_DECLARE_STATIC_CONST_STRING(str_values,                       "values");
 
@@ -1822,14 +1823,14 @@ static KOS_OBJ_ID thread_constructor(KOS_CONTEXT ctx,
 
 /* @item base function.prototype.apply()
  *
- *     function.prototype.apply(this, args)
+ *     function.prototype.apply(this_obj = void, args = [])
  *
  * Invokes a function with the specified this object and arguments.
  *
  * Returns the value returned by the function.
  *
- * The `this` argument is the object which is bound to the function as
- * `this` for this invocation.  It can be any object or `void`.
+ * The `this_obj` argument is the object which is bound to the function as
+ * `this` for the invocation.  It can be any object or `void`.
  *
  * The `args` argument is an array (can be empty) containing arguments for
  * the function.
@@ -1840,12 +1841,6 @@ static KOS_OBJ_ID thread_constructor(KOS_CONTEXT ctx,
  *     > f.apply(1, [2])
  *     3
  */
-static const KOS_CONVERT apply_args[3] = {
-    KOS_DEFINE_MANDATORY_ARG(str_obj ),
-    KOS_DEFINE_MANDATORY_ARG(str_args),
-    KOS_DEFINE_TAIL_ARG()
-};
-
 static KOS_OBJ_ID apply(KOS_CONTEXT ctx,
                         KOS_OBJ_ID  this_obj,
                         KOS_OBJ_ID  args_obj)
@@ -1888,14 +1883,14 @@ KOS_DECLARE_PRIVATE_CLASS(thread_priv_class);
 
 /* @item base function.prototype.async()
  *
- *     function.prototype.async(this, args)
+ *     function.prototype.async(this_obj = void, args = [])
  *
  * Invokes a function asynchronously on a new thread.
  *
  * Returns the created thread object.
  *
- * The `this` argument is the object which is bound to the function as
- * `this` for this invocation.  It can be any object or `void`.
+ * The `this_obj` argument is the object which is bound to the function as
+ * `this` for the invocation.  It can be any object or `void`.
  *
  * The `args` argument is an array (can be empty) containing arguments for
  * the function.
@@ -5115,6 +5110,12 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 {
     int       error = KOS_SUCCESS;
     KOS_LOCAL module;
+
+    const KOS_CONVERT apply_args[3] = {
+        KOS_DEFINE_OPTIONAL_ARG(str_this_obj, KOS_VOID       ),
+        KOS_DEFINE_OPTIONAL_ARG(str_args,     KOS_EMPTY_ARRAY),
+        KOS_DEFINE_TAIL_ARG()
+    };
 
     KOS_init_local_with(ctx, &module, module_obj);
 

@@ -20,7 +20,7 @@ const unoptimized = x => x
 # Test basic async do
 do {
     var a = void
-    ;(fun { a = 10 }.async(void, [])).wait()
+    ;(fun { a = 10 }.async()).wait()
     assert a == 10
 }
 
@@ -31,7 +31,7 @@ do {
     var c = { setb: fun(x) { b = x } }
     var d = 3
 
-    const t = fun { c.setb(10) }.async(void, [])
+    const t = fun { c.setb(10) }.async()
     t.wait()
 
     unoptimized(a)
@@ -69,7 +69,7 @@ do {
         return x + 1
     }
 
-    const t = fun { return 101 -> aa -> bb -> cc }.async(void, [])
+    const t = fun { return 101 -> aa -> bb -> cc }.async()
     const result = t.wait()
 
     assert t instanceof thread
@@ -84,7 +84,7 @@ do {
     const o = { value: 10,
                 doit:  fun(x) { this.value = x; return x + 1 } }
 
-    const val = (fun { return 42 -> o.doit }.async(void, [])).wait()
+    const val = (fun { return 42 -> o.doit }.async()).wait()
 
     assert o.value == 42
     assert val == 43
@@ -100,7 +100,7 @@ do {
         }
         else {
             o[0] = count - 1
-            fun { f(f, o) }.async(void, [])
+            fun { f(f, o) }.async()
         }
     }
 
@@ -119,7 +119,7 @@ do {
         yield 10
     }
 
-    const th = gen_10().async(void, [])
+    const th = gen_10().async()
     assert th.wait() == 10
 }
 
@@ -130,7 +130,7 @@ do {
         yield x
     }
 
-    (gen(0).async(void, [])).wait()
+    (gen(0).async()).wait()
 }
 
 # Ellipsis on a new thread
@@ -162,7 +162,7 @@ do {
             var thread = void
 
             if count == 0 {
-                thread = f.async(void, [])
+                thread = f.async()
             }
             else {
                 thread = r.async(void, [r, f, count - 1])

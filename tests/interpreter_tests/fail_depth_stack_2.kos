@@ -7,7 +7,7 @@ fun go_deeper
 {
     try {
         if more {
-            go_deeper.async(void, [])
+            go_deeper.async()
         }
     }
     catch const e {
