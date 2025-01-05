@@ -1620,15 +1620,24 @@ static int optimize_concat(KOS_COMP_UNIT *program,
 
     while (child_2) {
 
-        const KOS_AST_NODE *const_2 = kos_get_const(program, child_2);
-        KOS_AST_NODE *const child_3 = child_2->next;
+        const KOS_AST_NODE *const_2;
+        KOS_AST_NODE       *child_3;
+        int                  term;
+        int                  error = visit_node(program, child_2, &term);
+
+        if (error)
+            return error;
+        assert(term == TERM_NONE);
+
+        const_2 = kos_get_const(program, child_2);
+        child_3 = child_2->next;
 
         /* TODO convert numbers, buffer and array literals to strings */
 
         if (const_1 && const_2 && (const_2->type == NT_STRING_LITERAL) &&
             (is_raw_str(const_1) == is_raw_str(const_2))) {
 
-            const int error = add_strings(program, child_1, const_1, const_2);
+            error = add_strings(program, child_1, const_1, const_2);
             if (error)
                 return error;
 
@@ -1664,6 +1673,9 @@ static int operator_token(KOS_COMP_UNIT *program,
     const KOS_AST_NODE *cb    = KOS_NULL;
     KOS_NODE_TYPE       a_type;
     KOS_NODE_TYPE       b_type;
+
+    if (node->token.op == OT_CONCAT)
+        return optimize_concat(program, node);
 
     assert(a);
     b = a->next;
@@ -1706,11 +1718,6 @@ static int operator_token(KOS_COMP_UNIT *program,
                 if (a_type == NT_NUMERIC_LITERAL)
                     error = optimize_unary_op(program, node, ca);
             }
-            break;
-        }
-
-        case OT_CONCAT: {
-            error = optimize_concat(program, node);
             break;
         }
 

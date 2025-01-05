@@ -1703,6 +1703,15 @@ do {
     expect_fail(_ => add2("", void))
     expect_fail(_ => add2("", fun{}))
 }
+do {
+    assert "h" ++ "e" ++ "l" ++ "l" ++ "o" == "hello"
+
+    const noopt = !("h e l l o" in buffer)
+    const _e = noopt ? "e" : ""
+    const _l = noopt ? "l" : ""
+
+    assert "h" ++ _e ++ "l" ++ _l ++ "o" == "hello"
+}
 
 ##############################################################################
 # ++= string concatenation
