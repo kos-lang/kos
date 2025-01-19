@@ -117,8 +117,8 @@ static void init_context(KOS_CONTEXT ctx, KOS_INSTANCE *inst)
     ctx->stack_depth = 0;
     ctx->local_list  = KOS_NULL;
     ctx->ulocal_list = KOS_NULL;
-    ctx->gc_state    = GC_SUSPENDED;
-    ctx->event_flags = 0;
+    KOS_atomic_write_relaxed_u32(ctx->gc_state, GC_SUSPENDED);
+    KOS_atomic_write_relaxed_u32(ctx->event_flags, 0);
 }
 
 static int register_thread(KOS_INSTANCE *inst,
