@@ -27,8 +27,8 @@ Disassembling regular expression: x*y{1,2}?
 ==============================================================================
 
 00000000: 000C 000B 0000 0000      GREEDY.COUNT     00000016, 0, 0
-00000008: 0000 0078                MATCH.ONE.CHAR   120
+00000008: 0000 0078                MATCH.ONE.CHAR   'x'
 0000000C: 000E FFFE 0000 0000 FFFF GREEDY.JUMP      00000008, 0, 0, 65535
 00000016: 000D 000B 0001 0001      LAZY.COUNT       END, 1, 1
-0000001E: 0000 0079                MATCH.ONE.CHAR   121
+0000001E: 0000 0079                MATCH.ONE.CHAR   'y'
 00000022: 000F FFFE 0001 0001 0002 LAZY.JUMP        0000001E, 1, 1, 2

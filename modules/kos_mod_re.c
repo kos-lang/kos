@@ -1022,7 +1022,7 @@ static int emit_multiplicity(struct RE_PARSE_CTX *re_ctx,
     int            error;
     const uint32_t pivot    = (uint32_t)re_ctx->buf.size;
     const int      lazy     = peek_next_char(&re_ctx->iter) == '?';
-    unsigned       count_id = re_ctx->num_counts++;
+    const unsigned count_id = re_ctx->num_counts++;
     uint32_t       jump_offs;
     uint32_t       count_size;
 
@@ -1268,6 +1268,8 @@ static void disassemble(struct RE_OBJ *re, const char *re_cstr)
                 else
                     num_printed = snprintf(pr_buf, sizeof(pr_buf), "%08X", target);
             }
+            else if ( ! i_arg && instr == INSTR_MATCH_ONE_CHAR && (operand >= 0x20 && operand < 0x7F))
+                num_printed = snprintf(pr_buf, sizeof(pr_buf), "'%c'", (char)operand);
             else
                 num_printed = snprintf(pr_buf, sizeof(pr_buf), "%u", operand);
 
@@ -1791,6 +1793,10 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
                 const int16_t delta = (int16_t)bytecode[1];
 
                 assert(delta);
+                assert(poss_stack->current);
+
+                if ( ! poss_stack->current)
+                    RAISE_ERROR(KOS_ERROR_INTERNAL);
 
                 TRY(push_possibility(poss_stack, ctx, re, bytecode + delta, &iter));
 
@@ -1802,6 +1808,10 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
                 const int16_t delta = (int16_t)bytecode[1];
 
                 assert(delta);
+                assert(poss_stack->current);
+
+                if ( ! poss_stack->current)
+                    RAISE_ERROR(KOS_ERROR_INTERNAL);
 
                 bytecode += delta;
                 assert(bytecode <= bytecode_end);
@@ -1814,6 +1824,10 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
                 const uint16_t min_count = bytecode[3];
 
                 assert(delta);
+                assert(poss_stack->current);
+
+                if ( ! poss_stack->current)
+                    RAISE_ERROR(KOS_ERROR_INTERNAL);
 
                 poss_stack->current->counts_and_groups[count_id] = 0;
 
@@ -1830,6 +1844,10 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
                 const uint16_t min_count = bytecode[3];
 
                 assert(delta);
+                assert(poss_stack->current);
+
+                if ( ! poss_stack->current)
+                    RAISE_ERROR(KOS_ERROR_INTERNAL);
 
                 poss_stack->current->counts_and_groups[count_id] = 0;
 
