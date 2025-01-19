@@ -1,0 +1,206 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Copyright (c) 2014-2024 Chris Dragan
+
+import base.buffer
+import base.integer
+import base.print
+import base.range
+import kos.execute
+import random.random
+import random.grandom
+
+# For use inside generated scripts to avoid optimization
+public var _false = false
+public var _true  = true
+public var _0     = 0
+public var _1     = 1
+public var _2     = 2
+public var _aaa   = "aaa"
+public var _bbb   = "bbb"
+
+const exception = {}
+const unknown   = {}
+
+assert exception != unknown
+assert exception != void
+assert unknown   != void
+
+fun printable(value)
+{
+    if value == exception {
+        return "<exception>"
+    }
+    if value == unknown {
+        return "<no value returned>"
+    }
+    if typeof value == "string" {
+        return "\"\(value)\""
+    }
+    return value
+}
+
+fun run(name, script, expected_result, extra_info)
+{
+    var result = unknown
+    var exc    = void
+
+    try {
+        result = execute(script = script,
+                         name   = name,
+                         base   = false)
+    }
+    catch const e {
+        result = exception
+        exc    = e
+    }
+
+    if result != expected_result {
+        print("Failed test:   \(name)")
+        print("Failed script: \(script)")
+        print("Returned:      \(printable(result))")
+        print("Expected:      \(printable(expected_result))")
+        for const key, value in extra_info {
+            print("\(key):".ljust(30) ++ "\(value)")
+        }
+        if result == exception {
+            throw exc
+        }
+        throw "Test \(name) failed"
+    }
+}
+
+const values = [
+    { str: "false",   value: false, },
+    { str: "true",    value: true,  },
+    { str: "0",       value: 0,     },
+    { str: "1",       value: 1,     },
+    { str: "2",       value: 2,     },
+    { str: "\"aaa\"", value: "aaa", },
+    { str: "\"bbb\"", value: "bbb", },
+]
+
+const boolean_operators = [
+    # Comparison
+    { str: "==", op: (a, b) => a == b, unary: false, },
+    { str: "<",  op: (a, b) => a <  b, unary: false, },
+    { str: ">",  op: (a, b) => a >  b, unary: false, },
+    { str: "<=", op: (a, b) => a <= b, unary: false, },
+    { str: ">=", op: (a, b) => a >= b, unary: false, },
+    { str: "!=", op: (a, b) => a != b, unary: false, },
+
+    # Boolean
+    { str: "&&", op: (a, b) => a && b, unary: false, },
+    { str: "||", op: (a, b) => a || b, unary: false, },
+    { str: "!" , op: (a, b) =>    ! b, unary: true,  },
+]
+
+fun generate_expr(rng, imports, config, depth = 0)
+{
+    var is_op = void
+
+    if depth == 0 {
+        is_op = true
+    }
+    else if depth == config.get("max_depth", 3) {
+        is_op = false
+    }
+    else {
+        is_op = rng.integer(0, 99) >= config.get("op_probability", 30)
+    }
+
+    var operators = void
+    switch config.type {
+        case "boolean" { operators = boolean_operators }
+    }
+
+    if ! is_op {
+        const idx = rng.integer(0, values.size - 1)
+        # TODO variables, refinement, etc.
+        return values[idx]
+    }
+
+    const idx   = rng.integer(0, operators.size - 1)
+    const op    = operators[idx]
+
+    const left  = op.unary ? { value: void } : generate_expr(rng, imports, config, depth + 1)
+    const right = generate_expr(rng, imports, config, depth + 1)
+
+    const popen  = depth > 0 ? "(" : ""
+    const pclose = depth > 0 ? ")" : ""
+    const str    = popen ++ (op.unary ? "" : left.str ++ " ") ++ op.str ++ " " ++ right.str ++ pclose
+    const value  = op.op(left.value, right.value)
+
+    return { str: str, value: value }
+}
+
+fun init_rng(rng = void)
+{
+    if typeof rng == "integer" {
+        const seed = rng
+        rng = random(seed)
+        rng.seed = seed
+    }
+
+    if ! rng {
+        const seed = grandom.integer()
+        rng = random(seed)
+        rng.seed = seed
+    }
+
+    return rng
+}
+
+fun run_test(config, rng = void)
+{
+    rng = init_rng(rng)
+
+    const imports = { }
+    const expr = generate_expr(rng, imports, config)
+
+    var script = ""
+    for const ident, _ in imports {
+        script ++= "import \(ident);"
+    }
+    script ++= expr.str
+
+    config.print(script)
+
+    run(config.type, script, expr.value, { "Seed": rng.seed })
+}
+
+fun run_test_loops(config)
+{
+    const rng = init_rng(config.seed || grandom.integer())
+    config.print("Test \(config.type), \(config.loops) loops, seed \(rng.seed)")
+    for const i in range(config.loops) {
+        run_test(config, rng)
+    }
+}
+
+public fun main(script, args...)
+{
+    var seed    = void
+    var verbose = false
+    var loops   = 1000
+
+    args = args.iterator()
+    for const arg in args {
+        switch arg {
+            case "-verbose" { verbose = true }
+            case "-loops"   { loops   = integer(args()) }
+            case "-seed"    { seed    = integer(args()) }
+            default         { print("Unrecognized argument: \(arg)"); return 1 }
+        }
+    }
+
+    const config = {
+        type:           "boolean",
+        max_depth:      4,
+        op_probability: 30,
+        verbose:        verbose,
+        loops:          loops,
+        seed:           seed,
+        print:          (args...) => this.verbose ? print(args...) : void,
+    }
+    run_test_loops(config)
+}
