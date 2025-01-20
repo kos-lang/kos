@@ -95,4 +95,4 @@ jobs:
           name: ${{ needs.release.outputs.version }}
           tag_name: ${{ github.ref }}
           body: Release ${{ needs.release.outputs.version }}
-          files: artifacts/package/kos-*
+          files: artifacts/kos-*
