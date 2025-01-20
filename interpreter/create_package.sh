@@ -37,6 +37,7 @@ if [ -z "$JOBS" ]; then
         Windows) JOBS="$NUMBER_OF_PROCESSORS" ;;
     esac
 fi
+echo "Running on $UNAME $(uname -m)"
 echo "Using $JOBS jobs"
 
 # Check if we're in the right directory
@@ -48,6 +49,14 @@ fi
 BUILDDIR=Out/release
 PKGDIR="$BUILDDIR"/package
 PKGNAME="kos-$VERSION"
+
+if [[ $UNAME = Darwin ]]; then
+    if [[ $(uname -m) = arm64 ]]; then
+        ALT_TARGET="x86_64"
+    else
+        ALT_TARGET"arm64"
+    fi
+fi
 
 compile_kos()
 {
@@ -70,9 +79,9 @@ collect_package()
             ln "$BUILDDIR_LOCAL"/share/kos/modules/*.kos "$PKGDIR_LOCAL"/share/kos/modules/
             local FILE
             for FILE in "$BUILDDIR_LOCAL"/share/kos/modules/*.dylib; do
-                lipo -create -output "$PKGDIR_LOCAL"/share/kos/modules/"$(basename "$FILE")" "$FILE" "$BUILDDIR_LOCAL"-arm64/share/kos/modules/"$(basename "$FILE")"
+                lipo -create -output "$PKGDIR_LOCAL"/share/kos/modules/"$(basename "$FILE")" "$FILE" "$BUILDDIR_LOCAL"-$ALT_TARGET/share/kos/modules/"$(basename "$FILE")"
             done
-            lipo -create -output "$PKGDIR_LOCAL"/bin/kos "$BUILDDIR_LOCAL"/interpreter/kos "$BUILDDIR_LOCAL"-arm64/interpreter/kos
+            lipo -create -output "$PKGDIR_LOCAL"/bin/kos "$BUILDDIR_LOCAL"/interpreter/kos "$BUILDDIR_LOCAL"-$ALT_TARGET/interpreter/kos
         else
             ln "$BUILDDIR_LOCAL"/interpreter/kos "$PKGDIR_LOCAL"/bin/
             ln "$BUILDDIR_LOCAL"/share/kos/modules/* "$PKGDIR_LOCAL"/share/kos/modules/
@@ -87,7 +96,7 @@ create_pkg_dir()
     compile_kos test
 
     if [ "$UNAME" = "Darwin" ]; then
-        compile_kos target=arm64
+        compile_kos "target=$ALT_TARGET"
     fi
 
     collect_package "$BUILDDIR"
