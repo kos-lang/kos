@@ -85,6 +85,8 @@ jobs:
           path: "./artifacts"
           pattern: package-*
           merge-multiple: true
+      - name: List downloaded artifacts
+        run: ls -lR artifacts
       - name: Create and upload release
         uses: softprops/action-gh-release@v2
         with:
