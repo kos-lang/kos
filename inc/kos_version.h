@@ -10,7 +10,7 @@
 #endif
 
 #ifndef KOS_VERSION_MINOR
-#   define KOS_VERSION_MINOR 2
+#   define KOS_VERSION_MINOR 3
 #endif
 
 #ifndef KOS_VERSION_REVISION
