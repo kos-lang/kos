@@ -39,7 +39,7 @@ fun printable(value)
     return value
 }
 
-fun run(name, script, expected_result, extra_info)
+fun run_script(name, script, expected_result, extra_info)
 {
     var result = unknown
     var exc    = void
@@ -70,13 +70,20 @@ fun run(name, script, expected_result, extra_info)
 }
 
 const values = [
-    { str: "false",   value: false, },
-    { str: "true",    value: true,  },
-    { str: "0",       value: 0,     },
-    { str: "1",       value: 1,     },
-    { str: "2",       value: 2,     },
-    { str: "\"aaa\"", value: "aaa", },
-    { str: "\"bbb\"", value: "bbb", },
+    { str: "false",   value: false, global: false, },
+    { str: "true",    value: true,  global: false, },
+    { str: "0",       value: 0,     global: false, },
+    { str: "1",       value: 1,     global: false, },
+    { str: "2",       value: 2,     global: false, },
+    { str: "\"aaa\"", value: "aaa", global: false, },
+    { str: "\"bbb\"", value: "bbb", global: false, },
+    { str: "_false",  value: false, global: true,  },
+    { str: "_true",   value: true,  global: true,  },
+    { str: "_0",      value: 0,     global: true,  },
+    { str: "_1",      value: 1,     global: true,  },
+    { str: "_2",      value: 2,     global: true,  },
+    { str: "_aaa",    value: "aaa", global: true,  },
+    { str: "_bbb",    value: "bbb", global: true,  },
 ]
 
 const boolean_operators = [
@@ -114,9 +121,16 @@ fun generate_expr(rng, imports, config, depth = 0)
     }
 
     if ! is_op {
-        const idx = rng.integer(0, values.size - 1)
-        # TODO variables, refinement, etc.
-        return values[idx]
+        const size = config.allow_globals ? values.size : (values.size / 2)
+        const idx = rng.integer(0, size - 1)
+        const val = values[idx]
+        if ! config.allow_globals {
+            assert ! val.global
+        }
+        if val.global {
+            imports[val.str] = void
+        }
+        return val
     }
 
     const idx   = rng.integer(0, operators.size - 1)
@@ -154,18 +168,20 @@ fun run_test(config, rng = void)
 {
     rng = init_rng(rng)
 
+    config.allow_globals = rng.integer(0, 1) == 1
+
     const imports = { }
     const expr = generate_expr(rng, imports, config)
 
     var script = ""
     for const ident, _ in imports {
-        script ++= "import \(ident);"
+        script ++= "import operators_generated.\(ident);"
     }
     script ++= expr.str
 
     config.print(script)
 
-    run(config.type, script, expr.value, { "Seed": rng.seed })
+    run_script(config.type, script, expr.value, { "Seed": rng.seed })
 }
 
 fun run_test_loops(config)
