@@ -50,8 +50,8 @@ BUILDDIR=Out/release
 PKGDIR="$BUILDDIR"/package
 PKGNAME="kos-$VERSION"
 
-if [[ $UNAME = Darwin ]]; then
-    if [[ $(uname -m) = arm64 ]]; then
+if [ "$UNAME" = "Darwin" ]; then
+    if [ "$(uname -m)" = "arm64" ]; then
         ALT_TARGET="x86_64"
     else
         ALT_TARGET"arm64"
