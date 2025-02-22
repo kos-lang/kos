@@ -228,8 +228,8 @@ else
     # Configure gcov
     gcov ?= 0
     ifneq ($(gcov), 0)
-        CFLAGS  += -fprofile-arcs -ftest-coverage -fno-inline -fprofile-update=atomic
-        LDFLAGS += -fprofile-arcs -ftest-coverage
+        CFLAGS  += -fprofile-arcs -ftest-coverage -fprofile-update=atomic -fno-inline
+        LDFLAGS += -fprofile-arcs -ftest-coverage -fprofile-update=atomic
     endif
 
     # Special handling of fuzzer
