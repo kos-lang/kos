@@ -70,34 +70,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: Out/debug/kos.info
 
-  windows-32:
-    strategy:
-      matrix:
-        target:
-          - x86
-        test:
-          - c89
-          - release
-          - seqfail
-    runs-on: windows-2019
-    timeout-minutes: 10
-    steps:
-      - uses: msys2/setup-msys2@v2
-        with:
-          msystem: MSYS
-          path-type: inherit
-          install: diffutils
-      - uses: actions/checkout@v4
-      - name: Remove link.exe from MSYS2
-        shell: msys2 {0}
-        run: rm -f /bin/link.exe
-      - name: Test
-        shell: cmd
-        run: |
-          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" ${{ matrix.target }}
-          msys2 -c "tests/run ${{ matrix.test }}"
-
-  windows-64:
+  windows:
     strategy:
       matrix:
         target:
@@ -116,6 +89,9 @@ jobs:
           path-type: inherit
           install: diffutils
       - uses: actions/checkout@v4
+      - name: Remove link.exe from MSYS2
+        shell: msys2 {0}
+        run: rm -f /bin/link.exe
       - name: Test
         shell: cmd
         run: |
