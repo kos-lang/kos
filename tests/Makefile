@@ -253,7 +253,7 @@ else
 gcov: simple_test $(all_tests)
 	@echo Lcov kos.info
 	@find $(out_dir)/ -name "*.gcno" -o -name "*.gcda" -exec rm '{}' +
-	@lcov --capture --directory .. --output-file $(out_dir_base)/kos.info
+	@lcov --capture --directory .. --output-file $(out_dir_base)/kos.info --ignore-errors inconsistent
 	@find $(out_dir_base)/ -name "*.gcno" -o -name "*.gcda" -exec rm '{}' +
 endif
 
