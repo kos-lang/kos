@@ -54,7 +54,7 @@ if [ "$UNAME" = "Darwin" ]; then
     if [ "$(uname -m)" = "arm64" ]; then
         ALT_TARGET="x86_64"
     else
-        ALT_TARGET"arm64"
+        ALT_TARGET="arm64"
     fi
 fi
 
