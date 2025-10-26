@@ -289,7 +289,7 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
             updated_filename = filename_cstr.size > old_len;
     }
     else
-        stored_errno = errno;
+        stored_errno = errno ? errno : EIO;
 
     KOS_resume_context(ctx);
 
@@ -611,8 +611,9 @@ static KOS_OBJ_ID print(KOS_CONTEXT ctx,
 {
     KOS_VECTOR       cstr;
     KOS_LOCAL        this_;
-    KOS_FILE_HOLDER *file_holder = KOS_NULL;
-    int              error       = KOS_SUCCESS;
+    KOS_FILE_HOLDER *file_holder  = KOS_NULL;
+    int              stored_errno = 0;
+    int              error        = KOS_SUCCESS;
 
     KOS_init_local_with(ctx, &this_, this_obj);
 
@@ -624,14 +625,28 @@ static KOS_OBJ_ID print(KOS_CONTEXT ctx,
 
     KOS_suspend_context(ctx);
 
+    errno = 0;
+
     if (cstr.size) {
+        size_t num_writ = 0;
+
         cstr.buffer[cstr.size - 1] = '\n';
-        fwrite(cstr.buffer, 1, cstr.size, get_file(file_holder));
+        num_writ = fwrite(cstr.buffer, 1, cstr.size, get_file(file_holder));
+
+        if (num_writ < cstr.size)
+            stored_errno = errno ? errno : EIO;
     }
-    else
-        fprintf(get_file(file_holder), "\n");
+    else {
+        if (fprintf(get_file(file_holder), "\n") != 1)
+            stored_errno = errno ? errno : EIO;
+    }
 
     KOS_resume_context(ctx);
+
+    if (stored_errno) {
+        KOS_raise_errno_value(ctx, "fwrite", stored_errno);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
 
 cleanup:
     KOS_vector_destroy(&cstr);
@@ -769,7 +784,7 @@ static KOS_OBJ_ID read_line(KOS_CONTEXT ctx,
 
         if ( ! ret) {
             if (ferror(get_file(file_holder))) {
-                const int stored_errno = errno;
+                const int stored_errno = errno ? errno : EIO;
                 KOS_resume_context(ctx);
                 KOS_raise_errno_value(ctx, "fgets", stored_errno);
                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
@@ -881,7 +896,7 @@ static KOS_OBJ_ID read_some(KOS_CONTEXT ctx,
     num_read = fread(data + offset, 1, (size_t)to_read, get_file(file_holder));
 
     if (num_read < (size_t)to_read && ferror(get_file(file_holder)))
-        stored_errno = errno;
+        stored_errno = errno ? errno : EIO;
 
     KOS_resume_context(ctx);
 
@@ -980,7 +995,7 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
                 num_writ = fwrite(data, 1, to_write, get_file(file_holder));
 
                 if (num_writ < to_write)
-                    stored_errno = errno;
+                    stored_errno = errno ? errno : EIO;
 
                 KOS_resume_context(ctx);
             }
@@ -1009,7 +1024,7 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
                 num_writ = fwrite(cstr.buffer, 1, cstr.size - 1, get_file(file_holder));
 
                 if (num_writ < cstr.size - 1)
-                    stored_errno = errno;
+                    stored_errno = errno ? errno : EIO;
 
                 KOS_resume_context(ctx);
             }
