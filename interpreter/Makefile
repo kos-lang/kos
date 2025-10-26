@@ -22,7 +22,7 @@ libs += $(out_dir_base)/core/$(call LIB_NAME,kos_lang)
 
 $(kos_exe): $(libs)
 
-$(eval $(call LINK_EXE,kos,$(c_files) $(cpp_files),$(libs)))
+$(eval $(call LINK_EXE,kos,LINK_C,$(c_files) $(cpp_files),$(libs)))
 
 ifdef tracy
     $(call OBJECTS_FROM_SOURCES, $(cpp_files)): | $(dir $(call OBJECTS_FROM_SOURCES, $(cpp_files)))

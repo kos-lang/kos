@@ -98,7 +98,7 @@ tool ?=
 libs =  $(out_dir_base)/modules/$(call LIB_NAME,kos_modules)
 libs += $(out_dir_base)/core/$(call LIB_NAME,kos_lang)
 
-LINK_TEST = $(call LINK_EXE,$1,$1.c,$(libs))
+LINK_TEST = $(call LINK_EXE,$1,LINK_CPP,$1.c,$(libs))
 
 $(foreach test, $(all_test_programs), $(eval $(call LINK_TEST,$(test))))
 

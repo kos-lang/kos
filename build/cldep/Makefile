@@ -10,4 +10,4 @@ CL = cl
 
 default: $(out_dir)/cldep$(exe_suffix)
 
-$(eval $(call LINK_EXE,cldep,$(cpp_files),))
+$(eval $(call LINK_EXE,cldep,LINK_CPP,$(cpp_files),))

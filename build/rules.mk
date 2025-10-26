@@ -117,6 +117,9 @@ ifeq ($(UNAME), Windows)
 
     gcov = 0
 
+    # On Windows separate linker tool is used irrespective of language
+    LINK_C :=
+    LINK_CPP :=
     LD_DEFS = -def:$1.win.def
 else
     ifeq ($(debug), 0)
@@ -223,6 +226,13 @@ else
 
     ifneq (,$(filter FreeBSD OpenBSD NetBSD DragonFly,$(UNAME)))
         EXE_LDFLAGS += -lpthread
+    endif
+
+    LINK_CPP = $(CXX)
+    ifeq ($(CLANG), $(CPPLANG))
+        LINK_C = $(CXX)
+    else
+        LINK_C = $(CC)
     endif
 
     # Configure gcov
@@ -415,17 +425,17 @@ endif
 ifeq ($(UNAME), Windows)
 
 define LINK_EXE
-$(out_dir)/$1$(exe_suffix): $$(call OBJECTS_FROM_SOURCES,$2) $3
+$(out_dir)/$1$(exe_suffix): $$(call OBJECTS_FROM_SOURCES,$3) $4
 	@echo Link $(out_dir_rel)/$1$(exe_suffix)
-	@link -nologo $$(EXE_LDFLAGS) $$(LDFLAGS) -out:$$@ $$^ $3
+	@link -nologo $$(EXE_LDFLAGS) $$(LDFLAGS) -out:$$@ $$^ $4
 endef
 
 else #------------------------------------------------------------------------
 
 define LINK_EXE
-$(out_dir)/$1$(exe_suffix): $$(call OBJECTS_FROM_SOURCES,$2) $3
+$(out_dir)/$1$(exe_suffix): $$(call OBJECTS_FROM_SOURCES,$3) $4
 	@echo Link $(out_dir_rel)/$1$(exe_suffix)
-	@$(CXX) $$^ -o $$@ $3 $$(EXE_LDFLAGS) $$(LDFLAGS)
+	@$($2) $$^ -o $$@ $4 $$(EXE_LDFLAGS) $$(LDFLAGS)
 	@$(STRIP) $$@
 endef
 
@@ -439,17 +449,17 @@ SHARED_TARGET = $(out_dir)/$1$(so_suffix)
 ifeq ($(UNAME), Windows)
 
 define LINK_SHARED_LIB
-$$(call SHARED_TARGET,$1): $$(call OBJECTS_FROM_SOURCES,$2)
+$$(call SHARED_TARGET,$1): $$(call OBJECTS_FROM_SOURCES,$3)
 	@echo Link $1$(so_suffix)
-	@link -nologo -dll $$(SHARED_LDFLAGS) $$(LDFLAGS) -out:$$@ $$^ $3
+	@link -nologo -dll $$(SHARED_LDFLAGS) $$(LDFLAGS) -out:$$@ $$^ $4
 endef
 
 else #------------------------------------------------------------------------
 
 define LINK_SHARED_LIB
-$$(call SHARED_TARGET,$1): $$(call OBJECTS_FROM_SOURCES,$2)
+$$(call SHARED_TARGET,$1): $$(call OBJECTS_FROM_SOURCES,$3)
 	@echo Link $1$(so_suffix)
-	@$(CXX) $$^ -o $$@ $3 $$(SHARED_LDFLAGS) $$(LDFLAGS)
+	@$($2) $$^ -o $$@ $4 $$(SHARED_LDFLAGS) $$(LDFLAGS)
 	@$(STRIP) $$@
 endef
 

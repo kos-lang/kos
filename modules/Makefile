@@ -33,7 +33,7 @@ else
         external_modules += $1
         -include $$(call DEPS_FROM_SOURCES,$$(c_files_$1))
         $$(call OBJECTS_FROM_SOURCES,$$(c_files_$1)): CFLAGS += -DKOS_PUBLIC_API
-        $$(eval $$(call LINK_SHARED_LIB,$1,$$(c_files_$1),))
+        $$(eval $$(call LINK_SHARED_LIB,$1,LINK_C,$$(c_files_$1),))
     endef
 endif
 

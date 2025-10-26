@@ -13,4 +13,4 @@ ifeq ($(UNAME), Linux)
 CFLAGS += -D_XOPEN_SOURCE=600
 endif
 
-$(eval $(call LINK_EXE,pseudotty,$(c_files),))
+$(eval $(call LINK_EXE,pseudotty,LINK_C,$(c_files)))
