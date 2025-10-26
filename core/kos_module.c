@@ -26,6 +26,7 @@
 #include "kos_try.h"
 #include "kos_utf8_internal.h"
 #include <assert.h>
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -445,6 +446,7 @@ static int load_file(KOS_CONTEXT  ctx,
 
             static const char error_info[] = "unable to load file \"";
             const size_t      path_len     = cpath.size - 1;
+            const int         saved_errno  = errno ? errno : EIO;
 
             if ( ! KOS_vector_resize(&cpath, cpath.size + sizeof(error_info))) {
                 memmove(&cpath.buffer[sizeof(error_info) - 1],
@@ -453,7 +455,7 @@ static int load_file(KOS_CONTEXT  ctx,
                 cpath.buffer[cpath.size - 2] = '"';
                 cpath.buffer[cpath.size - 1] = 0;
 
-                KOS_raise_errno(ctx, cpath.buffer);
+                KOS_raise_errno_value(ctx, cpath.buffer, saved_errno);
                 error = KOS_ERROR_EXCEPTION;
                 break;
             }

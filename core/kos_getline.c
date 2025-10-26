@@ -344,7 +344,7 @@ static int init_terminal(TERM_INFO *old_info)
 
     errno = 0;
 
-    if ( ! tcgetattr(fileno(stdin), &new_attrs)) {
+    if (tcgetattr(fileno(stdin), &new_attrs) == 0) {
 
         *old_info = new_attrs;
 
@@ -358,8 +358,14 @@ static int init_terminal(TERM_INFO *old_info)
         if (tcsetattr(fileno(stdin), TCSAFLUSH, &new_attrs) == 0) {
 
             error = install_signal(SIGWINCH, sig_winch, &old_sig_winch);
-            if (error)
+            if (error) {
+                const int saved_errno = errno;
+
                 (void)tcsetattr(fileno(stdin), TCSANOW, old_info);
+
+                if (error == KOS_ERROR_ERRNO)
+                    errno = saved_errno;
+            }
         }
     }
 
@@ -1343,6 +1349,7 @@ static int legacy_get_line(KOS_GETLINE *state,
         size_t         num_read;
         void           (*old_signal)(int);
         char*          ret_buf;
+        int            saved_errno = 0;
 
         if (KOS_vector_resize(buf, old_size + increment)) {
             fprintf(stderr, "Out of memory\n");
@@ -1352,7 +1359,11 @@ static int legacy_get_line(KOS_GETLINE *state,
         if ( ! setjmp(jmpbuf)) {
             old_signal = signal(SIGINT, ctrlc_signal_handler);
 
+            errno = 0;
+
             ret_buf = fgets(buf->buffer + old_size, (int)increment, stdin);
+
+            saved_errno = errno;
 
             signal(SIGINT, old_signal);
         }
@@ -1373,6 +1384,7 @@ static int legacy_get_line(KOS_GETLINE *state,
                 return KOS_SUCCESS_RETURN;
 
             fprintf(stderr, "Failed reading from stdin\n");
+            errno = saved_errno;
             return KOS_ERROR_ERRNO;
         }
 
@@ -1451,10 +1463,14 @@ int kos_getline(KOS_GETLINE      *state,
             edit.num_columns = (edit.interactive && (edit.num_columns < min_width)) ? min_width : edit.num_columns;
             edit.num_columns = (edit.interactive && (edit.num_columns > max_width)) ? max_width : edit.num_columns;
 
+            errno = 0;
+
             error = clear_and_redraw(&edit);
         }
 
         if ( ! error) {
+
+            errno = 0;
 
             key = console_read();
 

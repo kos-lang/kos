@@ -387,7 +387,7 @@ int main(int argc, char *argv[])
                 break;
 
             case KOS_ERROR_ERRNO:
-                printf("Failed to open file %s: %s\n", argv[iarg], strerror(errno));
+                printf("Failed to open file %s: %s\n", argv[iarg], strerror(errno ? errno : EIO));
                 return 1;
         }
     }

@@ -433,7 +433,7 @@ static int enforce_eol(KOS_VECTOR *buf)
 static int get_errno(int error)
 {
     if (error == KOS_ERROR_ERRNO)
-        return errno;
+        return errno ? errno : EIO;
 
 #ifdef _WIN32
     if (error == KOS_ERROR_LAST_ERROR)
