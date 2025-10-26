@@ -12,16 +12,16 @@
 #endif
 
 #if defined(__cplusplus) && defined(TRACY_ENABLE)
-#   include "Tracy.hpp"
-#   define PROF_FRAME_START(name)        FrameMarkStart(name)
-#   define PROF_FRAME_END(name)          FrameMarkEnd(name)
-#   define PROF_MALLOC(ptr, size)        TracyAlloc(ptr, size)
-#   define PROF_FREE(ptr)                TracyFree(ptr)
-#   define PROF_ZONE(color)              ZoneScopedC(PROF_ ## color)
-#   define PROF_ZONE_N(color, name)      ZoneScopedNC(#name, PROF_ ## color)
-#   define PROF_ZONE_NAME(name, len)     ZoneName(name, len)
-#   define PROF_PLOT(name, value)        TracyPlot(name, value)
-#   define PROF_PLOT_INIT(name, type)    TracyPlotConfig(name, tracy::PlotFormatType::type)
+#   include "tracy/Tracy.hpp"
+#   define PROF_FRAME_START(name)        FrameMarkStart(name);
+#   define PROF_FRAME_END(name)          FrameMarkEnd(name);
+#   define PROF_MALLOC(ptr, size)        TracyAlloc(ptr, size);
+#   define PROF_FREE(ptr)                TracyFree(ptr);
+#   define PROF_ZONE(color)              ZoneScopedC(PROF_ ## color);
+#   define PROF_ZONE_N(color, name)      ZoneScopedNC(#name, PROF_ ## color);
+#   define PROF_ZONE_NAME(name, len)     ZoneName(name, len);
+#   define PROF_PLOT(name, value)        TracyPlot(name, value);
+#   define PROF_PLOT_INIT(name, type)    TracyPlotConfig(name, tracy::PlotFormatType::type, false, true, 0);
 #   define PROF_PARSER                   0x81A2A4
 #   define PROF_COMPILER                 0xA48281
 #   define PROF_MODULE                   0x9192A5
