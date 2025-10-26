@@ -217,7 +217,7 @@ else
 
     ifeq ($(UNAME), Linux)
         CFLAGS      += -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200112L
-        EXE_LDFLAGS += -lpthread -lrt -ldl
+        EXE_LDFLAGS += -lpthread -lrt -ldl -lm
     endif
 
     ifneq (true,$(shell $(kos_dir)build/have_o_cloexec $(CC) $(CFLAGS)))
