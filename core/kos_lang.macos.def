@@ -1,3 +1,4 @@
+_kos_call_function
 _KOS_append_cstr
 _KOS_array_cas
 _KOS_array_fill
@@ -87,17 +88,23 @@ _KOS_mempool_alloc
 _KOS_mempool_destroy
 _KOS_mempool_init
 _KOS_mempool_init_small
+_KOS_module_add_constructo2
 _KOS_module_add_constructor
+_KOS_module_add_functio2
 _KOS_module_add_function
 _KOS_module_add_global
+_KOS_module_add_member_functio2
 _KOS_module_add_member_function
+_KOS_module_add_static_functio2
 _KOS_module_add_static_function
 _KOS_module_get_global
 _KOS_module_run_function
 _KOS_modules_init
 _KOS_new_array
 _KOS_new_buffer
+_KOS_new_builtin_clas2
 _KOS_new_builtin_class
+_KOS_new_builtin_functio2
 _KOS_new_builtin_function
 _KOS_new_class
 _KOS_new_const_ascii_cstring
@@ -187,4 +194,3 @@ _KOS_vector_init
 _KOS_vector_reserve
 _KOS_vector_resize
 _KOS_void
-_kos_call_function

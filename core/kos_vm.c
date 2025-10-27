@@ -1329,7 +1329,7 @@ KOS_OBJ_ID KOS_get_module(KOS_CONTEXT ctx)
 const KOS_BYTECODE *get_bytecode_objptr(KOS_STACK_FRAME *stack_frame)
 {
     const KOS_OBJ_ID func         = get_current_func(stack_frame);
-    const KOS_OBJ_ID bytecode_obj = OBJPTR(FUNCTION, func)->bytecode;
+    const KOS_OBJ_ID bytecode_obj = OBJPTR(FUNCTION, func)->handle2.bytecode;
     return (const KOS_BYTECODE *)OBJPTR(OPAQUE, bytecode_obj);
 }
 

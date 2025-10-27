@@ -680,7 +680,7 @@ static int disassemble_func(KOS_CONTEXT ctx, KOS_OBJ_ID func_obj)
     KOS_vector_init(&func_name_cstr);
 
     assert( ! IS_BAD_PTR(func.o));
-    bytecode_obj = OBJPTR(FUNCTION, func.o)->bytecode;
+    bytecode_obj = OBJPTR(FUNCTION, func.o)->handle2.bytecode;
 
     assert( ! IS_SMALL_INT(bytecode_obj));
     assert( ! IS_BAD_PTR(bytecode_obj));
@@ -925,7 +925,7 @@ static int alloc_constants(KOS_CONTEXT    ctx,
         {
             const KOS_OBJ_ID bytecode = alloc_bytecode(ctx, program, func_const);
             TRY_OBJID(bytecode);
-            OBJPTR(FUNCTION, obj.o)->bytecode = bytecode;
+            OBJPTR(FUNCTION, obj.o)->handle2.bytecode = bytecode;
 
             ((KOS_BYTECODE *)OBJPTR(OPAQUE, bytecode))->def_line  = func_const->def_line;
             ((KOS_BYTECODE *)OBJPTR(OPAQUE, bytecode))->num_instr = func_const->num_instr;
@@ -2171,6 +2171,41 @@ cleanup:
     return error;
 }
 
+int KOS_module_add_functio2(KOS_CONTEXT          ctx,
+                            KOS_OBJ_ID           module_obj,
+                            KOS_OBJ_ID           name_obj,
+                            KOS_FUNCTION_HANDLE2 handler,
+                            const KOS_CONVERT   *args,
+                            KOS_FUNCTION_STATE   gen_state)
+{
+    int        error  = KOS_SUCCESS;
+    KOS_OBJ_ID func_obj;
+    KOS_LOCAL  module;
+    KOS_LOCAL  name;
+
+    KOS_init_local_with(ctx, &module, module_obj);
+    KOS_init_local_with(ctx, &name,   name_obj);
+
+    func_obj = KOS_new_builtin_functio2(ctx, name_obj, handler, args);
+
+    assert(GET_OBJ_TYPE(module.o) == OBJ_MODULE);
+
+    TRY_OBJID(func_obj);
+
+    OBJPTR(FUNCTION, func_obj)->module = module.o;
+    OBJPTR(FUNCTION, func_obj)->state  = (uint8_t)gen_state;
+
+    TRY(KOS_module_add_global(ctx,
+                              module.o,
+                              name.o,
+                              func_obj,
+                              KOS_NULL));
+
+cleanup:
+    KOS_destroy_top_locals(ctx, &name, &module);
+    return error;
+}
+
 int KOS_module_add_constructor(KOS_CONTEXT          ctx,
                                KOS_OBJ_ID           module_obj,
                                KOS_OBJ_ID           name_obj,
@@ -2190,6 +2225,43 @@ int KOS_module_add_constructor(KOS_CONTEXT          ctx,
     KOS_init_local_with(ctx, &name,   name_obj);
 
     func.o = KOS_new_builtin_class(ctx, name_obj, handler, args);
+    TRY_OBJID(func.o);
+
+    OBJPTR(CLASS, func.o)->module = module.o;
+
+    TRY(KOS_module_add_global(ctx,
+                              module.o,
+                              name.o,
+                              func.o,
+                              KOS_NULL));
+
+    *ret_proto = KOS_atomic_read_relaxed_obj(OBJPTR(CLASS, func.o)->prototype);
+    assert( ! IS_BAD_PTR(*ret_proto));
+
+cleanup:
+    KOS_destroy_top_locals(ctx, &name, &func);
+    return error;
+}
+
+int KOS_module_add_constructo2(KOS_CONTEXT          ctx,
+                               KOS_OBJ_ID           module_obj,
+                               KOS_OBJ_ID           name_obj,
+                               KOS_FUNCTION_HANDLE2 handler,
+                               const KOS_CONVERT   *args,
+                               KOS_OBJ_ID          *ret_proto)
+{
+    int       error = KOS_SUCCESS;
+    KOS_LOCAL func;
+    KOS_LOCAL module;
+    KOS_LOCAL name;
+
+    assert(GET_OBJ_TYPE(module_obj) == OBJ_MODULE);
+
+    KOS_init_local(     ctx, &func);
+    KOS_init_local_with(ctx, &module, module_obj);
+    KOS_init_local_with(ctx, &name,   name_obj);
+
+    func.o = KOS_new_builtin_clas2(ctx, name_obj, handler, args);
     TRY_OBJID(func.o);
 
     OBJPTR(CLASS, func.o)->module = module.o;
@@ -2241,6 +2313,39 @@ cleanup:
     return error;
 }
 
+int KOS_module_add_member_functio2(KOS_CONTEXT          ctx,
+                                   KOS_OBJ_ID           module_obj,
+                                   KOS_OBJ_ID           proto_obj,
+                                   KOS_OBJ_ID           name_obj,
+                                   KOS_FUNCTION_HANDLE2 handler,
+                                   const KOS_CONVERT   *args,
+                                   KOS_FUNCTION_STATE   gen_state)
+{
+    int        error = KOS_SUCCESS;
+    KOS_OBJ_ID func_obj;
+    KOS_LOCAL  module;
+    KOS_LOCAL  proto;
+    KOS_LOCAL  name;
+
+    assert(GET_OBJ_TYPE(module_obj) == OBJ_MODULE);
+
+    KOS_init_local_with(ctx, &module, module_obj);
+    KOS_init_local_with(ctx, &proto,  proto_obj);
+    KOS_init_local_with(ctx, &name,   name_obj);
+
+    func_obj = KOS_new_builtin_functio2(ctx, name.o, handler, args);
+    TRY_OBJID(func_obj);
+
+    OBJPTR(FUNCTION, func_obj)->module = module.o;
+    OBJPTR(FUNCTION, func_obj)->state  = (uint8_t)gen_state;
+
+    TRY(KOS_set_property(ctx, proto.o, name.o, func_obj));
+
+cleanup:
+    KOS_destroy_top_locals(ctx, &name, &module);
+    return error;
+}
+
 int KOS_module_add_static_function(KOS_CONTEXT          ctx,
                                    KOS_OBJ_ID           module_obj,
                                    KOS_OBJ_ID           class_name_obj,
@@ -2264,6 +2369,41 @@ int KOS_module_add_static_function(KOS_CONTEXT          ctx,
     TRY(KOS_module_get_global(ctx, module.o, class_name_obj, &ctor.o, KOS_NULL));
 
     func_obj = KOS_new_builtin_function(ctx, name.o, handler, args);
+    TRY_OBJID(func_obj);
+
+    OBJPTR(FUNCTION, func_obj)->module = module.o;
+    OBJPTR(FUNCTION, func_obj)->state  = (uint8_t)gen_state;
+
+    TRY(KOS_set_property(ctx, ctor.o, name.o, func_obj));
+
+cleanup:
+    KOS_destroy_top_locals(ctx, &ctor, &module);
+    return error;
+}
+
+int KOS_module_add_static_functio2(KOS_CONTEXT          ctx,
+                                   KOS_OBJ_ID           module_obj,
+                                   KOS_OBJ_ID           class_name_obj,
+                                   KOS_OBJ_ID           name_obj,
+                                   KOS_FUNCTION_HANDLE2 handler,
+                                   const KOS_CONVERT   *args,
+                                   KOS_FUNCTION_STATE   gen_state)
+{
+    int        error = KOS_SUCCESS;
+    KOS_OBJ_ID func_obj;
+    KOS_LOCAL  module;
+    KOS_LOCAL  ctor;
+    KOS_LOCAL  name;
+
+    assert(GET_OBJ_TYPE(module_obj) == OBJ_MODULE);
+
+    KOS_init_local_with(ctx, &module, module_obj);
+    KOS_init_local_with(ctx, &name,   name_obj);
+    KOS_init_local(     ctx, &ctor);
+
+    TRY(KOS_module_get_global(ctx, module.o, class_name_obj, &ctor.o, KOS_NULL));
+
+    func_obj = KOS_new_builtin_functio2(ctx, name.o, handler, args);
     TRY_OBJID(func_obj);
 
     OBJPTR(FUNCTION, func_obj)->module = module.o;

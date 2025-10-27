@@ -1,4 +1,5 @@
 {
+    kos_call_function;
     KOS_append_cstr;
     KOS_array_cas;
     KOS_array_fill;
@@ -88,17 +89,23 @@
     KOS_mempool_destroy;
     KOS_mempool_init;
     KOS_mempool_init_small;
+    KOS_module_add_constructo2;
     KOS_module_add_constructor;
+    KOS_module_add_functio2;
     KOS_module_add_function;
     KOS_module_add_global;
+    KOS_module_add_member_functio2;
     KOS_module_add_member_function;
+    KOS_module_add_static_functio2;
     KOS_module_add_static_function;
     KOS_module_get_global;
     KOS_module_run_function;
     KOS_modules_init;
     KOS_new_array;
     KOS_new_buffer;
+    KOS_new_builtin_clas2;
     KOS_new_builtin_class;
+    KOS_new_builtin_functio2;
     KOS_new_builtin_function;
     KOS_new_class;
     KOS_new_const_ascii_cstring;
@@ -188,5 +195,4 @@
     KOS_vector_reserve;
     KOS_vector_resize;
     KOS_void;
-    kos_call_function;
 };

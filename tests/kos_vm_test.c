@@ -92,8 +92,8 @@ static KOS_OBJ_ID create_func_obj(KOS_CONTEXT              ctx,
     if (create == CREATE_GEN)
         func->state = KOS_GEN_INIT;
 
-    func->bytecode = kos_alloc_bytecode(ctx, &bytecode[offs], bytecode_size - offs, KOS_NULL, 0);
-    if (IS_BAD_PTR(func->bytecode))
+    func->handle2.bytecode = kos_alloc_bytecode(ctx, &bytecode[offs], bytecode_size - offs, KOS_NULL, 0);
+    if (IS_BAD_PTR(func->handle2.bytecode))
         return KOS_BADPTR;
 
     return obj_id;

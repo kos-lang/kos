@@ -84,10 +84,26 @@ int KOS_module_add_function(KOS_CONTEXT          ctx,
                             KOS_FUNCTION_STATE   gen_state);
 
 KOS_API
+int KOS_module_add_functio2(KOS_CONTEXT          ctx,
+                            KOS_OBJ_ID           module_obj,
+                            KOS_OBJ_ID           str_name,
+                            KOS_FUNCTION_HANDLE2 handler,
+                            const KOS_CONVERT   *args,
+                            KOS_FUNCTION_STATE   gen_state);
+
+KOS_API
 int KOS_module_add_constructor(KOS_CONTEXT          ctx,
                                KOS_OBJ_ID           module_obj,
                                KOS_OBJ_ID           str_name,
                                KOS_FUNCTION_HANDLER handler,
+                               const KOS_CONVERT   *args,
+                               KOS_OBJ_ID          *ret_proto);
+
+KOS_API
+int KOS_module_add_constructo2(KOS_CONTEXT          ctx,
+                               KOS_OBJ_ID           module_obj,
+                               KOS_OBJ_ID           str_name,
+                               KOS_FUNCTION_HANDLE2 handler,
                                const KOS_CONVERT   *args,
                                KOS_OBJ_ID          *ret_proto);
 
@@ -101,11 +117,29 @@ int KOS_module_add_member_function(KOS_CONTEXT          ctx,
                                    KOS_FUNCTION_STATE   gen_state);
 
 KOS_API
+int KOS_module_add_member_functio2(KOS_CONTEXT          ctx,
+                                   KOS_OBJ_ID           module_obj,
+                                   KOS_OBJ_ID           proto_obj,
+                                   KOS_OBJ_ID           str_name,
+                                   KOS_FUNCTION_HANDLE2 handler,
+                                   const KOS_CONVERT   *args,
+                                   KOS_FUNCTION_STATE   gen_state);
+
+KOS_API
 int KOS_module_add_static_function(KOS_CONTEXT          ctx,
                                    KOS_OBJ_ID           module_obj,
                                    KOS_OBJ_ID           class_name,
                                    KOS_OBJ_ID           str_name,
                                    KOS_FUNCTION_HANDLER handler,
+                                   const KOS_CONVERT   *args,
+                                   KOS_FUNCTION_STATE   gen_state);
+
+KOS_API
+int KOS_module_add_static_functio2(KOS_CONTEXT          ctx,
+                                   KOS_OBJ_ID           module_obj,
+                                   KOS_OBJ_ID           class_name,
+                                   KOS_OBJ_ID           str_name,
+                                   KOS_FUNCTION_HANDLE2 handler,
                                    const KOS_CONVERT   *args,
                                    KOS_FUNCTION_STATE   gen_state);
 

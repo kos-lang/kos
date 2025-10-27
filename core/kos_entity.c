@@ -77,7 +77,7 @@ KOS_OBJ_ID KOS_new_function(KOS_CONTEXT ctx)
         func->opts.this_reg     = KOS_NO_REG;
         func->opts.bind_reg     = KOS_NO_REG;
 
-        func->bytecode              = KOS_BADPTR;
+        func->handle2.bytecode      = KOS_BADPTR;
         func->module                = KOS_BADPTR;
         func->name                  = KOS_STR_EMPTY;
         func->closures              = KOS_VOID;
@@ -116,14 +116,14 @@ KOS_OBJ_ID kos_copy_function(KOS_CONTEXT ctx,
 
         KOS_atomic_write_relaxed_u32(dest->state, KOS_atomic_read_relaxed_u32(src->state));
 
-        dest->opts       = src->opts;
-        dest->bytecode   = src->bytecode;
-        dest->module     = src->module;
-        dest->name       = src->name;
-        dest->closures   = src->closures;
-        dest->defaults   = src->defaults;
-        dest->arg_map    = src->arg_map;
-        dest->handler    = src->handler;
+        dest->opts     = src->opts;
+        dest->handle2  = src->handle2;
+        dest->module   = src->module;
+        dest->name     = src->name;
+        dest->closures = src->closures;
+        dest->defaults = src->defaults;
+        dest->arg_map  = src->arg_map;
+        dest->handler  = src->handler;
     }
 
     KOS_destroy_top_local(ctx, &obj);
@@ -211,14 +211,14 @@ KOS_OBJ_ID KOS_new_class(KOS_CONTEXT ctx, KOS_OBJ_ID proto_obj)
         OBJPTR(CLASS, func.o)->opts.this_reg     = KOS_NO_REG;
         OBJPTR(CLASS, func.o)->opts.bind_reg     = KOS_NO_REG;
 
-        OBJPTR(CLASS, func.o)->dummy      = KOS_CTOR;
-        OBJPTR(CLASS, func.o)->bytecode   = KOS_BADPTR;
-        OBJPTR(CLASS, func.o)->module     = KOS_BADPTR;
-        OBJPTR(CLASS, func.o)->name       = KOS_STR_EMPTY;
-        OBJPTR(CLASS, func.o)->closures   = KOS_VOID;
-        OBJPTR(CLASS, func.o)->defaults   = KOS_VOID;
-        OBJPTR(CLASS, func.o)->arg_map    = KOS_VOID;
-        OBJPTR(CLASS, func.o)->handler    = KOS_NULL;
+        OBJPTR(CLASS, func.o)->dummy            = KOS_CTOR;
+        OBJPTR(CLASS, func.o)->handle2.bytecode = KOS_BADPTR;
+        OBJPTR(CLASS, func.o)->module           = KOS_BADPTR;
+        OBJPTR(CLASS, func.o)->name             = KOS_STR_EMPTY;
+        OBJPTR(CLASS, func.o)->closures         = KOS_VOID;
+        OBJPTR(CLASS, func.o)->defaults         = KOS_VOID;
+        OBJPTR(CLASS, func.o)->arg_map          = KOS_VOID;
+        OBJPTR(CLASS, func.o)->handler          = KOS_NULL;
         KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, func.o)->prototype, proto.o);
         KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, func.o)->props,     KOS_BADPTR);
 
@@ -314,6 +314,70 @@ cleanup:
     return error;
 }
 
+static int init_builtin_functio2(KOS_CONTEXT          ctx,
+                                 KOS_OBJ_ID           func_obj,
+                                 KOS_OBJ_ID           name_obj,
+                                 KOS_FUNCTION_HANDLE2 handler,
+                                 const KOS_CONVERT   *args)
+{
+    KOS_LOCAL func;
+    KOS_LOCAL arg_map;
+    KOS_LOCAL defaults;
+    unsigned  min_args     = 0;
+    unsigned  num_def_args = 0;
+    int       error        = KOS_SUCCESS;
+
+    OBJPTR(FUNCTION, func_obj)->handle2.handler = handler;
+    OBJPTR(FUNCTION, func_obj)->name            = name_obj;
+
+    if ( ! args || IS_BAD_PTR(args->name))
+        return KOS_SUCCESS;
+
+    KOS_init_local_with(ctx, &func,     func_obj);
+    KOS_init_local_with(ctx, &arg_map,  KOS_VOID);
+    KOS_init_local_with(ctx, &defaults, KOS_VOID);
+
+    arg_map.o = KOS_new_object(ctx);
+    TRY_OBJID(arg_map.o);
+
+    do {
+        assert(min_args + num_def_args < 256);
+
+        if (defaults.o == KOS_VOID) {
+            if ( ! IS_BAD_PTR(args->default_value)) {
+                defaults.o = KOS_new_array(ctx, count_args(args));
+                TRY_OBJID(defaults.o);
+
+                TRY(KOS_array_resize(ctx, defaults.o, 0));
+            }
+        }
+
+        TRY(KOS_set_property(ctx, arg_map.o, args->name, TO_SMALL_INT((int64_t)(min_args + num_def_args))));
+
+        if (defaults.o == KOS_VOID)
+            ++min_args;
+        else {
+            ++num_def_args;
+
+            assert( ! IS_BAD_PTR(args->default_value));
+
+            TRY(KOS_array_push(ctx, defaults.o, args->default_value, KOS_NULL));
+        }
+
+        ++args;
+    } while ( ! IS_BAD_PTR(args->name));
+
+    OBJPTR(FUNCTION, func.o)->opts.min_args     = (uint8_t)min_args;
+    OBJPTR(FUNCTION, func.o)->opts.num_def_args = (uint8_t)num_def_args;
+    OBJPTR(FUNCTION, func.o)->defaults          = defaults.o;
+    OBJPTR(FUNCTION, func.o)->arg_map           = arg_map.o;
+
+cleanup:
+    KOS_destroy_top_locals(ctx, &defaults, &func);
+
+    return error;
+}
+
 KOS_OBJ_ID KOS_new_builtin_function(KOS_CONTEXT          ctx,
                                     KOS_OBJ_ID           name_obj,
                                     KOS_FUNCTION_HANDLER handler,
@@ -329,6 +393,27 @@ KOS_OBJ_ID KOS_new_builtin_function(KOS_CONTEXT          ctx,
 
     if ( ! IS_BAD_PTR(func.o)) {
         if (init_builtin_function(ctx, func.o, name.o, handler, args))
+            func.o = KOS_BADPTR;
+    }
+
+    return KOS_destroy_top_locals(ctx, &name, &func);
+}
+
+KOS_OBJ_ID KOS_new_builtin_functio2(KOS_CONTEXT          ctx,
+                                    KOS_OBJ_ID           name_obj,
+                                    KOS_FUNCTION_HANDLE2 handler,
+                                    const KOS_CONVERT   *args)
+{
+    KOS_LOCAL func;
+    KOS_LOCAL name;
+
+    KOS_init_local(     ctx, &func);
+    KOS_init_local_with(ctx, &name, name_obj);
+
+    func.o = KOS_new_function(ctx);
+
+    if ( ! IS_BAD_PTR(func.o)) {
+        if (init_builtin_functio2(ctx, func.o, name.o, handler, args))
             func.o = KOS_BADPTR;
     }
 
@@ -362,6 +447,33 @@ KOS_OBJ_ID KOS_new_builtin_class(KOS_CONTEXT          ctx,
     return KOS_destroy_top_locals(ctx, &name, &func);
 }
 
+KOS_OBJ_ID KOS_new_builtin_clas2(KOS_CONTEXT          ctx,
+                                 KOS_OBJ_ID           name_obj,
+                                 KOS_FUNCTION_HANDLE2 handler,
+                                 const KOS_CONVERT   *args)
+{
+    KOS_OBJ_ID proto_obj;
+    KOS_LOCAL  func;
+    KOS_LOCAL  name;
+
+    KOS_init_local(     ctx, &func);
+    KOS_init_local_with(ctx, &name, name_obj);
+
+    proto_obj = KOS_new_object(ctx);
+
+    if ( ! IS_BAD_PTR(proto_obj)) {
+
+        func.o = KOS_new_class(ctx, proto_obj);
+
+        if ( ! IS_BAD_PTR(func.o)) {
+            if (init_builtin_functio2(ctx, func.o, name.o, handler, args))
+                func.o = KOS_BADPTR;
+        }
+    }
+
+    return KOS_destroy_top_locals(ctx, &name, &func);
+}
+
 unsigned KOS_function_addr_to_line(KOS_OBJ_ID func_obj,
                                    uint32_t   offs)
 {
@@ -369,7 +481,7 @@ unsigned KOS_function_addr_to_line(KOS_OBJ_ID func_obj,
     unsigned   ret = 0;
 
     assert( ! IS_BAD_PTR(func_obj));
-    bytecode_obj = OBJPTR(FUNCTION, func_obj)->bytecode;
+    bytecode_obj = OBJPTR(FUNCTION, func_obj)->handle2.bytecode;
     if ( ! IS_SMALL_INT(bytecode_obj) && ! IS_BAD_PTR(bytecode_obj)) {
 
         KOS_BYTECODE *const bytecode = (KOS_BYTECODE *)OBJPTR(OPAQUE, bytecode_obj);
@@ -405,7 +517,7 @@ uint32_t KOS_function_get_def_line(KOS_OBJ_ID func_obj)
     uint32_t   def_line = 0;
 
     assert( ! IS_BAD_PTR(func_obj));
-    bytecode_obj = OBJPTR(FUNCTION, func_obj)->bytecode;
+    bytecode_obj = OBJPTR(FUNCTION, func_obj)->handle2.bytecode;
     if ( ! IS_SMALL_INT(bytecode_obj) && ! IS_BAD_PTR(bytecode_obj))
         def_line = ((KOS_BYTECODE *)OBJPTR(OPAQUE, bytecode_obj))->def_line;
 
@@ -418,7 +530,7 @@ uint32_t KOS_function_get_num_instr(KOS_OBJ_ID func_obj)
     uint32_t   num_instr = 0;
 
     assert( ! IS_BAD_PTR(func_obj));
-    bytecode_obj = OBJPTR(FUNCTION, func_obj)->bytecode;
+    bytecode_obj = OBJPTR(FUNCTION, func_obj)->handle2.bytecode;
     if ( ! IS_SMALL_INT(bytecode_obj) && ! IS_BAD_PTR(bytecode_obj))
         num_instr = ((KOS_BYTECODE *)OBJPTR(OPAQUE, bytecode_obj))->num_instr;
 
@@ -431,7 +543,7 @@ uint32_t KOS_function_get_code_size(KOS_OBJ_ID func_obj)
     uint32_t   bytecode_size = 0;
 
     assert( ! IS_BAD_PTR(func_obj));
-    bytecode_obj = OBJPTR(FUNCTION, func_obj)->bytecode;
+    bytecode_obj = OBJPTR(FUNCTION, func_obj)->handle2.bytecode;
     if ( ! IS_SMALL_INT(bytecode_obj) && ! IS_BAD_PTR(bytecode_obj))
         bytecode_size = ((KOS_BYTECODE *)OBJPTR(OPAQUE, bytecode_obj))->bytecode_size;
 

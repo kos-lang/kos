@@ -389,7 +389,7 @@ static int test_instr(KOS_CONTEXT           ctx,
             if (IS_BAD_PTR(bytecode))
                 error = KOS_ERROR_EXCEPTION;
             else
-                OBJPTR(FUNCTION, func_obj)->bytecode = bytecode;
+                OBJPTR(FUNCTION, func_obj)->handle2.bytecode = bytecode;
         }
     }
 

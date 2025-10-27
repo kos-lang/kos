@@ -391,6 +391,11 @@ typedef KOS_OBJ_ID (*KOS_FUNCTION_HANDLER)(KOS_CONTEXT ctx,
                                            KOS_OBJ_ID  this_obj,
                                            KOS_OBJ_ID  args_obj);
 
+typedef KOS_OBJ_ID (*KOS_FUNCTION_HANDLE2)(KOS_CONTEXT ctx,
+                                           KOS_OBJ_ID  this_obj,
+                                           uint32_t    num_args,
+                                           KOS_OBJ_ID *args);
+
 typedef enum KOS_FUNCTION_STATE_E {
     KOS_FUN,            /* regular function                                     */
     KOS_CTOR,           /* class constructor                                    */
@@ -419,11 +424,16 @@ typedef struct KOS_FUNCTION_OPTS_S {
     uint8_t bind_reg;     /* First bound register */
 } KOS_FUNCTION_OPTS;
 
+union KOS_HANDLER_U {
+    KOS_OBJ_ID           bytecode; /* Buffer storage object with bytecode */
+    KOS_FUNCTION_HANDLE2 handler;  /* Pointer to native function handler */
+};
+
 typedef struct KOS_FUNCTION_S {
     KOS_OBJ_HEADER       header;
     KOS_FUNCTION_OPTS    opts;
     KOS_ATOMIC(uint32_t) state;
-    KOS_OBJ_ID           bytecode; /* Buffer storage with bytecode */
+    union KOS_HANDLER_U  handle2;  /* Native handler or bytecode */
     KOS_OBJ_ID           module;
     KOS_OBJ_ID           name;     /* Function name */
     KOS_OBJ_ID           closures; /* Array with bound closures */
@@ -437,7 +447,7 @@ typedef struct KOS_CLASS_S {
     KOS_OBJ_HEADER         header;
     KOS_FUNCTION_OPTS      opts;
     uint32_t               dummy;
-    KOS_OBJ_ID             bytecode; /* Buffer storage with bytecode */
+    union KOS_HANDLER_U    handle2;  /* Native handler or bytecode */
     KOS_OBJ_ID             module;
     KOS_OBJ_ID             name;     /* Function name */
     KOS_OBJ_ID             closures; /* Array with bound closures */
@@ -546,9 +556,21 @@ KOS_OBJ_ID KOS_new_builtin_function(KOS_CONTEXT          ctx,
                                     const KOS_CONVERT   *args);
 
 KOS_API
+KOS_OBJ_ID KOS_new_builtin_functio2(KOS_CONTEXT          ctx,
+                                    KOS_OBJ_ID           name_obj,
+                                    KOS_FUNCTION_HANDLE2 handler,
+                                    const KOS_CONVERT   *args);
+
+KOS_API
 KOS_OBJ_ID KOS_new_builtin_class(KOS_CONTEXT          ctx,
                                  KOS_OBJ_ID           name_obj,
                                  KOS_FUNCTION_HANDLER handler,
+                                 const KOS_CONVERT   *args);
+
+KOS_API
+KOS_OBJ_ID KOS_new_builtin_clas2(KOS_CONTEXT          ctx,
+                                 KOS_OBJ_ID           name_obj,
+                                 KOS_FUNCTION_HANDLE2 handler,
                                  const KOS_CONVERT   *args);
 
 KOS_API
