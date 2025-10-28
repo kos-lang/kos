@@ -167,9 +167,7 @@ static KOS_OBJ_ID set_prototype(KOS_CONTEXT ctx,
 
         if ( ! IS_BAD_PTR(arg)) {
 
-            const KOS_FUNCTION_HANDLER handler = OBJPTR(CLASS, this_obj)->handler;
-
-            if ( ! handler) {
+            if ( ! kos_is_native_function(this_obj)) {
                 KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, this_obj)->prototype, arg);
                 ret = this_obj;
             }

@@ -391,10 +391,10 @@ typedef KOS_OBJ_ID (*KOS_FUNCTION_HANDLER)(KOS_CONTEXT ctx,
                                            KOS_OBJ_ID  this_obj,
                                            KOS_OBJ_ID  args_obj);
 
-typedef KOS_OBJ_ID (*KOS_FUNCTION_HANDLE2)(KOS_CONTEXT ctx,
-                                           KOS_OBJ_ID  this_obj,
-                                           uint32_t    num_args,
-                                           KOS_OBJ_ID *args);
+typedef KOS_OBJ_ID (*KOS_FUNCTION_HANDLE2)(KOS_CONTEXT             ctx,
+                                           KOS_OBJ_ID              this_obj,
+                                           uint32_t                num_args,
+                                           KOS_ATOMIC(KOS_OBJ_ID) *args);
 
 typedef enum KOS_FUNCTION_STATE_E {
     KOS_FUN,            /* regular function                                     */
