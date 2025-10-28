@@ -449,26 +449,22 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
 
     KOS_GETLINE state;
     KOS_VECTOR  tmp_buf;
-    KOS_LOCAL   print_args;
+    KOS_LOCAL   ret;
     int         error;
     int         genline_init = 0;
     int         stored_errno = 0;
 
-    KOS_init_local(ctx, &print_args);
+    KOS_init_local(ctx, &ret);
 
     KOS_vector_init(&tmp_buf);
 
     printf(KOS_VERSION_STRING " interactive interpreter\n");
 
-    print_args.o = KOS_new_array(ctx, 1);
-    TRY_OBJID(print_args.o);
-
     /* Initialize module */
-    {
-        KOS_OBJ_ID ret = KOS_repl(ctx, str_stdin, KOS_IMPORT_BASE | KOS_RUN_INTERACTIVE, KOS_NULL, KOS_NULL, 0);
-        if (IS_BAD_PTR(ret))
-            RAISE_ERROR(KOS_ERROR_EXCEPTION);
-    }
+    ret.o = KOS_repl(ctx, str_stdin, KOS_IMPORT_BASE | KOS_RUN_INTERACTIVE, KOS_NULL, KOS_NULL, 0);
+    if (IS_BAD_PTR(ret.o))
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    ret.o = KOS_BADPTR;
 
     error = kos_getline_init(&state);
     if (error) {
@@ -481,8 +477,9 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
     buf->size = 0;
 
     for (;;) {
-        KOS_OBJ_ID ret;
-        int        hook_error;
+        int hook_error;
+
+        ret.o = KOS_BADPTR;
 
         TRY(KOS_unhook_ctrl_c(ctx));
 
@@ -558,22 +555,26 @@ static int run_interactive(KOS_CONTEXT ctx, KOS_VECTOR *buf)
         if ( ! buf->size)
             continue;
 
-        ret = KOS_repl(ctx, str_stdin, KOS_RUN_INTERACTIVE | KOS_RUN_CONTINUE, KOS_NULL, buf->buffer, (unsigned)buf->size);
+        ret.o = KOS_repl(ctx,
+                         str_stdin,
+                         KOS_RUN_INTERACTIVE | KOS_RUN_CONTINUE,
+                         KOS_NULL,
+                         buf->buffer,
+                         (unsigned)buf->size);
         buf->size = 0;
 
-        if (IS_BAD_PTR(ret)) {
+        if (IS_BAD_PTR(ret.o)) {
             KOS_print_exception(ctx, KOS_STDERR);
             KOS_clear_exception(ctx);
             continue;
         }
 
-        if ( ! IS_SMALL_INT(ret) && GET_OBJ_TYPE(ret) == OBJ_VOID)
+        if ( ! IS_SMALL_INT(ret.o) && GET_OBJ_TYPE(ret.o) == OBJ_VOID)
             continue;
 
-        TRY(KOS_array_write(ctx, print_args.o, 0, ret));
-
         TRY(KOS_print_to_cstr_vec(ctx,
-                                  print_args.o,
+                                  1,
+                                  (KOS_ATOMIC(KOS_OBJ_ID) *)&ret.o,
                                   KOS_QUOTE_STRINGS,
                                   buf,
                                   "",
@@ -610,7 +611,7 @@ cleanup:
 
     KOS_vector_destroy(&tmp_buf);
 
-    KOS_destroy_top_local(ctx, &print_args);
+    KOS_destroy_top_local(ctx, &ret);
 
     return error;
 }

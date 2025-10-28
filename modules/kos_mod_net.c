@@ -1515,7 +1515,6 @@ static int send_one_object(KOS_CONTEXT             ctx,
                            int                     flags,
                            KOS_SOCKET_HOLDER      *socket_holder,
                            KOS_VECTOR             *cstr,
-                           KOS_LOCAL              *print_args,
                            const KOS_GENERIC_ADDR *addr,
                            ADDR_LEN                addr_len)
 {
@@ -1570,14 +1569,13 @@ static int send_one_object(KOS_CONTEXT             ctx,
 
         int64_t num_writ = 0;
 
-        if (IS_BAD_PTR(print_args->o)) {
-            print_args->o = KOS_new_array(ctx, 1);
-            TRY_OBJID(print_args->o);
-        }
-
-        TRY(KOS_array_write(ctx, print_args->o, 0, obj.o));
-
-        TRY(KOS_print_to_cstr_vec(ctx, print_args->o, KOS_DONT_QUOTE, cstr, " ", 1));
+        TRY(KOS_print_to_cstr_vec(ctx,
+                                  1,
+                                  (KOS_ATOMIC(KOS_OBJ_ID) *)&obj.o,
+                                  KOS_DONT_QUOTE,
+                                  cstr,
+                                  " ",
+                                  1));
 
         if (cstr->size) {
             KOS_suspend_context(ctx);
@@ -1637,7 +1635,6 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
                             KOS_OBJ_ID  args_obj)
 {
     KOS_VECTOR         cstr;
-    KOS_LOCAL          print_args;
     KOS_LOCAL          args;
     KOS_LOCAL          this_;
     KOS_SOCKET_HOLDER *socket_holder = KOS_NULL;
@@ -1647,7 +1644,7 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
 
     KOS_vector_init(&cstr);
 
-    KOS_init_locals(ctx, &print_args, &args, &this_, kos_end_locals);
+    KOS_init_locals(ctx, &args, &this_, kos_end_locals);
 
     args.o  = args_obj;
     this_.o = this_obj;
@@ -1659,7 +1656,7 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
         const KOS_OBJ_ID arg = KOS_array_read(ctx, args.o, i_arg);
         TRY_OBJID(arg);
 
-        TRY(send_one_object(ctx, arg, 0, socket_holder, &cstr, &print_args, KOS_NULL, 0));
+        TRY(send_one_object(ctx, arg, 0, socket_holder, &cstr, KOS_NULL, 0));
     }
 
 cleanup:
@@ -1667,7 +1664,7 @@ cleanup:
 
     KOS_vector_destroy(&cstr);
 
-    this_.o = KOS_destroy_top_locals(ctx, &print_args, &this_);
+    this_.o = KOS_destroy_top_locals(ctx, &args, &this_);
 
     return error ? KOS_BADPTR : this_.o;
 }
@@ -1702,7 +1699,6 @@ static KOS_OBJ_ID kos_send(KOS_CONTEXT ctx,
                            KOS_OBJ_ID  args_obj)
 {
     KOS_VECTOR         cstr;
-    KOS_LOCAL          print_args;
     KOS_LOCAL          args;
     KOS_LOCAL          this_;
     KOS_OBJ_ID         arg;
@@ -1714,7 +1710,7 @@ static KOS_OBJ_ID kos_send(KOS_CONTEXT ctx,
 
     KOS_vector_init(&cstr);
 
-    KOS_init_locals(ctx, &print_args, &args, &this_, kos_end_locals);
+    KOS_init_locals(ctx, &args, &this_, kos_end_locals);
 
     args.o  = args_obj;
     this_.o = this_obj;
@@ -1740,14 +1736,14 @@ static KOS_OBJ_ID kos_send(KOS_CONTEXT ctx,
     arg = KOS_array_read(ctx, args.o, 0);
     TRY_OBJID(arg);
 
-    TRY(send_one_object(ctx, arg, (int)flags64, socket_holder, &cstr, &print_args, KOS_NULL, 0));
+    TRY(send_one_object(ctx, arg, (int)flags64, socket_holder, &cstr, KOS_NULL, 0));
 
 cleanup:
     release_socket(socket_holder);
 
     KOS_vector_destroy(&cstr);
 
-    this_.o = KOS_destroy_top_locals(ctx, &print_args, &this_);
+    this_.o = KOS_destroy_top_locals(ctx, &args, &this_);
 
     return error ? KOS_BADPTR : this_.o;
 }
@@ -1809,7 +1805,7 @@ static KOS_OBJ_ID kos_sendto(KOS_CONTEXT ctx,
     KOS_vector_init(&port_cstr);
     KOS_mempool_init_small(&alloc, 512U);
 
-    KOS_init_locals(ctx, &print_args, &args, &this_, kos_end_locals);
+    KOS_init_locals(ctx, &args, &this_, kos_end_locals);
 
     args.o  = args_obj;
     this_.o = this_obj;
@@ -1866,7 +1862,7 @@ static KOS_OBJ_ID kos_sendto(KOS_CONTEXT ctx,
     arg = KOS_array_read(ctx, args.o, 2);
     TRY_OBJID(arg);
 
-    TRY(send_one_object(ctx, arg, (int)flags64, socket_holder, &cstr, &print_args,
+    TRY(send_one_object(ctx, arg, (int)flags64, socket_holder, &cstr,
                         (const KOS_GENERIC_ADDR *)address_info->ai_addr,
                         (ADDR_LEN)address_info->ai_addrlen));
 
@@ -1880,7 +1876,7 @@ cleanup:
     KOS_vector_destroy(&port_cstr);
     KOS_vector_destroy(&cstr);
 
-    this_.o = KOS_destroy_top_locals(ctx, &print_args, &this_);
+    this_.o = KOS_destroy_top_locals(ctx, &args, &this_);
 
     return error ? KOS_BADPTR : this_.o;
 }

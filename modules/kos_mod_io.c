@@ -605,9 +605,10 @@ static KOS_OBJ_ID kos_close(KOS_CONTEXT ctx,
  * After printing all values writes an EOL character.  If no values are
  * provided, just writes an EOL character.
  */
-static KOS_OBJ_ID print(KOS_CONTEXT ctx,
-                        KOS_OBJ_ID  this_obj,
-                        KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID print(KOS_CONTEXT             ctx,
+                        KOS_OBJ_ID              this_obj,
+                        uint32_t                num_args,
+                        KOS_ATOMIC(KOS_OBJ_ID) *args)
 {
     KOS_VECTOR       cstr;
     KOS_LOCAL        this_;
@@ -619,7 +620,7 @@ static KOS_OBJ_ID print(KOS_CONTEXT ctx,
 
     KOS_vector_init(&cstr);
 
-    TRY(KOS_print_to_cstr_vec(ctx, args_obj, KOS_DONT_QUOTE, &cstr, " ", 1));
+    TRY(KOS_print_to_cstr_vec(ctx, num_args, args, KOS_DONT_QUOTE, &cstr, " ", 1));
 
     TRY(acquire_file_object(ctx, this_.o, &file_holder));
 
@@ -939,7 +940,6 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
                             KOS_OBJ_ID  args_obj)
 {
     KOS_VECTOR       cstr;
-    KOS_LOCAL        print_args;
     KOS_LOCAL        arg;
     KOS_LOCAL        args;
     KOS_LOCAL        this_;
@@ -950,7 +950,7 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
 
     KOS_vector_init(&cstr);
 
-    KOS_init_locals(ctx, &print_args, &arg, &args, &this_, kos_end_locals);
+    KOS_init_locals(ctx, &arg, &args, &this_, kos_end_locals);
 
     args.o  = args_obj;
     this_.o = this_obj;
@@ -1007,14 +1007,9 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
         }
         else if (GET_OBJ_TYPE(arg.o) == OBJ_STRING) {
 
-            if (IS_BAD_PTR(print_args.o)) {
-                print_args.o = KOS_new_array(ctx, 1);
-                TRY_OBJID(print_args.o);
-            }
+            KOS_ATOMIC(KOS_OBJ_ID) *const arg_ptr = (KOS_ATOMIC(KOS_OBJ_ID) *)&arg.o;
 
-            TRY(KOS_array_write(ctx, print_args.o, 0, arg.o));
-
-            TRY(KOS_print_to_cstr_vec(ctx, print_args.o, KOS_DONT_QUOTE, &cstr, " ", 1));
+            TRY(KOS_print_to_cstr_vec(ctx, 1, arg_ptr, KOS_DONT_QUOTE, &cstr, " ", 1));
 
             if (cstr.size) {
                 KOS_suspend_context(ctx);
@@ -1041,7 +1036,7 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
     }
 
 cleanup:
-    this_.o = KOS_destroy_top_locals(ctx, &print_args, &this_);
+    this_.o = KOS_destroy_top_locals(ctx, &arg, &this_);
 
     KOS_vector_destroy(&cstr);
 
@@ -1901,7 +1896,7 @@ int kos_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "close",     kos_close,        KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "flush",     flush,            KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "lock",      kos_lock,         KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "print",     print,            KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, file_proto.o, "print",     print,            KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "read_line", read_line,        read_line_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "read_some", read_some,        read_some_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "release",   kos_close,        KOS_NULL);

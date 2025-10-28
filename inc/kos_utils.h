@@ -166,12 +166,13 @@ KOS_OBJ_ID KOS_object_to_string(KOS_CONTEXT ctx,
                                 KOS_OBJ_ID  obj);
 
 KOS_API
-int KOS_print_to_cstr_vec(KOS_CONTEXT          ctx,
-                          KOS_OBJ_ID           array,
-                          KOS_QUOTE_STR        quote_str,
-                          struct KOS_VECTOR_S *cstr_vec,
-                          const char          *sep,
-                          unsigned             sep_len);
+int KOS_print_to_cstr_vec(KOS_CONTEXT             ctx,
+                          uint32_t                num_args,
+                          KOS_ATOMIC(KOS_OBJ_ID) *args,
+                          KOS_QUOTE_STR           quote_str,
+                          struct KOS_VECTOR_S    *cstr_vec,
+                          const char             *sep,
+                          unsigned                sep_len);
 
 KOS_API
 int KOS_append_cstr(KOS_CONTEXT          ctx,

@@ -108,16 +108,17 @@ do {                                                       \
  * After printing all values prints an EOL character.  If no values are
  * provided, just prints an EOL character.
  */
-static KOS_OBJ_ID print(KOS_CONTEXT ctx,
-                        KOS_OBJ_ID  this_obj,
-                        KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID print(KOS_CONTEXT             ctx,
+                        KOS_OBJ_ID              this_obj,
+                        uint32_t                num_args,
+                        KOS_ATOMIC(KOS_OBJ_ID) *args)
 {
     int        error = KOS_SUCCESS;
     KOS_VECTOR cstr;
 
     KOS_vector_init(&cstr);
 
-    TRY(KOS_print_to_cstr_vec(ctx, args_obj, KOS_DONT_QUOTE, &cstr, " ", 1));
+    TRY(KOS_print_to_cstr_vec(ctx, num_args, args, KOS_DONT_QUOTE, &cstr, " ", 1));
 
     KOS_suspend_context(ctx);
 
@@ -5180,7 +5181,7 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 
     KOS_init_local_with(ctx, &module, module_obj);
 
-    TRY_ADD_FUNCTION( ctx, module.o, "print",     print,     KOS_NULL);
+    TRY_ADD_FUNCTIO2( ctx, module.o, "print",     print,     KOS_NULL);
     TRY_ADD_FUNCTION( ctx, module.o, "stringify", stringify, KOS_NULL);
     TRY_ADD_GENERATOR(ctx, module.o, "deep",      deep,      deep_args);
     TRY_ADD_GENERATOR(ctx, module.o, "shallow",   shallow,   deep_args);

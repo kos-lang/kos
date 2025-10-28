@@ -1278,33 +1278,27 @@ KOS_OBJ_ID KOS_object_to_string(KOS_CONTEXT ctx,
     return error ? KOS_BADPTR : ret;
 }
 
-int KOS_print_to_cstr_vec(KOS_CONTEXT   ctx,
-                          KOS_OBJ_ID    array,
-                          KOS_QUOTE_STR quote_str,
-                          KOS_VECTOR   *cstr_vec,
-                          const char   *sep,
-                          unsigned      sep_len)
+int KOS_print_to_cstr_vec(KOS_CONTEXT             ctx,
+                          uint32_t                num_args,
+                          KOS_ATOMIC(KOS_OBJ_ID) *args,
+                          KOS_QUOTE_STR           quote_str,
+                          KOS_VECTOR             *cstr_vec,
+                          const char             *sep,
+                          unsigned                sep_len)
 {
     int      error = KOS_SUCCESS;
-    uint32_t len;
     uint32_t i;
     uint32_t first_sep_i;
 
     assert(cstr_vec);
-    assert(GET_OBJ_TYPE(array) == OBJ_ARRAY);
-
-    if (GET_OBJ_TYPE(array) != OBJ_ARRAY)
-        RAISE_EXCEPTION_STR(str_err_not_array);
 
     first_sep_i = cstr_vec->size ? 0U : 1U;
 
-    len = KOS_get_array_size(array);
-
-    if (len)
+    if (num_args)
         TRY(KOS_vector_reserve(cstr_vec, cstr_vec->size + 128U));
 
-    for (i = 0; i < len; i++) {
-        KOS_OBJ_ID obj = KOS_array_read(ctx, array, (int)i);
+    for (i = 0; i < num_args; i++) {
+        KOS_OBJ_ID obj = KOS_atomic_read_relaxed_obj(args[i]);
         TRY_OBJID(obj);
 
         if (i >= first_sep_i && sep_len) {
