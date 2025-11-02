@@ -1190,23 +1190,36 @@ static KOS_OBJ_ID call_native_function(KOS_CONTEXT ctx,
     num_args = KOS_atomic_read_relaxed_u32(OBJPTR(ARRAY, args.o)->size);
 
     if (num_args) {
-        storage_size = sizeof(KOS_ARRAY_STORAGE) + (num_args ? num_args - 1 : 0) * sizeof(KOS_OBJ_ID);
+        KOS_ARRAY_STORAGE *buf;
+        const uint32_t     capacity = num_args ? num_args : 1;
 
-        args_array.o = OBJID(ARRAY_STORAGE, (KOS_ARRAY_STORAGE *)
-                             kos_alloc_object(ctx,
-                                              KOS_ALLOC_IMMOVABLE,
-                                              OBJ_ARRAY_STORAGE,
-                                              (uint32_t)storage_size));
+        storage_size = sizeof(KOS_ARRAY_STORAGE) + (capacity - 1) * sizeof(KOS_OBJ_ID);
 
-        kos_atomic_move_ptr((KOS_ATOMIC(void *) *)&OBJPTR(ARRAY_STORAGE, args_array.o)->buf[0],
+        buf = (KOS_ARRAY_STORAGE *)kos_alloc_object(ctx,
+                                                    KOS_ALLOC_IMMOVABLE,
+                                                    OBJ_ARRAY_STORAGE,
+                                                    (uint32_t)storage_size);
+
+        if ( ! buf) {
+            KOS_destroy_top_locals(ctx, &func, &args_array);
+            return KOS_BADPTR;
+        }
+
+        args_array.o = OBJID(ARRAY_STORAGE, buf);
+
+        KOS_atomic_write_relaxed_u32(buf->capacity,       capacity);
+        KOS_atomic_write_relaxed_u32(buf->num_slots_open, num_args);
+        KOS_atomic_write_relaxed_ptr(buf->next,           KOS_BADPTR);
+
+        kos_atomic_move_ptr((KOS_ATOMIC(void *) *)&buf->buf[0],
                             (KOS_ATOMIC(void *) *)kos_get_array_buffer(OBJPTR(ARRAY, args.o)),
                             num_args);
     }
 
-    ret_obj = OBJPTR(FUNCTION, func_obj)->handle2.handler(ctx,
-                                                          this_.o,
-                                                          num_args,
-                                                          &OBJPTR(ARRAY_STORAGE, args_array.o)->buf[0]);
+    ret_obj = OBJPTR(FUNCTION, func.o)->handle2.handler(ctx,
+                                                        this_.o,
+                                                        num_args,
+                                                        &OBJPTR(ARRAY_STORAGE, args_array.o)->buf[0]);
 
     KOS_destroy_top_locals(ctx, &func, &args_array);
 

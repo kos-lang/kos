@@ -614,6 +614,95 @@ static void init_empty_string(KOS_STRING *dest,
     }
 }
 
+KOS_OBJ_ID KOS_string_add_n_ptr(KOS_CONTEXT             ctx,
+                                uint32_t                num_strings,
+                                KOS_ATOMIC(KOS_OBJ_ID) *args)
+{
+    KOS_LOCAL new_str;
+
+    KOS_init_local(ctx, &new_str);
+
+    if (num_strings == 1)
+        new_str.o = KOS_atomic_read_relaxed_obj(args[0]);
+
+    else {
+        KOS_ATOMIC(KOS_OBJ_ID) *const end = args + num_strings;
+        KOS_ATOMIC(KOS_OBJ_ID)       *cur_ptr;
+
+        KOS_OBJ_ID       non_0_str = KOS_VOID;
+        KOS_STRING_FLAGS elem_size = KOS_STRING_ELEM_8;
+        unsigned         new_len   = 0;
+        unsigned         num_non_0 = 0;
+        unsigned         mash_size = 0;
+        unsigned         ascii     = KOS_STRING_ASCII;
+
+        new_str.o = KOS_STR_EMPTY;
+
+        for (cur_ptr = args; cur_ptr != end; ++cur_ptr) {
+            KOS_OBJ_ID cur_str = KOS_atomic_read_relaxed_obj(*cur_ptr);
+            unsigned   cur_len;
+
+            assert( ! IS_BAD_PTR(cur_str));
+
+            if (GET_OBJ_TYPE(cur_str) != OBJ_STRING) {
+                new_str.o = KOS_BADPTR;
+                new_len   = 0;
+                KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_string));
+                break;
+            }
+
+            mash_size |= OBJPTR(STRING, cur_str)->header.flags & KOS_STRING_ELEM_MASK;
+            ascii     &= OBJPTR(STRING, cur_str)->header.flags & KOS_STRING_ASCII;
+
+            cur_len = KOS_get_string_length(cur_str);
+
+            new_len += cur_len;
+
+            if (cur_len) {
+                ++num_non_0;
+                non_0_str = cur_str;
+            }
+        }
+
+        if (mash_size & KOS_STRING_ELEM_32)
+            elem_size = KOS_STRING_ELEM_32;
+        else if (mash_size & KOS_STRING_ELEM_16)
+            elem_size = KOS_STRING_ELEM_16;
+        else
+            elem_size = (KOS_STRING_FLAGS)ascii;
+
+        if (num_non_0 == 1 && new_len)
+            new_str.o = non_0_str;
+
+        else if (new_len) {
+            override_elem_size(elem_size);
+
+            if (new_len <= 0xFFFFU)
+                new_str.o = OBJID(STRING, new_empty_string(ctx, new_len, elem_size));
+            else {
+                new_str.o = KOS_BADPTR;
+                KOS_raise_exception(ctx, KOS_CONST_ID(str_err_string_too_long));
+            }
+
+            if ( ! IS_BAD_PTR(new_str.o)) {
+
+                unsigned pos = 0;
+
+                for (cur_ptr = args; cur_ptr != end; ++cur_ptr) {
+                    KOS_OBJ_ID     str_obj = KOS_atomic_read_relaxed_obj(*cur_ptr);
+                    const unsigned cur_len = OBJPTR(STRING, str_obj)->header.length;
+                    init_empty_string(OBJPTR(STRING, new_str.o), pos, OBJPTR(STRING, str_obj), cur_len);
+                    pos += cur_len;
+                }
+            }
+        }
+    }
+
+    new_str.o = KOS_destroy_top_local(ctx, &new_str);
+
+    return new_str.o;
+}
+
 KOS_OBJ_ID KOS_string_add_n(KOS_CONTEXT         ctx,
                             struct KOS_LOCAL_S *str_array,
                             unsigned            num_strings)

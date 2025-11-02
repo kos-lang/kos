@@ -108,6 +108,11 @@ KOS_OBJ_ID KOS_string_add_n(KOS_CONTEXT         ctx,
                             unsigned            num_strings);
 
 KOS_API
+KOS_OBJ_ID KOS_string_add_n_ptr(KOS_CONTEXT             ctx,
+                                uint32_t                num_strings,
+                                KOS_ATOMIC(KOS_OBJ_ID) *args);
+
+KOS_API
 KOS_OBJ_ID KOS_string_add(KOS_CONTEXT ctx,
                           KOS_OBJ_ID  str_array_id);
 

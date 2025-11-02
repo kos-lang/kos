@@ -142,6 +142,7 @@ _KOS_realloc
 _KOS_repl
 _KOS_resume_context
 _KOS_run_module
+_KOS_set_builtin_dynamic_propert2
 _KOS_set_builtin_dynamic_property
 _KOS_set_properties_from_native
 _KOS_set_property
@@ -157,6 +158,7 @@ _KOS_str_value
 _KOS_str_void
 _KOS_string_add
 _KOS_string_add_n
+_KOS_string_add_n_ptr
 _KOS_string_compare
 _KOS_string_compare_slice
 _KOS_string_find

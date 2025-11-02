@@ -143,6 +143,7 @@
     KOS_repl;
     KOS_resume_context;
     KOS_run_module;
+    KOS_set_builtin_dynamic_propert2;
     KOS_set_builtin_dynamic_property;
     KOS_set_properties_from_native;
     KOS_set_property;
@@ -158,6 +159,7 @@
     KOS_str_void;
     KOS_string_add;
     KOS_string_add_n;
+    KOS_string_add_n_ptr;
     KOS_string_compare;
     KOS_string_compare_slice;
     KOS_string_find;
