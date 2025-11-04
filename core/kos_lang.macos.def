@@ -28,6 +28,7 @@ _KOS_destroy_top_locals
 _KOS_destroy_ulocal
 _KOS_does_file_exist
 _KOS_empty_array
+_KOS_extract_native_from_args
 _KOS_extract_native_from_array
 _KOS_extract_native_from_iterable
 _KOS_extract_native_from_object
@@ -88,7 +89,6 @@ _KOS_mempool_alloc
 _KOS_mempool_destroy
 _KOS_mempool_init
 _KOS_mempool_init_small
-_KOS_module_add_constructo2
 _KOS_module_add_constructor
 _KOS_module_add_functio2
 _KOS_module_add_function
@@ -102,7 +102,6 @@ _KOS_module_run_function
 _KOS_modules_init
 _KOS_new_array
 _KOS_new_buffer
-_KOS_new_builtin_clas2
 _KOS_new_builtin_class
 _KOS_new_builtin_functio2
 _KOS_new_builtin_function

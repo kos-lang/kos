@@ -2305,6 +2305,59 @@ cleanup:
     return error;
 }
 
+int KOS_extract_native_from_args(const KOS_CONTEXT             ctx,
+                                 const uint32_t                num_args,
+                                 KOS_ATOMIC(KOS_OBJ_ID) *const args,
+                                 const char             *const element_name,
+                                 const KOS_CONVERT            *convert,
+                                 struct KOS_MEMPOOL_S   *const alloc,
+                                 ...)
+{
+    va_list  vargs;
+    uint32_t i     = 0;
+    int      error = KOS_SUCCESS;
+
+    va_start(vargs, alloc);
+
+    while ( ! IS_BAD_PTR(convert->name)) {
+
+        if (convert->type != KOS_NATIVE_SKIP) {
+
+            KOS_OBJ_ID value_id;
+            void      *value_ptr = va_arg(vargs, void *);
+
+            if (i < num_args) {
+                value_id = args[i];
+                TRY_OBJID(value_id);
+            }
+            else if (IS_BAD_PTR(convert->default_value)) {
+                KOS_VECTOR name_cstr;
+
+                KOS_vector_init(&name_cstr);
+
+                if ( ! KOS_string_to_cstr_vec(ctx, convert->name, &name_cstr))
+                    KOS_raise_printf(ctx, "missing %s %u '%s'", element_name, i, name_cstr.buffer);
+
+                KOS_vector_destroy(&name_cstr);
+
+                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+            }
+            else
+                value_id = convert->default_value;
+
+            TRY(KOS_extract_native_value(ctx, value_id, convert, alloc, value_ptr));
+        }
+
+        ++convert;
+        ++i;
+    }
+
+cleanup:
+    va_end(vargs);
+
+    return error;
+}
+
 int KOS_extract_native_from_array(KOS_CONTEXT           ctx,
                                   KOS_OBJ_ID            array_id,
                                   const char           *element_name,

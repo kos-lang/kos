@@ -420,33 +420,6 @@ KOS_OBJ_ID KOS_new_builtin_functio2(KOS_CONTEXT          ctx,
 
 KOS_OBJ_ID KOS_new_builtin_class(KOS_CONTEXT          ctx,
                                  KOS_OBJ_ID           name_obj,
-                                 KOS_FUNCTION_HANDLER handler,
-                                 const KOS_CONVERT   *args)
-{
-    KOS_OBJ_ID proto_obj;
-    KOS_LOCAL  func;
-    KOS_LOCAL  name;
-
-    KOS_init_local(     ctx, &func);
-    KOS_init_local_with(ctx, &name, name_obj);
-
-    proto_obj = KOS_new_object(ctx);
-
-    if ( ! IS_BAD_PTR(proto_obj)) {
-
-        func.o = KOS_new_class(ctx, proto_obj);
-
-        if ( ! IS_BAD_PTR(func.o)) {
-            if (init_builtin_function(ctx, func.o, name.o, handler, args))
-                func.o = KOS_BADPTR;
-        }
-    }
-
-    return KOS_destroy_top_locals(ctx, &name, &func);
-}
-
-KOS_OBJ_ID KOS_new_builtin_clas2(KOS_CONTEXT          ctx,
-                                 KOS_OBJ_ID           name_obj,
                                  KOS_FUNCTION_HANDLE2 handler,
                                  const KOS_CONVERT   *args)
 {

@@ -405,9 +405,10 @@ static const KOS_CONVERT socket_args[4] = {
  *
  * On error throws an exception.
  */
-static KOS_OBJ_ID kos_socket(KOS_CONTEXT ctx,
-                             KOS_OBJ_ID  this_obj,
-                             KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_socket(const KOS_CONTEXT             ctx,
+                             const KOS_OBJ_ID              this_obj,
+                             const uint32_t                num_args,
+                             KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_LOCAL  this_;
     KOS_LOCAL  ret;
@@ -418,13 +419,13 @@ static KOS_OBJ_ID kos_socket(KOS_CONTEXT ctx,
     int        saved_errno  = 0;
     int        error;
 
-    assert(KOS_get_array_size(args_obj) >= 3);
+    assert(num_args >= 3);
 
     KOS_init_local(     ctx, &ret);
     KOS_init_local_with(ctx, &this_, this_obj);
 
-    TRY(KOS_extract_native_from_array(ctx, args_obj, "argument", socket_args, KOS_NULL,
-                                      &arg_domain, &arg_type, &arg_protocol));
+    TRY(KOS_extract_native_from_args(ctx, num_args, args, "argument", socket_args, KOS_NULL,
+                                     &arg_domain, &arg_type, &arg_protocol));
 
     KOS_suspend_context(ctx);
 

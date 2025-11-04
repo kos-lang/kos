@@ -80,31 +80,23 @@ static const KOS_CONVERT random_args[2] = {
     KOS_DEFINE_TAIL_ARG()
 };
 
-static KOS_OBJ_ID kos_random(KOS_CONTEXT ctx,
-                             KOS_OBJ_ID  this_obj,
-                             KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_random(const KOS_CONTEXT             ctx,
+                             const KOS_OBJ_ID              this_obj,
+                             const uint32_t                num_args,
+                             KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     int                error    = KOS_SUCCESS;
     KOS_RNG_CONTAINER *rng      = KOS_NULL;
-    KOS_LOCAL          args;
-    KOS_LOCAL          seed;
     KOS_LOCAL          ret;
 
-    assert(KOS_get_array_size(args_obj) >= 1);
+    assert(num_args >= 1);
 
-    KOS_init_locals(ctx, &args, &seed, &ret, kos_end_locals);
-
-    args.o = args_obj;
+    KOS_init_local(ctx, &ret);
 
     ret.o = KOS_new_object_with_private(ctx, this_obj, &random_priv_class, finalize);
     TRY_OBJID(ret.o);
 
-    seed.o = KOS_array_read(ctx, args.o, 0);
-    TRY_OBJID(seed.o);
-
-    assert( ! IS_BAD_PTR(seed.o));
-
-    if ((seed.o != KOS_VOID) && ! IS_NUMERIC_OBJ(seed.o))
+    if ((args[0] != KOS_VOID) && ! IS_NUMERIC_OBJ(args[0]))
         RAISE_EXCEPTION(str_err_invalid_seed);
 
     rng = (KOS_RNG_CONTAINER *)KOS_malloc(sizeof(KOS_RNG_CONTAINER));
@@ -114,13 +106,13 @@ static KOS_OBJ_ID kos_random(KOS_CONTEXT ctx,
         RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
     }
 
-    if (seed.o == KOS_VOID)
+    if (args[0] == KOS_VOID)
         kos_rng_init(&rng->rng);
     else {
 
         int64_t seed_value;
 
-        TRY(KOS_get_integer(ctx, seed.o, &seed_value));
+        TRY(KOS_get_integer(ctx, args[0], &seed_value));
 
         kos_rng_init_seed(&rng->rng, (uint64_t)seed_value);
     }
@@ -135,7 +127,7 @@ cleanup:
     if (rng)
         KOS_free(rng);
 
-    ret.o = KOS_destroy_top_locals(ctx, &args, &ret);
+    ret.o = KOS_destroy_top_local(ctx, &ret);
 
     return error ? KOS_BADPTR : ret.o;
 }

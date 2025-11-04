@@ -564,12 +564,6 @@ KOS_OBJ_ID KOS_new_builtin_functio2(KOS_CONTEXT          ctx,
 KOS_API
 KOS_OBJ_ID KOS_new_builtin_class(KOS_CONTEXT          ctx,
                                  KOS_OBJ_ID           name_obj,
-                                 KOS_FUNCTION_HANDLER handler,
-                                 const KOS_CONVERT   *args);
-
-KOS_API
-KOS_OBJ_ID KOS_new_builtin_clas2(KOS_CONTEXT          ctx,
-                                 KOS_OBJ_ID           name_obj,
                                  KOS_FUNCTION_HANDLE2 handler,
                                  const KOS_CONVERT   *args);
 

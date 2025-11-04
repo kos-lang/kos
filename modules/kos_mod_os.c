@@ -1344,9 +1344,10 @@ cleanup:
  *
  * Calling this class directly throws an exception.
  */
-static KOS_OBJ_ID process_ctor(KOS_CONTEXT ctx,
-                               KOS_OBJ_ID  this_obj,
-                               KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID process_ctor(const KOS_CONTEXT             ctx,
+                               const KOS_OBJ_ID              this_obj,
+                               const uint32_t                num_args,
+                               KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_raise_exception(ctx, KOS_CONST_ID(str_err_use_spawn));
     return KOS_BADPTR;

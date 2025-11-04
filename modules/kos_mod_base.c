@@ -82,15 +82,15 @@ KOS_DECLARE_STATIC_CONST_STRING(str_this_obj,                     "this_obj");
 KOS_DECLARE_STATIC_CONST_STRING(str_value,                        "value");
 KOS_DECLARE_STATIC_CONST_STRING(str_values,                       "values");
 
-#define TRY_CREATE_CONSTRUCTOR(name, module, args)         \
-do {                                                       \
-    KOS_DECLARE_STATIC_CONST_STRING(str_ctr_##name, #name);\
-    TRY(create_class(ctx,                                  \
-                     module,                               \
-                     KOS_CONST_ID(str_ctr_##name),         \
-                     name##_constructor,                   \
-                     (args),                               \
-                     ctx->inst->prototypes.name##_proto)); \
+#define TRY_CREATE_CONSTRUCTOR(name, module, args)                        \
+do {                                                                      \
+    KOS_DECLARE_STATIC_CONST_STRING(str_ctr_##name, #name);               \
+    TRY(KOS_module_add_constructor(ctx,                                   \
+                                   module,                                \
+                                   KOS_CONST_ID(str_ctr_##name),          \
+                                   name##_constructor,                    \
+                                   (args),                                \
+                                   &ctx->inst->prototypes.name##_proto)); \
 } while (0)
 
 #define PROTO(type) (ctx->inst->prototypes.type##_proto)
@@ -260,38 +260,6 @@ static KOS_OBJ_ID deep(const KOS_CONTEXT             ctx,
                        KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     return object_iterator(ctx, regs_obj, KOS_DEEP);
-}
-
-static int create_class(const KOS_CONTEXT          ctx,
-                        const KOS_OBJ_ID           module_obj,
-                        const KOS_OBJ_ID           class_name,
-                        const KOS_FUNCTION_HANDLE2 constructor,
-                        const KOS_CONVERT   *const args,
-                        const KOS_OBJ_ID           prototype)
-{
-    int        error    = KOS_SUCCESS;
-    KOS_OBJ_ID func_obj = KOS_BADPTR;
-    KOS_LOCAL  module;
-    KOS_LOCAL  proto;
-
-    KOS_init_local_with(ctx, &module, module_obj);
-    KOS_init_local_with(ctx, &proto,  prototype);
-
-    func_obj = KOS_new_builtin_clas2(ctx, class_name, constructor, args);
-    TRY_OBJID(func_obj);
-
-    OBJPTR(CLASS, func_obj)->prototype = proto.o;
-    OBJPTR(CLASS, func_obj)->module    = module.o;
-
-    TRY(KOS_module_add_global(ctx,
-                              module.o,
-                              class_name,
-                              func_obj,
-                              KOS_NULL));
-
-cleanup:
-    KOS_destroy_top_locals(ctx, &proto, &module);
-    return error;
 }
 
 /* @item base number()

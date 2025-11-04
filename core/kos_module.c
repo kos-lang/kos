@@ -2209,18 +2209,20 @@ cleanup:
 int KOS_module_add_constructor(KOS_CONTEXT          ctx,
                                KOS_OBJ_ID           module_obj,
                                KOS_OBJ_ID           name_obj,
-                               KOS_FUNCTION_HANDLER handler,
+                               KOS_FUNCTION_HANDLE2 handler,
                                const KOS_CONVERT   *args,
                                KOS_OBJ_ID          *ret_proto)
 {
     int       error = KOS_SUCCESS;
     KOS_LOCAL func;
+    KOS_LOCAL proto;
     KOS_LOCAL module;
     KOS_LOCAL name;
 
     assert(GET_OBJ_TYPE(module_obj) == OBJ_MODULE);
 
     KOS_init_local(     ctx, &func);
+    KOS_init_local_with(ctx, &proto,  *ret_proto);
     KOS_init_local_with(ctx, &module, module_obj);
     KOS_init_local_with(ctx, &name,   name_obj);
 
@@ -2229,42 +2231,8 @@ int KOS_module_add_constructor(KOS_CONTEXT          ctx,
 
     OBJPTR(CLASS, func.o)->module = module.o;
 
-    TRY(KOS_module_add_global(ctx,
-                              module.o,
-                              name.o,
-                              func.o,
-                              KOS_NULL));
-
-    *ret_proto = KOS_atomic_read_relaxed_obj(OBJPTR(CLASS, func.o)->prototype);
-    assert( ! IS_BAD_PTR(*ret_proto));
-
-cleanup:
-    KOS_destroy_top_locals(ctx, &name, &func);
-    return error;
-}
-
-int KOS_module_add_constructo2(KOS_CONTEXT          ctx,
-                               KOS_OBJ_ID           module_obj,
-                               KOS_OBJ_ID           name_obj,
-                               KOS_FUNCTION_HANDLE2 handler,
-                               const KOS_CONVERT   *args,
-                               KOS_OBJ_ID          *ret_proto)
-{
-    int       error = KOS_SUCCESS;
-    KOS_LOCAL func;
-    KOS_LOCAL module;
-    KOS_LOCAL name;
-
-    assert(GET_OBJ_TYPE(module_obj) == OBJ_MODULE);
-
-    KOS_init_local(     ctx, &func);
-    KOS_init_local_with(ctx, &module, module_obj);
-    KOS_init_local_with(ctx, &name,   name_obj);
-
-    func.o = KOS_new_builtin_clas2(ctx, name_obj, handler, args);
-    TRY_OBJID(func.o);
-
-    OBJPTR(CLASS, func.o)->module = module.o;
+    if ( ! IS_BAD_PTR(proto.o))
+        OBJPTR(CLASS, func.o)->prototype = proto.o;
 
     TRY(KOS_module_add_global(ctx,
                               module.o,
@@ -2272,8 +2240,10 @@ int KOS_module_add_constructo2(KOS_CONTEXT          ctx,
                               func.o,
                               KOS_NULL));
 
-    *ret_proto = KOS_atomic_read_relaxed_obj(OBJPTR(CLASS, func.o)->prototype);
-    assert( ! IS_BAD_PTR(*ret_proto));
+    if (IS_BAD_PTR(proto.o)) {
+        *ret_proto = KOS_atomic_read_relaxed_obj(OBJPTR(CLASS, func.o)->prototype);
+        assert( ! IS_BAD_PTR(*ret_proto));
+    }
 
 cleanup:
     KOS_destroy_top_locals(ctx, &name, &func);

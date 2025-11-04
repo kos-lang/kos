@@ -29,6 +29,7 @@
     KOS_destroy_ulocal;
     KOS_does_file_exist;
     KOS_empty_array;
+    KOS_extract_native_from_args;
     KOS_extract_native_from_array;
     KOS_extract_native_from_iterable;
     KOS_extract_native_from_object;
@@ -89,7 +90,6 @@
     KOS_mempool_destroy;
     KOS_mempool_init;
     KOS_mempool_init_small;
-    KOS_module_add_constructo2;
     KOS_module_add_constructor;
     KOS_module_add_functio2;
     KOS_module_add_function;
@@ -103,7 +103,6 @@
     KOS_modules_init;
     KOS_new_array;
     KOS_new_buffer;
-    KOS_new_builtin_clas2;
     KOS_new_builtin_class;
     KOS_new_builtin_functio2;
     KOS_new_builtin_function;

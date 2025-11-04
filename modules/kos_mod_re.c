@@ -1991,33 +1991,31 @@ static const KOS_CONVERT re_uncached_args[2] = {
     KOS_DEFINE_TAIL_ARG()
 };
 
-static KOS_OBJ_ID re_ctor(KOS_CONTEXT ctx,
-                          KOS_OBJ_ID  this_obj,
-                          KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID re_ctor(const KOS_CONTEXT             ctx,
+                          const KOS_OBJ_ID              this_obj,
+                          const uint32_t                num_args,
+                          KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     int       error = KOS_SUCCESS;
-    KOS_LOCAL regex_str;
     KOS_LOCAL regex;
 
-    assert(KOS_get_array_size(args_obj) >= 1);
+    assert(num_args >= 1);
 
-    KOS_init_locals(ctx, &regex_str, &regex, kos_end_locals);
+    KOS_init_local(ctx, &regex);
 
-    regex_str.o = KOS_array_read(ctx, args_obj, 0);
-    TRY_OBJID(regex_str.o);
-
-    if (GET_OBJ_TYPE(regex_str.o) != OBJ_STRING)
+    TRY_OBJID(args[0]);
+    if (GET_OBJ_TYPE(args[0]) != OBJ_STRING)
         RAISE_EXCEPTION_STR(str_err_regex_not_a_string);
 
     regex.o = KOS_new_object_with_private(ctx, this_obj, &regex_priv_class, finalize);
     TRY_OBJID(regex.o);
 
-    TRY(parse_re(ctx, regex_str.o, regex.o));
+    TRY(parse_re(ctx, args[0], regex.o));
 
-    TRY(KOS_set_property(ctx, regex.o, KOS_CONST_ID(str_string), regex_str.o));
+    TRY(KOS_set_property(ctx, regex.o, KOS_CONST_ID(str_string), args[0]));
 
 cleanup:
-    regex.o = KOS_destroy_top_locals(ctx, &regex_str, &regex);
+    regex.o = KOS_destroy_top_local(ctx, &regex);
 
     return error ? KOS_BADPTR : regex.o;
 }

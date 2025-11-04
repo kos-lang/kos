@@ -95,14 +95,6 @@ KOS_API
 int KOS_module_add_constructor(KOS_CONTEXT          ctx,
                                KOS_OBJ_ID           module_obj,
                                KOS_OBJ_ID           str_name,
-                               KOS_FUNCTION_HANDLER handler,
-                               const KOS_CONVERT   *args,
-                               KOS_OBJ_ID          *ret_proto);
-
-KOS_API
-int KOS_module_add_constructo2(KOS_CONTEXT          ctx,
-                               KOS_OBJ_ID           module_obj,
-                               KOS_OBJ_ID           str_name,
                                KOS_FUNCTION_HANDLE2 handler,
                                const KOS_CONVERT   *args,
                                KOS_OBJ_ID          *ret_proto);
@@ -185,13 +177,6 @@ do {                                                                     \
 do {                                                                        \
     KOS_DECLARE_STATIC_CONST_STRING(XstrNAME, name);                        \
     TRY(KOS_module_add_constructor((ctx), (module), KOS_CONST_ID(XstrNAME), \
-                                   (handler), (args), (ret_proto)));        \
-} while (0)
-
-#define TRY_ADD_CONSTRUCTO2(ctx, module, name, handler, args, ret_proto)    \
-do {                                                                        \
-    KOS_DECLARE_STATIC_CONST_STRING(XstrNAME, name);                        \
-    TRY(KOS_module_add_constructo2((ctx), (module), KOS_CONST_ID(XstrNAME), \
                                    (handler), (args), (ret_proto)));        \
 } while (0)
 

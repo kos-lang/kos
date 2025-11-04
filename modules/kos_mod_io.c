@@ -220,14 +220,14 @@ static const KOS_CONVERT open_args[3] = {
     KOS_DEFINE_TAIL_ARG()
 };
 
-static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
-                           KOS_OBJ_ID  this_obj,
-                           KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_open(const KOS_CONTEXT             ctx,
+                           const KOS_OBJ_ID              this_obj,
+                           const uint32_t                num_args,
+                           KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_VECTOR filename_cstr;
     KOS_VECTOR flags_cstr;
     KOS_LOCAL  this_;
-    KOS_LOCAL  args;
     KOS_LOCAL  filename;
     KOS_LOCAL  ret;
     KOS_OBJ_ID flags_obj;
@@ -236,20 +236,19 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
     int        stored_errno     = 0;
     int        updated_filename = 0;
 
-    assert(KOS_get_array_size(args_obj) >= 2);
+    assert(num_args >= 2);
 
     KOS_vector_init(&filename_cstr);
     KOS_vector_init(&flags_cstr);
 
-    KOS_init_locals(ctx, &this_, &args, &filename, &ret, kos_end_locals);
+    KOS_init_locals(ctx, &this_, &filename, &ret, kos_end_locals);
 
     this_.o = this_obj;
-    args.o  = args_obj;
 
     /* Read flags */
 
     /* TODO use own flags */
-    flags_obj = KOS_array_read(ctx, args.o, 1);
+    flags_obj = args[1];
     TRY_OBJID(flags_obj);
 
     if (GET_OBJ_TYPE(flags_obj) != OBJ_STRING)
@@ -263,7 +262,7 @@ static KOS_OBJ_ID kos_open(KOS_CONTEXT ctx,
 
     /* Read filename argument and process it */
 
-    filename.o = KOS_array_read(ctx, args.o, 0);
+    filename.o = args[0];
     TRY_OBJID(filename.o);
 
     TRY(KOS_string_to_cstr_vec(ctx, filename.o, &filename_cstr));
@@ -406,9 +405,10 @@ static FILE *to_file(KOS_CONTEXT ctx, int *fd, const char *mode)
  *
  * `pipe` objects are most useful with `os.spawn()`.
  */
-static KOS_OBJ_ID kos_pipe(KOS_CONTEXT ctx,
-                           KOS_OBJ_ID  this_obj,
-                           KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_pipe(const KOS_CONTEXT             ctx,
+                           const KOS_OBJ_ID              this_obj,
+                           const uint32_t                num_args,
+                           KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_LOCAL ret;
     KOS_LOCAL file_obj;
@@ -605,10 +605,10 @@ static KOS_OBJ_ID kos_close(KOS_CONTEXT ctx,
  * After printing all values writes an EOL character.  If no values are
  * provided, just writes an EOL character.
  */
-static KOS_OBJ_ID print(KOS_CONTEXT             ctx,
-                        KOS_OBJ_ID              this_obj,
-                        uint32_t                num_args,
-                        KOS_ATOMIC(KOS_OBJ_ID) *args)
+static KOS_OBJ_ID print(const KOS_CONTEXT             ctx,
+                        const KOS_OBJ_ID              this_obj,
+                        const uint32_t                num_args,
+                        KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_VECTOR       cstr;
     KOS_LOCAL        this_;
@@ -1691,9 +1691,10 @@ cleanup:
  *
  * When called directly, this class throws an exception.
  */
-static KOS_OBJ_ID kos_lock_ctor(KOS_CONTEXT ctx,
-                                KOS_OBJ_ID  this_obj,
-                                KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_lock_ctor(const KOS_CONTEXT             ctx,
+                                const KOS_OBJ_ID              this_obj,
+                                const uint32_t                num_args,
+                                KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_raise_exception(ctx, KOS_CONST_ID(str_err_lock_ctor));
     return KOS_BADPTR;

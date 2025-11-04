@@ -101,6 +101,7 @@ int KOS_extract_native_value(KOS_CONTEXT           ctx,
                              struct KOS_MEMPOOL_S *alloc,
                              void                 *value_ptr);
 
+/* TODO delete this */
 KOS_API
 int KOS_extract_native_from_array(KOS_CONTEXT           ctx,
                                   KOS_OBJ_ID            array_id,
@@ -108,6 +109,15 @@ int KOS_extract_native_from_array(KOS_CONTEXT           ctx,
                                   const KOS_CONVERT    *convert,
                                   struct KOS_MEMPOOL_S *alloc,
                                   ...);
+
+KOS_API
+int KOS_extract_native_from_args(KOS_CONTEXT             ctx,
+                                 uint32_t                num_args,
+                                 KOS_ATOMIC(KOS_OBJ_ID) *args,
+                                 const char             *element_name,
+                                 const KOS_CONVERT      *convert,
+                                 struct KOS_MEMPOOL_S   *alloc,
+                                 ...);
 
 KOS_API
 int KOS_extract_native_from_iterable(KOS_CONTEXT           ctx,

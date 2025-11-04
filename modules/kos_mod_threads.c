@@ -49,9 +49,10 @@ static void mutex_finalize(KOS_CONTEXT ctx,
  *
  * Mutex objects are best used with the `with` statement.
  */
-static KOS_OBJ_ID mutex_ctor(KOS_CONTEXT ctx,
-                             KOS_OBJ_ID  this_obj,
-                             KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID mutex_ctor(const KOS_CONTEXT             ctx,
+                             const KOS_OBJ_ID              this_obj,
+                             const uint32_t                num_args,
+                             KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_LOCAL  mutex;
     KOS_OBJ_ID proto;
@@ -192,16 +193,17 @@ static const KOS_CONVERT sem_args[2] = {
  *
  * Semaphore objects can be used with the `with` statement.
  */
-static KOS_OBJ_ID semaphore_ctor(KOS_CONTEXT ctx,
-                                 KOS_OBJ_ID  this_obj,
-                                 KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID semaphore_ctor(const KOS_CONTEXT             ctx,
+                                 const KOS_OBJ_ID              this_obj,
+                                 const uint32_t                num_args,
+                                 KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_LOCAL      semaphore;
     KOS_OBJ_ID     proto;
     KOS_SEMAPHORE *sem   = KOS_NULL;
     int            error = KOS_SUCCESS;
 
-    assert(KOS_get_array_size(args_obj) >= 1);
+    assert(num_args >= 1);
 
     KOS_init_local(ctx, &semaphore);
 
@@ -218,10 +220,7 @@ static KOS_OBJ_ID semaphore_ctor(KOS_CONTEXT ctx,
     {
         int64_t value64;
 
-        KOS_OBJ_ID arg = KOS_array_read(ctx, args_obj, 0);
-        TRY_OBJID(arg);
-
-        TRY(KOS_get_integer(ctx, arg, &value64));
+        TRY(KOS_get_integer(ctx, args[0], &value64));
 
         if (value64 < 0)
             RAISE_EXCEPTION_STR(str_err_init_too_small);
