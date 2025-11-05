@@ -190,13 +190,6 @@ do {                                                                            
 #define TRY_ADD_MEMBER_GENERATOR(ctx, module, proto, name, handler, args)                \
 do {                                                                                     \
     KOS_DECLARE_STATIC_CONST_STRING(XstrNAME, name);                                     \
-    TRY(KOS_module_add_member_function((ctx), (module), (proto), KOS_CONST_ID(XstrNAME), \
-                                       (handler), (args), KOS_GEN_INIT));                \
-} while (0)
-
-#define TRY_ADD_MEMBER_GENERATO2(ctx, module, proto, name, handler, args)                \
-do {                                                                                     \
-    KOS_DECLARE_STATIC_CONST_STRING(XstrNAME, name);                                     \
     TRY(KOS_module_add_member_functio2((ctx), (module), (proto), KOS_CONST_ID(XstrNAME), \
                                        (handler), (args), KOS_GEN_INIT));                \
 } while (0)
