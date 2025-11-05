@@ -124,12 +124,12 @@ static const KOS_CONVERT raw_lexer_args[3] = {
  * The benefit of using the raw lexer is that it can be used for parsing non-Kos scripts,
  * including C source code.
  */
-static KOS_OBJ_ID raw_lexer(KOS_CONTEXT ctx,
-                            KOS_OBJ_ID  regs_obj,
-                            KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID raw_lexer(const KOS_CONTEXT             ctx,
+                            const KOS_OBJ_ID              regs_obj,
+                            const uint32_t                num_args,
+                            KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_LOCAL           regs;
-    KOS_LOCAL           args;
     KOS_LOCAL           lexer;
     KOS_LOCAL           init;
     KOS_LOCAL           value;
@@ -140,10 +140,9 @@ static KOS_OBJ_ID raw_lexer(KOS_CONTEXT ctx,
 
     assert(GET_OBJ_TYPE(regs_obj) == OBJ_ARRAY);
 
-    KOS_init_locals(ctx, &regs, &args, &lexer, &init, &value, &token, kos_end_locals);
+    KOS_init_locals(ctx, &regs, &lexer, &init, &value, &token, kos_end_locals);
 
     regs.o = regs_obj;
-    args.o = args_obj;
 
     lexer.o = KOS_array_read(ctx, regs.o, 0);
     assert( ! IS_BAD_PTR(lexer.o));
@@ -242,14 +241,11 @@ static KOS_OBJ_ID raw_lexer(KOS_CONTEXT ctx,
 
         kos_lexer = (KOS_LEXER_OBJ *)KOS_object_get_private(lexer.o, &lexer_priv_class);
 
-        if (KOS_get_array_size(args.o) > 0) {
+        if (num_args > 0) {
 
-            int64_t    i_value;
-            KOS_OBJ_ID arg = KOS_array_read(ctx, args.o, 0);
+            int64_t i_value;
 
-            TRY_OBJID(arg);
-
-            TRY(KOS_get_integer(ctx, arg, &i_value));
+            TRY(KOS_get_integer(ctx, args[0], &i_value));
 
             if (i_value != 0 && i_value != 1)
                 RAISE_EXCEPTION_STR(str_err_invalid_arg);

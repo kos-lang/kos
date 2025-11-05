@@ -944,9 +944,10 @@ static KOS_OBJ_ID find_first_file(KOS_CONTEXT ctx, KOS_VECTOR *path_cstr_vec, KO
  *
  *     > const files = [ fs.listdir(".") ... ]
  */
-static KOS_OBJ_ID listdir(KOS_CONTEXT ctx,
-                          KOS_OBJ_ID  regs_obj,
-                          KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID listdir(const KOS_CONTEXT             ctx,
+                          const KOS_OBJ_ID              regs_obj,
+                          const uint32_t                num_args,
+                          KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_LOCAL  regs;
     KOS_LOCAL  dir_walk;
