@@ -219,14 +219,6 @@ do {                                                                            
 do {                                                                                          \
     KOS_DECLARE_STATIC_CONST_STRING(XstrCLASS, class_name);                                   \
     KOS_DECLARE_STATIC_CONST_STRING(XstrNAME,  func_name);                                    \
-    TRY(KOS_module_add_static_function((ctx), (module), KOS_CONST_ID(XstrCLASS),              \
-                                       KOS_CONST_ID(XstrNAME), (handler), (args), KOS_FUN));  \
-} while (0)
-
-#define TRY_ADD_STATIC_FUNCTIO2(ctx, module, class_name, func_name, handler, args)            \
-do {                                                                                          \
-    KOS_DECLARE_STATIC_CONST_STRING(XstrCLASS, class_name);                                   \
-    KOS_DECLARE_STATIC_CONST_STRING(XstrNAME,  func_name);                                    \
     TRY(KOS_module_add_static_functio2((ctx), (module), KOS_CONST_ID(XstrCLASS),              \
                                        KOS_CONST_ID(XstrNAME), (handler), (args), KOS_FUN));  \
 } while (0)

@@ -4986,32 +4986,28 @@ static const KOS_CONVERT module_load_args[2] = {
     KOS_DEFINE_TAIL_ARG()
 };
 
-static KOS_OBJ_ID module_load(KOS_CONTEXT ctx,
-                              KOS_OBJ_ID  this_obj,
-                              KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID module_load(const KOS_CONTEXT             ctx,
+                              const KOS_OBJ_ID              regs_obj,
+                              const uint32_t                num_args,
+                              KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    KOS_LOCAL  name;
     KOS_LOCAL  module;
     KOS_VECTOR path_cstr;
     int        error = KOS_SUCCESS;
 
-    assert(GET_OBJ_TYPE(args_obj) == OBJ_ARRAY);
-    assert(KOS_get_array_size(args_obj) >= 1);
+    assert(num_args >= 1);
 
     KOS_vector_init(&path_cstr);
-    KOS_init_locals(ctx, &name, &module, kos_end_locals);
+    KOS_init_local(ctx, &module);
 
-    name.o = KOS_array_read(ctx, args_obj, 0);
-    TRY_OBJID(name.o);
-
-    if (GET_OBJ_TYPE(name.o) != OBJ_STRING)
+    if (GET_OBJ_TYPE(args[0]) != OBJ_STRING)
         RAISE_EXCEPTION_STR(str_err_not_string);
 
-    module.o = KOS_get_property_shallow(ctx, ctx->inst->modules.module_names, name.o);
+    module.o = KOS_get_property_shallow(ctx, ctx->inst->modules.module_names, args[0]);
     if (IS_BAD_PTR(module.o) || ! IS_SMALL_INT(module.o)) {
         KOS_clear_exception(ctx);
 
-        TRY(KOS_string_to_cstr_vec(ctx, name.o, &path_cstr));
+        TRY(KOS_string_to_cstr_vec(ctx, args[0], &path_cstr));
 
         module.o = KOS_load_module(ctx, path_cstr.buffer, (uint32_t)(path_cstr.size - 1));
         TRY_OBJID(module.o);
@@ -5028,7 +5024,7 @@ static KOS_OBJ_ID module_load(KOS_CONTEXT ctx,
     }
 
 cleanup:
-    module.o = KOS_destroy_top_locals(ctx, &name, &module);
+    module.o = KOS_destroy_top_local(ctx, &module);
     KOS_vector_destroy(&path_cstr);
 
     return error ? KOS_BADPTR : module.o;
