@@ -804,16 +804,13 @@ cleanup:
  *     > stringify(true, "true", 42, [10, "str"])
  *     "truetrue42[10, str]"
  */
-static KOS_OBJ_ID stringify(KOS_CONTEXT ctx,
-                            KOS_OBJ_ID  this_obj,
-                            KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID stringify(const KOS_CONTEXT             ctx,
+                            const KOS_OBJ_ID              regs_obj,
+                            const uint32_t                num_args,
+                            KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    int            error    = KOS_SUCCESS;
-    const uint32_t num_args = KOS_get_array_size(args_obj);
-    KOS_OBJ_ID     ret      = KOS_BADPTR;
-    KOS_LOCAL      args;
-
-    KOS_init_local_with(ctx, &args, args_obj);
+    int        error = KOS_SUCCESS;
+    KOS_OBJ_ID ret   = KOS_BADPTR;
 
     if (num_args == 0)
         ret = KOS_new_string(ctx, KOS_NULL, 0);
@@ -824,22 +821,17 @@ static KOS_OBJ_ID stringify(KOS_CONTEXT ctx,
 
         for (i = 0; i < num_args; i++) {
 
-            KOS_OBJ_ID obj = KOS_array_read(ctx, args.o, (int)i);
+            const KOS_OBJ_ID obj = KOS_object_to_string(ctx, args[i]);
             TRY_OBJID(obj);
 
-            obj = KOS_object_to_string(ctx, obj);
-            TRY_OBJID(obj);
-
-            TRY(KOS_array_write(ctx, args.o, (int)i, obj));
+            args[i] = obj;
         }
 
         if (i == num_args)
-            ret = KOS_string_add(ctx, args.o);
+            ret = KOS_string_add_n_ptr(ctx, num_args, args);
     }
 
 cleanup:
-    KOS_destroy_top_local(ctx, &args);
-
     return error ? KOS_BADPTR : ret;
 }
 
@@ -5144,7 +5136,7 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     KOS_init_local_with(ctx, &module, module_obj);
 
     TRY_ADD_FUNCTIO2( ctx, module.o, "print",     print,     KOS_NULL);
-    TRY_ADD_FUNCTION( ctx, module.o, "stringify", stringify, KOS_NULL);
+    TRY_ADD_FUNCTIO2( ctx, module.o, "stringify", stringify, KOS_NULL);
     TRY_ADD_GENERATOR(ctx, module.o, "deep",      deep,      deep_args);
     TRY_ADD_GENERATOR(ctx, module.o, "shallow",   shallow,   deep_args);
 
