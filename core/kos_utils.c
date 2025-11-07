@@ -220,15 +220,30 @@ int KOS_get_index_arg(KOS_CONTEXT           ctx,
                       enum KOS_VOID_INDEX_E void_index,
                       int                  *found_pos)
 {
-    int64_t          ival;
-    const KOS_OBJ_ID val_id = KOS_array_read(ctx, args_obj, arg_idx);
-    int              error  = KOS_SUCCESS;
+    const KOS_OBJ_ID value = KOS_array_read(ctx, args_obj, arg_idx);
+    int              error = KOS_SUCCESS;
 
-    TRY_OBJID(val_id);
+    TRY_OBJID(value);
+
+    return KOS_get_index(ctx, value, begin_pos, end_pos, void_index, found_pos);
+
+cleanup:
+    return error;
+}
+
+int KOS_get_index(const KOS_CONTEXT           ctx,
+                  const KOS_OBJ_ID            value,
+                  const int                   begin_pos,
+                  const int                   end_pos,
+                  const enum KOS_VOID_INDEX_E void_index,
+                  int                  *const found_pos)
+{
+    int64_t ival;
+    int     error = KOS_SUCCESS;
 
     assert(end_pos >= 0);
 
-    if (val_id == KOS_VOID) {
+    if (value == KOS_VOID) {
         switch (void_index) {
             case KOS_VOID_INDEX_IS_BEGIN:
                 *found_pos = begin_pos;
@@ -243,7 +258,7 @@ int KOS_get_index_arg(KOS_CONTEXT           ctx,
         }
     }
 
-    TRY(KOS_get_integer(ctx, val_id, &ival));
+    TRY(KOS_get_integer(ctx, value, &ival));
 
     if (ival < 0)
         ival += end_pos;

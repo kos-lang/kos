@@ -95,6 +95,14 @@ int KOS_get_index_arg(KOS_CONTEXT           ctx,
                       int                  *found_pos);
 
 KOS_API
+int KOS_get_index(KOS_CONTEXT           ctx,
+                  KOS_OBJ_ID            value,
+                  int                   begin_pos,
+                  int                   end_pos,
+                  enum KOS_VOID_INDEX_E void_index,
+                  int                  *found_pos);
+
+KOS_API
 int KOS_extract_native_value(KOS_CONTEXT           ctx,
                              KOS_OBJ_ID            value_id,
                              const KOS_CONVERT    *convert,
