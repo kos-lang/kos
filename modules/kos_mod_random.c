@@ -184,38 +184,31 @@ static const KOS_CONVERT rand_integer_args[3] = {
     KOS_DEFINE_TAIL_ARG()
 };
 
-static KOS_OBJ_ID rand_integer(KOS_CONTEXT ctx,
-                               KOS_OBJ_ID  this_obj,
-                               KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID rand_integer(const KOS_CONTEXT             ctx,
+                               const KOS_OBJ_ID              this_obj,
+                               const uint32_t                num_args,
+                               KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_RNG_CONTAINER *rng       = KOS_NULL;
-    KOS_OBJ_ID         min_id;
-    KOS_OBJ_ID         max_id;
-    int                error     = KOS_SUCCESS;
     int64_t            value     = 0;
     int64_t            min_value = 0;
     int64_t            max_value = 0;
+    int                error     = KOS_SUCCESS;
 
-    assert(KOS_get_array_size(args_obj) >= 2);
+    assert(num_args >= 2);
 
     TRY(get_rng(ctx, this_obj, &rng));
 
-    min_id = KOS_array_read(ctx, args_obj, 0);
-    TRY_OBJID(min_id);
-
-    max_id = KOS_array_read(ctx, args_obj, 1);
-    TRY_OBJID(max_id);
-
-    if ((min_id == KOS_VOID) && (max_id != KOS_VOID))
+    if ((args[0] == KOS_VOID) && (args[1] != KOS_VOID))
         RAISE_EXCEPTION(str_err_no_min_value);
 
-    if ((min_id != KOS_VOID) && (max_id == KOS_VOID))
+    if ((args[0] != KOS_VOID) && (args[1] == KOS_VOID))
         RAISE_EXCEPTION(str_err_no_max_value);
 
-    if (min_id != KOS_VOID) {
+    if (args[0] != KOS_VOID) {
 
-        TRY(KOS_get_integer(ctx, min_id, &min_value));
-        TRY(KOS_get_integer(ctx, max_id, &max_value));
+        TRY(KOS_get_integer(ctx, args[0], &min_value));
+        TRY(KOS_get_integer(ctx, args[1], &max_value));
 
         if (min_value > max_value)
             RAISE_EXCEPTION(str_err_invalid_range);
@@ -226,7 +219,7 @@ static KOS_OBJ_ID rand_integer(KOS_CONTEXT ctx,
 
     kos_lock_mutex(rng->mutex);
 
-    if (min_id != KOS_VOID)
+    if (args[0] != KOS_VOID)
         value = min_value +
             (int64_t)kos_rng_random_range(&rng->rng,
                                           (uint64_t)(max_value - min_value));
@@ -255,9 +248,10 @@ cleanup:
  *     > r.float()
  *     0.782519239019594
  */
-static KOS_OBJ_ID rand_float(KOS_CONTEXT ctx,
-                             KOS_OBJ_ID  this_obj,
-                             KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID rand_float(const KOS_CONTEXT             ctx,
+                             const KOS_OBJ_ID              this_obj,
+                             const uint32_t                num_args,
+                             KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_RNG_CONTAINER *rng   = KOS_NULL;
     int                error = KOS_SUCCESS;
@@ -293,8 +287,8 @@ int kos_module_random_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     KOS_init_local(     ctx, &proto);
 
     TRY_ADD_CONSTRUCTOR(    ctx, module.o,          "random",  kos_random,   random_args, &proto.o);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "integer", rand_integer, rand_integer_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "float",   rand_float,   KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, proto.o, "integer", rand_integer, rand_integer_args);
+    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, proto.o, "float",   rand_float,   KOS_NULL);
 
 cleanup:
     KOS_destroy_top_locals(ctx, &proto, &module);
