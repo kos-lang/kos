@@ -753,7 +753,7 @@ do {
 
 do {
     const b = buffer()
-    b.pack("i2 u2", [ 0x8000, 0x8101 ])
+    b.pack("i2 u2", 0x8000, 0x8101)
 
     assert b.size == 4
     assert b[0]   == 0x00

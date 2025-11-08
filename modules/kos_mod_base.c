@@ -2636,10 +2636,12 @@ cleanup:
 }
 
 struct KOS_PACK_FORMAT_S {
-    KOS_LOCAL fmt_str;
-    KOS_LOCAL data;
-    int       idx;
-    int       big_end;
+    KOS_LOCAL               fmt_str;
+    KOS_LOCAL               output;
+    KOS_ATOMIC(KOS_OBJ_ID) *args;
+    uint32_t                num_args;
+    int                     idx;
+    int                     big_end;
 };
 
 typedef int (*KOS_PACK_FORMAT_FUNC)(KOS_CONTEXT               ctx,
@@ -2883,22 +2885,8 @@ static int pack_format(KOS_CONTEXT               ctx,
 
     KOS_init_local_with(ctx, &buffer, buffer_obj);
 
-    if (fmt->idx < 0) {
-        KOS_OBJ_ID obj = fmt->data.o;
-
+    if (fmt->idx < 0)
         fmt->idx = 1;
-
-        if (KOS_get_array_size(obj) > 1) {
-
-            obj = KOS_array_read(ctx, obj, 1);
-            TRY_OBJID(obj);
-
-            if (GET_OBJ_TYPE(obj) == OBJ_ARRAY) {
-                fmt->data.o = obj;
-                fmt->idx    = 0;
-            }
-        }
-    }
 
     assert(size != ~0U || value_fmt == 's');
 
@@ -2930,18 +2918,18 @@ static int pack_format(KOS_CONTEXT               ctx,
                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
             }
 
-            if ((unsigned)fmt->idx + count > KOS_get_array_size(fmt->data.o)) {
+            if ((unsigned)fmt->idx + count > fmt->num_args) {
                 KOS_raise_printf(ctx,
                     "not enough values to pack '%c%u' count %u at position %u; input has %u elements but required %u",
                     (char)value_fmt, size, count, fmt_offs + 1,
-                    KOS_get_array_size(fmt->data.o), (unsigned)fmt->idx + count);
+                    fmt->num_args, (unsigned)fmt->idx + count);
                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
             }
 
             for ( ; count; count--) {
                 unsigned   i;
                 int64_t    value;
-                KOS_OBJ_ID value_obj = KOS_array_read(ctx, fmt->data.o, fmt->idx++);
+                KOS_OBJ_ID value_obj = fmt->args[fmt->idx++];
 
                 TRY_OBJID(value_obj);
 
@@ -2974,17 +2962,17 @@ static int pack_format(KOS_CONTEXT               ctx,
                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
             }
 
-            if ((unsigned)fmt->idx + count > KOS_get_array_size(fmt->data.o)) {
+            if ((unsigned)fmt->idx + count > fmt->num_args) {
                 KOS_raise_printf(ctx,
                     "not enough values to pack '%c%u' count %u at position %u; input has %u elements but required %u",
                     (char)value_fmt, size, count, fmt_offs + 1,
-                    KOS_get_array_size(fmt->data.o), (unsigned)fmt->idx + count);
+                    fmt->num_args, (unsigned)fmt->idx + count);
                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
             }
 
             for ( ; count; count--) {
                 unsigned   i;
-                KOS_OBJ_ID value_obj = KOS_array_read(ctx, fmt->data.o, fmt->idx++);
+                KOS_OBJ_ID value_obj = fmt->args[fmt->idx++];
                 double     value     = 0;
                 uint64_t   out_val;
 
@@ -3030,16 +3018,16 @@ static int pack_format(KOS_CONTEXT               ctx,
         case 'b': {
 
             assert(size != ~0U);
-            if ((unsigned)fmt->idx + count > KOS_get_array_size(fmt->data.o)) {
+            if ((unsigned)fmt->idx + count > fmt->num_args) {
                 KOS_raise_printf(ctx,
                     "not enough values to pack '%c%u' count %u at position %u; input has %u elements but required %u",
                     (char)value_fmt, size, count, fmt_offs + 1,
-                    KOS_get_array_size(fmt->data.o), (unsigned)fmt->idx + count);
+                    fmt->num_args, (unsigned)fmt->idx + count);
                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
             }
 
             for ( ; count; count--) {
-                KOS_OBJ_ID     value_obj = KOS_array_read(ctx, fmt->data.o, fmt->idx++);
+                KOS_OBJ_ID     value_obj = fmt->args[fmt->idx++];
                 const uint8_t *src       = KOS_NULL;
                 uint32_t       src_size;
                 uint32_t       copy_size;
@@ -3082,16 +3070,16 @@ static int pack_format(KOS_CONTEXT               ctx,
 
             assert(value_fmt == 's');
 
-            if ((unsigned)fmt->idx + count > KOS_get_array_size(fmt->data.o)) {
+            if ((unsigned)fmt->idx + count > fmt->num_args) {
                 KOS_raise_printf(ctx,
                     "not enough values to pack '%c%u' count %u at position %u; input has %u elements but required %u",
                     (char)value_fmt, size, count, fmt_offs + 1,
-                    KOS_get_array_size(fmt->data.o), (unsigned)fmt->idx + count);
+                    fmt->num_args, (unsigned)fmt->idx + count);
                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
             }
 
             for ( ; count; count--) {
-                KOS_OBJ_ID value_obj = KOS_array_read(ctx, fmt->data.o, fmt->idx++);
+                KOS_OBJ_ID value_obj = fmt->args[fmt->idx++];
                 uint32_t   copy_size;
 
                 TRY_OBJID(value_obj);
@@ -3239,7 +3227,7 @@ static int unpack_format(KOS_CONTEXT               ctx,
 
                 TRY_OBJID(obj);
 
-                TRY(KOS_array_push(ctx, fmt->data.o, obj, KOS_NULL));
+                TRY(KOS_array_push(ctx, fmt->output.o, obj, KOS_NULL));
 
                 offs += size;
             }
@@ -3261,7 +3249,7 @@ static int unpack_format(KOS_CONTEXT               ctx,
                     memcpy(data, &KOS_buffer_data_const(buffer.o)[offs], size);
                 }
 
-                TRY(KOS_array_push(ctx, fmt->data.o, obj, KOS_NULL));
+                TRY(KOS_array_push(ctx, fmt->output.o, obj, KOS_NULL));
 
                 offs += size;
             }
@@ -3280,7 +3268,7 @@ static int unpack_format(KOS_CONTEXT               ctx,
 
                 TRY_OBJID(obj);
 
-                TRY(KOS_array_push(ctx, fmt->data.o, obj, KOS_NULL));
+                TRY(KOS_array_push(ctx, fmt->output.o, obj, KOS_NULL));
 
                 offs += size;
             }
@@ -3396,20 +3384,22 @@ static const KOS_CONVERT pack_args[2] = {
     KOS_DEFINE_TAIL_ARG()
 };
 
-static KOS_OBJ_ID pack(KOS_CONTEXT ctx,
-                       KOS_OBJ_ID  this_obj,
-                       KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID pack(const KOS_CONTEXT             ctx,
+                       const KOS_OBJ_ID              this_obj,
+                       const uint32_t                num_args,
+                       KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     int                      error;
     struct KOS_PACK_FORMAT_S fmt;
     KOS_LOCAL                buffer;
 
-    KOS_init_locals(ctx, &fmt.fmt_str, &fmt.data, &buffer, kos_end_locals);
+    KOS_init_locals(ctx, &fmt.fmt_str, &buffer, kos_end_locals);
 
     buffer.o = this_obj;
 
-    fmt.fmt_str.o = KOS_array_read(ctx, args_obj, 0);
-    fmt.data.o    = args_obj;
+    fmt.fmt_str.o = args[0];
+    fmt.args      = args;
+    fmt.num_args  = num_args;
     fmt.idx       = -1;
     fmt.big_end   = 0;
 
@@ -3467,22 +3457,22 @@ static const KOS_CONVERT unpack_args[3] = {
     KOS_DEFINE_TAIL_ARG()
 };
 
-static KOS_OBJ_ID unpack(KOS_CONTEXT ctx,
-                         KOS_OBJ_ID  this_obj,
-                         KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID unpack(const KOS_CONTEXT             ctx,
+                         const KOS_OBJ_ID              this_obj,
+                         const uint32_t                num_args,
+                         KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     struct KOS_PACK_FORMAT_S fmt;
     KOS_LOCAL                buffer;
-    KOS_LOCAL                args;
     int                      error;
 
-    KOS_init_locals(ctx, &buffer, &args, &fmt.fmt_str, &fmt.data, kos_end_locals);
+    KOS_init_locals(ctx, &buffer, &fmt.fmt_str, &fmt.output, kos_end_locals);
 
     buffer.o = this_obj;
-    args.o   = args_obj;
 
     fmt.fmt_str.o = KOS_BADPTR;
-    fmt.data.o    = KOS_BADPTR;
+    fmt.args      = args;
+    fmt.num_args  = num_args;
     fmt.idx       = 0;
     fmt.big_end   = 0;
 
@@ -3491,23 +3481,22 @@ static KOS_OBJ_ID unpack(KOS_CONTEXT ctx,
     if (GET_OBJ_TYPE(buffer.o) != OBJ_BUFFER)
         RAISE_EXCEPTION_STR(str_err_not_buffer);
 
-    fmt.fmt_str.o = KOS_array_read(ctx, args.o, 0);
-    TRY_OBJID(fmt.fmt_str.o);
+    fmt.fmt_str.o = args[0];
 
     if (GET_OBJ_TYPE(fmt.fmt_str.o) != OBJ_STRING)
         RAISE_EXCEPTION_STR(str_err_not_string);
 
-    fmt.data.o = KOS_new_array(ctx, 0);
-    TRY_OBJID(fmt.data.o);
+    fmt.output.o = KOS_new_array(ctx, 0);
+    TRY_OBJID(fmt.output.o);
 
-    TRY(KOS_get_index_arg(ctx, args.o, 1, 0, (int)KOS_get_buffer_size(buffer.o), KOS_VOID_INDEX_IS_BEGIN, &fmt.idx));
+    TRY(KOS_get_index(ctx, args[1], 0, (int)KOS_get_buffer_size(buffer.o), KOS_VOID_INDEX_IS_BEGIN, &fmt.idx));
 
     TRY(process_pack_format(ctx, buffer.o, unpack_format, &fmt));
 
 cleanup:
-    fmt.data.o = KOS_destroy_top_locals(ctx, &buffer, &fmt.data);
+    fmt.output.o = KOS_destroy_top_locals(ctx, &buffer, &fmt.output);
 
-    return error ? KOS_BADPTR : fmt.data.o;
+    return error ? KOS_BADPTR : fmt.output.o;
 }
 
 /* @item base buffer.prototype.copy_buffer()
@@ -5073,11 +5062,11 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 
     TRY_ADD_MEMBER_FUNCTIO2( ctx, module.o, PROTO(buffer),    "copy_buffer",  copy_buffer,         copy_buffer_args);
     TRY_ADD_MEMBER_FUNCTIO2( ctx, module.o, PROTO(buffer),    "fill",         fill,                fill_args);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(buffer),    "pack",         pack,                pack_args);
+    TRY_ADD_MEMBER_FUNCTIO2( ctx, module.o, PROTO(buffer),    "pack",         pack,                pack_args);
     TRY_ADD_MEMBER_FUNCTIO2( ctx, module.o, PROTO(buffer),    "reserve",      reserve,             reserve_args);
     TRY_ADD_MEMBER_FUNCTIO2( ctx, module.o, PROTO(buffer),    "resize",       resize,              resize_buffer_args);
     TRY_ADD_MEMBER_FUNCTIO2( ctx, module.o, PROTO(buffer),    "slice",        slice,               slice_args);
-    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(buffer),    "unpack",       unpack,              unpack_args);
+    TRY_ADD_MEMBER_FUNCTIO2( ctx, module.o, PROTO(buffer),    "unpack",       unpack,              unpack_args);
     TRY_ADD_MEMBER_PROPERT2( ctx, module.o, PROTO(buffer),    "size",         get_buffer_size,     KOS_NULL);
 
     TRY_ADD_MEMBER_FUNCTIO2( ctx, module.o, PROTO(exception), "print",        print_exception,     KOS_NULL);
