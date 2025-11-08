@@ -54,13 +54,15 @@ KOS_DECLARE_STATIC_CONST_STRING(str_read,                           "read");
 KOS_DECLARE_STATIC_CONST_STRING(str_size,                           "size");
 KOS_DECLARE_STATIC_CONST_STRING(str_write,                          "write");
 
-static KOS_OBJ_ID get_file_pos(KOS_CONTEXT ctx,
-                               KOS_OBJ_ID  this_obj,
-                               KOS_OBJ_ID  args_obj);
+static KOS_OBJ_ID get_file_pos(const KOS_CONTEXT             ctx,
+                               const KOS_OBJ_ID              this_obj,
+                               const uint32_t                num_args,
+                               KOS_ATOMIC(KOS_OBJ_ID) *const args);
 
-static KOS_OBJ_ID set_file_pos(KOS_CONTEXT ctx,
-                               KOS_OBJ_ID  this_obj,
-                               KOS_OBJ_ID  args_obj);
+static KOS_OBJ_ID set_file_pos(const KOS_CONTEXT             ctx,
+                               const KOS_OBJ_ID              this_obj,
+                               const uint32_t                num_args,
+                               KOS_ATOMIC(KOS_OBJ_ID) *const args);
 
 static void fix_path_separators(KOS_VECTOR *buf)
 {
@@ -227,7 +229,7 @@ static KOS_OBJ_ID kos_open(const KOS_CONTEXT             ctx,
 {
     KOS_VECTOR filename_cstr;
     KOS_VECTOR flags_cstr;
-    KOS_LOCAL  this_;
+    KOS_LOCAL  self;
     KOS_LOCAL  filename;
     KOS_LOCAL  ret;
     KOS_OBJ_ID flags_obj;
@@ -241,9 +243,9 @@ static KOS_OBJ_ID kos_open(const KOS_CONTEXT             ctx,
     KOS_vector_init(&filename_cstr);
     KOS_vector_init(&flags_cstr);
 
-    KOS_init_locals(ctx, &this_, &filename, &ret, kos_end_locals);
+    KOS_init_locals(ctx, &self, &filename, &ret, kos_end_locals);
 
-    this_.o = this_obj;
+    self.o = this_obj;
 
     /* Read flags */
 
@@ -299,10 +301,10 @@ static KOS_OBJ_ID kos_open(const KOS_CONTEXT             ctx,
 
     /* Create file object */
 
-    ret.o = KOS_new_object_with_private(ctx, this_.o, &file_priv_class, file_finalize);
+    ret.o = KOS_new_object_with_private(ctx, self.o, &file_priv_class, file_finalize);
     TRY_OBJID(ret.o);
 
-    TRY(KOS_set_builtin_dynamic_property(ctx,
+    TRY(KOS_set_builtin_dynamic_propert2(ctx,
                                          ret.o,
                                          KOS_CONST_ID(str_position),
                                          KOS_get_module(ctx),
@@ -326,7 +328,7 @@ cleanup:
     if (file)
         fclose(file);
 
-    ret.o = KOS_destroy_top_locals(ctx, &this_, &ret);
+    ret.o = KOS_destroy_top_locals(ctx, &self, &ret);
 
     return error ? KOS_BADPTR : ret.o;
 }
@@ -413,7 +415,7 @@ static KOS_OBJ_ID kos_pipe(const KOS_CONTEXT             ctx,
     KOS_LOCAL ret;
     KOS_LOCAL file_obj;
     KOS_LOCAL io_module;
-    KOS_LOCAL this_;
+    KOS_LOCAL self;
     FILE     *file         = KOS_NULL;
 #ifdef _WIN32
     HANDLE    read_pipe    = INVALID_HANDLE_VALUE;
@@ -428,12 +430,12 @@ static KOS_OBJ_ID kos_pipe(const KOS_CONTEXT             ctx,
     KOS_init_local(     ctx, &ret);
     KOS_init_local(     ctx, &file_obj);
     KOS_init_local(     ctx, &io_module);
-    KOS_init_local_with(ctx, &this_, this_obj);
+    KOS_init_local_with(ctx, &self, this_obj);
 
     io_module.o = KOS_get_module(ctx);
     TRY_OBJID(io_module.o);
 
-    ret.o = KOS_new_object_with_prototype(ctx, this_.o);
+    ret.o = KOS_new_object_with_prototype(ctx, self.o);
     TRY_OBJID(ret.o);
 
     KOS_suspend_context(ctx);
@@ -501,7 +503,7 @@ cleanup:
         close(write_pipe);
 #endif
 
-    ret.o = KOS_destroy_top_locals(ctx, &this_, &ret);
+    ret.o = KOS_destroy_top_locals(ctx, &self, &ret);
 
     return error ? KOS_BADPTR : ret.o;
 }
@@ -566,9 +568,10 @@ KOS_FILE_HANDLE KOS_io_get_file(KOS_CONTEXT ctx,
  *
  * Closes the file object if it is still opened.
  */
-static KOS_OBJ_ID kos_close(KOS_CONTEXT ctx,
-                            KOS_OBJ_ID  this_obj,
-                            KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_close(const KOS_CONTEXT             ctx,
+                            const KOS_OBJ_ID              this_obj,
+                            const uint32_t                num_args,
+                            KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_FILE_HOLDER *closed_holder;
     KOS_FILE_HOLDER *file_holder;
@@ -611,18 +614,18 @@ static KOS_OBJ_ID print(const KOS_CONTEXT             ctx,
                         KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_VECTOR       cstr;
-    KOS_LOCAL        this_;
+    KOS_LOCAL        self;
     KOS_FILE_HOLDER *file_holder  = KOS_NULL;
     int              stored_errno = 0;
     int              error        = KOS_SUCCESS;
 
-    KOS_init_local_with(ctx, &this_, this_obj);
+    KOS_init_local_with(ctx, &self, this_obj);
 
     KOS_vector_init(&cstr);
 
     TRY(KOS_print_to_cstr_vec(ctx, num_args, args, KOS_DONT_QUOTE, &cstr, " ", 1));
 
-    TRY(acquire_file_object(ctx, this_.o, &file_holder));
+    TRY(acquire_file_object(ctx, self.o, &file_holder));
 
     KOS_suspend_context(ctx);
 
@@ -652,11 +655,11 @@ static KOS_OBJ_ID print(const KOS_CONTEXT             ctx,
 cleanup:
     KOS_vector_destroy(&cstr);
 
-    this_.o = KOS_destroy_top_local(ctx, &this_);
+    self.o = KOS_destroy_top_local(ctx, &self);
 
     release_file(file_holder);
 
-    return error ? KOS_BADPTR : this_.o;
+    return error ? KOS_BADPTR : self.o;
 }
 
 /* @item io file.prototype.flush()
@@ -671,19 +674,20 @@ cleanup:
  *
  * Returns the file object itself.
  */
-static KOS_OBJ_ID flush(KOS_CONTEXT ctx,
-                        KOS_OBJ_ID  this_obj,
-                        KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID flush(const KOS_CONTEXT             ctx,
+                        const KOS_OBJ_ID              this_obj,
+                        const uint32_t                num_args,
+                        KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    KOS_LOCAL        this_;
+    KOS_LOCAL        self;
     KOS_FILE_HOLDER *file_holder  = KOS_NULL;
     int              stored_errno = 0;
     int              result;
     int              error        = KOS_SUCCESS;
 
-    KOS_init_local_with(ctx, &this_, this_obj);
+    KOS_init_local_with(ctx, &self, this_obj);
 
-    TRY(acquire_file_object(ctx, this_.o, &file_holder));
+    TRY(acquire_file_object(ctx, self.o, &file_holder));
 
     KOS_suspend_context(ctx);
 
@@ -703,11 +707,11 @@ static KOS_OBJ_ID flush(KOS_CONTEXT ctx,
     }
 
 cleanup:
-    this_.o = KOS_destroy_top_local(ctx, &this_);
+    self.o = KOS_destroy_top_local(ctx, &self);
 
     release_file(file_holder);
 
-    return error ? KOS_BADPTR : this_.o;
+    return error ? KOS_BADPTR : self.o;
 }
 
 static int is_eol(char c)
@@ -738,13 +742,13 @@ static const KOS_CONVERT read_line_args[2] = {
     KOS_DEFINE_TAIL_ARG()
 };
 
-static KOS_OBJ_ID read_line(KOS_CONTEXT ctx,
-                            KOS_OBJ_ID  this_obj,
-                            KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID read_line(const KOS_CONTEXT             ctx,
+                            const KOS_OBJ_ID              this_obj,
+                            const uint32_t                num_args,
+                            KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_FILE_HOLDER *file_holder = KOS_NULL;
     int64_t          iarg        = 0;
-    KOS_OBJ_ID       arg;
     KOS_VECTOR       buf;
     KOS_OBJ_ID       line        = KOS_BADPTR;
     int              error       = KOS_SUCCESS;
@@ -752,16 +756,13 @@ static KOS_OBJ_ID read_line(KOS_CONTEXT ctx,
     int              last_size   = 0;
     int              num_read;
 
-    assert(KOS_get_array_size(args_obj) >= 1);
+    assert(num_args >= 1);
 
     KOS_vector_init(&buf);
 
     TRY(acquire_file_object(ctx, this_obj, &file_holder));
 
-    arg = KOS_array_read(ctx, args_obj, 0);
-    TRY_OBJID(arg);
-
-    TRY(KOS_get_integer(ctx, arg, &iarg));
+    TRY(KOS_get_integer(ctx, args[0], &iarg));
 
     if (iarg <= 0 || iarg > INT_MAX-1)
         RAISE_EXCEPTION_STR(str_err_invalid_buffer_size);
@@ -840,14 +841,13 @@ static const KOS_CONVERT read_some_args[3] = {
     KOS_DEFINE_TAIL_ARG()
 };
 
-static KOS_OBJ_ID read_some(KOS_CONTEXT ctx,
-                            KOS_OBJ_ID  this_obj,
-                            KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID read_some(const KOS_CONTEXT             ctx,
+                            const KOS_OBJ_ID              this_obj,
+                            const uint32_t                num_args,
+                            KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_FILE_HOLDER *file_holder  = KOS_NULL;
-    KOS_LOCAL        args;
     KOS_LOCAL        buf;
-    KOS_OBJ_ID       arg;
     int64_t          to_read;
     size_t           num_read;
     uint8_t         *data;
@@ -855,23 +855,18 @@ static KOS_OBJ_ID read_some(KOS_CONTEXT ctx,
     int              error        = KOS_SUCCESS;
     int              stored_errno = 0;
 
-    assert(KOS_get_array_size(args_obj) >= 2);
+    assert(num_args >= 2);
 
-    KOS_init_local(     ctx, &buf);
-    KOS_init_local_with(ctx, &args, args_obj);
+    KOS_init_local(ctx, &buf);
 
     TRY(acquire_file_object(ctx, this_obj, &file_holder));
 
-    arg = KOS_array_read(ctx, args.o, 0);
-    TRY_OBJID(arg);
-
-    TRY(KOS_get_integer(ctx, arg, &to_read));
+    TRY(KOS_get_integer(ctx, args[0], &to_read));
 
     if (to_read < 1)
         to_read = 1;
 
-    buf.o = KOS_array_read(ctx, args.o, 1);
-    TRY_OBJID(buf.o);
+    buf.o = args[1];
 
     if (buf.o == KOS_VOID)
         buf.o = KOS_new_buffer(ctx, 0);
@@ -911,7 +906,7 @@ static KOS_OBJ_ID read_some(KOS_CONTEXT ctx,
     }
 
 cleanup:
-    buf.o = KOS_destroy_top_locals(ctx, &args, &buf);
+    buf.o = KOS_destroy_top_local(ctx, &buf);
 
     release_file(file_holder);
 
@@ -935,35 +930,32 @@ cleanup:
  * Invoking this function without any arguments doesn't write anything
  * to the file but ensures that the file object is correct.
  */
-static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
-                            KOS_OBJ_ID  this_obj,
-                            KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_write(const KOS_CONTEXT             ctx,
+                            const KOS_OBJ_ID              this_obj,
+                            const uint32_t                num_args,
+                            KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_VECTOR       cstr;
     KOS_LOCAL        arg;
-    KOS_LOCAL        args;
-    KOS_LOCAL        this_;
+    KOS_LOCAL        self;
     KOS_FILE_HOLDER *file_holder = KOS_NULL;
     uint32_t         i_arg;
-    const uint32_t   num_args    = KOS_get_array_size(args_obj);
     int              error       = KOS_SUCCESS;
 
     KOS_vector_init(&cstr);
 
-    KOS_init_locals(ctx, &arg, &args, &this_, kos_end_locals);
+    KOS_init_locals(ctx, &arg, &self, kos_end_locals);
 
-    args.o  = args_obj;
-    this_.o = this_obj;
+    self.o = this_obj;
 
-    TRY(acquire_file_object(ctx, this_.o, &file_holder));
+    TRY(acquire_file_object(ctx, self.o, &file_holder));
 
     for (i_arg = 0; i_arg < num_args; i_arg++) {
 
         size_t num_writ     = 0;
         int    stored_errno = 0;
 
-        arg.o = KOS_array_read(ctx, args.o, i_arg);
-        TRY_OBJID(arg.o);
+        arg.o = args[i_arg];
 
         if (GET_OBJ_TYPE(arg.o) == OBJ_BUFFER) {
 
@@ -1036,13 +1028,13 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
     }
 
 cleanup:
-    this_.o = KOS_destroy_top_locals(ctx, &arg, &this_);
+    self.o = KOS_destroy_top_locals(ctx, &arg, &self);
 
     KOS_vector_destroy(&cstr);
 
     release_file(file_holder);
 
-    return error ? KOS_BADPTR : this_.o;
+    return error ? KOS_BADPTR : self.o;
 }
 
 /* @item io file.prototype.console
@@ -1052,9 +1044,10 @@ cleanup:
  * A boolean read-only flag indicating whether the file represents
  * an interactive console.
  */
-static KOS_OBJ_ID get_file_console(KOS_CONTEXT ctx,
-                                   KOS_OBJ_ID  this_obj,
-                                   KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID get_file_console(const KOS_CONTEXT             ctx,
+                                   const KOS_OBJ_ID              this_obj,
+                                   const uint32_t                num_args,
+                                   KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_FILE_HOLDER *file_holder = KOS_NULL;
     int              status      = 0;
@@ -1076,9 +1069,10 @@ static KOS_OBJ_ID get_file_console(KOS_CONTEXT ctx,
  * A boolean read-only flag indicating whether the read/write pointer has
  * reached the end of the file object.
  */
-static KOS_OBJ_ID get_file_eof(KOS_CONTEXT ctx,
-                               KOS_OBJ_ID  this_obj,
-                               KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID get_file_eof(const KOS_CONTEXT             ctx,
+                               const KOS_OBJ_ID              this_obj,
+                               const uint32_t                num_args,
+                               KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_FILE_HOLDER *file_holder = KOS_NULL;
     int              status      = 0;
@@ -1100,9 +1094,10 @@ static KOS_OBJ_ID get_file_eof(KOS_CONTEXT ctx,
  * A boolean read-only flag indicating whether there was an error during the
  * last file operation on the file object.
  */
-static KOS_OBJ_ID get_file_error(KOS_CONTEXT ctx,
-                                 KOS_OBJ_ID  this_obj,
-                                 KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID get_file_error(const KOS_CONTEXT             ctx,
+                                 const KOS_OBJ_ID              this_obj,
+                                 const uint32_t                num_args,
+                                 KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_FILE_HOLDER *file_holder = KOS_NULL;
     int              status      = 0;
@@ -1123,9 +1118,10 @@ static KOS_OBJ_ID get_file_error(KOS_CONTEXT ctx,
  *
  * An integer number representing the underlying file descriptor number.
  */
-static KOS_OBJ_ID get_file_fd(KOS_CONTEXT ctx,
-                              KOS_OBJ_ID  this_obj,
-                              KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID get_file_fd(const KOS_CONTEXT             ctx,
+                              const KOS_OBJ_ID              this_obj,
+                              const uint32_t                num_args,
+                              KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_FILE_HOLDER *file_holder = KOS_NULL;
     int              fd          = -1;
@@ -1198,9 +1194,10 @@ static int64_t get_epoch_time_us(const LARGE_INTEGER *time)
  * The `device` property is only produced for device objects on some
  * OS-es, for example Linux, *BSD, or MacOSX.
  */
-static KOS_OBJ_ID get_file_stat(KOS_CONTEXT ctx,
-                                KOS_OBJ_ID  this_obj,
-                                KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID get_file_stat(const KOS_CONTEXT             ctx,
+                                const KOS_OBJ_ID              this_obj,
+                                const uint32_t                num_args,
+                                KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_LOCAL        info;
     KOS_LOCAL        aux;
@@ -1347,9 +1344,10 @@ cleanup:
  *
  * When writing data to a file, its size may not be immediately refleced, until flush is performed.
  */
-static KOS_OBJ_ID get_file_size(KOS_CONTEXT ctx,
-                                KOS_OBJ_ID  this_obj,
-                                KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID get_file_size(const KOS_CONTEXT             ctx,
+                                const KOS_OBJ_ID              this_obj,
+                                const uint32_t                num_args,
+                                KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     int64_t          size        = 0;
     KOS_FILE_HOLDER *file_holder = KOS_NULL;
@@ -1432,9 +1430,10 @@ cleanup:
  *
  * If the file was not open (e.g. it's a pipe or stdout) then `path` is `void`.
  */
-static KOS_OBJ_ID get_file_path(KOS_CONTEXT ctx,
-                                KOS_OBJ_ID  this_obj,
-                                KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID get_file_path(const KOS_CONTEXT             ctx,
+                                const KOS_OBJ_ID              this_obj,
+                                const uint32_t                num_args,
+                                KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     return KOS_VOID;
 }
@@ -1450,9 +1449,10 @@ static KOS_OBJ_ID get_file_path(KOS_CONTEXT ctx,
  * Writing the `position` property on an open file object will move the
  * file pointer in the same way as invoking the `seek` function.
  */
-static KOS_OBJ_ID get_file_pos(KOS_CONTEXT ctx,
-                               KOS_OBJ_ID  this_obj,
-                               KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID get_file_pos(const KOS_CONTEXT             ctx,
+                               const KOS_OBJ_ID              this_obj,
+                               const uint32_t                num_args,
+                               KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_FILE_HOLDER *file_holder  = KOS_NULL;
     long             pos          = 0;
@@ -1507,31 +1507,27 @@ static const KOS_CONVERT set_file_pos_args[2] = {
     KOS_DEFINE_TAIL_ARG()
 };
 
-static KOS_OBJ_ID set_file_pos(KOS_CONTEXT ctx,
-                               KOS_OBJ_ID  this_obj,
-                               KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID set_file_pos(const KOS_CONTEXT             ctx,
+                               KOS_OBJ_ID                    this_obj,
+                               const uint32_t                num_args,
+                               KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_FILE_HOLDER *file_holder = KOS_NULL;
-    KOS_LOCAL        this_;
-    KOS_OBJ_ID       arg;
+    KOS_LOCAL        self;
     int64_t          pos;
     int              whence      = SEEK_SET;
     int              error       = KOS_SUCCESS;
 
-    assert(KOS_get_array_size(args_obj) >= 1);
+    assert(num_args >= 1);
 
     TRY(acquire_file_object(ctx, this_obj, &file_holder));
 
-    arg = KOS_array_read(ctx, args_obj, 0);
-
-    TRY_OBJID(arg);
-
-    TRY(KOS_get_integer(ctx, arg, &pos));
+    TRY(KOS_get_integer(ctx, args[0], &pos));
 
     if (pos < 0)
         whence = SEEK_END;
 
-    KOS_init_local_with(ctx, &this_, this_obj);
+    KOS_init_local_with(ctx, &self, this_obj);
 
     KOS_suspend_context(ctx);
 
@@ -1546,7 +1542,7 @@ static KOS_OBJ_ID set_file_pos(KOS_CONTEXT ctx,
 
     KOS_resume_context(ctx);
 
-    this_obj = KOS_destroy_top_local(ctx, &this_);
+    this_obj = KOS_destroy_top_local(ctx, &self);
 
 cleanup:
     release_file(file_holder);
@@ -1574,24 +1570,21 @@ static const KOS_CONVERT set_file_size_args[2] = {
     KOS_DEFINE_TAIL_ARG()
 };
 
-static KOS_OBJ_ID set_file_size(KOS_CONTEXT ctx,
-                                KOS_OBJ_ID  this_obj,
-                                KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID set_file_size(const KOS_CONTEXT             ctx,
+                                KOS_OBJ_ID                    this_obj,
+                                const uint32_t                num_args,
+                                KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_FILE_HOLDER *file_holder = KOS_NULL;
-    KOS_LOCAL        this_;
-    KOS_OBJ_ID       arg;
+    KOS_LOCAL        self;
     int64_t          size;
     int              error       = KOS_SUCCESS;
 
-    assert(KOS_get_array_size(args_obj) >= 1);
+    assert(num_args >= 1);
 
     TRY(acquire_file_object(ctx, this_obj, &file_holder));
 
-    arg = KOS_array_read(ctx, args_obj, 0);
-    TRY_OBJID(arg);
-
-    TRY(KOS_get_integer(ctx, arg, &size));
+    TRY(KOS_get_integer(ctx, args[0], &size));
 
 #ifdef _WIN32
 #   define BAD_SIZE_CHECK(size) 0
@@ -1606,7 +1599,7 @@ static KOS_OBJ_ID set_file_size(KOS_CONTEXT ctx,
 
 #undef BAD_SIZE_CHECK
 
-    KOS_init_local_with(ctx, &this_, this_obj);
+    KOS_init_local_with(ctx, &self, this_obj);
 
     KOS_suspend_context(ctx);
 
@@ -1672,7 +1665,7 @@ static KOS_OBJ_ID set_file_size(KOS_CONTEXT ctx,
 
     KOS_resume_context(ctx);
 
-    this_obj = KOS_destroy_top_local(ctx, &this_);
+    this_obj = KOS_destroy_top_local(ctx, &self);
 
 cleanup:
     release_file(file_holder);
@@ -1743,9 +1736,10 @@ KOS_DECLARE_PRIVATE_CLASS(file_lock_priv_class);
  *
  *     > with f.lock() { f.print("Hello") }
  */
-static KOS_OBJ_ID kos_lock(KOS_CONTEXT ctx,
-                           KOS_OBJ_ID  this_obj,
-                           KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_lock(const KOS_CONTEXT             ctx,
+                           const KOS_OBJ_ID              this_obj,
+                           const uint32_t                num_args,
+                           KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_LOCAL        lock;
     KOS_LOCAL        proto;
@@ -1835,9 +1829,10 @@ cleanup:
  *     > l.print("Hello")
  *     > l.release()
  */
-static KOS_OBJ_ID kos_unlock(KOS_CONTEXT ctx,
-                             KOS_OBJ_ID  this_obj,
-                             KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_unlock(const KOS_CONTEXT             ctx,
+                             const KOS_OBJ_ID              this_obj,
+                             const uint32_t                num_args,
+                             KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_FILE_HOLDER *file_holder;
 
@@ -1894,27 +1889,27 @@ int kos_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     KOS_init_local(     ctx, &priv);
 
     TRY_ADD_CONSTRUCTOR(    ctx, module.o,               "file",      kos_open,         open_args, &file_proto.o);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "close",     kos_close,        KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "flush",     flush,            KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "lock",      kos_lock,         KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, file_proto.o, "close",     kos_close,        KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, file_proto.o, "flush",     flush,            KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, file_proto.o, "lock",      kos_lock,         KOS_NULL);
     TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, file_proto.o, "print",     print,            KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "read_line", read_line,        read_line_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "read_some", read_some,        read_some_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "release",   kos_close,        KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "resize",    set_file_size,    set_file_size_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "seek",      set_file_pos,     set_file_pos_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "write",     kos_write,        KOS_NULL);
-    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "console",   get_file_console, KOS_NULL);
-    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "eof",       get_file_eof,     KOS_NULL);
-    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "error",     get_file_error,   KOS_NULL);
-    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "fd",        get_file_fd,      KOS_NULL);
-    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "stat",      get_file_stat,    KOS_NULL);
-    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "path",      get_file_path,    KOS_NULL);
-    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "position",  get_file_pos,     KOS_NULL);
-    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "size",      get_file_size,    KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, file_proto.o, "read_line", read_line,        read_line_args);
+    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, file_proto.o, "read_some", read_some,        read_some_args);
+    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, file_proto.o, "release",   kos_close,        KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, file_proto.o, "resize",    set_file_size,    set_file_size_args);
+    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, file_proto.o, "seek",      set_file_pos,     set_file_pos_args);
+    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, file_proto.o, "write",     kos_write,        KOS_NULL);
+    TRY_ADD_MEMBER_PROPERT2(ctx, module.o, file_proto.o, "console",   get_file_console, KOS_NULL);
+    TRY_ADD_MEMBER_PROPERT2(ctx, module.o, file_proto.o, "eof",       get_file_eof,     KOS_NULL);
+    TRY_ADD_MEMBER_PROPERT2(ctx, module.o, file_proto.o, "error",     get_file_error,   KOS_NULL);
+    TRY_ADD_MEMBER_PROPERT2(ctx, module.o, file_proto.o, "fd",        get_file_fd,      KOS_NULL);
+    TRY_ADD_MEMBER_PROPERT2(ctx, module.o, file_proto.o, "stat",      get_file_stat,    KOS_NULL);
+    TRY_ADD_MEMBER_PROPERT2(ctx, module.o, file_proto.o, "path",      get_file_path,    KOS_NULL);
+    TRY_ADD_MEMBER_PROPERT2(ctx, module.o, file_proto.o, "position",  get_file_pos,     KOS_NULL);
+    TRY_ADD_MEMBER_PROPERT2(ctx, module.o, file_proto.o, "size",      get_file_size,    KOS_NULL);
 
     TRY_ADD_CONSTRUCTOR(    ctx, module.o,               "file_lock", kos_lock_ctor,    KOS_NULL,  &file_lock.o);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_lock.o,  "release",   kos_unlock,       KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, file_lock.o,  "release",   kos_unlock,       KOS_NULL);
 
     TRY_ADD_CONSTRUCTOR(    ctx, module.o,               "pipe",      kos_pipe,         KOS_NULL,  &pipe_proto);
 
