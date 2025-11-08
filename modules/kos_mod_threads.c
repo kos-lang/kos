@@ -27,6 +27,7 @@ KOS_DECLARE_STATIC_CONST_STRING(str_err_cond_var_failed, "failed to create a con
 KOS_DECLARE_STATIC_CONST_STRING(str_err_count_too_small, "count argument is less than 1");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_count_too_large, "count argument exceeds 0x7FFFFFFF");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_mutex_failed,    "failed to create a mutex");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_number,      "object is not a number");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_init_too_large,  "init argument exceeds 0x7FFFFFFF");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_init_too_small,  "init argument is less than 0");
 KOS_DECLARE_STATIC_CONST_STRING(str_init,                "init");
@@ -105,9 +106,10 @@ cleanup:
  *
  * Returns `this` mutex object.
  */
-static KOS_OBJ_ID mutex_acquire(KOS_CONTEXT ctx,
-                                KOS_OBJ_ID  this_obj,
-                                KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID mutex_acquire(const KOS_CONTEXT             ctx,
+                                const KOS_OBJ_ID              this_obj,
+                                const uint32_t                num_args,
+                                KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_LOCAL mutex;
     KOS_MUTEX mutex_obj;
@@ -137,9 +139,10 @@ static KOS_OBJ_ID mutex_acquire(KOS_CONTEXT ctx,
  *
  * Returns `this` mutex object.
  */
-static KOS_OBJ_ID mutex_release(KOS_CONTEXT ctx,
-                                KOS_OBJ_ID  this_obj,
-                                KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID mutex_release(const KOS_CONTEXT             ctx,
+                                const KOS_OBJ_ID              this_obj,
+                                const uint32_t                num_args,
+                                KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     const KOS_MUTEX mutex_obj = (KOS_MUTEX)KOS_object_get_private(this_obj, &mutex_priv_class);
 
@@ -274,14 +277,14 @@ static const KOS_CONVERT count_arg[2] = {
     KOS_DEFINE_TAIL_ARG()
 };
 
-static int get_count_arg(KOS_CONTEXT ctx,
-                         KOS_OBJ_ID  args_obj,
-                         uint32_t   *count)
+static int get_count_arg(const KOS_CONTEXT             ctx,
+                         KOS_ATOMIC(KOS_OBJ_ID) *const args,
+                         uint32_t                     *count)
 {
     int64_t count64 = 0;
     int     error;
 
-    error = KOS_extract_native_from_array(ctx, args_obj, "argument", count_arg, KOS_NULL, &count64);
+    error = KOS_extract_native_from_args(ctx, 1, args, "argument", count_arg, KOS_NULL, &count64);
     if (error)
         return error;
 
@@ -317,9 +320,10 @@ static int get_count_arg(KOS_CONTEXT ctx,
  *
  * Returns `this` semaphore object.
  */
-static KOS_OBJ_ID semaphore_acquire(KOS_CONTEXT ctx,
-                                    KOS_OBJ_ID  this_obj,
-                                    KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID semaphore_acquire(const KOS_CONTEXT             ctx,
+                                    const KOS_OBJ_ID              this_obj,
+                                    const uint32_t                num_args,
+                                    KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_LOCAL      semaphore;
     KOS_SEMAPHORE *sem   = KOS_NULL;
@@ -329,7 +333,7 @@ static KOS_OBJ_ID semaphore_acquire(KOS_CONTEXT ctx,
 
     sem = (KOS_SEMAPHORE *)KOS_object_get_private(semaphore.o, &semaphore_priv_class);
 
-    if (get_count_arg(ctx, args_obj, &count)) {
+    if (get_count_arg(ctx, args, &count)) {
         KOS_destroy_top_local(ctx, &semaphore);
         return KOS_BADPTR;
     }
@@ -384,9 +388,10 @@ static KOS_OBJ_ID semaphore_acquire(KOS_CONTEXT ctx,
  *
  * Returns `this` semaphore object.
  */
-static KOS_OBJ_ID semaphore_release(KOS_CONTEXT ctx,
-                                    KOS_OBJ_ID  this_obj,
-                                    KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID semaphore_release(const KOS_CONTEXT             ctx,
+                                    const KOS_OBJ_ID              this_obj,
+                                    const uint32_t                num_args,
+                                    KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_LOCAL      semaphore;
     KOS_SEMAPHORE *sem   = KOS_NULL;
@@ -396,7 +401,7 @@ static KOS_OBJ_ID semaphore_release(KOS_CONTEXT ctx,
 
     sem = (KOS_SEMAPHORE *)KOS_object_get_private(semaphore.o, &semaphore_priv_class);
 
-    if (get_count_arg(ctx, args_obj, &count)) {
+    if (get_count_arg(ctx, args, &count)) {
         KOS_destroy_top_local(ctx, &semaphore);
         return KOS_BADPTR;
     }
@@ -437,9 +442,10 @@ static KOS_OBJ_ID semaphore_release(KOS_CONTEXT ctx,
     return KOS_destroy_top_local(ctx, &semaphore);
 }
 
-static KOS_OBJ_ID semaphore_value(KOS_CONTEXT ctx,
-                                  KOS_OBJ_ID  this_obj,
-                                  KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID semaphore_value(const KOS_CONTEXT             ctx,
+                                  const KOS_OBJ_ID              this_obj,
+                                  const uint32_t                num_args,
+                                  KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_SEMAPHORE *const sem = (KOS_SEMAPHORE *)KOS_object_get_private(this_obj, &semaphore_priv_class);
 
@@ -467,17 +473,18 @@ const KOS_CONVERT sleep_args[2] = {
  *
  * Returns `void`.
  */
-static KOS_OBJ_ID kos_sleep(KOS_CONTEXT ctx,
-                            KOS_OBJ_ID  this_obj,
-                            KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_sleep(const KOS_CONTEXT             ctx,
+                            const KOS_OBJ_ID              this_obj,
+                            const uint32_t                num_args,
+                            KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_NUMERIC arg;
     uint64_t    sleep_ns;
     int         error = KOS_SUCCESS;
 
-    assert(KOS_get_array_size(args_obj) > 0);
+    assert(num_args > 0);
 
-    TRY(KOS_get_numeric_arg(ctx, args_obj, 0, &arg));
+    arg = KOS_get_numeric(args[0]);
 
     if (arg.type == KOS_INTEGER_VALUE) {
         if (arg.u.i < 0 || arg.u.i > 1000000) {
@@ -487,6 +494,9 @@ static KOS_OBJ_ID kos_sleep(KOS_CONTEXT ctx,
         sleep_ns = (uint64_t)(arg.u.i * 1000000000);
     }
     else {
+        if (arg.type == KOS_NON_NUMERIC)
+            RAISE_EXCEPTION_STR(str_err_not_number);
+
         assert(arg.type == KOS_FLOAT_VALUE);
 
         if (arg.u.d < 0 || arg.u.d > 1000000.0) {
@@ -523,15 +533,15 @@ int kos_module_threads_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     KOS_atomic_write_relaxed_ptr(OBJPTR(MODULE, module.o)->priv, priv.o);
 
     TRY_ADD_CONSTRUCTOR(    ctx, module.o,                    "mutex",     mutex_ctor,        KOS_NULL, &mutex_proto.o);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, mutex_proto.o,     "acquire",   mutex_acquire,     KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, mutex_proto.o,     "release",   mutex_release,     KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, mutex_proto.o,     "acquire",   mutex_acquire,     KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, mutex_proto.o,     "release",   mutex_release,     KOS_NULL);
 
     TRY_ADD_CONSTRUCTOR(    ctx, module.o,                    "semaphore", semaphore_ctor,    sem_args, &semaphore_proto.o);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, semaphore_proto.o, "acquire",   semaphore_acquire, count_arg);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, semaphore_proto.o, "release",   semaphore_release, count_arg);
-    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, semaphore_proto.o, "value",     semaphore_value,   KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, semaphore_proto.o, "acquire",   semaphore_acquire, count_arg);
+    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, semaphore_proto.o, "release",   semaphore_release, count_arg);
+    TRY_ADD_MEMBER_PROPERT2(ctx, module.o, semaphore_proto.o, "value",     semaphore_value,   KOS_NULL);
 
-    TRY_ADD_FUNCTION(       ctx, module.o,                    "sleep",     kos_sleep,         sleep_args);
+    TRY_ADD_FUNCTIO2(       ctx, module.o,                    "sleep",     kos_sleep,         sleep_args);
 
     TRY(KOS_array_write(ctx, priv.o, 0, mutex_proto.o));
     TRY(KOS_array_write(ctx, priv.o, 1, semaphore_proto.o));
