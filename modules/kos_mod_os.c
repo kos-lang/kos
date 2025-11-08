@@ -1382,9 +1382,10 @@ static KOS_OBJ_ID process_ctor(const KOS_CONTEXT             ctx,
  *  # The process is stopped, in which case the `stopped` property is set to `true`.  In this
  *    case the `wait()` function can be called again to wait for the process to finish.
  */
-static KOS_OBJ_ID wait_for_child(KOS_CONTEXT ctx,
-                                 KOS_OBJ_ID  this_obj,
-                                 KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID wait_for_child(const KOS_CONTEXT             ctx,
+                                 const KOS_OBJ_ID              this_obj,
+                                 const uint32_t                num_args,
+                                 KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     struct KOS_WAIT_S *wait_info;
     KOS_LOCAL          ret;
@@ -1805,7 +1806,7 @@ KOS_INIT_MODULE(os, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_FUNCTION(       ctx, module.o,               "getloadavg", kos_getloadavg, KOS_NULL);
 
     TRY_ADD_CONSTRUCTOR(    ctx, module.o,               "process",    process_ctor,   KOS_NULL, &wait_proto.o);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, wait_proto.o, "wait",       wait_for_child, KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, wait_proto.o, "wait",       wait_for_child, KOS_NULL);
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, wait_proto.o, "pid",        get_pid,        0);
 
     /* @item os sysname
