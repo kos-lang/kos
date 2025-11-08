@@ -373,13 +373,15 @@ cleanup:
     return error;
 }
 
-static KOS_OBJ_ID get_blocking(KOS_CONTEXT ctx,
-                               KOS_OBJ_ID  this_obj,
-                               KOS_OBJ_ID  args_obj);
+static KOS_OBJ_ID get_blocking(const KOS_CONTEXT             ctx,
+                               const KOS_OBJ_ID              this_obj,
+                               const uint32_t                num_args,
+                               KOS_ATOMIC(KOS_OBJ_ID) *const args);
 
-static KOS_OBJ_ID set_blocking(KOS_CONTEXT ctx,
-                               KOS_OBJ_ID  this_obj,
-                               KOS_OBJ_ID  args_obj);
+static KOS_OBJ_ID set_blocking(const KOS_CONTEXT             ctx,
+                               const KOS_OBJ_ID              this_obj,
+                               const uint32_t                num_args,
+                               KOS_ATOMIC(KOS_OBJ_ID) *const args);
 
 static const KOS_CONVERT socket_args[4] = {
     { KOS_CONST_ID(str_domain),   TO_SMALL_INT(PF_INET),     0, 0, KOS_NATIVE_INT32 },
@@ -410,7 +412,7 @@ static KOS_OBJ_ID kos_socket(const KOS_CONTEXT             ctx,
                              const uint32_t                num_args,
                              KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    KOS_LOCAL  this_;
+    KOS_LOCAL  self;
     KOS_LOCAL  ret;
     KOS_SOCKET socket_fd    = KOS_INVALID_SOCKET;
     int32_t    arg_domain   = 0;
@@ -422,7 +424,7 @@ static KOS_OBJ_ID kos_socket(const KOS_CONTEXT             ctx,
     assert(num_args >= 3);
 
     KOS_init_local(     ctx, &ret);
-    KOS_init_local_with(ctx, &this_, this_obj);
+    KOS_init_local_with(ctx, &self, this_obj);
 
     TRY(KOS_extract_native_from_args(ctx, num_args, args, "argument", socket_args, KOS_NULL,
                                      &arg_domain, &arg_type, &arg_protocol));
@@ -443,10 +445,10 @@ static KOS_OBJ_ID kos_socket(const KOS_CONTEXT             ctx,
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
-    ret.o = KOS_new_object_with_private(ctx, this_.o, &socket_priv_class, socket_finalize);
+    ret.o = KOS_new_object_with_private(ctx, self.o, &socket_priv_class, socket_finalize);
     TRY_OBJID(ret.o);
 
-    TRY(KOS_set_builtin_dynamic_property(ctx,
+    TRY(KOS_set_builtin_dynamic_propert2(ctx,
                                          ret.o,
                                          KOS_CONST_ID(str_blocking),
                                          KOS_get_module(ctx),
@@ -456,7 +458,7 @@ static KOS_OBJ_ID kos_socket(const KOS_CONTEXT             ctx,
     TRY(set_socket_object(ctx, ret.o, socket_fd, arg_domain));
 
 cleanup:
-    ret.o = KOS_destroy_top_locals(ctx, &this_, &ret);
+    ret.o = KOS_destroy_top_locals(ctx, &self, &ret);
 
     return error ? KOS_BADPTR : ret.o;
 }
@@ -476,11 +478,12 @@ cleanup:
  *
  * On error throws an exception.
  */
-static KOS_OBJ_ID kos_accept(KOS_CONTEXT ctx,
-                             KOS_OBJ_ID  this_obj,
-                             KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_accept(const KOS_CONTEXT             ctx,
+                             const KOS_OBJ_ID              this_obj,
+                             const uint32_t                num_args,
+                             KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    KOS_LOCAL          this_;
+    KOS_LOCAL          self;
     KOS_LOCAL          sock;
     KOS_LOCAL          ret;
     KOS_GENERIC_ADDR   addr;
@@ -493,7 +496,7 @@ static KOS_OBJ_ID kos_accept(KOS_CONTEXT ctx,
 
     KOS_init_local(     ctx, &ret);
     KOS_init_local(     ctx, &sock);
-    KOS_init_local_with(ctx, &this_, this_obj);
+    KOS_init_local_with(ctx, &self, this_obj);
 
     TRY(acquire_socket_object(ctx, this_obj, &socket_holder));
 
@@ -513,7 +516,7 @@ static KOS_OBJ_ID kos_accept(KOS_CONTEXT ctx,
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
-    proto_obj = KOS_get_prototype(ctx, this_.o);
+    proto_obj = KOS_get_prototype(ctx, self.o);
 
     sock.o = KOS_new_object_with_private(ctx, proto_obj, &socket_priv_class, socket_finalize);
     TRY_OBJID(sock.o);
@@ -528,7 +531,7 @@ static KOS_OBJ_ID kos_accept(KOS_CONTEXT ctx,
 cleanup:
     release_socket(socket_holder);
 
-    ret.o = KOS_destroy_top_locals(ctx, &this_, &ret);
+    ret.o = KOS_destroy_top_locals(ctx, &self, &ret);
 
     return error ? KOS_BADPTR : ret.o;
 }
@@ -598,12 +601,13 @@ static const KOS_CONVERT bind_args[3] = {
  *
  * On error throws an exception.
  */
-static KOS_OBJ_ID kos_bind(KOS_CONTEXT ctx,
-                           KOS_OBJ_ID  this_obj,
-                           KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_bind(const KOS_CONTEXT             ctx,
+                           const KOS_OBJ_ID              this_obj,
+                           const uint32_t                num_args,
+                           KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     struct KOS_MEMPOOL_S alloc;
-    KOS_LOCAL            this_;
+    KOS_LOCAL            self;
     char                *address_cstr  = KOS_NULL;
     KOS_VECTOR           port_cstr;
     KOS_SOCKET_HOLDER   *socket_holder = KOS_NULL;
@@ -613,13 +617,13 @@ static KOS_OBJ_ID kos_bind(KOS_CONTEXT ctx,
     int                  saved_errno;
     int                  error;
 
-    KOS_init_local_with(ctx, &this_, this_obj);
+    KOS_init_local_with(ctx, &self, this_obj);
 
     KOS_vector_init(&port_cstr);
 
     KOS_mempool_init_small(&alloc, 512U);
 
-    TRY(KOS_extract_native_from_array(ctx, args_obj, "argument", bind_args, &alloc, &address_cstr));
+    TRY(KOS_extract_native_from_args(ctx, num_args, args, "argument", bind_args, &alloc, &address_cstr));
 
     assert(KOS_get_array_size(args_obj) >= 2);
     {
@@ -628,7 +632,7 @@ static KOS_OBJ_ID kos_bind(KOS_CONTEXT ctx,
         TRY(get_port(ctx, port_arg, &port_cstr));
     }
 
-    TRY(acquire_socket_object(ctx, this_.o, &socket_holder));
+    TRY(acquire_socket_object(ctx, self.o, &socket_holder));
 
     KOS_suspend_context(ctx);
 
@@ -685,9 +689,9 @@ cleanup:
 
     KOS_mempool_destroy(&alloc);
 
-    this_.o = KOS_destroy_top_local(ctx, &this_);
+    self.o = KOS_destroy_top_local(ctx, &self);
 
-    return error ? KOS_BADPTR : this_.o;
+    return error ? KOS_BADPTR : self.o;
 }
 
 /* @item net socket.prototype.close()
@@ -711,9 +715,10 @@ cleanup:
  *
  * On error throws an exception.
  */
-static KOS_OBJ_ID kos_close(KOS_CONTEXT ctx,
-                            KOS_OBJ_ID  this_obj,
-                            KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_close(const KOS_CONTEXT             ctx,
+                            const KOS_OBJ_ID              this_obj,
+                            const uint32_t                num_args,
+                            KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_SOCKET_HOLDER *closed_holder;
     KOS_SOCKET_HOLDER *socket_holder;
@@ -757,12 +762,13 @@ static const KOS_CONVERT connect_args[3] = {
  *
  * On error throws an exception.
  */
-static KOS_OBJ_ID kos_connect(KOS_CONTEXT ctx,
-                              KOS_OBJ_ID  this_obj,
-                              KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_connect(const KOS_CONTEXT             ctx,
+                              const KOS_OBJ_ID              this_obj,
+                              const uint32_t                num_args,
+                              KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     struct KOS_MEMPOOL_S alloc;
-    KOS_LOCAL            this_;
+    KOS_LOCAL            self;
     char                *address_cstr  = KOS_NULL;
     KOS_VECTOR           port_cstr;
     KOS_SOCKET_HOLDER   *socket_holder = KOS_NULL;
@@ -772,13 +778,13 @@ static KOS_OBJ_ID kos_connect(KOS_CONTEXT ctx,
     int                  saved_errno;
     int                  error;
 
-    KOS_init_local_with(ctx, &this_, this_obj);
+    KOS_init_local_with(ctx, &self, this_obj);
 
     KOS_vector_init(&port_cstr);
 
     KOS_mempool_init_small(&alloc, 512U);
 
-    TRY(KOS_extract_native_from_array(ctx, args_obj, "argument", bind_args, &alloc, &address_cstr));
+    TRY(KOS_extract_native_from_args(ctx, num_args, args, "argument", connect_args, &alloc, &address_cstr));
 
     assert(KOS_get_array_size(args_obj) >= 2);
     {
@@ -787,7 +793,7 @@ static KOS_OBJ_ID kos_connect(KOS_CONTEXT ctx,
         TRY(get_port(ctx, port_arg, &port_cstr));
     }
 
-    TRY(acquire_socket_object(ctx, this_.o, &socket_holder));
+    TRY(acquire_socket_object(ctx, self.o, &socket_holder));
 
     KOS_suspend_context(ctx);
 
@@ -844,9 +850,9 @@ cleanup:
 
     KOS_mempool_destroy(&alloc);
 
-    this_.o = KOS_destroy_top_local(ctx, &this_);
+    self.o = KOS_destroy_top_local(ctx, &self);
 
-    return error ? KOS_BADPTR : this_.o;
+    return error ? KOS_BADPTR : self.o;
 }
 
 KOS_DECLARE_STATIC_CONST_STRING(str_backlog, "backlog");
@@ -868,26 +874,27 @@ static const KOS_CONVERT listen_args[2] = {
  *
  * On error throws an exception.
  */
-static KOS_OBJ_ID kos_listen(KOS_CONTEXT ctx,
-                             KOS_OBJ_ID  this_obj,
-                             KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_listen(const KOS_CONTEXT             ctx,
+                             const KOS_OBJ_ID              this_obj,
+                             const uint32_t                num_args,
+                             KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    KOS_LOCAL          this_;
+    KOS_LOCAL          self;
     KOS_SOCKET_HOLDER *socket_holder = KOS_NULL;
     int                saved_errno;
     int                error;
     int32_t            backlog       = 0;
 
-    KOS_init_local_with(ctx, &this_, this_obj);
+    KOS_init_local_with(ctx, &self, this_obj);
 
-    TRY(KOS_extract_native_from_array(ctx, args_obj, "argument", listen_args, KOS_NULL, &backlog));
+    TRY(KOS_extract_native_from_args(ctx, num_args, args, "argument", listen_args, KOS_NULL, &backlog));
 
     if (backlog < 1 || backlog >= 0x10000) {
         KOS_raise_printf(ctx, "backlog argument %d is out of range", backlog);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
-    TRY(acquire_socket_object(ctx, this_.o, &socket_holder));
+    TRY(acquire_socket_object(ctx, self.o, &socket_holder));
 
     KOS_suspend_context(ctx);
 
@@ -907,9 +914,9 @@ static KOS_OBJ_ID kos_listen(KOS_CONTEXT ctx,
 cleanup:
     release_socket(socket_holder);
 
-    this_.o = KOS_destroy_top_local(ctx, &this_);
+    self.o = KOS_destroy_top_local(ctx, &self);
 
-    return error ? KOS_BADPTR : this_.o;
+    return error ? KOS_BADPTR : self.o;
 }
 
 KOS_DECLARE_STATIC_CONST_STRING(str_buffer, "buffer");
@@ -941,69 +948,55 @@ KOS_DECLARE_STATIC_CONST_STRING(str_size,   "size");
  *
  * On error throws an exception.
  */
-static KOS_OBJ_ID kos_recv(KOS_CONTEXT ctx,
-                           KOS_OBJ_ID  this_obj,
-                           KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_recv(const KOS_CONTEXT             ctx,
+                           const KOS_OBJ_ID              this_obj,
+                           const uint32_t                num_args,
+                           KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    KOS_LOCAL          args;
-    KOS_LOCAL          buf;
     int64_t            num_read;
     int64_t            to_read;
     int64_t            flags64;
     KOS_SOCKET_HOLDER *socket_holder = KOS_NULL;
     uint8_t           *data;
-    KOS_OBJ_ID         arg;
     uint32_t           offset;
     int                error         = KOS_SUCCESS;
     int                saved_errno   = 0;
 
-    assert(KOS_get_array_size(args_obj) >= 3);
-
-    KOS_init_local(     ctx, &buf);
-    KOS_init_local_with(ctx, &args, args_obj);
+    assert(num_args >= 3);
 
     TRY(acquire_socket_object(ctx, this_obj, &socket_holder));
 
-    arg = KOS_array_read(ctx, args.o, 0);
-    TRY_OBJID(arg);
-
-    TRY(KOS_get_integer(ctx, arg, &to_read));
+    TRY(KOS_get_integer(ctx, args[0], &to_read));
 
     if (to_read < 1)
         to_read = 1;
 
-    arg = KOS_array_read(ctx, args.o, 2);
-    TRY_OBJID(arg);
-
-    if ( ! IS_NUMERIC_OBJ(arg)) {
+    if ( ! IS_NUMERIC_OBJ(args[2])) {
         KOS_raise_printf(ctx, "flags argument is %s but expected integer",
-                         KOS_get_type_name(GET_OBJ_TYPE(arg)));
+                         KOS_get_type_name(GET_OBJ_TYPE(args[2])));
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
     else
-        TRY(KOS_get_integer(ctx, arg, &flags64));
+        TRY(KOS_get_integer(ctx, args[2], &flags64));
 
     if (flags64 & (MSG_OOB | MSG_PEEK | MSG_WAITALL)) {
         KOS_raise_printf(ctx, "flags argument 0x%" PRIx64 " contains unrecognized bits", flags64);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
-    buf.o = KOS_array_read(ctx, args.o, 1);
-    TRY_OBJID(buf.o);
-
-    if (buf.o == KOS_VOID)
-        buf.o = KOS_new_buffer(ctx, 0);
-    else if (GET_OBJ_TYPE(buf.o) != OBJ_BUFFER)
+    if (args[1] == KOS_VOID)
+        args[1] = KOS_new_buffer(ctx, 0);
+    else if (GET_OBJ_TYPE(args[1]) != OBJ_BUFFER)
         RAISE_EXCEPTION_STR(str_err_not_buffer);
 
-    offset = KOS_get_buffer_size(buf.o);
+    offset = KOS_get_buffer_size(args[1]);
 
     if (to_read > (int64_t)(0xFFFFFFFFU - offset))
         RAISE_EXCEPTION_STR(str_err_too_many_to_read);
 
-    TRY(KOS_buffer_resize(ctx, buf.o, (unsigned)(offset + to_read)));
+    TRY(KOS_buffer_resize(ctx, args[1], (unsigned)(offset + to_read)));
 
-    data = KOS_buffer_data(ctx, buf.o);
+    data = KOS_buffer_data(ctx, args[1]);
 
     if ( ! data)
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
@@ -1021,7 +1014,7 @@ static KOS_OBJ_ID kos_recv(KOS_CONTEXT ctx,
 
     assert(num_read <= to_read);
 
-    TRY(KOS_buffer_resize(ctx, buf.o, (unsigned)(offset + num_read)));
+    TRY(KOS_buffer_resize(ctx, args[1], (unsigned)(offset + num_read)));
 
     if (saved_errno) {
         KOS_raise_errno_value(ctx, "recv", saved_errno);
@@ -1031,9 +1024,7 @@ static KOS_OBJ_ID kos_recv(KOS_CONTEXT ctx,
 cleanup:
     release_socket(socket_holder);
 
-    buf.o = KOS_destroy_top_locals(ctx, &args, &buf);
-
-    return error ? KOS_BADPTR : buf.o;
+    return error ? KOS_BADPTR : args[1];
 }
 
 /* @item net socket.prototype.recvfrom()
@@ -1060,12 +1051,12 @@ cleanup:
  *
  * On error throws an exception.
  */
-static KOS_OBJ_ID kos_recvfrom(KOS_CONTEXT ctx,
-                               KOS_OBJ_ID  this_obj,
-                               KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_recvfrom(const KOS_CONTEXT             ctx,
+                               const KOS_OBJ_ID              this_obj,
+                               const uint32_t                num_args,
+                               KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_GENERIC_ADDR   addr;
-    KOS_LOCAL          args;
     KOS_LOCAL          buf;
     KOS_LOCAL          ret;
     int64_t            num_read;
@@ -1073,46 +1064,37 @@ static KOS_OBJ_ID kos_recvfrom(KOS_CONTEXT ctx,
     int64_t            flags64;
     KOS_SOCKET_HOLDER *socket_holder = KOS_NULL;
     uint8_t           *data;
-    KOS_OBJ_ID         arg;
     ADDR_LEN           addr_len      = 0;
     uint32_t           offset;
     int                error         = KOS_SUCCESS;
     int                saved_errno   = 0;
 
-    assert(KOS_get_array_size(args_obj) >= 3);
+    assert(num_args >= 3);
 
-    KOS_init_local(     ctx, &ret);
-    KOS_init_local(     ctx, &buf);
-    KOS_init_local_with(ctx, &args, args_obj);
+    KOS_init_local(ctx, &ret);
+    KOS_init_local(ctx, &buf);
 
     TRY(acquire_socket_object(ctx, this_obj, &socket_holder));
 
-    arg = KOS_array_read(ctx, args.o, 0);
-    TRY_OBJID(arg);
-
-    TRY(KOS_get_integer(ctx, arg, &to_read));
+    TRY(KOS_get_integer(ctx, args[0], &to_read));
 
     if (to_read < 1)
         to_read = 1;
 
-    arg = KOS_array_read(ctx, args.o, 2);
-    TRY_OBJID(arg);
-
-    if ( ! IS_NUMERIC_OBJ(arg)) {
+    if ( ! IS_NUMERIC_OBJ(args[2])) {
         KOS_raise_printf(ctx, "flags argument is %s but expected integer",
-                         KOS_get_type_name(GET_OBJ_TYPE(arg)));
+                         KOS_get_type_name(GET_OBJ_TYPE(args[2])));
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
     else
-        TRY(KOS_get_integer(ctx, arg, &flags64));
+        TRY(KOS_get_integer(ctx, args[2], &flags64));
 
     if (flags64 & (MSG_OOB | MSG_PEEK | MSG_WAITALL)) {
         KOS_raise_printf(ctx, "flags argument 0x%" PRIx64 " contains unrecognized bits", flags64);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
-    buf.o = KOS_array_read(ctx, args.o, 1);
-    TRY_OBJID(buf.o);
+    buf.o = args[1];
 
     if (buf.o == KOS_VOID)
         buf.o = KOS_new_buffer(ctx, 0);
@@ -1186,7 +1168,7 @@ static KOS_OBJ_ID kos_recvfrom(KOS_CONTEXT ctx,
 cleanup:
     release_socket(socket_holder);
 
-    ret.o = KOS_destroy_top_locals(ctx, &args, &ret);
+    ret.o = KOS_destroy_top_locals(ctx, &buf, &ret);
 
     return error ? KOS_BADPTR : ret.o;
 }
@@ -1229,7 +1211,7 @@ static KOS_OBJ_ID kos_wait(KOS_CONTEXT ctx,
     fd_set             fds;
     KOS_SOCKET_HOLDER *socket_holder;
     KOS_LOCAL          args;
-    KOS_LOCAL          this_;
+    KOS_LOCAL          self;
     KOS_OBJ_ID         wait_obj;
     KOS_OBJ_ID         ret_obj     = KOS_FALSE;
     int                nfds        = 0;
@@ -1238,10 +1220,10 @@ static KOS_OBJ_ID kos_wait(KOS_CONTEXT ctx,
 
     memset(&timeout, 0, sizeof(timeout));
 
-    KOS_init_local_with(ctx, &this_, this_obj);
+    KOS_init_local_with(ctx, &self, this_obj);
     KOS_init_local_with(ctx, &args,  args_obj);
 
-    TRY(acquire_socket_object(ctx, this_.o, &socket_holder));
+    TRY(acquire_socket_object(ctx, self.o, &socket_holder));
 
     assert(KOS_get_array_size(args.o) >= 1);
 
@@ -1305,7 +1287,7 @@ static KOS_OBJ_ID kos_wait(KOS_CONTEXT ctx,
 cleanup:
     release_socket(socket_holder);
 
-    KOS_destroy_top_locals(ctx, &args, &this_);
+    KOS_destroy_top_locals(ctx, &args, &self);
 
     return error ? KOS_BADPTR : ret_obj;
 }
@@ -1329,9 +1311,10 @@ cleanup:
  * However, the sending functions `send()`, `write()`, `sendto()` will
  * still block until all the data is sent.
  */
-static KOS_OBJ_ID get_blocking(KOS_CONTEXT ctx,
-                               KOS_OBJ_ID  this_obj,
-                               KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID get_blocking(const KOS_CONTEXT             ctx,
+                               const KOS_OBJ_ID              this_obj,
+                               const uint32_t                num_args,
+                               KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_SOCKET_HOLDER *socket_holder = KOS_NULL;
     int                blocking      = 1;
@@ -1370,33 +1353,30 @@ cleanup:
     return error ? KOS_BADPTR : KOS_BOOL(blocking);
 }
 
-static KOS_OBJ_ID set_blocking(KOS_CONTEXT ctx,
-                               KOS_OBJ_ID  this_obj,
-                               KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID set_blocking(const KOS_CONTEXT             ctx,
+                               const KOS_OBJ_ID              this_obj,
+                               const uint32_t                num_args,
+                               KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    KOS_LOCAL          this_;
+    KOS_LOCAL          self;
     KOS_SOCKET_HOLDER *socket_holder = KOS_NULL;
-    KOS_OBJ_ID         arg;
     int                blocking;
     int                saved_errno   = 0;
     int                error         = KOS_SUCCESS;
 
-    assert(KOS_get_array_size(args_obj) >= 1);
+    assert(num_args >= 1);
 
-    KOS_init_local_with(ctx, &this_, this_obj);
+    KOS_init_local_with(ctx, &self, this_obj);
 
-    TRY(acquire_socket_object(ctx, this_.o, &socket_holder));
+    TRY(acquire_socket_object(ctx, self.o, &socket_holder));
 
-    arg = KOS_array_read(ctx, args_obj, 0);
-    TRY_OBJID(arg);
-
-    if (GET_OBJ_TYPE(arg) != OBJ_BOOLEAN) {
+    if (GET_OBJ_TYPE(args[0]) != OBJ_BOOLEAN) {
         KOS_raise_printf(ctx, "blocking is a boolean, cannot set %s",
-                         KOS_get_type_name(GET_OBJ_TYPE(arg)));
+                         KOS_get_type_name(GET_OBJ_TYPE(args[0])));
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
-    blocking = KOS_get_bool(arg);
+    blocking = KOS_get_bool(args[0]);
 
     KOS_suspend_context(ctx);
 
@@ -1439,9 +1419,9 @@ static KOS_OBJ_ID set_blocking(KOS_CONTEXT ctx,
 cleanup:
     release_socket(socket_holder);
 
-    this_.o = KOS_destroy_top_local(ctx, &this_);
+    self.o = KOS_destroy_top_local(ctx, &self);
 
-    return error ? KOS_BADPTR : this_.o;
+    return error ? KOS_BADPTR : self.o;
 }
 
 static int send_loop(KOS_SOCKET              socket_fd,
@@ -1637,7 +1617,7 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
 {
     KOS_VECTOR         cstr;
     KOS_LOCAL          args;
-    KOS_LOCAL          this_;
+    KOS_LOCAL          self;
     KOS_SOCKET_HOLDER *socket_holder = KOS_NULL;
     const uint32_t     num_args      = KOS_get_array_size(args_obj);
     uint32_t           i_arg;
@@ -1645,12 +1625,12 @@ static KOS_OBJ_ID kos_write(KOS_CONTEXT ctx,
 
     KOS_vector_init(&cstr);
 
-    KOS_init_locals(ctx, &args, &this_, kos_end_locals);
+    KOS_init_locals(ctx, &args, &self, kos_end_locals);
 
     args.o  = args_obj;
-    this_.o = this_obj;
+    self.o = this_obj;
 
-    TRY(acquire_socket_object(ctx, this_.o, &socket_holder));
+    TRY(acquire_socket_object(ctx, self.o, &socket_holder));
 
     for (i_arg = 0; i_arg < num_args; i_arg++) {
 
@@ -1665,9 +1645,9 @@ cleanup:
 
     KOS_vector_destroy(&cstr);
 
-    this_.o = KOS_destroy_top_locals(ctx, &args, &this_);
+    self.o = KOS_destroy_top_locals(ctx, &args, &self);
 
-    return error ? KOS_BADPTR : this_.o;
+    return error ? KOS_BADPTR : self.o;
 }
 
 static const KOS_CONVERT send_args[3] = {
@@ -1701,7 +1681,7 @@ static KOS_OBJ_ID kos_send(KOS_CONTEXT ctx,
 {
     KOS_VECTOR         cstr;
     KOS_LOCAL          args;
-    KOS_LOCAL          this_;
+    KOS_LOCAL          self;
     KOS_OBJ_ID         arg;
     KOS_SOCKET_HOLDER *socket_holder = KOS_NULL;
     int64_t            flags64       = 0;
@@ -1711,12 +1691,12 @@ static KOS_OBJ_ID kos_send(KOS_CONTEXT ctx,
 
     KOS_vector_init(&cstr);
 
-    KOS_init_locals(ctx, &args, &this_, kos_end_locals);
+    KOS_init_locals(ctx, &args, &self, kos_end_locals);
 
     args.o  = args_obj;
-    this_.o = this_obj;
+    self.o = this_obj;
 
-    TRY(acquire_socket_object(ctx, this_.o, &socket_holder));
+    TRY(acquire_socket_object(ctx, self.o, &socket_holder));
 
     arg = KOS_array_read(ctx, args.o, 1);
     TRY_OBJID(arg);
@@ -1744,9 +1724,9 @@ cleanup:
 
     KOS_vector_destroy(&cstr);
 
-    this_.o = KOS_destroy_top_locals(ctx, &args, &this_);
+    self.o = KOS_destroy_top_locals(ctx, &args, &self);
 
-    return error ? KOS_BADPTR : this_.o;
+    return error ? KOS_BADPTR : self.o;
 }
 
 static const KOS_CONVERT sendto_args[5] = {
@@ -1789,9 +1769,8 @@ static KOS_OBJ_ID kos_sendto(KOS_CONTEXT ctx,
     struct KOS_MEMPOOL_S alloc;
     KOS_VECTOR           port_cstr;
     KOS_VECTOR           cstr;
-    KOS_LOCAL            print_args;
     KOS_LOCAL            args;
-    KOS_LOCAL            this_;
+    KOS_LOCAL            self;
     struct addrinfo     *address_info  = KOS_NULL;
     struct addrinfo      hints;
     int64_t              flags64       = 0;
@@ -1806,10 +1785,10 @@ static KOS_OBJ_ID kos_sendto(KOS_CONTEXT ctx,
     KOS_vector_init(&port_cstr);
     KOS_mempool_init_small(&alloc, 512U);
 
-    KOS_init_locals(ctx, &args, &this_, kos_end_locals);
+    KOS_init_locals(ctx, &args, &self, kos_end_locals);
 
     args.o  = args_obj;
-    this_.o = this_obj;
+    self.o = this_obj;
 
     TRY(KOS_extract_native_from_array(ctx, args_obj, "argument", sendto_args, &alloc, &address_cstr));
 
@@ -1820,7 +1799,7 @@ static KOS_OBJ_ID kos_sendto(KOS_CONTEXT ctx,
         TRY(get_port(ctx, port_arg, &port_cstr));
     }
 
-    TRY(acquire_socket_object(ctx, this_.o, &socket_holder));
+    TRY(acquire_socket_object(ctx, self.o, &socket_holder));
 
     KOS_suspend_context(ctx);
 
@@ -1877,9 +1856,9 @@ cleanup:
     KOS_vector_destroy(&port_cstr);
     KOS_vector_destroy(&cstr);
 
-    this_.o = KOS_destroy_top_locals(ctx, &args, &this_);
+    self.o = KOS_destroy_top_locals(ctx, &args, &self);
 
-    return error ? KOS_BADPTR : this_.o;
+    return error ? KOS_BADPTR : self.o;
 }
 
 #ifdef _WIN32
@@ -2034,9 +2013,10 @@ static const KOS_CONVERT getaddrinfo_args[3] = {
  *     {"type": 2, "domain": 2, "port": 80, "address": "127.0.0.1", "protocol": 17}
  *     {"type": 1, "domain": 2, "port": 80, "address": "127.0.0.1", "protocol": 6}
  */
-static KOS_OBJ_ID kos_getaddrinfo(KOS_CONTEXT ctx,
-                                  KOS_OBJ_ID  this_obj,
-                                  KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_getaddrinfo(const KOS_CONTEXT             ctx,
+                                  const KOS_OBJ_ID              this_obj,
+                                  const uint32_t                num_args,
+                                  KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_LOCAL            addr_infos;
     KOS_LOCAL            val;
@@ -2049,41 +2029,33 @@ static KOS_OBJ_ID kos_getaddrinfo(KOS_CONTEXT ctx,
     int                  i;
     int                  error;
 
-    assert(KOS_get_array_size(args_obj) >= 2);
+    assert(num_args >= 2);
 
     KOS_vector_init(&address_cstr);
     KOS_vector_init(&port_cstr);
 
     KOS_init_locals(ctx, &one_info, &val, &addr_infos, kos_end_locals);
 
-    one_info.o = args_obj;
-
-    val.o = KOS_array_read(ctx, one_info.o, 0);
-    TRY_OBJID(val.o);
-
-    if (val.o != KOS_VOID) {
-        if (GET_OBJ_TYPE(val.o) != OBJ_STRING) {
+    if (args[0] != KOS_VOID) {
+        if (GET_OBJ_TYPE(args[0]) != OBJ_STRING) {
             KOS_raise_printf(ctx, "address argument is %s but expected string",
-                             KOS_get_type_name(GET_OBJ_TYPE(val.o)));
+                             KOS_get_type_name(GET_OBJ_TYPE(args[0])));
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
 
-        TRY(KOS_string_to_cstr_vec(ctx, val.o, &address_cstr));
+        TRY(KOS_string_to_cstr_vec(ctx, args[0], &address_cstr));
     }
     if ( ! address_cstr.size || ! address_cstr.buffer[0])
         address_cstr.buffer = KOS_NULL;
 
-    val.o = KOS_array_read(ctx, one_info.o, 1);
-    TRY_OBJID(val.o);
-
-    if (val.o != KOS_VOID) {
-        if (GET_OBJ_TYPE(val.o) == OBJ_STRING)
-            TRY(KOS_string_to_cstr_vec(ctx, val.o, &port_cstr));
-        else if (GET_OBJ_TYPE(val.o) <= OBJ_INTEGER) {
+    if (args[1] != KOS_VOID) {
+        if (GET_OBJ_TYPE(args[1]) == OBJ_STRING)
+            TRY(KOS_string_to_cstr_vec(ctx, args[1], &port_cstr));
+        else if (GET_OBJ_TYPE(args[1]) <= OBJ_INTEGER) {
             int64_t  int_value;
             unsigned len;
 
-            TRY(KOS_get_integer(ctx, val.o, &int_value));
+            TRY(KOS_get_integer(ctx, args[1], &int_value));
 
             if (int_value < 0 || int_value > 0xFFFF) {
                 KOS_raise_printf(ctx, "port %" PRId64 " is out of range", int_value);
@@ -2097,7 +2069,7 @@ static KOS_OBJ_ID kos_getaddrinfo(KOS_CONTEXT ctx,
         }
         else {
             KOS_raise_printf(ctx, "port argument is %s but expected string or integer",
-                             KOS_get_type_name(GET_OBJ_TYPE(val.o)));
+                             KOS_get_type_name(GET_OBJ_TYPE(args[1])));
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
         }
     }
@@ -2199,47 +2171,40 @@ static const KOS_CONVERT getsockopt_args[3] = {
  *  - SO_SNDBUF - integer
  *  - SO_SNDTIMEO - float (milliseconds)
  */
-static KOS_OBJ_ID kos_getsockopt(KOS_CONTEXT ctx,
-                                 KOS_OBJ_ID  this_obj,
-                                 KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_getsockopt(const KOS_CONTEXT             ctx,
+                                 const KOS_OBJ_ID              this_obj,
+                                 const uint32_t                num_args,
+                                 KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    KOS_LOCAL          args;
-    KOS_LOCAL          this_;
+    KOS_LOCAL          self;
     KOS_LOCAL          value;
     KOS_SOCKET_HOLDER *socket_holder;
     int64_t            level;
     int64_t            option;
     int                error;
 
-    assert(KOS_get_array_size(args_obj) > 0);
+    assert(num_args > 0);
 
     KOS_init_local(     ctx, &value);
-    KOS_init_local_with(ctx, &this_, this_obj);
-    KOS_init_local_with(ctx, &args,  args_obj);
+    KOS_init_local_with(ctx, &self, this_obj);
 
-    TRY(acquire_socket_object(ctx, this_.o, &socket_holder));
+    TRY(acquire_socket_object(ctx, self.o, &socket_holder));
 
-    value.o = KOS_array_read(ctx, args.o, 0);
-    TRY_OBJID(value.o);
-
-    if (GET_OBJ_TYPE(value.o) > OBJ_INTEGER) {
+    if (GET_OBJ_TYPE(args[0]) > OBJ_INTEGER) {
         KOS_raise_printf(ctx, "level argument is %s but expected integer",
-                         KOS_get_type_name(GET_OBJ_TYPE(value.o)));
+                         KOS_get_type_name(GET_OBJ_TYPE(args[0])));
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
-    TRY(KOS_get_integer(ctx, value.o, &level));
+    TRY(KOS_get_integer(ctx, args[0], &level));
 
-    value.o = KOS_array_read(ctx, args.o, 1);
-    TRY_OBJID(value.o);
-
-    if (GET_OBJ_TYPE(value.o) > OBJ_INTEGER) {
+    if (GET_OBJ_TYPE(args[1]) > OBJ_INTEGER) {
         KOS_raise_printf(ctx, "option argument is %s but expected integer",
-                         KOS_get_type_name(GET_OBJ_TYPE(value.o)));
+                         KOS_get_type_name(GET_OBJ_TYPE(args[1])));
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
-    TRY(KOS_get_integer(ctx, value.o, &option));
+    TRY(KOS_get_integer(ctx, args[1], &option));
 
     if (level == SOL_SOCKET) {
         switch (option) {
@@ -2297,7 +2262,7 @@ static KOS_OBJ_ID kos_getsockopt(KOS_CONTEXT ctx,
 cleanup:
     release_socket(socket_holder);
 
-    value.o = KOS_destroy_top_locals(ctx, &args, &value);
+    value.o = KOS_destroy_top_locals(ctx, &self, &value);
 
     return error ? KOS_BADPTR : value.o;
 }
@@ -2502,7 +2467,7 @@ static KOS_OBJ_ID kos_setsockopt(KOS_CONTEXT ctx,
 {
     KOS_LOCAL          args;
     KOS_LOCAL          value;
-    KOS_LOCAL          this_;
+    KOS_LOCAL          self;
     KOS_SOCKET_HOLDER *socket_holder;
     int64_t            level;
     int64_t            option;
@@ -2510,11 +2475,11 @@ static KOS_OBJ_ID kos_setsockopt(KOS_CONTEXT ctx,
 
     assert(KOS_get_array_size(args_obj) > 1);
 
-    KOS_init_local_with(ctx, &this_, this_obj);
+    KOS_init_local_with(ctx, &self, this_obj);
     KOS_init_local(     ctx, &value);
     KOS_init_local_with(ctx, &args,  args_obj);
 
-    TRY(acquire_socket_object(ctx, this_.o, &socket_holder));
+    TRY(acquire_socket_object(ctx, self.o, &socket_holder));
 
     value.o = KOS_array_read(ctx, args.o, 0);
     TRY_OBJID(value.o);
@@ -2593,9 +2558,9 @@ static KOS_OBJ_ID kos_setsockopt(KOS_CONTEXT ctx,
 cleanup:
     release_socket(socket_holder);
 
-    this_.o = KOS_destroy_top_locals(ctx, &args, &this_);
+    self.o = KOS_destroy_top_locals(ctx, &args, &self);
 
-    return error ? KOS_BADPTR : this_.o;
+    return error ? KOS_BADPTR : self.o;
 }
 
 KOS_DECLARE_STATIC_CONST_STRING(str_how, "how");
@@ -2618,21 +2583,22 @@ static const KOS_CONVERT shutdown_args[2] = {
  *
  * On error throws an exception.
  */
-static KOS_OBJ_ID kos_shutdown(KOS_CONTEXT ctx,
-                               KOS_OBJ_ID  this_obj,
-                               KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_shutdown(const KOS_CONTEXT             ctx,
+                               const KOS_OBJ_ID              this_obj,
+                               const uint32_t                num_args,
+                               KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    KOS_LOCAL          this_;
+    KOS_LOCAL          self;
     KOS_SOCKET_HOLDER *socket_holder = KOS_NULL;
     int                saved_errno;
     int                error;
     int32_t            how           = 0;
 
-    KOS_init_local_with(ctx, &this_, this_obj);
+    KOS_init_local_with(ctx, &self, this_obj);
 
-    TRY(KOS_extract_native_from_array(ctx, args_obj, "argument", shutdown_args, KOS_NULL, &how));
+    TRY(KOS_extract_native_from_args(ctx, 1, args, "argument", shutdown_args, KOS_NULL, &how));
 
-    TRY(acquire_socket_object(ctx, this_.o, &socket_holder));
+    TRY(acquire_socket_object(ctx, self.o, &socket_holder));
 
     KOS_suspend_context(ctx);
 
@@ -2652,9 +2618,9 @@ static KOS_OBJ_ID kos_shutdown(KOS_CONTEXT ctx,
 cleanup:
     release_socket(socket_holder);
 
-    this_.o = KOS_destroy_top_local(ctx, &this_);
+    self.o = KOS_destroy_top_local(ctx, &self);
 
-    return error ? KOS_BADPTR : this_.o;
+    return error ? KOS_BADPTR : self.o;
 }
 
 KOS_INIT_MODULE(net, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
@@ -2698,26 +2664,26 @@ KOS_INIT_MODULE(net, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 #endif
 
     TRY_ADD_CONSTRUCTOR(    ctx, module.o,                 "socket",      kos_socket,      socket_args, &socket_proto.o);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "accept",      kos_accept,      KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "bind",        kos_bind,        bind_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "close",       kos_close,       KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "connect",     kos_connect,     connect_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "getsockopt",  kos_getsockopt,  getsockopt_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "listen",      kos_listen,      listen_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "read",        kos_recv,        recv_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "recv",        kos_recv,        recv_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "recvfrom",    kos_recvfrom,    recv_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "release",     kos_close,       KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, socket_proto.o, "accept",      kos_accept,      KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, socket_proto.o, "bind",        kos_bind,        bind_args);
+    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, socket_proto.o, "close",       kos_close,       KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, socket_proto.o, "connect",     kos_connect,     connect_args);
+    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, socket_proto.o, "getsockopt",  kos_getsockopt,  getsockopt_args);
+    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, socket_proto.o, "listen",      kos_listen,      listen_args);
+    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, socket_proto.o, "read",        kos_recv,        recv_args);
+    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, socket_proto.o, "recv",        kos_recv,        recv_args);
+    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, socket_proto.o, "recvfrom",    kos_recvfrom,    recv_args);
+    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, socket_proto.o, "release",     kos_close,       KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "wait",        kos_wait,        wait_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "send",        kos_send,        send_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "sendto",      kos_sendto,      sendto_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "setsockopt",  kos_setsockopt,  setsockopt_args);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "shutdown",    kos_shutdown,    shutdown_args);
+    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, socket_proto.o, "shutdown",    kos_shutdown,    shutdown_args);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "write",       kos_write,       KOS_NULL);
 
-    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, socket_proto.o, "blocking",    get_blocking,    KOS_NULL);
+    TRY_ADD_MEMBER_PROPERT2(ctx, module.o, socket_proto.o, "blocking",    get_blocking,    KOS_NULL);
 
-    TRY_ADD_FUNCTION(       ctx, module.o,                 "getaddrinfo", kos_getaddrinfo, getaddrinfo_args);
+    TRY_ADD_FUNCTIO2(       ctx, module.o,                 "getaddrinfo", kos_getaddrinfo, getaddrinfo_args);
 
 #ifndef _WIN32
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "AF_LOCAL",     AF_LOCAL);
