@@ -2045,52 +2045,46 @@ cleanup:
  *
  *     > re(r"down.*(rabbit)").find("tumbling down the rabbit hole")
  */
-static KOS_OBJ_ID re_find(KOS_CONTEXT ctx,
-                          KOS_OBJ_ID  this_obj,
-                          KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID re_find(const KOS_CONTEXT             ctx,
+                          const KOS_OBJ_ID              this_obj,
+                          const uint32_t                num_args,
+                          KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
+    KOS_OBJ_ID           match;
+    struct RE_POSS_STACK poss_stack;
+    struct RE_OBJ       *re;
     int                  error = KOS_SUCCESS;
     int                  begin_pos;
     int                  end_pos;
     int                  pos;
-    KOS_LOCAL            str;
-    KOS_LOCAL            match;
-    struct RE_POSS_STACK poss_stack;
-    struct RE_OBJ       *re;
 
-    assert(KOS_get_array_size(args_obj) >= 3);
+    assert(num_args >= 3);
 
     init_possibility_stack(&poss_stack);
 
-    KOS_init_local(ctx, &match);
-
-    KOS_init_local_with(ctx, &str, KOS_array_read(ctx, args_obj, 0));
-    TRY_OBJID(str.o);
-
-    if (GET_OBJ_TYPE(str.o) != OBJ_STRING)
+    if (GET_OBJ_TYPE(args[0]) != OBJ_STRING)
         RAISE_EXCEPTION_STR(str_err_not_string);
 
-    end_pos = (int)KOS_get_string_length(str.o);
+    end_pos = (int)KOS_get_string_length(args[0]);
 
     re = (struct RE_OBJ *)KOS_object_get_private(this_obj, &regex_priv_class);
     if ( ! re)
         RAISE_EXCEPTION_STR(str_err_not_re);
 
-    TRY(KOS_get_index_arg(ctx, args_obj, 1, 0,         end_pos, KOS_VOID_INDEX_IS_BEGIN, &begin_pos));
-    TRY(KOS_get_index_arg(ctx, args_obj, 2, begin_pos, end_pos, KOS_VOID_INDEX_IS_END,   &end_pos));
+    TRY(KOS_get_index(ctx, args[1], 0,         end_pos, KOS_VOID_INDEX_IS_BEGIN, &begin_pos));
+    TRY(KOS_get_index(ctx, args[2], begin_pos, end_pos, KOS_VOID_INDEX_IS_END,   &end_pos));
 
     for (pos = begin_pos; pos <= end_pos; pos++) {
         /* TODO optimize the case when the re begins with ^: don't look beyond begin_pos */
-        match.o = match_string(ctx, re, str.o, (uint32_t)begin_pos, (uint32_t)pos, (uint32_t)end_pos, &poss_stack);
-        if (match.o != KOS_VOID)
+        match = match_string(ctx, re, args[0], (uint32_t)begin_pos, (uint32_t)pos, (uint32_t)end_pos, &poss_stack);
+        if (match != KOS_VOID)
             break;
     }
 
 cleanup:
-    match.o = KOS_destroy_top_locals(ctx, &str, &match);
     destroy_possibility_stack(&poss_stack);
 
-    return error ? KOS_BADPTR : match.o;
+    return error ? KOS_BADPTR : match;
 }
 
 KOS_INIT_MODULE(re, KOS_MODULE_NEEDS_KOS_SOURCE)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
@@ -2112,7 +2106,7 @@ KOS_INIT_MODULE(re, KOS_MODULE_NEEDS_KOS_SOURCE)(KOS_CONTEXT ctx, KOS_OBJ_ID mod
     KOS_init_local(     ctx, &proto);
 
     TRY_ADD_CONSTRUCTOR(    ctx, module.o,          "re_uncached", re_ctor, re_uncached_args, &proto.o);
-    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "find",        re_find, find_args);
+    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, proto.o, "find",        re_find, find_args);
 
 cleanup:
     KOS_destroy_top_locals(ctx, &proto, &module);
