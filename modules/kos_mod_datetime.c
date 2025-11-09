@@ -18,9 +18,10 @@ static const char str_err_cannot_get_time[] = "failed to get system time";
  * Returns current time, in microseconds since the Epoch.
  *
  */
-static KOS_OBJ_ID now(KOS_CONTEXT ctx,
-                      KOS_OBJ_ID  this_obj,
-                      KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID now(const KOS_CONTEXT             ctx,
+                      const KOS_OBJ_ID              this_obj,
+                      const uint32_t                num_args,
+                      KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_OBJ_ID    ret     = KOS_BADPTR;
     const int64_t time_us = KOS_get_time_us();
@@ -40,7 +41,7 @@ int kos_module_datetime_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 
     KOS_init_local_with(ctx, &module, module_obj);
 
-    TRY_ADD_FUNCTION(ctx, module.o, "now", now, KOS_NULL);
+    TRY_ADD_FUNCTIO2(ctx, module.o, "now", now, KOS_NULL);
 
 cleanup:
     KOS_destroy_top_local(ctx, &module);
