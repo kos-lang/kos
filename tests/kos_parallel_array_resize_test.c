@@ -90,9 +90,10 @@ static int run_test(KOS_CONTEXT ctx, struct THREAD_DATA *data)
     return 0;
 }
 
-static KOS_OBJ_ID test_thread_func(KOS_CONTEXT ctx,
-                                   KOS_OBJ_ID  this_obj,
-                                   KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID test_thread_func(const KOS_CONTEXT             ctx,
+                                   const KOS_OBJ_ID              this_obj,
+                                   const uint32_t                num_args,
+                                   KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     struct THREAD_DATA *test  = (struct THREAD_DATA *)this_obj;
 

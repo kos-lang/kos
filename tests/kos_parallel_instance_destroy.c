@@ -12,9 +12,10 @@ typedef struct INIT_DATA_S {
     KOS_ATOMIC(uint32_t) go;
 } INIT_DATA;
 
-static KOS_OBJ_ID test_thread_func(KOS_CONTEXT ctx,
-                                   KOS_OBJ_ID  this_obj,
-                                   KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID test_thread_func(const KOS_CONTEXT             ctx,
+                                   const KOS_OBJ_ID              this_obj,
+                                   const uint32_t                num_args,
+                                   KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     int        error;
     INIT_DATA *go = (INIT_DATA *)this_obj;

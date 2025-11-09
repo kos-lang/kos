@@ -64,9 +64,10 @@ static int write_props_inner(KOS_CONTEXT       ctx,
     return 0;
 }
 
-static KOS_OBJ_ID write_props(KOS_CONTEXT ctx,
-                              KOS_OBJ_ID  this_obj,
-                              KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID write_props(const KOS_CONTEXT             ctx,
+                              const KOS_OBJ_ID              this_obj,
+                              const uint32_t                num_args,
+                              KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     struct THREAD_DATA *test = (struct THREAD_DATA *)this_obj;
 
@@ -106,9 +107,10 @@ static int read_props_inner(KOS_CONTEXT       ctx,
     return 0;
 }
 
-static KOS_OBJ_ID read_props(KOS_CONTEXT ctx,
-                             KOS_OBJ_ID  this_obj,
-                             KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID read_props(const KOS_CONTEXT             ctx,
+                             const KOS_OBJ_ID              this_obj,
+                             const uint32_t                num_args,
+                             KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     struct THREAD_DATA *test = (struct THREAD_DATA *)this_obj;
 

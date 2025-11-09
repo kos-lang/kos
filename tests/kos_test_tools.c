@@ -13,7 +13,7 @@
 #include "../core/kos_try.h"
 
 int create_thread(KOS_CONTEXT          ctx,
-                  KOS_FUNCTION_HANDLER proc,
+                  KOS_FUNCTION_HANDLE2 proc,
                   void                *cookie,
                   KOS_THREAD         **thread)
 {
@@ -23,7 +23,7 @@ int create_thread(KOS_CONTEXT          ctx,
 
     KOS_init_local(ctx, &func);
 
-    func.o = KOS_new_builtin_function(ctx, KOS_STR_EMPTY, proc, KOS_NULL);
+    func.o = KOS_new_builtin_functio2(ctx, KOS_STR_EMPTY, proc, KOS_NULL);
     TRY_OBJID(func.o);
 
     args_obj = KOS_new_array(ctx, 0);
