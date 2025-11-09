@@ -1097,17 +1097,15 @@ static void redirect_io(FILE *src_file,
  *
  * Returns a `process` object which can be used to obtain information about the spawned child process.
  */
-static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
-                        KOS_OBJ_ID  this_obj,
-                        KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID spawn(const KOS_CONTEXT             ctx,
+                        const KOS_OBJ_ID              this_obj,
+                        const uint32_t                num_args,
+                        KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_LOCAL          process;
-    KOS_LOCAL          args;
     KOS_LOCAL          desc;
     KOS_MEMPOOL        alloc;
-    KOS_OBJ_ID         value_obj;
     KOS_OBJ_ID         inherit_env;
-    KOS_OBJ_ID         file_obj;
     struct KOS_WAIT_S *wait_info;
     char              *program_cstr      = KOS_NULL;
     char              *cwd               = KOS_NULL;
@@ -1125,12 +1123,11 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
 #endif
     int                error             = KOS_SUCCESS;
 
-    assert(KOS_get_array_size(args_obj) >= 8);
+    assert(num_args >= 8);
 
     KOS_mempool_init_small(&alloc, 0x1000U);
     KOS_init_local(     ctx, &process);
-    KOS_init_local_with(ctx, &args, args_obj);
-    KOS_init_local_with(ctx, &desc, KOS_array_read(ctx, args_obj, 0));
+    KOS_init_local_with(ctx, &desc, args[0]);
 
     /* Create return object which can be used to manage the child process */
     process.o = create_wait_object(ctx);
@@ -1139,58 +1136,38 @@ static KOS_OBJ_ID spawn(KOS_CONTEXT ctx,
     TRY(get_wait_info(ctx, process.o, &wait_info));
 
     /* Get 'cwd' */
-    value_obj = KOS_array_read(ctx, args.o, 3);
-    TRY_OBJID(value_obj);
-    TRY(check_arg_type(ctx, value_obj, "cwd", OBJ_STRING));
-
-    TRY(get_string(ctx, value_obj, &alloc, &cwd));
+    TRY(check_arg_type(ctx, args[3], "cwd", OBJ_STRING));
+    TRY(get_string(ctx, args[3], &alloc, &cwd));
 
     /* Get 'program' */
-    value_obj = KOS_array_read(ctx, args.o, 0);
-    TRY_OBJID(value_obj);
-    TRY(check_arg_type(ctx, value_obj, "program", OBJ_STRING));
-
-    TRY(get_string(ctx, value_obj, &alloc, &program_cstr));
-
+    TRY(check_arg_type(ctx, args[0], "program", OBJ_STRING));
+    TRY(get_string(ctx, args[0], &alloc, &program_cstr));
     TRY(find_program(ctx, &alloc, cwd, &program_cstr));
 
     /* Get 'args' */
-    value_obj = KOS_array_read(ctx, args.o, 1);
-    TRY_OBJID(value_obj);
-    TRY(check_arg_type(ctx, value_obj, "args", OBJ_ARRAY));
-
-    TRY(get_args_array(ctx, value_obj, &alloc, program_cstr, &args_array));
+    TRY(check_arg_type(ctx, args[1], "args", OBJ_ARRAY));
+    TRY(get_args_array(ctx, args[1], &alloc, program_cstr, &args_array));
 
     /* Get 'inherit_env' */
-    inherit_env = KOS_array_read(ctx, args.o, 4);
-    TRY_OBJID(inherit_env);
+    inherit_env = args[4];
     TRY(check_arg_type(ctx, inherit_env, "inherit_env", OBJ_BOOLEAN));
 
     /* Get 'env' */
-    value_obj = KOS_array_read(ctx, args.o, 2);
-    TRY_OBJID(value_obj);
-    if (value_obj != KOS_VOID)
-        TRY(check_arg_type(ctx, value_obj, "env", OBJ_OBJECT));
-
-    TRY(get_env_array(ctx, value_obj, KOS_get_bool(inherit_env), &alloc, &env_array));
+    if (args[2] != KOS_VOID)
+        TRY(check_arg_type(ctx, args[2], "env", OBJ_OBJECT));
+    TRY(get_env_array(ctx, args[2], KOS_get_bool(inherit_env), &alloc, &env_array));
 
     /* Get 'stdin' */
-    file_obj = KOS_array_read(ctx, args.o, 5);
-    TRY_OBJID(file_obj);
-    if (file_obj != KOS_VOID)
-        TRY(get_file(ctx, file_obj, &stdin_file));
+    if (args[5] != KOS_VOID)
+        TRY(get_file(ctx, args[5], &stdin_file));
 
     /* Get 'stdout' */
-    file_obj = KOS_array_read(ctx, args.o, 6);
-    TRY_OBJID(file_obj);
-    if (file_obj != KOS_VOID)
-        TRY(get_file(ctx, file_obj, &stdout_file));
+    if (args[6] != KOS_VOID)
+        TRY(get_file(ctx, args[6], &stdout_file));
 
     /* Get 'stderr' */
-    file_obj = KOS_array_read(ctx, args.o, 7);
-    TRY_OBJID(file_obj);
-    if (file_obj != KOS_VOID)
-        TRY(get_file(ctx, file_obj, &stderr_file));
+    if (args[7] != KOS_VOID)
+        TRY(get_file(ctx, args[7], &stderr_file));
 
 #ifdef _WIN32
     {
@@ -1559,20 +1536,16 @@ static const KOS_CONVERT exit_args[2] = {
  *
  *      > exit(1)
  */
-static KOS_OBJ_ID kos_exit(KOS_CONTEXT ctx,
-                           KOS_OBJ_ID  this_obj,
-                           KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_exit(const KOS_CONTEXT             ctx,
+                           const KOS_OBJ_ID              this_obj,
+                           const uint32_t                num_args,
+                           KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    int64_t    exit_code;
-    KOS_OBJ_ID exit_code_obj;
-    int        error = KOS_SUCCESS;
+    int64_t exit_code;
 
-    assert(KOS_get_array_size(args_obj) > 0);
+    assert(num_args > 0);
 
-    exit_code_obj = KOS_array_read(ctx, args_obj, 0);
-    TRY_OBJID(exit_code_obj);
-
-    if (KOS_get_integer(ctx, exit_code_obj, &exit_code)) {
+    if (KOS_get_integer(ctx, args[0], &exit_code)) {
         KOS_clear_exception(ctx);
         exit_code = 0;
     }
@@ -1582,8 +1555,7 @@ static KOS_OBJ_ID kos_exit(KOS_CONTEXT ctx,
 
     exit((int)exit_code);
 
-cleanup:
-    return error ? KOS_BADPTR : KOS_VOID;
+    return KOS_VOID;
 }
 
 /* @item os getenv()
@@ -1599,23 +1571,21 @@ cleanup:
  *      > getenv("PATH")
  *      "/usr/bin:/bin:/usr/sbin:/sbin"
  */
-static KOS_OBJ_ID kos_getenv(KOS_CONTEXT ctx,
-                             KOS_OBJ_ID  this_obj,
-                             KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_getenv(const KOS_CONTEXT             ctx,
+                             const KOS_OBJ_ID              this_obj,
+                             const uint32_t                num_args,
+                             KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_VECTOR  cstr;
     KOS_OBJ_ID  obj = KOS_BADPTR;
     const char *env_var;
     int         error;
 
-    assert(KOS_get_array_size(args_obj) >= 2);
+    assert(num_args >= 2);
 
     KOS_vector_init(&cstr);
 
-    obj = KOS_array_read(ctx, args_obj, 0);
-    TRY_OBJID(obj);
-
-    TRY(KOS_string_to_cstr_vec(ctx, obj, &cstr));
+    TRY(KOS_string_to_cstr_vec(ctx, args[0], &cstr));
 
     env_var = getenv(cstr.buffer);
 
@@ -1626,10 +1596,8 @@ static KOS_OBJ_ID kos_getenv(KOS_CONTEXT ctx,
         obj = KOS_new_string(ctx, env_var, (unsigned)len);
         TRY_OBJID(obj);
     }
-    else {
-        obj = KOS_array_read(ctx, args_obj, 1);
-        TRY_OBJID(obj);
-    }
+    else
+        obj = args[1];
 
 cleanup:
     KOS_vector_destroy(&cstr);
@@ -1711,9 +1679,10 @@ static double get_windows_load_avg(void)
  *      > getloadavg()
  *      [1.38, 4.75, 5.60]
  */
-static KOS_OBJ_ID kos_getloadavg(KOS_CONTEXT ctx,
-                                 KOS_OBJ_ID  this_obj,
-                                 KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_getloadavg(const KOS_CONTEXT             ctx,
+                                 const KOS_OBJ_ID              this_obj,
+                                 const uint32_t                num_args,
+                                 KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     double    loadavg[3] = { 0.0, 0.0, 0.0 };
     KOS_LOCAL ret;
@@ -1801,10 +1770,10 @@ KOS_INIT_MODULE(os, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 
     KOS_atomic_write_relaxed_ptr(OBJPTR(MODULE, module.o)->priv, priv.o);
 
-    TRY_ADD_FUNCTION(       ctx, module.o,               "spawn",      spawn,          spawn_args);
-    TRY_ADD_FUNCTION(       ctx, module.o,               "exit",       kos_exit,       exit_args);
-    TRY_ADD_FUNCTION(       ctx, module.o,               "getenv",     kos_getenv,     getenv_args);
-    TRY_ADD_FUNCTION(       ctx, module.o,               "getloadavg", kos_getloadavg, KOS_NULL);
+    TRY_ADD_FUNCTIO2(       ctx, module.o,               "spawn",      spawn,          spawn_args);
+    TRY_ADD_FUNCTIO2(       ctx, module.o,               "exit",       kos_exit,       exit_args);
+    TRY_ADD_FUNCTIO2(       ctx, module.o,               "getenv",     kos_getenv,     getenv_args);
+    TRY_ADD_FUNCTIO2(       ctx, module.o,               "getloadavg", kos_getloadavg, KOS_NULL);
 
     TRY_ADD_CONSTRUCTOR(    ctx, module.o,               "process",    process_ctor,   KOS_NULL, &wait_proto.o);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, wait_proto.o, "wait",       wait_for_child, KOS_NULL);
