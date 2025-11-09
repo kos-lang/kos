@@ -95,7 +95,6 @@ _KOS_module_add_functio2
 _KOS_module_add_function
 _KOS_module_add_global
 _KOS_module_add_member_function
-_KOS_module_add_static_functio2
 _KOS_module_add_static_function
 _KOS_module_get_global
 _KOS_module_run_function
