@@ -435,9 +435,10 @@ static const KOS_CONVERT conv_gc_stats[22] = {
  * Throws an exception if there was an error, for example if the heap
  * ran out of memory.
  */
-static KOS_OBJ_ID collect_garbage(KOS_CONTEXT ctx,
-                                  KOS_OBJ_ID  this_obj,
-                                  KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID collect_garbage(const KOS_CONTEXT             ctx,
+                                  const KOS_OBJ_ID              this_obj,
+                                  const uint32_t                num_args,
+                                  KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_LOCAL    out;
     KOS_GC_STATS stats = KOS_GC_STATS_INIT(~0U);
@@ -482,14 +483,13 @@ static const KOS_CONVERT execute_args[4] = {
  *
  * Returns the result of the last statement in `script`.
  */
-static KOS_OBJ_ID execute(KOS_CONTEXT ctx,
-                          KOS_OBJ_ID  this_obj,
-                          KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID execute(const KOS_CONTEXT             ctx,
+                          const KOS_OBJ_ID              this_obj,
+                          const uint32_t                num_args,
+                          KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_VECTOR   name_cstr;
     KOS_VECTOR   data_cstr;
-    KOS_LOCAL    name;
-    KOS_OBJ_ID   arg_id;
     KOS_OBJ_ID   ret        = KOS_VOID;
     const char  *data       = KOS_NULL;
     unsigned     data_size  = 0;
@@ -499,29 +499,20 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx,
     KOS_vector_init(&name_cstr);
     KOS_vector_init(&data_cstr);
 
-    KOS_init_local(ctx, &name);
+    assert(num_args > 1);
 
-    assert(KOS_get_array_size(args_obj) > 1);
-
-    arg_id = KOS_array_read(ctx, args_obj, 2);
-    if (arg_id == KOS_TRUE)
+    if (args[2] == KOS_TRUE)
         flags |= KOS_IMPORT_BASE;
 
-    name.o = KOS_array_read(ctx, args_obj, 1);
-    TRY_OBJID(name.o);
-
-    if ((name.o != KOS_VOID) && (GET_OBJ_TYPE(name.o) != OBJ_STRING))
+    if ((args[1] != KOS_VOID) && (GET_OBJ_TYPE(args[1]) != OBJ_STRING))
         RAISE_EXCEPTION_STR(str_err_name_not_string);
 
-    arg_id = KOS_array_read(ctx, args_obj, 0);
-    TRY_OBJID(arg_id);
-
-    if (GET_OBJ_TYPE(arg_id) == OBJ_STRING) {
-        TRY(KOS_string_to_cstr_vec(ctx, arg_id, &data_cstr));
+    if (GET_OBJ_TYPE(args[0]) == OBJ_STRING) {
+        TRY(KOS_string_to_cstr_vec(ctx, args[0], &data_cstr));
         data_size = (unsigned)data_cstr.size - 1;
     }
-    else if (GET_OBJ_TYPE(arg_id) == OBJ_BUFFER) {
-        data_size = KOS_get_buffer_size(arg_id);
+    else if (GET_OBJ_TYPE(args[0]) == OBJ_BUFFER) {
+        data_size = KOS_get_buffer_size(args[0]);
 
         if (data_size) {
             if (KOS_vector_resize(&data_cstr, data_size)) {
@@ -529,7 +520,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx,
                 goto cleanup;
             }
 
-            memcpy(data_cstr.buffer, KOS_buffer_data_const(arg_id), data_size);
+            memcpy(data_cstr.buffer, KOS_buffer_data_const(args[0]), data_size);
         }
     }
     else
@@ -537,7 +528,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx,
 
     data = data_cstr.buffer;
 
-    if (name.o == KOS_VOID) {
+    if (args[1] == KOS_VOID) {
         if (KOS_vector_resize(&name_cstr, 1)) {
             KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
             goto cleanup;
@@ -545,15 +536,13 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx,
         name_cstr.buffer[0] = 0;
     }
     else {
-        TRY(KOS_string_to_cstr_vec(ctx, name.o, &name_cstr));
-        name.o = KOS_VOID;
+        TRY(KOS_string_to_cstr_vec(ctx, args[1], &name_cstr));
+        args[1] = KOS_VOID;
     }
 
     ret = KOS_repl(ctx, name_cstr.buffer, flags, KOS_NULL, data, data_size);
 
 cleanup:
-    KOS_destroy_top_local(ctx, &name);
-
     KOS_vector_destroy(&name_cstr);
     KOS_vector_destroy(&data_cstr);
 
@@ -566,9 +555,10 @@ cleanup:
  *
  * Returns array containing module search paths used for finding modules to import.
  */
-static KOS_OBJ_ID search_paths(KOS_CONTEXT ctx,
-                               KOS_OBJ_ID  this_obj,
-                               KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID search_paths(const KOS_CONTEXT             ctx,
+                               const KOS_OBJ_ID              this_obj,
+                               const uint32_t                num_args,
+                               KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     return KOS_array_slice(ctx, ctx->inst->modules.search_paths, 0, 0x7FFFFFFFU);
 }
@@ -596,9 +586,9 @@ int kos_module_kos_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     KOS_init_local_with(ctx, &module, module_obj);
     KOS_init_local(     ctx, &version);
 
-    TRY_ADD_FUNCTION(        ctx, module.o, "collect_garbage",      collect_garbage, KOS_NULL);
-    TRY_ADD_FUNCTION(        ctx, module.o, "execute",              execute,         execute_args);
-    TRY_ADD_FUNCTION(        ctx, module.o, "search_paths",         search_paths,    KOS_NULL);
+    TRY_ADD_FUNCTIO2(        ctx, module.o, "collect_garbage",      collect_garbage, KOS_NULL);
+    TRY_ADD_FUNCTIO2(        ctx, module.o, "execute",              execute,         execute_args);
+    TRY_ADD_FUNCTIO2(        ctx, module.o, "search_paths",         search_paths,    KOS_NULL);
     TRY_ADD_GENERATOR(       ctx, module.o, "raw_lexer",            raw_lexer,       raw_lexer_args);
 
     version.o = KOS_new_array(ctx, 3);
