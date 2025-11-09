@@ -78,20 +78,18 @@ static void fix_path_separators_vec(KOS_VECTOR *buf)
  *
  * Returns `true` if `filename` exists and is a file, or `false` otherwise.
  */
-static KOS_OBJ_ID file_exists(KOS_CONTEXT ctx,
-                              KOS_OBJ_ID  this_obj,
-                              KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID file_exists(const KOS_CONTEXT             ctx,
+                              const KOS_OBJ_ID              this_obj,
+                              const uint32_t                num_args,
+                              KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    int        error;
-    KOS_OBJ_ID ret          = KOS_BADPTR;
-    KOS_OBJ_ID filename_obj = KOS_array_read(ctx, args_obj, 0);
     KOS_VECTOR filename_cstr;
+    KOS_OBJ_ID ret = KOS_BADPTR;
+    int        error;
 
     KOS_vector_init(&filename_cstr);
 
-    TRY_OBJID(filename_obj);
-
-    TRY(KOS_string_to_cstr_vec(ctx, filename_obj, &filename_cstr));
+    TRY(KOS_string_to_cstr_vec(ctx, args[0], &filename_cstr));
 
     fix_path_separators_vec(&filename_cstr);
 
@@ -165,13 +163,12 @@ static int64_t get_epoch_time_us(const FILETIME *time)
  * The `device` property is only produced for device objects on some
  * OS-es, for example Linux, *BSD, or MacOSX.
  */
-static KOS_OBJ_ID get_stat(KOS_CONTEXT ctx,
-                           KOS_OBJ_ID  this_obj,
-                           KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID get_stat(const KOS_CONTEXT             ctx,
+                           const KOS_OBJ_ID              this_obj,
+                           const uint32_t                num_args,
+                           KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_LOCAL  data;
-    KOS_OBJ_ID filename_obj = KOS_array_read(ctx, args_obj, 0);
-    KOS_OBJ_ID follow_obj;
     KOS_VECTOR filename_cstr;
     int        error;
 
@@ -179,12 +176,7 @@ static KOS_OBJ_ID get_stat(KOS_CONTEXT ctx,
 
     KOS_vector_init(&filename_cstr);
 
-    TRY_OBJID(filename_obj);
-
-    follow_obj = KOS_array_read(ctx, args_obj, 1);
-    TRY_OBJID(follow_obj);
-
-    TRY(KOS_string_to_cstr_vec(ctx, filename_obj, &filename_cstr));
+    TRY(KOS_string_to_cstr_vec(ctx, args[0], &filename_cstr));
 
     fix_path_separators_vec(&filename_cstr);
 
@@ -248,7 +240,7 @@ static KOS_OBJ_ID get_stat(KOS_CONTEXT ctx,
 
         errno = 0;
 
-        if (KOS_get_bool(follow_obj))
+        if (KOS_get_bool(args[1]))
             ret = stat(filename_cstr.buffer, &st);
         else
             ret = lstat(filename_cstr.buffer, &st);
@@ -285,20 +277,18 @@ cleanup:
  *
  * If the file cannot be deleted, throws an error.
  */
-static KOS_OBJ_ID kos_remove(KOS_CONTEXT ctx,
-                             KOS_OBJ_ID  this_obj,
-                             KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_remove(const KOS_CONTEXT             ctx,
+                             const KOS_OBJ_ID              this_obj,
+                             const uint32_t                num_args,
+                             KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    int        error;
-    KOS_OBJ_ID ret          = KOS_BADPTR;
-    KOS_OBJ_ID filename_obj = KOS_array_read(ctx, args_obj, 0);
     KOS_VECTOR filename_cstr;
+    KOS_OBJ_ID ret = KOS_BADPTR;
+    int        error;
 
     KOS_vector_init(&filename_cstr);
 
-    TRY_OBJID(filename_obj);
-
-    TRY(KOS_string_to_cstr_vec(ctx, filename_obj, &filename_cstr));
+    TRY(KOS_string_to_cstr_vec(ctx, args[0], &filename_cstr));
 
     fix_path_separators_vec(&filename_cstr);
 
@@ -355,9 +345,10 @@ cleanup:
  *     > cwd()
  *     "/home/user"
  */
-static KOS_OBJ_ID cwd(KOS_CONTEXT ctx,
-                      KOS_OBJ_ID  this_obj,
-                      KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID cwd(const KOS_CONTEXT             ctx,
+                      const KOS_OBJ_ID              this_obj,
+                      const uint32_t                num_args,
+                      KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_VECTOR path_cstr;
     KOS_OBJ_ID path_obj  = KOS_BADPTR;
@@ -436,9 +427,10 @@ cleanup:
  *     > tempdir()
  *     "/tmp"
  */
-static KOS_OBJ_ID tempdir(KOS_CONTEXT ctx,
-                          KOS_OBJ_ID  this_obj,
-                          KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID tempdir(const KOS_CONTEXT             ctx,
+                          const KOS_OBJ_ID              this_obj,
+                          const uint32_t                num_args,
+                          KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
 #ifdef _WIN32
     char buf[MAX_PATH + 1];
@@ -487,19 +479,17 @@ static KOS_OBJ_ID tempdir(KOS_CONTEXT ctx,
  *     > chdir("/tmp")
  *     "/tmp"
  */
-static KOS_OBJ_ID kos_chdir(KOS_CONTEXT ctx,
-                            KOS_OBJ_ID  this_obj,
-                            KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_chdir(const KOS_CONTEXT             ctx,
+                            const KOS_OBJ_ID              this_obj,
+                            const uint32_t                num_args,
+                            KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    KOS_OBJ_ID path_obj = KOS_array_read(ctx, args_obj, 0);
     KOS_VECTOR path_cstr;
     int        error;
 
     KOS_vector_init(&path_cstr);
 
-    TRY_OBJID(path_obj);
-
-    TRY(KOS_string_to_cstr_vec(ctx, path_obj, &path_cstr));
+    TRY(KOS_string_to_cstr_vec(ctx, args[0], &path_cstr));
 
     fix_path_separators_vec(&path_cstr);
 
@@ -520,7 +510,7 @@ static KOS_OBJ_ID kos_chdir(KOS_CONTEXT ctx,
 cleanup:
     KOS_vector_destroy(&path_cstr);
 
-    return error ? KOS_BADPTR : path_obj;
+    return error ? KOS_BADPTR : args[0];
 }
 
 #ifdef _WIN32
@@ -603,11 +593,11 @@ static int make_directory(KOS_CONTEXT ctx,
  *     > mkdir("/tmp/test")
  *     "/tmp/test"
  */
-static KOS_OBJ_ID kos_mkdir(KOS_CONTEXT ctx,
-                            KOS_OBJ_ID  this_obj,
-                            KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_mkdir(const KOS_CONTEXT             ctx,
+                            const KOS_OBJ_ID              this_obj,
+                            const uint32_t                num_args,
+                            KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    KOS_LOCAL            path;
     struct KOS_MEMPOOL_S alloc;
     char                *path_cstr = KOS_NULL;
     size_t               path_len;
@@ -616,12 +606,7 @@ static KOS_OBJ_ID kos_mkdir(KOS_CONTEXT ctx,
 
     KOS_mempool_init_small(&alloc, 512U);
 
-    KOS_init_local(ctx, &path);
-
-    path.o = KOS_array_read(ctx, args_obj, 0);
-    TRY_OBJID(path.o);
-
-    TRY(KOS_extract_native_from_array(ctx, args_obj, "argument", mkdir_args, &alloc, &path_cstr, &deep));
+    TRY(KOS_extract_native_from_args(ctx, num_args, args, "argument", mkdir_args, &alloc, &path_cstr, &deep));
 
     path_len = strlen(path_cstr);
 
@@ -649,11 +634,9 @@ static KOS_OBJ_ID kos_mkdir(KOS_CONTEXT ctx,
     TRY(make_directory(ctx, path_cstr, !deep));
 
 cleanup:
-    path.o = KOS_destroy_top_local(ctx, &path);
-
     KOS_mempool_destroy(&alloc);
 
-    return error ? KOS_BADPTR : path.o;
+    return error ? KOS_BADPTR : args[0];
 }
 
 /* @item fs rmdir()
@@ -676,20 +659,18 @@ cleanup:
  *
  *     > rmdir("/tmp/test")
  */
-static KOS_OBJ_ID kos_rmdir(KOS_CONTEXT ctx,
-                            KOS_OBJ_ID  this_obj,
-                            KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_rmdir(const KOS_CONTEXT             ctx,
+                            const KOS_OBJ_ID              this_obj,
+                            const uint32_t                num_args,
+                            KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    KOS_OBJ_ID path_obj = KOS_array_read(ctx, args_obj, 0);
-    KOS_OBJ_ID ret      = KOS_BADPTR;
     KOS_VECTOR path_cstr;
+    KOS_OBJ_ID ret      = KOS_BADPTR;
     int        error;
 
     KOS_vector_init(&path_cstr);
 
-    TRY_OBJID(path_obj);
-
-    TRY(KOS_string_to_cstr_vec(ctx, path_obj, &path_cstr));
+    TRY(KOS_string_to_cstr_vec(ctx, args[0], &path_cstr));
 
     fix_path_separators_vec(&path_cstr);
 
@@ -1005,15 +986,15 @@ int kos_module_fs_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 
     KOS_init_local_with(ctx, &module, module_obj);
 
-    TRY_ADD_FUNCTION(ctx,  module.o, "file_exists", file_exists, filename_arg);
-    TRY_ADD_FUNCTION(ctx,  module.o, "stat",        get_stat,    stat_args);
-    TRY_ADD_FUNCTION(ctx,  module.o, "remove",      kos_remove,  filename_arg);
-    TRY_ADD_FUNCTION(ctx,  module.o, "cwd",         cwd,         KOS_NULL);
-    TRY_ADD_FUNCTION(ctx,  module.o, "tempdir",     tempdir,     KOS_NULL);
-    TRY_ADD_FUNCTION(ctx,  module.o, "chdir",       kos_chdir,   path_arg);
+    TRY_ADD_FUNCTIO2(ctx,  module.o, "file_exists", file_exists, filename_arg);
+    TRY_ADD_FUNCTIO2(ctx,  module.o, "stat",        get_stat,    stat_args);
+    TRY_ADD_FUNCTIO2(ctx,  module.o, "remove",      kos_remove,  filename_arg);
+    TRY_ADD_FUNCTIO2(ctx,  module.o, "cwd",         cwd,         KOS_NULL);
+    TRY_ADD_FUNCTIO2(ctx,  module.o, "tempdir",     tempdir,     KOS_NULL);
+    TRY_ADD_FUNCTIO2(ctx,  module.o, "chdir",       kos_chdir,   path_arg);
     TRY_ADD_GENERATOR(ctx, module.o, "listdir",     listdir,     path_arg);
-    TRY_ADD_FUNCTION(ctx,  module.o, "mkdir",       kos_mkdir,   mkdir_args);
-    TRY_ADD_FUNCTION(ctx,  module.o, "rmdir",       kos_rmdir,   path_arg);
+    TRY_ADD_FUNCTIO2(ctx,  module.o, "mkdir",       kos_mkdir,   mkdir_args);
+    TRY_ADD_FUNCTIO2(ctx,  module.o, "rmdir",       kos_rmdir,   path_arg);
 
     /* @item fs path_separator
      *
