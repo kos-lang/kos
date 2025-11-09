@@ -148,8 +148,6 @@ class context {
         // Register C++ function in Kos
         // ============================
 
-        function new_function(const char* name, KOS_FUNCTION_HANDLER handler, int min_args);
-
         function new_function(const char* name, KOS_FUNCTION_HANDLE2 handler, int min_args);
 
 #if __cplusplus >= 201703L
