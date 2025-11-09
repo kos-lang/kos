@@ -17,7 +17,7 @@
 static const char str_err_abs_minus_max[] = "cannot calculate abs of the lowest integer value";
 static const char str_err_m1_or_less[]    = "value is not greater than -1";
 static const char str_err_negative_root[] = "invalid base";
-static const char str_err_not_number[]    = "object is not a number";
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_number, "object is not a number");
 static const char str_err_outside_m1_1[]  = "value outside of [-1, 1] range";
 static const char str_err_pow_0_0[]       = "0 to the power of 0";
 static const char str_err_zero_or_less[]  = "value is not positive";
@@ -40,29 +40,29 @@ static const char str_err_zero_or_less[]  = "value is not positive";
  *     > math.abs(-math.infinity)
  *     infinity
  */
-static KOS_OBJ_ID kos_abs(KOS_CONTEXT ctx,
-                          KOS_OBJ_ID  this_obj,
-                          KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_abs(const KOS_CONTEXT             ctx,
+                          const KOS_OBJ_ID              this_obj,
+                          const uint32_t                num_args,
+                          KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    KOS_OBJ_ID ret = KOS_BADPTR;
-    KOS_NUMERIC numeric;
+    KOS_NUMERIC numeric = KOS_get_numeric(args[0]);
+    KOS_OBJ_ID  ret     = KOS_BADPTR;
 
-    if (KOS_get_numeric_arg(ctx, args_obj, 0, &numeric) == KOS_SUCCESS) {
-
-        if (numeric.type == KOS_INTEGER_VALUE) {
-            if (numeric.u.i == (int64_t)((uint64_t)1U << 63))
-                KOS_raise_exception_cstring(ctx, str_err_abs_minus_max);
-            else
-                ret = KOS_new_int(ctx, numeric.u.i < 0 ? -numeric.u.i : numeric.u.i);
-        }
-        else {
-            assert(numeric.type == KOS_FLOAT_VALUE);
-
-            numeric.u.i &= (int64_t)~((uint64_t)1U << 63);
-
-            ret = KOS_new_float(ctx, numeric.u.d);
-        }
+    if (numeric.type == KOS_INTEGER_VALUE) {
+        if (numeric.u.i == (int64_t)((uint64_t)1U << 63))
+            KOS_raise_exception_cstring(ctx, str_err_abs_minus_max);
+        else
+            ret = KOS_new_int(ctx, numeric.u.i < 0 ? -numeric.u.i : numeric.u.i);
     }
+    else if (numeric.type != KOS_NON_NUMERIC) {
+        assert(numeric.type == KOS_FLOAT_VALUE);
+
+        numeric.u.i &= (int64_t)~((uint64_t)1U << 63);
+
+        ret = KOS_new_float(ctx, numeric.u.d);
+    }
+    else
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_number));
 
     return ret;
 }
@@ -232,7 +232,7 @@ static KOS_OBJ_ID kos_ceil(KOS_CONTEXT ctx,
             break;
 
         default:
-            KOS_raise_exception_cstring(ctx, str_err_not_number);
+            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_number));
             break;
     }
 
@@ -393,7 +393,7 @@ static KOS_OBJ_ID kos_floor(KOS_CONTEXT ctx,
             break;
 
         default:
-            KOS_raise_exception_cstring(ctx, str_err_not_number);
+            KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_number));
             break;
     }
 
@@ -854,7 +854,7 @@ KOS_INIT_MODULE(math, KOS_MODULE_NEEDS_KOS_SOURCE)(KOS_CONTEXT ctx, KOS_OBJ_ID m
         TRY_ADD_GLOBAL(ctx, module.o, "nan", value_obj);
     }
 
-    TRY_ADD_FUNCTION(ctx, module.o, "abs",         kos_abs,         number_arg);
+    TRY_ADD_FUNCTIO2(ctx, module.o, "abs",         kos_abs,         number_arg);
     TRY_ADD_FUNCTION(ctx, module.o, "acos",        kos_acos,        number_arg);
     TRY_ADD_FUNCTION(ctx, module.o, "asin",        kos_asin,        number_arg);
     TRY_ADD_FUNCTION(ctx, module.o, "atan",        kos_atan,        number_arg);
