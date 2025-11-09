@@ -304,7 +304,7 @@ static KOS_OBJ_ID kos_open(const KOS_CONTEXT             ctx,
     ret.o = KOS_new_object_with_private(ctx, self.o, &file_priv_class, file_finalize);
     TRY_OBJID(ret.o);
 
-    TRY(KOS_set_builtin_dynamic_propert2(ctx,
+    TRY(KOS_set_builtin_dynamic_property(ctx,
                                          ret.o,
                                          KOS_CONST_ID(str_position),
                                          KOS_get_module(ctx),
@@ -1889,27 +1889,27 @@ int kos_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     KOS_init_local(     ctx, &priv);
 
     TRY_ADD_CONSTRUCTOR(    ctx, module.o,               "file",      kos_open,         open_args, &file_proto.o);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, file_proto.o, "close",     kos_close,        KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, file_proto.o, "flush",     flush,            KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, file_proto.o, "lock",      kos_lock,         KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, file_proto.o, "print",     print,            KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, file_proto.o, "read_line", read_line,        read_line_args);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, file_proto.o, "read_some", read_some,        read_some_args);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, file_proto.o, "release",   kos_close,        KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, file_proto.o, "resize",    set_file_size,    set_file_size_args);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, file_proto.o, "seek",      set_file_pos,     set_file_pos_args);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, file_proto.o, "write",     kos_write,        KOS_NULL);
-    TRY_ADD_MEMBER_PROPERT2(ctx, module.o, file_proto.o, "console",   get_file_console, KOS_NULL);
-    TRY_ADD_MEMBER_PROPERT2(ctx, module.o, file_proto.o, "eof",       get_file_eof,     KOS_NULL);
-    TRY_ADD_MEMBER_PROPERT2(ctx, module.o, file_proto.o, "error",     get_file_error,   KOS_NULL);
-    TRY_ADD_MEMBER_PROPERT2(ctx, module.o, file_proto.o, "fd",        get_file_fd,      KOS_NULL);
-    TRY_ADD_MEMBER_PROPERT2(ctx, module.o, file_proto.o, "stat",      get_file_stat,    KOS_NULL);
-    TRY_ADD_MEMBER_PROPERT2(ctx, module.o, file_proto.o, "path",      get_file_path,    KOS_NULL);
-    TRY_ADD_MEMBER_PROPERT2(ctx, module.o, file_proto.o, "position",  get_file_pos,     KOS_NULL);
-    TRY_ADD_MEMBER_PROPERT2(ctx, module.o, file_proto.o, "size",      get_file_size,    KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "close",     kos_close,        KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "flush",     flush,            KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "lock",      kos_lock,         KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "print",     print,            KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "read_line", read_line,        read_line_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "read_some", read_some,        read_some_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "release",   kos_close,        KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "resize",    set_file_size,    set_file_size_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "seek",      set_file_pos,     set_file_pos_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_proto.o, "write",     kos_write,        KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "console",   get_file_console, KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "eof",       get_file_eof,     KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "error",     get_file_error,   KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "fd",        get_file_fd,      KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "stat",      get_file_stat,    KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "path",      get_file_path,    KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "position",  get_file_pos,     KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, file_proto.o, "size",      get_file_size,    KOS_NULL);
 
     TRY_ADD_CONSTRUCTOR(    ctx, module.o,               "file_lock", kos_lock_ctor,    KOS_NULL,  &file_lock.o);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, file_lock.o,  "release",   kos_unlock,       KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_lock.o,  "release",   kos_unlock,       KOS_NULL);
 
     TRY_ADD_CONSTRUCTOR(    ctx, module.o,               "pipe",      kos_pipe,         KOS_NULL,  &pipe_proto);
 

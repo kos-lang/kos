@@ -2106,7 +2106,7 @@ KOS_INIT_MODULE(re, KOS_MODULE_NEEDS_KOS_SOURCE)(KOS_CONTEXT ctx, KOS_OBJ_ID mod
     KOS_init_local(     ctx, &proto);
 
     TRY_ADD_CONSTRUCTOR(    ctx, module.o,          "re_uncached", re_ctor, re_uncached_args, &proto.o);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, proto.o, "find",        re_find, find_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "find",        re_find, find_args);
 
 cleanup:
     KOS_destroy_top_locals(ctx, &proto, &module);

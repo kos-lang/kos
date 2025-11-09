@@ -48,6 +48,7 @@
     KOS_get_absolute_path;
     KOS_get_env;
     KOS_get_file_name;
+    KOS_get_index;
     KOS_get_index_arg;
     KOS_get_integer;
     KOS_get_library_function;
@@ -94,7 +95,6 @@
     KOS_module_add_functio2;
     KOS_module_add_function;
     KOS_module_add_global;
-    KOS_module_add_member_functio2;
     KOS_module_add_member_function;
     KOS_module_add_static_functio2;
     KOS_module_add_static_function;
@@ -142,7 +142,6 @@
     KOS_repl;
     KOS_resume_context;
     KOS_run_module;
-    KOS_set_builtin_dynamic_propert2;
     KOS_set_builtin_dynamic_property;
     KOS_set_properties_from_native;
     KOS_set_property;

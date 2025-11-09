@@ -104,15 +104,6 @@ int KOS_module_add_member_function(KOS_CONTEXT          ctx,
                                    KOS_OBJ_ID           module_obj,
                                    KOS_OBJ_ID           proto_obj,
                                    KOS_OBJ_ID           str_name,
-                                   KOS_FUNCTION_HANDLER handler,
-                                   const KOS_CONVERT   *args,
-                                   KOS_FUNCTION_STATE   gen_state);
-
-KOS_API
-int KOS_module_add_member_functio2(KOS_CONTEXT          ctx,
-                                   KOS_OBJ_ID           module_obj,
-                                   KOS_OBJ_ID           proto_obj,
-                                   KOS_OBJ_ID           str_name,
                                    KOS_FUNCTION_HANDLE2 handler,
                                    const KOS_CONVERT   *args,
                                    KOS_FUNCTION_STATE   gen_state);
@@ -180,17 +171,10 @@ do {                                                                            
                                        (handler), (args), KOS_FUN));                     \
 } while (0)
 
-#define TRY_ADD_MEMBER_FUNCTIO2(ctx, module, proto, name, handler, args)                 \
-do {                                                                                     \
-    KOS_DECLARE_STATIC_CONST_STRING(XstrNAME, name);                                     \
-    TRY(KOS_module_add_member_functio2((ctx), (module), (proto), KOS_CONST_ID(XstrNAME), \
-                                       (handler), (args), KOS_FUN));                     \
-} while (0)
-
 #define TRY_ADD_MEMBER_GENERATOR(ctx, module, proto, name, handler, args)                \
 do {                                                                                     \
     KOS_DECLARE_STATIC_CONST_STRING(XstrNAME, name);                                     \
-    TRY(KOS_module_add_member_functio2((ctx), (module), (proto), KOS_CONST_ID(XstrNAME), \
+    TRY(KOS_module_add_member_function((ctx), (module), (proto), KOS_CONST_ID(XstrNAME), \
                                        (handler), (args), KOS_GEN_INIT));                \
 } while (0)
 
@@ -198,13 +182,6 @@ do {                                                                            
 do {                                                                             \
     KOS_DECLARE_STATIC_CONST_STRING(XstrNAME, name);                             \
     TRY(KOS_set_builtin_dynamic_property((ctx), (proto), KOS_CONST_ID(XstrNAME), \
-                                         (module), (getter), (setter)));         \
-} while (0)
-
-#define TRY_ADD_MEMBER_PROPERT2(ctx, module, proto, name, getter, setter)        \
-do {                                                                             \
-    KOS_DECLARE_STATIC_CONST_STRING(XstrNAME, name);                             \
-    TRY(KOS_set_builtin_dynamic_propert2((ctx), (proto), KOS_CONST_ID(XstrNAME), \
                                          (module), (getter), (setter)));         \
 } while (0)
 

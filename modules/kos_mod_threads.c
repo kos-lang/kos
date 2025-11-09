@@ -533,13 +533,13 @@ int kos_module_threads_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     KOS_atomic_write_relaxed_ptr(OBJPTR(MODULE, module.o)->priv, priv.o);
 
     TRY_ADD_CONSTRUCTOR(    ctx, module.o,                    "mutex",     mutex_ctor,        KOS_NULL, &mutex_proto.o);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, mutex_proto.o,     "acquire",   mutex_acquire,     KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, mutex_proto.o,     "release",   mutex_release,     KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, mutex_proto.o,     "acquire",   mutex_acquire,     KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, mutex_proto.o,     "release",   mutex_release,     KOS_NULL);
 
     TRY_ADD_CONSTRUCTOR(    ctx, module.o,                    "semaphore", semaphore_ctor,    sem_args, &semaphore_proto.o);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, semaphore_proto.o, "acquire",   semaphore_acquire, count_arg);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, semaphore_proto.o, "release",   semaphore_release, count_arg);
-    TRY_ADD_MEMBER_PROPERT2(ctx, module.o, semaphore_proto.o, "value",     semaphore_value,   KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, semaphore_proto.o, "acquire",   semaphore_acquire, count_arg);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, semaphore_proto.o, "release",   semaphore_release, count_arg);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, semaphore_proto.o, "value",     semaphore_value,   KOS_NULL);
 
     TRY_ADD_FUNCTIO2(       ctx, module.o,                    "sleep",     kos_sleep,         sleep_args);
 

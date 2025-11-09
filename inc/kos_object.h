@@ -76,14 +76,6 @@ int KOS_set_builtin_dynamic_property(KOS_CONTEXT          ctx,
                                      KOS_OBJ_ID           obj_id,
                                      KOS_OBJ_ID           prop,
                                      KOS_OBJ_ID           module_obj,
-                                     KOS_FUNCTION_HANDLER getter,
-                                     KOS_FUNCTION_HANDLER setter);
-
-KOS_API
-int KOS_set_builtin_dynamic_propert2(KOS_CONTEXT          ctx,
-                                     KOS_OBJ_ID           obj_id,
-                                     KOS_OBJ_ID           prop,
-                                     KOS_OBJ_ID           module_obj,
                                      KOS_FUNCTION_HANDLE2 getter,
                                      KOS_FUNCTION_HANDLE2 setter);
 

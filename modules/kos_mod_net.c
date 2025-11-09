@@ -448,7 +448,7 @@ static KOS_OBJ_ID kos_socket(const KOS_CONTEXT             ctx,
     ret.o = KOS_new_object_with_private(ctx, self.o, &socket_priv_class, socket_finalize);
     TRY_OBJID(ret.o);
 
-    TRY(KOS_set_builtin_dynamic_propert2(ctx,
+    TRY(KOS_set_builtin_dynamic_property(ctx,
                                          ret.o,
                                          KOS_CONST_ID(str_blocking),
                                          KOS_get_module(ctx),
@@ -2629,24 +2629,24 @@ KOS_INIT_MODULE(net, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 #endif
 
     TRY_ADD_CONSTRUCTOR(    ctx, module.o,                 "socket",      kos_socket,      socket_args, &socket_proto.o);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, socket_proto.o, "accept",      kos_accept,      KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, socket_proto.o, "bind",        kos_bind,        bind_args);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, socket_proto.o, "close",       kos_close,       KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, socket_proto.o, "connect",     kos_connect,     connect_args);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, socket_proto.o, "getsockopt",  kos_getsockopt,  getsockopt_args);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, socket_proto.o, "listen",      kos_listen,      listen_args);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, socket_proto.o, "read",        kos_recv,        recv_args);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, socket_proto.o, "recv",        kos_recv,        recv_args);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, socket_proto.o, "recvfrom",    kos_recvfrom,    recv_args);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, socket_proto.o, "release",     kos_close,       KOS_NULL);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, socket_proto.o, "wait",        kos_wait,        wait_args);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, socket_proto.o, "send",        kos_send,        send_args);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, socket_proto.o, "sendto",      kos_sendto,      sendto_args);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, socket_proto.o, "setsockopt",  kos_setsockopt,  setsockopt_args);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, socket_proto.o, "shutdown",    kos_shutdown,    shutdown_args);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, socket_proto.o, "write",       kos_write,       KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "accept",      kos_accept,      KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "bind",        kos_bind,        bind_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "close",       kos_close,       KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "connect",     kos_connect,     connect_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "getsockopt",  kos_getsockopt,  getsockopt_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "listen",      kos_listen,      listen_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "read",        kos_recv,        recv_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "recv",        kos_recv,        recv_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "recvfrom",    kos_recvfrom,    recv_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "release",     kos_close,       KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "wait",        kos_wait,        wait_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "send",        kos_send,        send_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "sendto",      kos_sendto,      sendto_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "setsockopt",  kos_setsockopt,  setsockopt_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "shutdown",    kos_shutdown,    shutdown_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "write",       kos_write,       KOS_NULL);
 
-    TRY_ADD_MEMBER_PROPERT2(ctx, module.o, socket_proto.o, "blocking",    get_blocking,    KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, socket_proto.o, "blocking",    get_blocking,    KOS_NULL);
 
     TRY_ADD_FUNCTIO2(       ctx, module.o,                 "getaddrinfo", kos_getaddrinfo, getaddrinfo_args);
 

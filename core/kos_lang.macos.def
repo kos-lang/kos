@@ -47,6 +47,7 @@ _KOS_function_get_num_instr
 _KOS_get_absolute_path
 _KOS_get_env
 _KOS_get_file_name
+_KOS_get_index
 _KOS_get_index_arg
 _KOS_get_integer
 _KOS_get_library_function
@@ -93,7 +94,6 @@ _KOS_module_add_constructor
 _KOS_module_add_functio2
 _KOS_module_add_function
 _KOS_module_add_global
-_KOS_module_add_member_functio2
 _KOS_module_add_member_function
 _KOS_module_add_static_functio2
 _KOS_module_add_static_function
@@ -141,7 +141,6 @@ _KOS_realloc
 _KOS_repl
 _KOS_resume_context
 _KOS_run_module
-_KOS_set_builtin_dynamic_propert2
 _KOS_set_builtin_dynamic_property
 _KOS_set_properties_from_native
 _KOS_set_property

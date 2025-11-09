@@ -287,8 +287,8 @@ int kos_module_random_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     KOS_init_local(     ctx, &proto);
 
     TRY_ADD_CONSTRUCTOR(    ctx, module.o,          "random",  kos_random,   random_args, &proto.o);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, proto.o, "integer", rand_integer, rand_integer_args);
-    TRY_ADD_MEMBER_FUNCTIO2(ctx, module.o, proto.o, "float",   rand_float,   KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "integer", rand_integer, rand_integer_args);
+    TRY_ADD_MEMBER_FUNCTION(ctx, module.o, proto.o, "float",   rand_float,   KOS_NULL);
 
 cleanup:
     KOS_destroy_top_locals(ctx, &proto, &module);

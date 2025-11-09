@@ -131,9 +131,10 @@ KOS_OBJ_ID kos_copy_function(KOS_CONTEXT ctx,
     return ret;
 }
 
-static KOS_OBJ_ID get_prototype(KOS_CONTEXT ctx,
-                                KOS_OBJ_ID  this_obj,
-                                KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID get_prototype(const KOS_CONTEXT             ctx,
+                                const KOS_OBJ_ID              this_obj,
+                                const uint32_t                num_args,
+                                KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_OBJ_ID ret;
 
@@ -153,9 +154,10 @@ static KOS_OBJ_ID get_prototype(KOS_CONTEXT ctx,
     return ret;
 }
 
-static KOS_OBJ_ID set_prototype(KOS_CONTEXT ctx,
-                                KOS_OBJ_ID  this_obj,
-                                KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID set_prototype(const KOS_CONTEXT             ctx,
+                                const KOS_OBJ_ID              this_obj,
+                                const uint32_t                num_args,
+                                KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_OBJ_ID ret = KOS_BADPTR;
 
@@ -163,12 +165,10 @@ static KOS_OBJ_ID set_prototype(KOS_CONTEXT ctx,
 
     if (GET_OBJ_TYPE(this_obj) == OBJ_CLASS) {
 
-        const KOS_OBJ_ID arg = KOS_array_read(ctx, args_obj, 0);
-
-        if ( ! IS_BAD_PTR(arg)) {
+        if ( ! IS_BAD_PTR(args[0])) {
 
             if ( ! kos_is_native_function(this_obj)) {
-                KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, this_obj)->prototype, arg);
+                KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, this_obj)->prototype, args[0]);
                 ret = this_obj;
             }
             else
