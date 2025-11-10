@@ -179,12 +179,12 @@ int kos_stack_push(KOS_CONTEXT ctx,
     base_idx   = stack_size;
     state      = KOS_atomic_read_relaxed_u32(OBJPTR(FUNCTION, func.o)->state);
 
-    assert( ! kos_is_native_function(func.o) ||
+    assert( ! KOS_is_native_function(func.o) ||
            OBJPTR(FUNCTION, func.o)->opts.num_regs == 0);
 
     assert((state > KOS_GEN_INIT) || (instr > INSTR_NEXT));
 
-    num_regs = kos_is_native_function(func.o)
+    num_regs = KOS_is_native_function(func.o)
                ? 1 : OBJPTR(FUNCTION, func.o)->opts.num_regs;
     room = num_regs + KOS_STACK_EXTRA;
 
@@ -539,9 +539,9 @@ static int dump_stack(KOS_OBJ_ID stack,
     KOS_LOCAL         module_path;
     KOS_LOCAL         frame_desc;
 
-    if (IS_SMALL_INT(OBJPTR(FUNCTION, func)->handle2.bytecode)) {
+    if (KOS_is_native_function(func)) {
         line       = 0;
-        instr_offs = (intptr_t)OBJPTR(FUNCTION, func)->handle2.handler;
+        instr_offs = (intptr_t)OBJPTR(FUNCTION, func)->handler.handler;
     }
     else {
         instr_offs = get_instr_offs(stack_frame);

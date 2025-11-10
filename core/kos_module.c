@@ -680,7 +680,7 @@ static int disassemble_func(KOS_CONTEXT ctx, KOS_OBJ_ID func_obj)
     KOS_vector_init(&func_name_cstr);
 
     assert( ! IS_BAD_PTR(func.o));
-    bytecode_obj = OBJPTR(FUNCTION, func.o)->handle2.bytecode;
+    bytecode_obj = OBJPTR(FUNCTION, func.o)->handler.bytecode;
 
     assert( ! IS_SMALL_INT(bytecode_obj));
     assert( ! IS_BAD_PTR(bytecode_obj));
@@ -925,7 +925,7 @@ static int alloc_constants(KOS_CONTEXT    ctx,
         {
             const KOS_OBJ_ID bytecode = alloc_bytecode(ctx, program, func_const);
             TRY_OBJID(bytecode);
-            OBJPTR(FUNCTION, obj.o)->handle2.bytecode = bytecode;
+            OBJPTR(FUNCTION, obj.o)->handler.bytecode = bytecode;
 
             ((KOS_BYTECODE *)OBJPTR(OPAQUE, bytecode))->def_line  = func_const->def_line;
             ((KOS_BYTECODE *)OBJPTR(OPAQUE, bytecode))->num_instr = func_const->num_instr;

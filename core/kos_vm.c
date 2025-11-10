@@ -518,11 +518,6 @@ static KOS_OBJ_ID slice_args(KOS_CONTEXT ctx,
     return new_args;
 }
 
-int kos_is_native_function(KOS_OBJ_ID func_obj)
-{
-    return IS_SMALL_INT(OBJPTR(FUNCTION, func_obj)->handle2.bytecode);
-}
-
 static int init_registers(KOS_CONTEXT ctx,
                           KOS_OBJ_ID  func_obj,
                           KOS_OBJ_ID  args_obj,
@@ -557,7 +552,7 @@ static int init_registers(KOS_CONTEXT ctx,
 
     assert(GET_OBJ_TYPE(this_obj) <= OBJ_LAST_TYPE);
     assert( ! IS_BAD_PTR(args.o) || GET_OBJ_TYPE(stack_obj) == OBJ_STACK);
-    assert( ! kos_is_native_function(func.o));
+    assert( ! KOS_is_native_function(func.o));
     assert(args_reg_end <= KOS_NO_REG);
     assert(num_input_args >= num_non_def_args);
 
@@ -776,7 +771,7 @@ static KOS_OBJ_ID create_this(KOS_CONTEXT ctx, KOS_OBJ_ID func_obj)
 
     assert( ! IS_BAD_PTR(proto_obj));
 
-    if (kos_is_native_function(func_obj))
+    if (KOS_is_native_function(func_obj))
         return proto_obj;
 
     return KOS_new_object_with_prototype(ctx, proto_obj);
@@ -788,7 +783,7 @@ static KOS_OBJ_ID set_default_args_for_handler(KOS_CONTEXT ctx,
 {
     assert((GET_OBJ_TYPE(func_obj) == OBJ_FUNCTION) || (GET_OBJ_TYPE(func_obj) == OBJ_CLASS));
     assert(GET_OBJ_TYPE(args_obj) == OBJ_ARRAY);
-    assert(kos_is_native_function(func_obj));
+    assert(KOS_is_native_function(func_obj));
 
     if (OBJPTR(FUNCTION, func_obj)->opts.num_def_args) {
 
@@ -1000,7 +995,7 @@ static int prepare_call(KOS_CONTEXT        ctx,
             assert(instr > INSTR_NEXT);
             TRY(kos_stack_push(ctx, func.o, ret_reg, (uint8_t)instr));
 
-            if ( ! kos_is_native_function(func.o))
+            if ( ! KOS_is_native_function(func.o))
                 TRY(init_registers(ctx,
                                    func.o,
                                    args.o,
@@ -1031,7 +1026,7 @@ static int prepare_call(KOS_CONTEXT        ctx,
 
             KOS_atomic_write_relaxed_u32(OBJPTR(FUNCTION, func.o)->state, KOS_GEN_READY);
 
-            if ( ! kos_is_native_function(func.o))
+            if ( ! KOS_is_native_function(func.o))
                 TRY(init_registers(ctx,
                                    func.o,
                                    args.o,
@@ -1076,7 +1071,7 @@ static int prepare_call(KOS_CONTEXT        ctx,
 
             TRY(kos_stack_push(ctx, func.o, ret_reg, (uint8_t)instr));
 
-            if ( ! kos_is_native_function(func.o)) {
+            if ( ! KOS_is_native_function(func.o)) {
                 if (state == KOS_GEN_ACTIVE) {
 
                     KOS_OBJ_ID value;
@@ -1151,7 +1146,7 @@ static void finish_call(KOS_CONTEXT        ctx,
             }
             else {
                 const KOS_FUNCTION_STATE end_state =
-                    kos_is_native_function(func_obj) ? KOS_GEN_READY : KOS_GEN_ACTIVE;
+                    KOS_is_native_function(func_obj) ? KOS_GEN_READY : KOS_GEN_ACTIVE;
 
                 state = end_state;
             }
@@ -1216,7 +1211,7 @@ static KOS_OBJ_ID call_native_function(KOS_CONTEXT ctx,
                             num_args);
     }
 
-    ret_obj = OBJPTR(FUNCTION, func.o)->handle2.handler(ctx,
+    ret_obj = OBJPTR(FUNCTION, func.o)->handler.handler(ctx,
                                                         this_.o,
                                                         num_args,
                                                         &OBJPTR(ARRAY_STORAGE, args_array.o)->buf[0]);
@@ -1392,7 +1387,7 @@ KOS_OBJ_ID KOS_get_module(KOS_CONTEXT ctx)
 const KOS_BYTECODE *get_bytecode_objptr(KOS_STACK_FRAME *stack_frame)
 {
     const KOS_OBJ_ID func         = get_current_func(stack_frame);
-    const KOS_OBJ_ID bytecode_obj = OBJPTR(FUNCTION, func)->handle2.bytecode;
+    const KOS_OBJ_ID bytecode_obj = OBJPTR(FUNCTION, func)->handler.bytecode;
     return (const KOS_BYTECODE *)OBJPTR(OPAQUE, bytecode_obj);
 }
 
@@ -3196,7 +3191,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx) /* lgtm [cpp/use-of-goto] */
 #ifndef CONFIG_DEEP_STACK
                     KOS_init_local_with(ctx, &func, func.o);
 
-                    if ((state == KOS_GEN_READY || state == KOS_GEN_ACTIVE) && ! kos_is_native_function(func.o)) {
+                    if ((state == KOS_GEN_READY || state == KOS_GEN_ACTIVE) && ! KOS_is_native_function(func.o)) {
 
                         KOS_OBJ_ID this_obj = KOS_VOID;
                         KOS_OBJ_ID args_obj = KOS_EMPTY_ARRAY;
@@ -3464,7 +3459,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx) /* lgtm [cpp/use-of-goto] */
                     out = this_.o;
 
                 else {
-                    if ( ! kos_is_native_function(func.o)) {
+                    if ( ! KOS_is_native_function(func.o)) {
 #ifdef CONFIG_DEEP_STACK
                         ret.o = execute(ctx);
 
@@ -3895,7 +3890,7 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
         ret.o = this_.o;
 
     else {
-        if (kos_is_native_function(func.o)) {
+        if (KOS_is_native_function(func.o)) {
             PROF_ZONE(VM)
             PROF_ZONE_NAME_FUN(func.o)
 

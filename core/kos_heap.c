@@ -1664,7 +1664,7 @@ static int mark_children_gray(KOS_MARK_CONTEXT *mark_ctx,
 
         case OBJ_FUNCTION:
             /* TODO make these atomic */
-            TRY(mark_object_gray(mark_ctx, OBJPTR(FUNCTION, obj_id)->handle2.bytecode));
+            TRY(mark_object_gray(mark_ctx, OBJPTR(FUNCTION, obj_id)->handler.bytecode));
             TRY(mark_object_gray(mark_ctx, OBJPTR(FUNCTION, obj_id)->module));
             TRY(mark_object_gray(mark_ctx, OBJPTR(FUNCTION, obj_id)->name));
             TRY(mark_object_gray(mark_ctx, OBJPTR(FUNCTION, obj_id)->closures));
@@ -1677,7 +1677,7 @@ static int mark_children_gray(KOS_MARK_CONTEXT *mark_ctx,
             TRY(mark_object_gray(mark_ctx, KOS_atomic_read_relaxed_obj(OBJPTR(CLASS, obj_id)->prototype)));
             TRY(mark_object_black(mark_ctx, KOS_atomic_read_relaxed_obj(OBJPTR(CLASS, obj_id)->props)));
             /* TODO make these atomic */
-            TRY(mark_object_gray(mark_ctx, OBJPTR(CLASS, obj_id)->handle2.bytecode));
+            TRY(mark_object_gray(mark_ctx, OBJPTR(CLASS, obj_id)->handler.bytecode));
             TRY(mark_object_gray(mark_ctx, OBJPTR(CLASS, obj_id)->module));
             TRY(mark_object_gray(mark_ctx, OBJPTR(CLASS, obj_id)->name));
             TRY(mark_object_gray(mark_ctx, OBJPTR(CLASS, obj_id)->closures));
@@ -2257,7 +2257,7 @@ static void update_child_ptrs(KOS_OBJ_HEADER *hdr)
             break;
 
         case OBJ_FUNCTION:
-            update_child_ptr(&((KOS_FUNCTION *)hdr)->handle2.bytecode);
+            update_child_ptr(&((KOS_FUNCTION *)hdr)->handler.bytecode);
             update_child_ptr(&((KOS_FUNCTION *)hdr)->module);
             update_child_ptr(&((KOS_FUNCTION *)hdr)->name);
             update_child_ptr(&((KOS_FUNCTION *)hdr)->closures);
@@ -2269,7 +2269,7 @@ static void update_child_ptrs(KOS_OBJ_HEADER *hdr)
         case OBJ_CLASS:
             update_child_ptr((KOS_OBJ_ID *)&((KOS_CLASS *)hdr)->prototype);
             update_child_ptr((KOS_OBJ_ID *)&((KOS_CLASS *)hdr)->props);
-            update_child_ptr(&((KOS_CLASS *)hdr)->handle2.bytecode);
+            update_child_ptr(&((KOS_CLASS *)hdr)->handler.bytecode);
             update_child_ptr(&((KOS_CLASS *)hdr)->module);
             update_child_ptr(&((KOS_CLASS *)hdr)->name);
             update_child_ptr(&((KOS_CLASS *)hdr)->closures);

@@ -429,7 +429,7 @@ typedef struct KOS_FUNCTION_S {
     KOS_OBJ_HEADER       header;
     KOS_FUNCTION_OPTS    opts;
     KOS_ATOMIC(uint32_t) state;
-    union KOS_HANDLER_U  handle2;  /* Native handler or bytecode */
+    union KOS_HANDLER_U  handler;  /* Native handler or bytecode */
     KOS_OBJ_ID           module;
     KOS_OBJ_ID           name;     /* Function name */
     KOS_OBJ_ID           closures; /* Array with bound closures */
@@ -442,7 +442,7 @@ typedef struct KOS_CLASS_S {
     KOS_OBJ_HEADER         header;
     KOS_FUNCTION_OPTS      opts;
     uint32_t               dummy;
-    union KOS_HANDLER_U    handle2;  /* Native handler or bytecode */
+    union KOS_HANDLER_U    handler;  /* Native handler or bytecode */
     KOS_OBJ_ID             module;
     KOS_OBJ_ID             name;     /* Function name */
     KOS_OBJ_ID             closures; /* Array with bound closures */
@@ -579,6 +579,15 @@ KOS_API
 KOS_OBJ_ID KOS_get_named_arg(KOS_CONTEXT ctx,
                              KOS_OBJ_ID  func_obj,
                              uint32_t    i);
+
+#ifdef __cplusplus
+static inline bool KOS_is_native_function(KOS_OBJ_ID func_obj)
+{
+    return IS_SMALL_INT(OBJPTR(FUNCTION, func_obj)->handler.bytecode);
+}
+#else
+#define KOS_is_native_function(func_obj) (IS_SMALL_INT(OBJPTR(FUNCTION, (func_obj))->handler.bytecode))
+#endif
 
 KOS_API
 unsigned KOS_function_addr_to_line(KOS_OBJ_ID func_obj,

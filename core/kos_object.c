@@ -871,7 +871,7 @@ static KOS_OBJ_ID new_builtin_dynamic_prop(KOS_CONTEXT          ctx,
         if ( ! IS_BAD_PTR(func_obj)) {
             OBJPTR(FUNCTION, func_obj)->module          = module_obj;
             OBJPTR(FUNCTION, func_obj)->opts.min_args   = 0;
-            OBJPTR(FUNCTION, func_obj)->handle2.handler = getter;
+            OBJPTR(FUNCTION, func_obj)->handler.handler = getter;
             OBJPTR(FUNCTION, func_obj)->name            = name.o;
             OBJPTR(DYNAMIC_PROP, dyn_prop.o)->getter    = func_obj;
         }
@@ -888,7 +888,7 @@ static KOS_OBJ_ID new_builtin_dynamic_prop(KOS_CONTEXT          ctx,
             if ( ! IS_BAD_PTR(func_obj)) {
                 OBJPTR(FUNCTION, func_obj)->module          = module_obj;
                 OBJPTR(FUNCTION, func_obj)->opts.min_args   = 0;
-                OBJPTR(FUNCTION, func_obj)->handle2.handler = setter;
+                OBJPTR(FUNCTION, func_obj)->handler.handler = setter;
                 OBJPTR(FUNCTION, func_obj)->name            = name.o;
                 OBJPTR(DYNAMIC_PROP, dyn_prop.o)->setter    = func_obj;
             }

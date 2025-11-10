@@ -77,7 +77,7 @@ KOS_OBJ_ID KOS_new_function(KOS_CONTEXT ctx)
         func->opts.this_reg     = KOS_NO_REG;
         func->opts.bind_reg     = KOS_NO_REG;
 
-        func->handle2.bytecode      = KOS_BADPTR;
+        func->handler.bytecode      = KOS_BADPTR;
         func->module                = KOS_BADPTR;
         func->name                  = KOS_STR_EMPTY;
         func->closures              = KOS_VOID;
@@ -116,7 +116,7 @@ KOS_OBJ_ID kos_copy_function(KOS_CONTEXT ctx,
         KOS_atomic_write_relaxed_u32(dest->state, KOS_atomic_read_relaxed_u32(src->state));
 
         dest->opts     = src->opts;
-        dest->handle2  = src->handle2;
+        dest->handler  = src->handler;
         dest->module   = src->module;
         dest->name     = src->name;
         dest->closures = src->closures;
@@ -165,7 +165,7 @@ static KOS_OBJ_ID set_prototype(const KOS_CONTEXT             ctx,
 
         if ( ! IS_BAD_PTR(args[0])) {
 
-            if ( ! kos_is_native_function(this_obj)) {
+            if ( ! KOS_is_native_function(this_obj)) {
                 KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, this_obj)->prototype, args[0]);
                 ret = this_obj;
             }
@@ -208,7 +208,7 @@ KOS_OBJ_ID KOS_new_class(KOS_CONTEXT ctx, KOS_OBJ_ID proto_obj)
         OBJPTR(CLASS, func.o)->opts.bind_reg     = KOS_NO_REG;
 
         OBJPTR(CLASS, func.o)->dummy            = KOS_CTOR;
-        OBJPTR(CLASS, func.o)->handle2.bytecode = KOS_BADPTR;
+        OBJPTR(CLASS, func.o)->handler.bytecode = KOS_BADPTR;
         OBJPTR(CLASS, func.o)->module           = KOS_BADPTR;
         OBJPTR(CLASS, func.o)->name             = KOS_STR_EMPTY;
         OBJPTR(CLASS, func.o)->closures         = KOS_VOID;
@@ -258,7 +258,7 @@ static int init_builtin_function(KOS_CONTEXT          ctx,
     unsigned  num_def_args = 0;
     int       error        = KOS_SUCCESS;
 
-    OBJPTR(FUNCTION, func_obj)->handle2.handler = handler;
+    OBJPTR(FUNCTION, func_obj)->handler.handler = handler;
     OBJPTR(FUNCTION, func_obj)->name            = name_obj;
 
     if ( ! args || IS_BAD_PTR(args->name))
@@ -364,7 +364,7 @@ unsigned KOS_function_addr_to_line(KOS_OBJ_ID func_obj,
     unsigned   ret = 0;
 
     assert( ! IS_BAD_PTR(func_obj));
-    bytecode_obj = OBJPTR(FUNCTION, func_obj)->handle2.bytecode;
+    bytecode_obj = OBJPTR(FUNCTION, func_obj)->handler.bytecode;
     if ( ! IS_SMALL_INT(bytecode_obj) && ! IS_BAD_PTR(bytecode_obj)) {
 
         KOS_BYTECODE *const bytecode = (KOS_BYTECODE *)OBJPTR(OPAQUE, bytecode_obj);
@@ -400,7 +400,7 @@ uint32_t KOS_function_get_def_line(KOS_OBJ_ID func_obj)
     uint32_t   def_line = 0;
 
     assert( ! IS_BAD_PTR(func_obj));
-    bytecode_obj = OBJPTR(FUNCTION, func_obj)->handle2.bytecode;
+    bytecode_obj = OBJPTR(FUNCTION, func_obj)->handler.bytecode;
     if ( ! IS_SMALL_INT(bytecode_obj) && ! IS_BAD_PTR(bytecode_obj))
         def_line = ((KOS_BYTECODE *)OBJPTR(OPAQUE, bytecode_obj))->def_line;
 
@@ -413,7 +413,7 @@ uint32_t KOS_function_get_num_instr(KOS_OBJ_ID func_obj)
     uint32_t   num_instr = 0;
 
     assert( ! IS_BAD_PTR(func_obj));
-    bytecode_obj = OBJPTR(FUNCTION, func_obj)->handle2.bytecode;
+    bytecode_obj = OBJPTR(FUNCTION, func_obj)->handler.bytecode;
     if ( ! IS_SMALL_INT(bytecode_obj) && ! IS_BAD_PTR(bytecode_obj))
         num_instr = ((KOS_BYTECODE *)OBJPTR(OPAQUE, bytecode_obj))->num_instr;
 
@@ -426,7 +426,7 @@ uint32_t KOS_function_get_code_size(KOS_OBJ_ID func_obj)
     uint32_t   bytecode_size = 0;
 
     assert( ! IS_BAD_PTR(func_obj));
-    bytecode_obj = OBJPTR(FUNCTION, func_obj)->handle2.bytecode;
+    bytecode_obj = OBJPTR(FUNCTION, func_obj)->handler.bytecode;
     if ( ! IS_SMALL_INT(bytecode_obj) && ! IS_BAD_PTR(bytecode_obj))
         bytecode_size = ((KOS_BYTECODE *)OBJPTR(OPAQUE, bytecode_obj))->bytecode_size;
 

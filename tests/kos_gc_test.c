@@ -713,7 +713,7 @@ static int verify_function(KOS_OBJ_ID obj_id)
     TEST(OBJPTR(FUNCTION, obj_id)->opts.args_reg == 3);
     TEST(KOS_atomic_read_relaxed_u32(OBJPTR(FUNCTION, obj_id)->state) == 0);
 
-    v = OBJPTR(FUNCTION, obj_id)->handle2.bytecode;
+    v = OBJPTR(FUNCTION, obj_id)->handler.bytecode;
     TEST( ! IS_BAD_PTR(v));
     TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
     TEST(OBJPTR(INTEGER, v)->value == 48);
@@ -775,7 +775,7 @@ static KOS_OBJ_ID alloc_function(KOS_CONTEXT  ctx,
     OBJPTR(FUNCTION, obj_id[0])->opts.min_args    = 1;
     OBJPTR(FUNCTION, obj_id[0])->opts.num_regs    = 2;
     OBJPTR(FUNCTION, obj_id[0])->opts.args_reg    = 3;
-    OBJPTR(FUNCTION, obj_id[0])->handle2.bytecode = obj_id[1];
+    OBJPTR(FUNCTION, obj_id[0])->handler.bytecode = obj_id[1];
     OBJPTR(FUNCTION, obj_id[0])->module           = obj_id[2];
     OBJPTR(FUNCTION, obj_id[0])->name             = obj_id[3];
     OBJPTR(FUNCTION, obj_id[0])->closures         = obj_id[4];
@@ -807,7 +807,7 @@ static int verify_class(KOS_OBJ_ID obj_id)
     TEST(OBJPTR(CLASS, obj_id)->opts.num_regs == 2);
     TEST(OBJPTR(CLASS, obj_id)->opts.args_reg == 3);
 
-    v = OBJPTR(FUNCTION, obj_id)->handle2.bytecode;
+    v = OBJPTR(FUNCTION, obj_id)->handler.bytecode;
     TEST( ! IS_BAD_PTR(v));
     TEST(GET_OBJ_TYPE(v) == OBJ_INTEGER);
     TEST(OBJPTR(INTEGER, v)->value == 52);
@@ -880,7 +880,7 @@ static KOS_OBJ_ID alloc_class(KOS_CONTEXT  ctx,
     OBJPTR(CLASS, obj_id[0])->opts.min_args    = 1;
     OBJPTR(CLASS, obj_id[0])->opts.num_regs    = 2;
     OBJPTR(CLASS, obj_id[0])->opts.args_reg    = 3;
-    OBJPTR(CLASS, obj_id[0])->handle2.bytecode = obj_id[1];
+    OBJPTR(CLASS, obj_id[0])->handler.bytecode = obj_id[1];
     OBJPTR(CLASS, obj_id[0])->module           = obj_id[2];
     OBJPTR(CLASS, obj_id[0])->name             = obj_id[3];
     OBJPTR(CLASS, obj_id[0])->closures         = obj_id[4];

@@ -304,8 +304,6 @@ KOS_OBJ_ID kos_alloc_bytecode(KOS_CONTEXT ctx,
                               const void *addr2line,
                               uint32_t    addr2line_size);
 
-int kos_is_native_function(KOS_OBJ_ID func_obj);
-
 /*==========================================================================*/
 /* KOS_MODULE                                                               */
 /*==========================================================================*/
