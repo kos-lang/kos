@@ -387,10 +387,6 @@ typedef struct KOS_ARRAY_S {
     KOS_ATOMIC(KOS_OBJ_ID) data;
 } KOS_ARRAY;
 
-typedef KOS_OBJ_ID (*KOS_FUNCTION_HANDLER)(KOS_CONTEXT ctx,
-                                           KOS_OBJ_ID  this_obj,
-                                           KOS_OBJ_ID  args_obj);
-
 typedef KOS_OBJ_ID (*KOS_FUNCTION_HANDLE2)(KOS_CONTEXT             ctx,
                                            KOS_OBJ_ID              this_obj,
                                            uint32_t                num_args,
@@ -439,7 +435,6 @@ typedef struct KOS_FUNCTION_S {
     KOS_OBJ_ID           closures; /* Array with bound closures */
     KOS_OBJ_ID           defaults; /* Array with bound default values for arguments */
     KOS_OBJ_ID           arg_map;  /* Object which maps argument names to indexes */
-    KOS_FUNCTION_HANDLER handler;  /* TODO store this in bytecode member */
     KOS_OBJ_ID           generator_stack_frame;
 } KOS_FUNCTION;
 
@@ -453,7 +448,6 @@ typedef struct KOS_CLASS_S {
     KOS_OBJ_ID             closures; /* Array with bound closures */
     KOS_OBJ_ID             defaults; /* Array with bound default values for arguments */
     KOS_OBJ_ID             arg_map;  /* Object which maps argument names to indexes */
-    KOS_FUNCTION_HANDLER   handler;  /* TODO store this in bytecode member */
     KOS_ATOMIC(KOS_OBJ_ID) prototype;
     KOS_ATOMIC(KOS_OBJ_ID) props;
 } KOS_CLASS;

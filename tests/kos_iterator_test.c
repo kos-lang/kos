@@ -17,13 +17,19 @@
 #define TEST_NO_EXCEPTION() TEST( ! KOS_is_exception_pending(ctx))
 
 /* Always returns integer 256 */
-static KOS_OBJ_ID return_256(KOS_CONTEXT ctx, KOS_OBJ_ID this_obj, KOS_OBJ_ID args_obj)
+static KOS_OBJ_ID return_256(const KOS_CONTEXT             ctx,
+                             const KOS_OBJ_ID              this_obj,
+                             const uint32_t                num_args,
+                             KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     return TO_SMALL_INT(256);
 }
 
 /* Yields integers 256 and 512 */
-static KOS_OBJ_ID yield_256_and_512(KOS_CONTEXT ctx, KOS_OBJ_ID this_obj, KOS_OBJ_ID args_obj)
+static KOS_OBJ_ID yield_256_and_512(const KOS_CONTEXT             ctx,
+                                    const KOS_OBJ_ID              this_obj,
+                                    const uint32_t                num_args,
+                                    KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_OBJ_ID value;
 
@@ -437,7 +443,7 @@ int main(void)
         obj = KOS_new_function(ctx);
         TEST( ! IS_BAD_PTR(obj));
         TEST(GET_OBJ_TYPE(obj) == OBJ_FUNCTION);
-        OBJPTR(FUNCTION, obj)->handler = return_256;
+        OBJPTR(FUNCTION, obj)->handle2.handler = return_256;
 
         /* ---------------------------------------------------------------- */
 
@@ -478,7 +484,7 @@ int main(void)
         obj = KOS_new_class(ctx, KOS_VOID);
         TEST( ! IS_BAD_PTR(obj));
         TEST(GET_OBJ_TYPE(obj) == OBJ_CLASS);
-        OBJPTR(FUNCTION, obj)->handler = return_256;
+        OBJPTR(FUNCTION, obj)->handle2.handler = return_256;
 
         /* ---------------------------------------------------------------- */
 
@@ -529,7 +535,7 @@ int main(void)
         obj = KOS_new_function(ctx);
         TEST( ! IS_BAD_PTR(obj));
         TEST(GET_OBJ_TYPE(obj) == OBJ_FUNCTION);
-        OBJPTR(FUNCTION, obj)->handler = return_256;
+        OBJPTR(FUNCTION, obj)->handle2.handler = return_256;
         KOS_atomic_write_relaxed_u32(OBJPTR(FUNCTION, obj)->state, KOS_GEN_INIT);
 
         /* ---------------------------------------------------------------- */
@@ -570,7 +576,7 @@ int main(void)
         obj = KOS_new_function(ctx);
         TEST( ! IS_BAD_PTR(obj));
         TEST(GET_OBJ_TYPE(obj) == OBJ_FUNCTION);
-        OBJPTR(FUNCTION, obj)->handler = yield_256_and_512;
+        OBJPTR(FUNCTION, obj)->handle2.handler = yield_256_and_512;
         KOS_atomic_write_relaxed_u32(OBJPTR(FUNCTION, obj)->state, KOS_GEN_INIT);
 
         {

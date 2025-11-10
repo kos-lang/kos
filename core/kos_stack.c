@@ -539,11 +539,7 @@ static int dump_stack(KOS_OBJ_ID stack,
     KOS_LOCAL         module_path;
     KOS_LOCAL         frame_desc;
 
-    if (OBJPTR(FUNCTION, func)->handler) {
-        line       = 0;
-        instr_offs = (intptr_t)OBJPTR(FUNCTION, func)->handler;
-    }
-    else if (IS_SMALL_INT(OBJPTR(FUNCTION, func)->handle2.bytecode)) {
+    if (IS_SMALL_INT(OBJPTR(FUNCTION, func)->handle2.bytecode)) {
         line       = 0;
         instr_offs = (intptr_t)OBJPTR(FUNCTION, func)->handle2.handler;
     }

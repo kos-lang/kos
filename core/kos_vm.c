@@ -520,7 +520,7 @@ static KOS_OBJ_ID slice_args(KOS_CONTEXT ctx,
 
 int kos_is_native_function(KOS_OBJ_ID func_obj)
 {
-    return OBJPTR(FUNCTION, func_obj)->handler || IS_SMALL_INT(OBJPTR(FUNCTION, func_obj)->handle2.bytecode);
+    return IS_SMALL_INT(OBJPTR(FUNCTION, func_obj)->handle2.bytecode);
 }
 
 static int init_registers(KOS_CONTEXT ctx,
@@ -3510,10 +3510,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx) /* lgtm [cpp/use-of-goto] */
                             PROF_ZONE(VM)
                             PROF_ZONE_NAME_FUN(func.o)
 
-                            if (OBJPTR(FUNCTION, func.o)->handler)
-                                ret.o = OBJPTR(FUNCTION, func.o)->handler(ctx, this_.o, args.o);
-                            else
-                                ret.o = call_native_function(ctx, func.o, this_.o, args.o);
+                            ret.o = call_native_function(ctx, func.o, this_.o, args.o);
 
                             assert(IS_BAD_PTR(ret.o) || GET_OBJ_TYPE(ret.o) <= OBJ_LAST_TYPE);
 
@@ -3902,10 +3899,7 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
             PROF_ZONE(VM)
             PROF_ZONE_NAME_FUN(func.o)
 
-            if (OBJPTR(FUNCTION, func.o)->handler)
-                ret.o = OBJPTR(FUNCTION, func.o)->handler(ctx, this_.o, args.o);
-            else
-                ret.o = call_native_function(ctx, func.o, this_.o, args.o);
+            ret.o = call_native_function(ctx, func.o, this_.o, args.o);
 
             assert(ctx->local_list == &func);
 

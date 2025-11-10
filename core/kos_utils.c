@@ -1057,10 +1057,7 @@ static int vector_append_function(KOS_CONTEXT ctx,
 
     TRY(vector_append_str(ctx, cstr_vec, func->name, KOS_DONT_QUOTE));
 
-    if (func->handler)
-        len = (unsigned)snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%" PRIX64 ">",
-                                 (uint64_t)(uintptr_t)func->handler);
-    else if (IS_SMALL_INT(func->handle2.bytecode))
+    if (IS_SMALL_INT(func->handle2.bytecode))
         len = (unsigned)snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%" PRIX64 ">",
                                  (uint64_t)(uintptr_t)func->handle2.handler);
     else
@@ -1102,10 +1099,7 @@ static KOS_OBJ_ID function_to_str(KOS_CONTEXT ctx,
 
     strings[1].o = OBJPTR(FUNCTION, func.o)->name;
 
-    if (OBJPTR(FUNCTION, func.o)->handler)
-        snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%" PRIx64 ">",
-                 (uint64_t)(uintptr_t)OBJPTR(FUNCTION, func.o)->handler);
-    else if (IS_SMALL_INT(OBJPTR(FUNCTION, func.o)->handle2.bytecode))
+    if (IS_SMALL_INT(OBJPTR(FUNCTION, func.o)->handle2.bytecode))
         snprintf(cstr_ptr, sizeof(cstr_ptr), " @ 0x%" PRIx64 ">",
                  (uint64_t)(uintptr_t)OBJPTR(FUNCTION, func.o)->handle2.handler);
     else

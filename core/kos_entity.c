@@ -83,7 +83,6 @@ KOS_OBJ_ID KOS_new_function(KOS_CONTEXT ctx)
         func->closures              = KOS_VOID;
         func->defaults              = KOS_VOID;
         func->arg_map               = KOS_VOID;
-        func->handler               = KOS_NULL;
         func->generator_stack_frame = KOS_BADPTR;
 
         KOS_atomic_write_relaxed_u32(func->state, KOS_FUN);
@@ -123,7 +122,6 @@ KOS_OBJ_ID kos_copy_function(KOS_CONTEXT ctx,
         dest->closures = src->closures;
         dest->defaults = src->defaults;
         dest->arg_map  = src->arg_map;
-        dest->handler  = src->handler;
     }
 
     KOS_destroy_top_local(ctx, &obj);
@@ -216,7 +214,6 @@ KOS_OBJ_ID KOS_new_class(KOS_CONTEXT ctx, KOS_OBJ_ID proto_obj)
         OBJPTR(CLASS, func.o)->closures         = KOS_VOID;
         OBJPTR(CLASS, func.o)->defaults         = KOS_VOID;
         OBJPTR(CLASS, func.o)->arg_map          = KOS_VOID;
-        OBJPTR(CLASS, func.o)->handler          = KOS_NULL;
         KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, func.o)->prototype, proto.o);
         KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, func.o)->props,     KOS_BADPTR);
 
