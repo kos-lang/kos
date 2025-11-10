@@ -54,9 +54,7 @@ static KOS_OBJ_ID kos_abs(const KOS_CONTEXT             ctx,
         else
             ret = KOS_new_int(ctx, numeric.u.i < 0 ? -numeric.u.i : numeric.u.i);
     }
-    else if (numeric.type != KOS_NON_NUMERIC) {
-        assert(numeric.type == KOS_FLOAT_VALUE);
-
+    else if (numeric.type == KOS_FLOAT_VALUE) {
         numeric.u.i &= (int64_t)~((uint64_t)1U << 63);
 
         ret = KOS_new_float(ctx, numeric.u.d);
@@ -82,28 +80,30 @@ static KOS_OBJ_ID kos_abs(const KOS_CONTEXT             ctx,
  *     > math.acos(1)
  *     0.0
  */
-static KOS_OBJ_ID kos_acos(KOS_CONTEXT ctx,
-                           KOS_OBJ_ID  this_obj,
-                           KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_acos(const KOS_CONTEXT             ctx,
+                           const KOS_OBJ_ID              this_obj,
+                           const uint32_t                num_args,
+                           KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    int         error = KOS_SUCCESS;
-    KOS_OBJ_ID  ret   = KOS_BADPTR;
     KOS_NUMERIC numeric;
+    KOS_OBJ_ID  ret   = KOS_BADPTR;
     double      value;
+    int         error = KOS_SUCCESS;
 
-    TRY(KOS_get_numeric_arg(ctx, args_obj, 0, &numeric));
+    numeric = KOS_get_numeric(args[0]);
 
     if (numeric.type == KOS_INTEGER_VALUE) {
         if ((numeric.u.i < -1) || (numeric.u.i > 1))
             RAISE_EXCEPTION(str_err_outside_m1_1);
         value = (double)numeric.u.i;
     }
-    else {
-        assert(numeric.type == KOS_FLOAT_VALUE);
+    else if (numeric.type == KOS_FLOAT_VALUE) {
         value = numeric.u.d;
         if ((value < -1) || (value > 1))
             RAISE_EXCEPTION(str_err_outside_m1_1);
     }
+    else
+        RAISE_EXCEPTION_STR(str_err_not_number);
 
     ret = KOS_new_float(ctx, acos(value));
 
@@ -126,28 +126,30 @@ cleanup:
  *     > math.asin(-1)
  *     0.0
  */
-static KOS_OBJ_ID kos_asin(KOS_CONTEXT ctx,
-                           KOS_OBJ_ID  this_obj,
-                           KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_asin(const KOS_CONTEXT             ctx,
+                           const KOS_OBJ_ID              this_obj,
+                           const uint32_t                num_args,
+                           KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    int         error = KOS_SUCCESS;
-    KOS_OBJ_ID  ret   = KOS_BADPTR;
     KOS_NUMERIC numeric;
+    KOS_OBJ_ID  ret   = KOS_BADPTR;
     double      value;
+    int         error = KOS_SUCCESS;
 
-    TRY(KOS_get_numeric_arg(ctx, args_obj, 0, &numeric));
+    numeric = KOS_get_numeric(args[0]);
 
     if (numeric.type == KOS_INTEGER_VALUE) {
         if ((numeric.u.i < -1) || (numeric.u.i > 1))
             RAISE_EXCEPTION(str_err_outside_m1_1);
         value = (double)numeric.u.i;
     }
-    else {
-        assert(numeric.type == KOS_FLOAT_VALUE);
+    else if (numeric.type == KOS_FLOAT_VALUE) {
         value = numeric.u.d;
         if ((value < -1) || (value > 1))
             RAISE_EXCEPTION(str_err_outside_m1_1);
     }
+    else
+        RAISE_EXCEPTION_STR(str_err_not_number);
 
     ret = KOS_new_float(ctx, asin(value));
 
@@ -168,24 +170,24 @@ cleanup:
  *     > math.atan(math.infinity)
  *     1.570796326794897
  */
-static KOS_OBJ_ID kos_atan(KOS_CONTEXT ctx,
-                           KOS_OBJ_ID  this_obj,
-                           KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_atan(const KOS_CONTEXT             ctx,
+                           const KOS_OBJ_ID              this_obj,
+                           const uint32_t                num_args,
+                           KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    int         error = KOS_SUCCESS;
-    KOS_OBJ_ID  ret   = KOS_BADPTR;
     KOS_NUMERIC numeric;
+    KOS_OBJ_ID  ret   = KOS_BADPTR;
     double      value;
+    int         error = KOS_SUCCESS;
 
-    TRY(KOS_get_numeric_arg(ctx, args_obj, 0, &numeric));
+    numeric = KOS_get_numeric(args[0]);
 
-    if (numeric.type == KOS_INTEGER_VALUE) {
+    if (numeric.type == KOS_INTEGER_VALUE)
         value = (double)numeric.u.i;
-    }
-    else {
-        assert(numeric.type == KOS_FLOAT_VALUE);
+    else if (numeric.type == KOS_FLOAT_VALUE)
         value = numeric.u.d;
-    }
+    else
+        RAISE_EXCEPTION_STR(str_err_not_number);
 
     ret = KOS_new_float(ctx, atan(value));
 
@@ -209,26 +211,24 @@ cleanup:
  *     > math.ceil(-0.1)
  *     -0.0
  */
-static KOS_OBJ_ID kos_ceil(KOS_CONTEXT ctx,
-                           KOS_OBJ_ID  this_obj,
-                           KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_ceil(const KOS_CONTEXT             ctx,
+                           const KOS_OBJ_ID              this_obj,
+                           const uint32_t                num_args,
+                           KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_OBJ_ID ret = KOS_BADPTR;
-    KOS_OBJ_ID arg = KOS_array_read(ctx, args_obj, 0);
 
-    assert( ! IS_BAD_PTR(arg));
+    if (IS_SMALL_INT(args[0]))
+        ret = args[0];
 
-    if (IS_SMALL_INT(arg))
-        ret = arg;
-
-    else switch (READ_OBJ_TYPE(arg)) {
+    else switch (READ_OBJ_TYPE(args[0])) {
 
         case OBJ_INTEGER:
-            ret = arg;
+            ret = args[0];
             break;
 
         case OBJ_FLOAT:
-            ret = KOS_new_float(ctx, ceil(OBJPTR(FLOAT, arg)->value));
+            ret = KOS_new_float(ctx, ceil(OBJPTR(FLOAT, args[0])->value));
             break;
 
         default:
@@ -252,23 +252,24 @@ static KOS_OBJ_ID kos_ceil(KOS_CONTEXT ctx,
  *     > math.cos(math.pi / 2)
  *     0.0
  */
-static KOS_OBJ_ID kos_cos(KOS_CONTEXT ctx,
-                          KOS_OBJ_ID  this_obj,
-                          KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_cos(const KOS_CONTEXT             ctx,
+                          const KOS_OBJ_ID              this_obj,
+                          const uint32_t                num_args,
+                          KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    int         error = KOS_SUCCESS;
-    KOS_OBJ_ID  ret   = KOS_BADPTR;
     KOS_NUMERIC numeric;
+    KOS_OBJ_ID  ret   = KOS_BADPTR;
     double      value;
+    int         error = KOS_SUCCESS;
 
-    TRY(KOS_get_numeric_arg(ctx, args_obj, 0, &numeric));
+    numeric = KOS_get_numeric(args[0]);
 
     if (numeric.type == KOS_INTEGER_VALUE)
         value = (double)numeric.u.i;
-    else {
-        assert(numeric.type == KOS_FLOAT_VALUE);
+    else if (numeric.type == KOS_FLOAT_VALUE)
         value = numeric.u.d;
-    }
+    else
+        RAISE_EXCEPTION_STR(str_err_not_number);
 
     ret = KOS_new_float(ctx, cos(value));
 
@@ -291,28 +292,29 @@ cleanup:
  *     > math.exp(-1)
  *     0.367879441171442
  */
-static KOS_OBJ_ID kos_exp(KOS_CONTEXT ctx,
-                          KOS_OBJ_ID  this_obj,
-                          KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_exp(const KOS_CONTEXT             ctx,
+                          const KOS_OBJ_ID              this_obj,
+                          const uint32_t                num_args,
+                          KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    KOS_OBJ_ID  ret = KOS_BADPTR;
     KOS_NUMERIC numeric;
+    KOS_OBJ_ID  ret   = KOS_BADPTR;
+    double      value;
+    int         error = KOS_SUCCESS;
 
-    if (KOS_get_numeric_arg(ctx, args_obj, 0, &numeric) == KOS_SUCCESS) {
+    numeric = KOS_get_numeric(args[0]);
 
-        double value;
+    if (numeric.type == KOS_INTEGER_VALUE)
+        value = (double)numeric.u.i;
+    else if (numeric.type == KOS_FLOAT_VALUE)
+        value = numeric.u.d;
+    else
+        RAISE_EXCEPTION_STR(str_err_not_number);
 
-        if (numeric.type == KOS_INTEGER_VALUE)
-            value = (double)numeric.u.i;
-        else {
-            assert(numeric.type == KOS_FLOAT_VALUE);
-            value = numeric.u.d;
-        }
+    ret = KOS_new_float(ctx, exp(value));
 
-        ret = KOS_new_float(ctx, exp(value));
-    }
-
-    return ret;
+cleanup:
+    return error ? KOS_BADPTR : ret;
 }
 
 /* @item math expm1()
@@ -330,28 +332,29 @@ static KOS_OBJ_ID kos_exp(KOS_CONTEXT ctx,
  *     > math.expm1(2)
  *     6.38905609893065
  */
-static KOS_OBJ_ID kos_expm1(KOS_CONTEXT ctx,
-                            KOS_OBJ_ID  this_obj,
-                            KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_expm1(const KOS_CONTEXT             ctx,
+                            const KOS_OBJ_ID              this_obj,
+                            const uint32_t                num_args,
+                            KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    KOS_OBJ_ID  ret = KOS_BADPTR;
     KOS_NUMERIC numeric;
+    KOS_OBJ_ID  ret   = KOS_BADPTR;
+    double      value;
+    int         error = KOS_SUCCESS;
 
-    if (KOS_get_numeric_arg(ctx, args_obj, 0, &numeric) == KOS_SUCCESS) {
+    numeric = KOS_get_numeric(args[0]);
 
-        double value;
+    if (numeric.type == KOS_INTEGER_VALUE)
+        value = (double)numeric.u.i;
+    else if (numeric.type == KOS_FLOAT_VALUE)
+        value = numeric.u.d;
+    else
+        RAISE_EXCEPTION_STR(str_err_not_number);
 
-        if (numeric.type == KOS_INTEGER_VALUE)
-            value = (double)numeric.u.i;
-        else {
-            assert(numeric.type == KOS_FLOAT_VALUE);
-            value = numeric.u.d;
-        }
+    ret = KOS_new_float(ctx, expm1(value));
 
-        ret = KOS_new_float(ctx, expm1(value));
-    }
-
-    return ret;
+cleanup:
+    return error ? KOS_BADPTR : ret;
 }
 
 /* @item math floor()
@@ -370,26 +373,24 @@ static KOS_OBJ_ID kos_expm1(KOS_CONTEXT ctx,
  *     > math.floor(-0.1)
  *     -1.0
  */
-static KOS_OBJ_ID kos_floor(KOS_CONTEXT ctx,
-                            KOS_OBJ_ID  this_obj,
-                            KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_floor(const KOS_CONTEXT             ctx,
+                            const KOS_OBJ_ID              this_obj,
+                            const uint32_t                num_args,
+                            KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_OBJ_ID ret = KOS_BADPTR;
-    KOS_OBJ_ID arg = KOS_array_read(ctx, args_obj, 0);
 
-    assert( ! IS_BAD_PTR(arg));
+    if (IS_SMALL_INT(args[0]))
+        ret = args[0];
 
-    if (IS_SMALL_INT(arg))
-        ret = arg;
-
-    else switch (READ_OBJ_TYPE(arg)) {
+    else switch (READ_OBJ_TYPE(args[0])) {
 
         case OBJ_INTEGER:
-            ret = arg;
+            ret = args[0];
             break;
 
         case OBJ_FLOAT:
-            ret = KOS_new_float(ctx, floor(OBJPTR(FLOAT, arg)->value));
+            ret = KOS_new_float(ctx, floor(OBJPTR(FLOAT, args[0])->value));
             break;
 
         default:
@@ -415,28 +416,30 @@ static KOS_OBJ_ID kos_floor(KOS_CONTEXT ctx,
  *     > math.log(1)
  *     0.0
  */
-static KOS_OBJ_ID kos_log(KOS_CONTEXT ctx,
-                          KOS_OBJ_ID  this_obj,
-                          KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_log(const KOS_CONTEXT             ctx,
+                          const KOS_OBJ_ID              this_obj,
+                          const uint32_t                num_args,
+                          KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    int         error = KOS_SUCCESS;
-    KOS_OBJ_ID  ret   = KOS_BADPTR;
     KOS_NUMERIC numeric;
+    KOS_OBJ_ID  ret   = KOS_BADPTR;
     double      value;
+    int         error = KOS_SUCCESS;
 
-    TRY(KOS_get_numeric_arg(ctx, args_obj, 0, &numeric));
+    numeric = KOS_get_numeric(args[0]);
 
     if (numeric.type == KOS_INTEGER_VALUE) {
         if (numeric.u.i <= 0)
             RAISE_EXCEPTION(str_err_zero_or_less);
         value = (double)numeric.u.i;
     }
-    else {
-        assert(numeric.type == KOS_FLOAT_VALUE);
+    else if (numeric.type == KOS_FLOAT_VALUE) {
         value = numeric.u.d;
         if (value <= 0)
             RAISE_EXCEPTION(str_err_zero_or_less);
     }
+    else
+        RAISE_EXCEPTION_STR(str_err_not_number);
 
     ret = KOS_new_float(ctx, log(value));
 
@@ -461,28 +464,30 @@ cleanup:
  *     > math.log10(100)
  *     2.0
  */
-static KOS_OBJ_ID kos_log10(KOS_CONTEXT ctx,
-                            KOS_OBJ_ID  this_obj,
-                            KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_log10(const KOS_CONTEXT             ctx,
+                            const KOS_OBJ_ID              this_obj,
+                            const uint32_t                num_args,
+                            KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    int         error = KOS_SUCCESS;
-    KOS_OBJ_ID  ret   = KOS_BADPTR;
     KOS_NUMERIC numeric;
+    KOS_OBJ_ID  ret   = KOS_BADPTR;
     double      value;
+    int         error = KOS_SUCCESS;
 
-    TRY(KOS_get_numeric_arg(ctx, args_obj, 0, &numeric));
+    numeric = KOS_get_numeric(args[0]);
 
     if (numeric.type == KOS_INTEGER_VALUE) {
         if (numeric.u.i <= 0)
             RAISE_EXCEPTION(str_err_zero_or_less);
         value = (double)numeric.u.i;
     }
-    else {
-        assert(numeric.type == KOS_FLOAT_VALUE);
+    else if (numeric.type == KOS_FLOAT_VALUE) {
         value = numeric.u.d;
         if (value <= 0)
             RAISE_EXCEPTION(str_err_zero_or_less);
     }
+    else
+        RAISE_EXCEPTION_STR(str_err_not_number);
 
     ret = KOS_new_float(ctx, log10(value));
 
@@ -507,28 +512,30 @@ cleanup:
  *     > math.log1p(0)
  *     0.0
  */
-static KOS_OBJ_ID kos_log1p(KOS_CONTEXT ctx,
-                            KOS_OBJ_ID  this_obj,
-                            KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_log1p(const KOS_CONTEXT             ctx,
+                            const KOS_OBJ_ID              this_obj,
+                            const uint32_t                num_args,
+                            KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    int         error = KOS_SUCCESS;
-    KOS_OBJ_ID  ret   = KOS_BADPTR;
     KOS_NUMERIC numeric;
+    KOS_OBJ_ID  ret   = KOS_BADPTR;
     double      value;
+    int         error = KOS_SUCCESS;
 
-    TRY(KOS_get_numeric_arg(ctx, args_obj, 0, &numeric));
+    numeric = KOS_get_numeric(args[0]);
 
     if (numeric.type == KOS_INTEGER_VALUE) {
         if (numeric.u.i <= -1)
             RAISE_EXCEPTION(str_err_m1_or_less);
         value = (double)numeric.u.i;
     }
-    else {
-        assert(numeric.type == KOS_FLOAT_VALUE);
+    else if (numeric.type == KOS_FLOAT_VALUE) {
         value = numeric.u.d;
         if (value <= -1)
             RAISE_EXCEPTION(str_err_m1_or_less);
     }
+    else
+        RAISE_EXCEPTION_STR(str_err_not_number);
 
     ret = KOS_new_float(ctx, log1p(value));
 
@@ -552,20 +559,18 @@ cleanup:
  *     > math.is_infinity(1e60)
  *     false
  */
-static KOS_OBJ_ID kos_is_infinity(KOS_CONTEXT ctx,
-                                  KOS_OBJ_ID  this_obj,
-                                  KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_is_infinity(const KOS_CONTEXT             ctx,
+                                  const KOS_OBJ_ID              this_obj,
+                                  const uint32_t                num_args,
+                                  KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_OBJ_ID ret = KOS_BADPTR;
-    KOS_OBJ_ID arg = KOS_array_read(ctx, args_obj, 0);
 
-    assert( ! IS_BAD_PTR(arg));
-
-    if (GET_OBJ_TYPE(arg) == OBJ_FLOAT) {
+    if (GET_OBJ_TYPE(args[0]) == OBJ_FLOAT) {
 
         KOS_NUMERIC_VALUE value;
 
-        value.d = OBJPTR(FLOAT, arg)->value;
+        value.d = OBJPTR(FLOAT, args[0])->value;
         ret     = KOS_BOOL(((value.i >> 52) & 0x7FF) == 0x7FF && ! ((uint64_t)value.i << 12));
     }
     else
@@ -590,20 +595,18 @@ static KOS_OBJ_ID kos_is_infinity(KOS_CONTEXT ctx,
  *     > math.is_nan([])
  *     false
  */
-static KOS_OBJ_ID kos_is_nan(KOS_CONTEXT ctx,
-                             KOS_OBJ_ID  this_obj,
-                             KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_is_nan(const KOS_CONTEXT             ctx,
+                             const KOS_OBJ_ID              this_obj,
+                             const uint32_t                num_args,
+                             KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_OBJ_ID ret = KOS_BADPTR;
-    KOS_OBJ_ID arg = KOS_array_read(ctx, args_obj, 0);
 
-    assert( ! IS_BAD_PTR(arg));
-
-    if (GET_OBJ_TYPE(arg) == OBJ_FLOAT) {
+    if (GET_OBJ_TYPE(args[0]) == OBJ_FLOAT) {
 
         KOS_NUMERIC_VALUE value;
 
-        value.d = OBJPTR(FLOAT, arg)->value;
+        value.d = OBJPTR(FLOAT, args[0])->value;
         ret     = KOS_BOOL(((value.i >> 52) & 0x7FF) == 0x7FF && ((uint64_t)value.i << 12));
     }
     else
@@ -631,33 +634,34 @@ static KOS_OBJ_ID kos_is_nan(KOS_CONTEXT ctx,
  *     > math.pow(10, -2)
  *     0.01
  */
-static KOS_OBJ_ID kos_pow(KOS_CONTEXT ctx,
-                          KOS_OBJ_ID  this_obj,
-                          KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_pow(const KOS_CONTEXT             ctx,
+                          const KOS_OBJ_ID              this_obj,
+                          const uint32_t                num_args,
+                          KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    int         error = KOS_SUCCESS;
-    KOS_OBJ_ID  ret   = KOS_BADPTR;
     KOS_NUMERIC arg1;
     KOS_NUMERIC arg2;
+    KOS_OBJ_ID  ret   = KOS_BADPTR;
     double      val1;
     double      val2;
+    int         error = KOS_SUCCESS;
 
-    TRY(KOS_get_numeric_arg(ctx, args_obj, 0, &arg1));
-    TRY(KOS_get_numeric_arg(ctx, args_obj, 1, &arg2));
+    arg1 = KOS_get_numeric(args[0]);
+    arg2 = KOS_get_numeric(args[1]);
 
     if (arg1.type == KOS_INTEGER_VALUE)
         val1 = (double)arg1.u.i;
-    else {
-        assert(arg1.type == KOS_FLOAT_VALUE);
+    else if (arg1.type == KOS_FLOAT_VALUE)
         val1 = arg1.u.d;
-    }
+    else
+        RAISE_EXCEPTION_STR(str_err_not_number);
 
     if (arg2.type == KOS_INTEGER_VALUE)
         val2 = (double)arg2.u.i;
-    else {
-        assert(arg2.type == KOS_FLOAT_VALUE);
+    else if (arg2.type == KOS_FLOAT_VALUE)
         val2 = arg2.u.d;
-    }
+    else
+        RAISE_EXCEPTION_STR(str_err_not_number);
 
     if (val1 == 0) {
         if (val2 == 0)
@@ -689,23 +693,25 @@ cleanup:
  *     > math.sin(math.pi / 2)
  *     1.0
  */
-static KOS_OBJ_ID kos_sin(KOS_CONTEXT ctx,
-                          KOS_OBJ_ID  this_obj,
-                          KOS_OBJ_ID  args_obj)
-{
-    int         error = KOS_SUCCESS;
-    KOS_OBJ_ID  ret   = KOS_BADPTR;
-    KOS_NUMERIC numeric;
-    double      value;
+static KOS_OBJ_ID kos_sin(const KOS_CONTEXT             ctx,
+                          const KOS_OBJ_ID              this_obj,
+                          const uint32_t                num_args,
+                          KOS_ATOMIC(KOS_OBJ_ID) *const args)
 
-    TRY(KOS_get_numeric_arg(ctx, args_obj, 0, &numeric));
+{
+    KOS_NUMERIC numeric;
+    KOS_OBJ_ID  ret   = KOS_BADPTR;
+    double      value;
+    int         error = KOS_SUCCESS;
+
+    numeric = KOS_get_numeric(args[0]);
 
     if (numeric.type == KOS_INTEGER_VALUE)
         value = (double)numeric.u.i;
-    else {
-        assert(numeric.type == KOS_FLOAT_VALUE);
+    else if (numeric.type == KOS_FLOAT_VALUE)
         value = numeric.u.d;
-    }
+    else
+        RAISE_EXCEPTION_STR(str_err_not_number);
 
     ret = KOS_new_float(ctx, sin(value));
 
@@ -728,28 +734,31 @@ cleanup:
  *     > math.sqrt(4)
  *     2.0
  */
-static KOS_OBJ_ID kos_sqrt(KOS_CONTEXT ctx,
-                           KOS_OBJ_ID  this_obj,
-                           KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_sqrt(const KOS_CONTEXT             ctx,
+                           const KOS_OBJ_ID              this_obj,
+                           const uint32_t                num_args,
+                           KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    int         error = KOS_SUCCESS;
-    KOS_OBJ_ID  ret   = KOS_BADPTR;
     KOS_NUMERIC numeric;
+    KOS_OBJ_ID  ret   = KOS_BADPTR;
     double      value;
+    int         error = KOS_SUCCESS;
 
-    TRY(KOS_get_numeric_arg(ctx, args_obj, 0, &numeric));
+
+    numeric = KOS_get_numeric(args[0]);
 
     if (numeric.type == KOS_INTEGER_VALUE) {
         if (numeric.u.i < 0)
             RAISE_EXCEPTION(str_err_negative_root);
         value = (double)numeric.u.i;
     }
-    else {
-        assert(numeric.type == KOS_FLOAT_VALUE);
+    else if (numeric.type == KOS_FLOAT_VALUE) {
         value = numeric.u.d;
         if (value < 0)
             RAISE_EXCEPTION(str_err_negative_root);
     }
+    else
+        RAISE_EXCEPTION_STR(str_err_not_number);
 
     ret = KOS_new_float(ctx, sqrt(value));
 
@@ -770,23 +779,24 @@ cleanup:
  *     > math.tan(math.pi / 4)
  *     1.0
  */
-static KOS_OBJ_ID kos_tan(KOS_CONTEXT ctx,
-                          KOS_OBJ_ID  this_obj,
-                          KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID kos_tan(const KOS_CONTEXT             ctx,
+                          const KOS_OBJ_ID              this_obj,
+                          const uint32_t                num_args,
+                          KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    int         error = KOS_SUCCESS;
-    KOS_OBJ_ID  ret   = KOS_BADPTR;
     KOS_NUMERIC numeric;
+    KOS_OBJ_ID  ret   = KOS_BADPTR;
     double      value;
+    int         error = KOS_SUCCESS;
 
-    TRY(KOS_get_numeric_arg(ctx, args_obj, 0, &numeric));
+    numeric = KOS_get_numeric(args[0]);
 
     if (numeric.type == KOS_INTEGER_VALUE)
         value = (double)numeric.u.i;
-    else {
-        assert(numeric.type == KOS_FLOAT_VALUE);
+    else if (numeric.type == KOS_FLOAT_VALUE)
         value = numeric.u.d;
-    }
+    else
+        RAISE_EXCEPTION_STR(str_err_not_number);
 
     ret = KOS_new_float(ctx, tan(value));
 
@@ -855,23 +865,23 @@ KOS_INIT_MODULE(math, KOS_MODULE_NEEDS_KOS_SOURCE)(KOS_CONTEXT ctx, KOS_OBJ_ID m
     }
 
     TRY_ADD_FUNCTIO2(ctx, module.o, "abs",         kos_abs,         number_arg);
-    TRY_ADD_FUNCTION(ctx, module.o, "acos",        kos_acos,        number_arg);
-    TRY_ADD_FUNCTION(ctx, module.o, "asin",        kos_asin,        number_arg);
-    TRY_ADD_FUNCTION(ctx, module.o, "atan",        kos_atan,        number_arg);
-    TRY_ADD_FUNCTION(ctx, module.o, "ceil",        kos_ceil,        number_arg);
-    TRY_ADD_FUNCTION(ctx, module.o, "cos",         kos_cos,         number_arg);
-    TRY_ADD_FUNCTION(ctx, module.o, "exp",         kos_exp,         number_arg);
-    TRY_ADD_FUNCTION(ctx, module.o, "expm1",       kos_expm1,       number_arg);
-    TRY_ADD_FUNCTION(ctx, module.o, "floor",       kos_floor,       number_arg);
-    TRY_ADD_FUNCTION(ctx, module.o, "log",         kos_log,         number_arg);
-    TRY_ADD_FUNCTION(ctx, module.o, "log10",       kos_log10,       number_arg);
-    TRY_ADD_FUNCTION(ctx, module.o, "log1p",       kos_log1p,       number_arg);
-    TRY_ADD_FUNCTION(ctx, module.o, "is_infinity", kos_is_infinity, number_arg);
-    TRY_ADD_FUNCTION(ctx, module.o, "is_nan",      kos_is_nan,      number_arg);
-    TRY_ADD_FUNCTION(ctx, module.o, "pow",         kos_pow,         pow_args);
-    TRY_ADD_FUNCTION(ctx, module.o, "sin",         kos_sin,         number_arg);
-    TRY_ADD_FUNCTION(ctx, module.o, "sqrt",        kos_sqrt,        number_arg);
-    TRY_ADD_FUNCTION(ctx, module.o, "tan",         kos_tan,         number_arg);
+    TRY_ADD_FUNCTIO2(ctx, module.o, "acos",        kos_acos,        number_arg);
+    TRY_ADD_FUNCTIO2(ctx, module.o, "asin",        kos_asin,        number_arg);
+    TRY_ADD_FUNCTIO2(ctx, module.o, "atan",        kos_atan,        number_arg);
+    TRY_ADD_FUNCTIO2(ctx, module.o, "ceil",        kos_ceil,        number_arg);
+    TRY_ADD_FUNCTIO2(ctx, module.o, "cos",         kos_cos,         number_arg);
+    TRY_ADD_FUNCTIO2(ctx, module.o, "exp",         kos_exp,         number_arg);
+    TRY_ADD_FUNCTIO2(ctx, module.o, "expm1",       kos_expm1,       number_arg);
+    TRY_ADD_FUNCTIO2(ctx, module.o, "floor",       kos_floor,       number_arg);
+    TRY_ADD_FUNCTIO2(ctx, module.o, "log",         kos_log,         number_arg);
+    TRY_ADD_FUNCTIO2(ctx, module.o, "log10",       kos_log10,       number_arg);
+    TRY_ADD_FUNCTIO2(ctx, module.o, "log1p",       kos_log1p,       number_arg);
+    TRY_ADD_FUNCTIO2(ctx, module.o, "is_infinity", kos_is_infinity, number_arg);
+    TRY_ADD_FUNCTIO2(ctx, module.o, "is_nan",      kos_is_nan,      number_arg);
+    TRY_ADD_FUNCTIO2(ctx, module.o, "pow",         kos_pow,         pow_args);
+    TRY_ADD_FUNCTIO2(ctx, module.o, "sin",         kos_sin,         number_arg);
+    TRY_ADD_FUNCTIO2(ctx, module.o, "sqrt",        kos_sqrt,        number_arg);
+    TRY_ADD_FUNCTIO2(ctx, module.o, "tan",         kos_tan,         number_arg);
 
 cleanup:
     KOS_destroy_top_local(ctx, &module);
