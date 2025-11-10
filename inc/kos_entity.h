@@ -387,7 +387,7 @@ typedef struct KOS_ARRAY_S {
     KOS_ATOMIC(KOS_OBJ_ID) data;
 } KOS_ARRAY;
 
-typedef KOS_OBJ_ID (*KOS_FUNCTION_HANDLE2)(KOS_CONTEXT             ctx,
+typedef KOS_OBJ_ID (*KOS_FUNCTION_HANDLER)(KOS_CONTEXT             ctx,
                                            KOS_OBJ_ID              this_obj,
                                            uint32_t                num_args,
                                            KOS_ATOMIC(KOS_OBJ_ID) *args);
@@ -422,7 +422,7 @@ typedef struct KOS_FUNCTION_OPTS_S {
 
 union KOS_HANDLER_U {
     KOS_OBJ_ID           bytecode; /* Buffer storage object with bytecode */
-    KOS_FUNCTION_HANDLE2 handler;  /* Pointer to native function handler */
+    KOS_FUNCTION_HANDLER handler;  /* Pointer to native function handler */
 };
 
 typedef struct KOS_FUNCTION_S {
@@ -546,13 +546,13 @@ KOS_OBJ_ID KOS_new_class(KOS_CONTEXT ctx,
 KOS_API
 KOS_OBJ_ID KOS_new_builtin_function(KOS_CONTEXT          ctx,
                                     KOS_OBJ_ID           name_obj,
-                                    KOS_FUNCTION_HANDLE2 handler,
+                                    KOS_FUNCTION_HANDLER handler,
                                     const KOS_CONVERT   *args);
 
 KOS_API
 KOS_OBJ_ID KOS_new_builtin_class(KOS_CONTEXT          ctx,
                                  KOS_OBJ_ID           name_obj,
-                                 KOS_FUNCTION_HANDLE2 handler,
+                                 KOS_FUNCTION_HANDLER handler,
                                  const KOS_CONVERT   *args);
 
 KOS_API

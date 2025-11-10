@@ -13,7 +13,7 @@
 #include "../core/kos_try.h"
 
 int create_thread(KOS_CONTEXT          ctx,
-                  KOS_FUNCTION_HANDLE2 proc,
+                  KOS_FUNCTION_HANDLER proc,
                   void                *cookie,
                   KOS_THREAD         **thread)
 {

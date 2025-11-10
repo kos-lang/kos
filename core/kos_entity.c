@@ -248,7 +248,7 @@ static unsigned count_args(const KOS_CONVERT *args)
 static int init_builtin_function(KOS_CONTEXT          ctx,
                                  KOS_OBJ_ID           func_obj,
                                  KOS_OBJ_ID           name_obj,
-                                 KOS_FUNCTION_HANDLE2 handler,
+                                 KOS_FUNCTION_HANDLER handler,
                                  const KOS_CONVERT   *args)
 {
     KOS_LOCAL func;
@@ -311,7 +311,7 @@ cleanup:
 
 KOS_OBJ_ID KOS_new_builtin_function(KOS_CONTEXT          ctx,
                                     KOS_OBJ_ID           name_obj,
-                                    KOS_FUNCTION_HANDLE2 handler,
+                                    KOS_FUNCTION_HANDLER handler,
                                     const KOS_CONVERT   *args)
 {
     KOS_LOCAL func;
@@ -332,7 +332,7 @@ KOS_OBJ_ID KOS_new_builtin_function(KOS_CONTEXT          ctx,
 
 KOS_OBJ_ID KOS_new_builtin_class(KOS_CONTEXT          ctx,
                                  KOS_OBJ_ID           name_obj,
-                                 KOS_FUNCTION_HANDLE2 handler,
+                                 KOS_FUNCTION_HANDLER handler,
                                  const KOS_CONVERT   *args)
 {
     KOS_OBJ_ID proto_obj;

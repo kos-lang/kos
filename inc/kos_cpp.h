@@ -148,7 +148,7 @@ class context {
         // Register C++ function in Kos
         // ============================
 
-        function new_function(const char* name, KOS_FUNCTION_HANDLE2 handler, int min_args);
+        function new_function(const char* name, KOS_FUNCTION_HANDLER handler, int min_args);
 
 #if __cplusplus >= 201703L
         template<auto fun>
@@ -1362,7 +1362,7 @@ inline buffer context::new_buffer(unsigned size)
     return buffer(*this, check_error(KOS_new_buffer(ctx_, size)));
 }
 
-inline function context::new_function(const char* name, KOS_FUNCTION_HANDLE2 handler, int min_args)
+inline function context::new_function(const char* name, KOS_FUNCTION_HANDLER handler, int min_args)
 {
     assert((min_args >= 0) && (min_args < 256));
     const KOS_OBJ_ID name_obj = check_error(KOS_new_cstring(ctx_, name));

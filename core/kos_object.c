@@ -850,8 +850,8 @@ int KOS_delete_property(KOS_CONTEXT ctx,
 static KOS_OBJ_ID new_builtin_dynamic_prop(KOS_CONTEXT          ctx,
                                            KOS_OBJ_ID           module_obj,
                                            KOS_OBJ_ID           name_obj,
-                                           KOS_FUNCTION_HANDLE2 getter,
-                                           KOS_FUNCTION_HANDLE2 setter)
+                                           KOS_FUNCTION_HANDLER getter,
+                                           KOS_FUNCTION_HANDLER setter)
 {
     KOS_LOCAL dyn_prop;
     KOS_LOCAL name;
@@ -904,8 +904,8 @@ int KOS_set_builtin_dynamic_property(KOS_CONTEXT          ctx,
                                      KOS_OBJ_ID           obj_id,
                                      KOS_OBJ_ID           prop_obj,
                                      KOS_OBJ_ID           module_obj,
-                                     KOS_FUNCTION_HANDLE2 getter,
-                                     KOS_FUNCTION_HANDLE2 setter)
+                                     KOS_FUNCTION_HANDLER getter,
+                                     KOS_FUNCTION_HANDLER setter)
 {
     int        error = KOS_SUCCESS;
     KOS_OBJ_ID dyn_prop;
