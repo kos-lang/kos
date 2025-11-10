@@ -541,7 +541,7 @@ int kos_module_threads_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, semaphore_proto.o, "release",   semaphore_release, count_arg);
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, semaphore_proto.o, "value",     semaphore_value,   KOS_NULL);
 
-    TRY_ADD_FUNCTIO2(       ctx, module.o,                    "sleep",     kos_sleep,         sleep_args);
+    TRY_ADD_FUNCTION(       ctx, module.o,                    "sleep",     kos_sleep,         sleep_args);
 
     TRY(KOS_array_write(ctx, priv.o, 0, mutex_proto.o));
     TRY(KOS_array_write(ctx, priv.o, 1, semaphore_proto.o));

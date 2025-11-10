@@ -1770,10 +1770,10 @@ KOS_INIT_MODULE(os, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 
     KOS_atomic_write_relaxed_ptr(OBJPTR(MODULE, module.o)->priv, priv.o);
 
-    TRY_ADD_FUNCTIO2(       ctx, module.o,               "spawn",      spawn,          spawn_args);
-    TRY_ADD_FUNCTIO2(       ctx, module.o,               "exit",       kos_exit,       exit_args);
-    TRY_ADD_FUNCTIO2(       ctx, module.o,               "getenv",     kos_getenv,     getenv_args);
-    TRY_ADD_FUNCTIO2(       ctx, module.o,               "getloadavg", kos_getloadavg, KOS_NULL);
+    TRY_ADD_FUNCTION(       ctx, module.o,               "spawn",      spawn,          spawn_args);
+    TRY_ADD_FUNCTION(       ctx, module.o,               "exit",       kos_exit,       exit_args);
+    TRY_ADD_FUNCTION(       ctx, module.o,               "getenv",     kos_getenv,     getenv_args);
+    TRY_ADD_FUNCTION(       ctx, module.o,               "getloadavg", kos_getloadavg, KOS_NULL);
 
     TRY_ADD_CONSTRUCTOR(    ctx, module.o,               "process",    process_ctor,   KOS_NULL, &wait_proto.o);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, wait_proto.o, "wait",       wait_for_child, KOS_NULL);

@@ -92,7 +92,6 @@
     KOS_mempool_init;
     KOS_mempool_init_small;
     KOS_module_add_constructor;
-    KOS_module_add_functio2;
     KOS_module_add_function;
     KOS_module_add_global;
     KOS_module_add_member_function;
@@ -103,7 +102,6 @@
     KOS_new_array;
     KOS_new_buffer;
     KOS_new_builtin_class;
-    KOS_new_builtin_functio2;
     KOS_new_builtin_function;
     KOS_new_class;
     KOS_new_const_ascii_cstring;

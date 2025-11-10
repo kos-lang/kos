@@ -1366,7 +1366,7 @@ inline function context::new_function(const char* name, KOS_FUNCTION_HANDLE2 han
 {
     assert((min_args >= 0) && (min_args < 256));
     const KOS_OBJ_ID name_obj = check_error(KOS_new_cstring(ctx_, name));
-    function fn(*this, check_error(KOS_new_builtin_functio2(ctx_, name_obj, handler, KOS_NULL)));
+    function fn(*this, check_error(KOS_new_builtin_function(ctx_, name_obj, handler, KOS_NULL)));
     OBJPTR(FUNCTION, fn)->opts.min_args = (uint8_t)min_args;
     return fn;
 }

@@ -986,15 +986,15 @@ int kos_module_fs_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 
     KOS_init_local_with(ctx, &module, module_obj);
 
-    TRY_ADD_FUNCTIO2(ctx,  module.o, "file_exists", file_exists, filename_arg);
-    TRY_ADD_FUNCTIO2(ctx,  module.o, "stat",        get_stat,    stat_args);
-    TRY_ADD_FUNCTIO2(ctx,  module.o, "remove",      kos_remove,  filename_arg);
-    TRY_ADD_FUNCTIO2(ctx,  module.o, "cwd",         cwd,         KOS_NULL);
-    TRY_ADD_FUNCTIO2(ctx,  module.o, "tempdir",     tempdir,     KOS_NULL);
-    TRY_ADD_FUNCTIO2(ctx,  module.o, "chdir",       kos_chdir,   path_arg);
+    TRY_ADD_FUNCTION(ctx,  module.o, "file_exists", file_exists, filename_arg);
+    TRY_ADD_FUNCTION(ctx,  module.o, "stat",        get_stat,    stat_args);
+    TRY_ADD_FUNCTION(ctx,  module.o, "remove",      kos_remove,  filename_arg);
+    TRY_ADD_FUNCTION(ctx,  module.o, "cwd",         cwd,         KOS_NULL);
+    TRY_ADD_FUNCTION(ctx,  module.o, "tempdir",     tempdir,     KOS_NULL);
+    TRY_ADD_FUNCTION(ctx,  module.o, "chdir",       kos_chdir,   path_arg);
     TRY_ADD_GENERATOR(ctx, module.o, "listdir",     listdir,     path_arg);
-    TRY_ADD_FUNCTIO2(ctx,  module.o, "mkdir",       kos_mkdir,   mkdir_args);
-    TRY_ADD_FUNCTIO2(ctx,  module.o, "rmdir",       kos_rmdir,   path_arg);
+    TRY_ADD_FUNCTION(ctx,  module.o, "mkdir",       kos_mkdir,   mkdir_args);
+    TRY_ADD_FUNCTION(ctx,  module.o, "rmdir",       kos_rmdir,   path_arg);
 
     /* @item fs path_separator
      *

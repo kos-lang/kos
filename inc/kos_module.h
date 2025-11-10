@@ -79,14 +79,6 @@ KOS_API
 int KOS_module_add_function(KOS_CONTEXT          ctx,
                             KOS_OBJ_ID           module_obj,
                             KOS_OBJ_ID           str_name,
-                            KOS_FUNCTION_HANDLER handler,
-                            const KOS_CONVERT   *args,
-                            KOS_FUNCTION_STATE   gen_state);
-
-KOS_API
-int KOS_module_add_functio2(KOS_CONTEXT          ctx,
-                            KOS_OBJ_ID           module_obj,
-                            KOS_OBJ_ID           str_name,
                             KOS_FUNCTION_HANDLE2 handler,
                             const KOS_CONVERT   *args,
                             KOS_FUNCTION_STATE   gen_state);
@@ -134,17 +126,10 @@ do {                                                                     \
                                 (handler), (args), KOS_FUN));            \
 } while (0)
 
-#define TRY_ADD_FUNCTIO2(ctx, module, name, handler, args)               \
-do {                                                                     \
-    KOS_DECLARE_STATIC_CONST_STRING(XstrNAME, name);                     \
-    TRY(KOS_module_add_functio2((ctx), (module), KOS_CONST_ID(XstrNAME), \
-                                (handler), (args), KOS_FUN));            \
-} while (0)
-
 #define TRY_ADD_GENERATOR(ctx, module, name, handler, args)              \
 do {                                                                     \
     KOS_DECLARE_STATIC_CONST_STRING(XstrNAME, name);                     \
-    TRY(KOS_module_add_functio2((ctx), (module), KOS_CONST_ID(XstrNAME), \
+    TRY(KOS_module_add_function((ctx), (module), KOS_CONST_ID(XstrNAME), \
                                 (handler), (args), KOS_GEN_INIT));       \
 } while (0)
 

@@ -41,7 +41,7 @@ int kos_module_datetime_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 
     KOS_init_local_with(ctx, &module, module_obj);
 
-    TRY_ADD_FUNCTIO2(ctx, module.o, "now", now, KOS_NULL);
+    TRY_ADD_FUNCTION(ctx, module.o, "now", now, KOS_NULL);
 
 cleanup:
     KOS_destroy_top_local(ctx, &module);

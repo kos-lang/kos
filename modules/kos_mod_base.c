@@ -5026,8 +5026,8 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 
     KOS_init_local_with(ctx, &module, module_obj);
 
-    TRY_ADD_FUNCTIO2( ctx, module.o, "print",     print,     KOS_NULL);
-    TRY_ADD_FUNCTIO2( ctx, module.o, "stringify", stringify, KOS_NULL);
+    TRY_ADD_FUNCTION( ctx, module.o, "print",     print,     KOS_NULL);
+    TRY_ADD_FUNCTION( ctx, module.o, "stringify", stringify, KOS_NULL);
     TRY_ADD_GENERATOR(ctx, module.o, "deep",      deep,      deep_args);
     TRY_ADD_GENERATOR(ctx, module.o, "shallow",   shallow,   deep_args);
 

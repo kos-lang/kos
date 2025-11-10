@@ -91,7 +91,6 @@ _KOS_mempool_destroy
 _KOS_mempool_init
 _KOS_mempool_init_small
 _KOS_module_add_constructor
-_KOS_module_add_functio2
 _KOS_module_add_function
 _KOS_module_add_global
 _KOS_module_add_member_function
@@ -102,7 +101,6 @@ _KOS_modules_init
 _KOS_new_array
 _KOS_new_buffer
 _KOS_new_builtin_class
-_KOS_new_builtin_functio2
 _KOS_new_builtin_function
 _KOS_new_class
 _KOS_new_const_ascii_cstring

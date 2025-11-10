@@ -586,9 +586,9 @@ int kos_module_kos_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     KOS_init_local_with(ctx, &module, module_obj);
     KOS_init_local(     ctx, &version);
 
-    TRY_ADD_FUNCTIO2(        ctx, module.o, "collect_garbage",      collect_garbage, KOS_NULL);
-    TRY_ADD_FUNCTIO2(        ctx, module.o, "execute",              execute,         execute_args);
-    TRY_ADD_FUNCTIO2(        ctx, module.o, "search_paths",         search_paths,    KOS_NULL);
+    TRY_ADD_FUNCTION(        ctx, module.o, "collect_garbage",      collect_garbage, KOS_NULL);
+    TRY_ADD_FUNCTION(        ctx, module.o, "execute",              execute,         execute_args);
+    TRY_ADD_FUNCTION(        ctx, module.o, "search_paths",         search_paths,    KOS_NULL);
     TRY_ADD_GENERATOR(       ctx, module.o, "raw_lexer",            raw_lexer,       raw_lexer_args);
 
     version.o = KOS_new_array(ctx, 3);

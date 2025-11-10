@@ -2648,7 +2648,7 @@ KOS_INIT_MODULE(net, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, socket_proto.o, "blocking",    get_blocking,    KOS_NULL);
 
-    TRY_ADD_FUNCTIO2(       ctx, module.o,                 "getaddrinfo", kos_getaddrinfo, getaddrinfo_args);
+    TRY_ADD_FUNCTION(       ctx, module.o,                 "getaddrinfo", kos_getaddrinfo, getaddrinfo_args);
 
 #ifndef _WIN32
     TRY_ADD_INTEGER_CONSTANT(ctx, module.o, "AF_LOCAL",     AF_LOCAL);

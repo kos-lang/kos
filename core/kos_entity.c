@@ -251,70 +251,6 @@ static unsigned count_args(const KOS_CONVERT *args)
 static int init_builtin_function(KOS_CONTEXT          ctx,
                                  KOS_OBJ_ID           func_obj,
                                  KOS_OBJ_ID           name_obj,
-                                 KOS_FUNCTION_HANDLER handler,
-                                 const KOS_CONVERT   *args)
-{
-    KOS_LOCAL func;
-    KOS_LOCAL arg_map;
-    KOS_LOCAL defaults;
-    unsigned  min_args     = 0;
-    unsigned  num_def_args = 0;
-    int       error        = KOS_SUCCESS;
-
-    OBJPTR(FUNCTION, func_obj)->handler = handler;
-    OBJPTR(FUNCTION, func_obj)->name    = name_obj;
-
-    if ( ! args || IS_BAD_PTR(args->name))
-        return KOS_SUCCESS;
-
-    KOS_init_local_with(ctx, &func,     func_obj);
-    KOS_init_local_with(ctx, &arg_map,  KOS_VOID);
-    KOS_init_local_with(ctx, &defaults, KOS_VOID);
-
-    arg_map.o = KOS_new_object(ctx);
-    TRY_OBJID(arg_map.o);
-
-    do {
-        assert(min_args + num_def_args < 256);
-
-        if (defaults.o == KOS_VOID) {
-            if ( ! IS_BAD_PTR(args->default_value)) {
-                defaults.o = KOS_new_array(ctx, count_args(args));
-                TRY_OBJID(defaults.o);
-
-                TRY(KOS_array_resize(ctx, defaults.o, 0));
-            }
-        }
-
-        TRY(KOS_set_property(ctx, arg_map.o, args->name, TO_SMALL_INT((int64_t)(min_args + num_def_args))));
-
-        if (defaults.o == KOS_VOID)
-            ++min_args;
-        else {
-            ++num_def_args;
-
-            assert( ! IS_BAD_PTR(args->default_value));
-
-            TRY(KOS_array_push(ctx, defaults.o, args->default_value, KOS_NULL));
-        }
-
-        ++args;
-    } while ( ! IS_BAD_PTR(args->name));
-
-    OBJPTR(FUNCTION, func.o)->opts.min_args     = (uint8_t)min_args;
-    OBJPTR(FUNCTION, func.o)->opts.num_def_args = (uint8_t)num_def_args;
-    OBJPTR(FUNCTION, func.o)->defaults          = defaults.o;
-    OBJPTR(FUNCTION, func.o)->arg_map           = arg_map.o;
-
-cleanup:
-    KOS_destroy_top_locals(ctx, &defaults, &func);
-
-    return error;
-}
-
-static int init_builtin_functio2(KOS_CONTEXT          ctx,
-                                 KOS_OBJ_ID           func_obj,
-                                 KOS_OBJ_ID           name_obj,
                                  KOS_FUNCTION_HANDLE2 handler,
                                  const KOS_CONVERT   *args)
 {
@@ -378,27 +314,6 @@ cleanup:
 
 KOS_OBJ_ID KOS_new_builtin_function(KOS_CONTEXT          ctx,
                                     KOS_OBJ_ID           name_obj,
-                                    KOS_FUNCTION_HANDLER handler,
-                                    const KOS_CONVERT   *args)
-{
-    KOS_LOCAL func;
-    KOS_LOCAL name;
-
-    KOS_init_local(     ctx, &func);
-    KOS_init_local_with(ctx, &name, name_obj);
-
-    func.o = KOS_new_function(ctx);
-
-    if ( ! IS_BAD_PTR(func.o)) {
-        if (init_builtin_function(ctx, func.o, name.o, handler, args))
-            func.o = KOS_BADPTR;
-    }
-
-    return KOS_destroy_top_locals(ctx, &name, &func);
-}
-
-KOS_OBJ_ID KOS_new_builtin_functio2(KOS_CONTEXT          ctx,
-                                    KOS_OBJ_ID           name_obj,
                                     KOS_FUNCTION_HANDLE2 handler,
                                     const KOS_CONVERT   *args)
 {
@@ -411,7 +326,7 @@ KOS_OBJ_ID KOS_new_builtin_functio2(KOS_CONTEXT          ctx,
     func.o = KOS_new_function(ctx);
 
     if ( ! IS_BAD_PTR(func.o)) {
-        if (init_builtin_functio2(ctx, func.o, name.o, handler, args))
+        if (init_builtin_function(ctx, func.o, name.o, handler, args))
             func.o = KOS_BADPTR;
     }
 
@@ -437,7 +352,7 @@ KOS_OBJ_ID KOS_new_builtin_class(KOS_CONTEXT          ctx,
         func.o = KOS_new_class(ctx, proto_obj);
 
         if ( ! IS_BAD_PTR(func.o)) {
-            if (init_builtin_functio2(ctx, func.o, name.o, handler, args))
+            if (init_builtin_function(ctx, func.o, name.o, handler, args))
                 func.o = KOS_BADPTR;
         }
     }
