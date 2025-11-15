@@ -552,12 +552,12 @@ static int init_registers(KOS_CONTEXT ctx,
 
     assert(GET_OBJ_TYPE(this_obj) <= OBJ_LAST_TYPE);
     assert( ! IS_BAD_PTR(args.o) || GET_OBJ_TYPE(stack_obj) == OBJ_STACK);
-    assert( ! KOS_is_native_function(func.o));
     assert(args_reg_end <= KOS_NO_REG);
     assert(num_input_args >= num_non_def_args);
 
     /* Initialize this */
     reg = OBJPTR(FUNCTION, func.o)->opts.this_reg;
+    assert( ! KOS_is_native_function(func.o) || reg == KOS_NO_REG);
     if (reg != KOS_NO_REG) {
         assert(reg < get_num_regs(ctx));
         KOS_atomic_write_relaxed_ptr(stack_frame->regs[reg], this_obj);
@@ -565,6 +565,7 @@ static int init_registers(KOS_CONTEXT ctx,
 
     /* Initialize ellipsis */
     reg = OBJPTR(FUNCTION, func.o)->opts.ellipsis_reg;
+    assert( ! KOS_is_native_function(func.o) || reg == KOS_NO_REG);
     if (reg != KOS_NO_REG)  {
         KOS_OBJ_ID ellipsis_obj;
 
@@ -583,6 +584,8 @@ static int init_registers(KOS_CONTEXT ctx,
     if (args_reg != KOS_NO_REG) {
 
         const uint32_t num_to_move  = KOS_min(num_input_args, (args_reg_end - args_reg));
+
+        assert( ! KOS_is_native_function(func.o));
 
         /* Move input args to registers */
         reg = args_reg;
@@ -660,6 +663,10 @@ static int init_registers(KOS_CONTEXT ctx,
             KOS_atomic_write_relaxed_ptr(stack_frame->regs[rest_reg], rest.o);
         }
     }
+    else if (KOS_is_native_function(func.o)) {
+        assert(OBJPTR(FUNCTION, func.o)->opts.rest_reg == KOS_NO_REG);
+        /* TODO */
+    }
     else {
         assert(OBJPTR(FUNCTION, func.o)->opts.min_args     == 0);
         assert(OBJPTR(FUNCTION, func.o)->opts.num_def_args == 0);
@@ -668,6 +675,7 @@ static int init_registers(KOS_CONTEXT ctx,
 
     /* Initialize bound closures */
     reg = OBJPTR(FUNCTION, func.o)->opts.bind_reg;
+    assert( ! KOS_is_native_function(func.o) || reg == KOS_NO_REG);
     if (reg != KOS_NO_REG) {
         KOS_ATOMIC(KOS_OBJ_ID) *src_buf;
         KOS_ATOMIC(KOS_OBJ_ID) *end;
@@ -733,7 +741,7 @@ static void set_handler_reg(KOS_CONTEXT ctx,
     size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->size);
     assert(size > KOS_STACK_EXTRA);
 
-    assert((GET_SMALL_INT(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[size - 1])) & 0xFF) == 1);
+    assert(GET_SMALL_INT(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[size - 1])) == 1);
     KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, stack)->buf[size - 2], obj_id);
 }
 
@@ -748,7 +756,7 @@ static KOS_OBJ_ID get_handler_reg(KOS_CONTEXT ctx)
     size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->size);
     assert(size > KOS_STACK_EXTRA);
 
-    assert((GET_SMALL_INT(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[size - 1])) & 0xFF) == 1);
+    assert(GET_SMALL_INT(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[size - 1])) == 1);
 
     return KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[size - 2]);
 }
@@ -993,7 +1001,7 @@ static int prepare_call(KOS_CONTEXT        ctx,
         /* Regular function */
         case KOS_FUN: {
             assert(instr > INSTR_NEXT);
-            TRY(kos_stack_push(ctx, func.o, ret_reg, (uint8_t)instr));
+            TRY(kos_stack_push(ctx, func.o, 0, ret_reg, (uint8_t)instr));
 
             if ( ! KOS_is_native_function(func.o))
                 TRY(init_registers(ctx,
@@ -1022,7 +1030,7 @@ static int prepare_call(KOS_CONTEXT        ctx,
             TRY_OBJID(func.o);
 
             assert(instr > INSTR_NEXT);
-            TRY(kos_stack_push(ctx, func.o, ret_reg, (uint8_t)instr));
+            TRY(kos_stack_push(ctx, func.o, 0, ret_reg, (uint8_t)instr));
 
             KOS_atomic_write_relaxed_u32(OBJPTR(FUNCTION, func.o)->state, KOS_GEN_READY);
 
@@ -1069,7 +1077,7 @@ static int prepare_call(KOS_CONTEXT        ctx,
 
             state_set = 1;
 
-            TRY(kos_stack_push(ctx, func.o, ret_reg, (uint8_t)instr));
+            TRY(kos_stack_push(ctx, func.o, 0, ret_reg, (uint8_t)instr));
 
             if ( ! KOS_is_native_function(func.o)) {
                 if (state == KOS_GEN_ACTIVE) {
@@ -1355,9 +1363,7 @@ static void set_closure_stack_size(KOS_CONTEXT      ctx,
 
             KOS_atomic_write_relaxed_u32(OBJPTR(STACK, stack)->size, size);
 
-            size_obj = KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[old_size - 1]);
-            assert(IS_SMALL_INT(size_obj));
-            size_obj = TO_SMALL_INT((int64_t)(((uint32_t)GET_SMALL_INT(size_obj) & ~0xFFU) | closure_size));
+            size_obj = TO_SMALL_INT((int64_t)closure_size);
             KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, stack)->buf[size - 1], size_obj);
 
             ctx->stack_depth -= old_size - size;
@@ -1407,16 +1413,11 @@ static const uint8_t *get_bytecode_at_offs(KOS_STACK_FRAME *stack_frame, uint32_
 
 static const uint8_t *get_bytecode(KOS_STACK_FRAME *stack_frame)
 {
-    const KOS_OBJ_ID instr_offs_id = KOS_atomic_read_relaxed_obj(stack_frame->instr_offs);
-    int64_t          instr_offs;
+    const uint32_t instr_offs = KOS_atomic_read_relaxed_u32(stack_frame->instr_offs) >> 1;
 
-    assert(IS_SMALL_INT(instr_offs_id));
+    assert(instr_offs < get_bytecode_size(stack_frame));
 
-    instr_offs = GET_SMALL_INT(instr_offs_id);
-
-    assert(instr_offs >= 0 && instr_offs < get_bytecode_size(stack_frame));
-
-    return get_bytecode_at_offs(stack_frame, (uint32_t)instr_offs);
+    return get_bytecode_at_offs(stack_frame, instr_offs);
 }
 
 static uint32_t get_instr_offs(KOS_STACK_FRAME *stack_frame, const uint8_t *bytecode)
@@ -1428,7 +1429,8 @@ static void store_instr_offs(KOS_STACK_FRAME *stack_frame,
                              const uint8_t   *bytecode)
 {
     const uint32_t instr_offs = get_instr_offs(stack_frame, bytecode);
-    KOS_atomic_write_relaxed_ptr(stack_frame->instr_offs, TO_SMALL_INT((int64_t)instr_offs));
+    assert(instr_offs <= 0x7FFFFFFFU);
+    KOS_atomic_write_relaxed_u32(stack_frame->instr_offs, instr_offs << 1);
 }
 
 static uint32_t get_catch(KOS_STACK_FRAME *stack_frame,
@@ -3722,8 +3724,8 @@ handle_return:
 
                 assert(IS_SMALL_INT(num_regs_obj));
 
-                rdest      = (uint8_t)(GET_SMALL_INT(num_regs_obj) >> 8);
-                call_instr = (KOS_BYTECODE_INSTR)(uint8_t)(GET_SMALL_INT(num_regs_obj) >> 16);
+                rdest      = stack_frame->ret_reg;
+                call_instr = (KOS_BYTECODE_INSTR)stack_frame->call_opcode;
 
                 assert((call_instr == INSTR_NEXT) ||
                        (call_instr == INSTR_NEXT_JUMP) ||
@@ -3959,7 +3961,7 @@ KOS_OBJ_ID KOS_run_module(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
         assert(GET_OBJ_TYPE(func_obj) == OBJ_FUNCTION);
         assert(GET_OBJ_TYPE(OBJPTR(FUNCTION, func_obj)->module) == OBJ_MODULE);
 
-        error = kos_stack_push(ctx, func_obj, KOS_NO_REG, INSTR_CALL);
+        error = kos_stack_push(ctx, func_obj, 0, KOS_NO_REG, INSTR_CALL);
 
         if ( ! error)
             pushed = 1;

@@ -260,30 +260,43 @@ uint32_t kos_string_iter_peek_next_code(KOS_STRING_ITER *iter);
  * Stack frame layout on the stack, indexed from register r0:
  *     -3     function object
  *     -2     (catch_offs << 8) | catch_reg
- *     -1     current instr offset
+ *     -1     current instr offset, return register, instruction opcode
  *     0      r0
  *     +N-1   rN-1
- *     +N     N | (ret_reg << 8) | (instr << 16)
+ *     +N     N
  *
  * For constructors, 'this' is also pushed as the last (additional) register,
  * i.e. one more register than the function actually uses.  The number of
  * registers N is thus func->num_regs + 1 for non-native constructors.
  */
 
-/* Number of entries in addition to the number of registers */
-#define KOS_STACK_EXTRA 4U
-
 struct KOS_STACK_FRAME_HDR_S {
-    KOS_ATOMIC(KOS_OBJ_ID) func_obj;
-    KOS_ATOMIC(KOS_OBJ_ID) catch_info;
-    KOS_ATOMIC(KOS_OBJ_ID) instr_offs;
-    KOS_ATOMIC(KOS_OBJ_ID) regs[1];
+    KOS_ATOMIC(KOS_OBJ_ID)       func_obj;
+    KOS_ATOMIC(KOS_OBJ_ID)       catch_info;
+    union {
+        /* On 32-bit architectures we need another 32-bit value to store the
+         * return register and call instruction opcode.
+         */
+        KOS_ATOMIC(KOS_OBJ_ID)   placeholder;
+        struct {
+            KOS_ATOMIC(uint32_t) instr_offs;  /* Current instruction offset << 1                 */
+            uint8_t              dummy1;      /* Zero                                            */
+            uint8_t              ret_reg;     /* Register holding return value in the caller     */
+            uint8_t              call_opcode; /* Opcode of instruction which called the function */
+            uint8_t              dummy2;      /* Zero                                            */
+        };
+    };
+    KOS_ATOMIC(KOS_OBJ_ID)       regs[1];
 };
+
+/* Number of entries in addition to the number of registers */
+#define KOS_STACK_EXTRA ((unsigned)(sizeof(struct KOS_STACK_FRAME_HDR_S) / sizeof(KOS_OBJ_ID)))
 
 typedef struct KOS_STACK_FRAME_HDR_S KOS_STACK_FRAME;
 
 int kos_stack_push(KOS_CONTEXT ctx,
                    KOS_OBJ_ID  func_obj,
+                   uint32_t    num_regs, /* Used only for args for native functions */
                    uint8_t     ret_reg,
                    uint8_t     instr);
 
