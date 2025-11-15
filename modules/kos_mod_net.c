@@ -1024,7 +1024,7 @@ static KOS_OBJ_ID kos_recv(const KOS_CONTEXT             ctx,
 cleanup:
     release_socket(socket_holder);
 
-    return error ? KOS_BADPTR : args[1];
+    return error ? KOS_BADPTR : KOS_atomic_read_relaxed_obj(args[1]);
 }
 
 /* @item net socket.prototype.recvfrom()

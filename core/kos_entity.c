@@ -163,10 +163,12 @@ static KOS_OBJ_ID set_prototype(const KOS_CONTEXT             ctx,
 
     if (GET_OBJ_TYPE(this_obj) == OBJ_CLASS) {
 
-        if ( ! IS_BAD_PTR(args[0])) {
+        const KOS_OBJ_ID arg = KOS_atomic_read_relaxed_obj(args[0]);
+
+        if ( ! IS_BAD_PTR(arg)) {
 
             if ( ! KOS_is_native_function(this_obj)) {
-                KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, this_obj)->prototype, args[0]);
+                KOS_atomic_write_relaxed_ptr(OBJPTR(CLASS, this_obj)->prototype, arg);
                 ret = this_obj;
             }
             else

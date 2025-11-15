@@ -510,7 +510,7 @@ static KOS_OBJ_ID kos_chdir(const KOS_CONTEXT             ctx,
 cleanup:
     KOS_vector_destroy(&path_cstr);
 
-    return error ? KOS_BADPTR : args[0];
+    return error ? KOS_BADPTR : KOS_atomic_read_relaxed_obj(args[0]);
 }
 
 #ifdef _WIN32
@@ -636,7 +636,7 @@ static KOS_OBJ_ID kos_mkdir(const KOS_CONTEXT             ctx,
 cleanup:
     KOS_mempool_destroy(&alloc);
 
-    return error ? KOS_BADPTR : args[0];
+    return error ? KOS_BADPTR : KOS_atomic_read_relaxed_obj(args[0]);
 }
 
 /* @item fs rmdir()
