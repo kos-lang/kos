@@ -1176,13 +1176,14 @@ static KOS_OBJ_ID call_native_function(KOS_CONTEXT ctx,
                                        KOS_OBJ_ID  this_obj,
                                        KOS_OBJ_ID  args_obj)
 {
-    KOS_LOCAL  func;
-    KOS_LOCAL  this_;
-    KOS_LOCAL  args;
-    KOS_LOCAL  args_array;
-    KOS_OBJ_ID ret_obj;
-    uint32_t   num_args = 0;
-    size_t     storage_size;
+    KOS_LOCAL               func;
+    KOS_LOCAL               this_;
+    KOS_LOCAL               args;
+    KOS_LOCAL               args_array;
+    KOS_OBJ_ID              ret_obj;
+    KOS_ATOMIC(KOS_OBJ_ID) *args_ptr = KOS_NULL;
+    size_t                  storage_size;
+    uint32_t                num_args = 0;
 
     KOS_init_locals(ctx, &func, &this_, &args, &args_array, kos_end_locals);
 
@@ -1219,10 +1220,10 @@ static KOS_OBJ_ID call_native_function(KOS_CONTEXT ctx,
                             num_args);
     }
 
-    ret_obj = OBJPTR(FUNCTION, func.o)->handler.handler(ctx,
-                                                        this_.o,
-                                                        num_args,
-                                                        &OBJPTR(ARRAY_STORAGE, args_array.o)->buf[0]);
+    if (num_args)
+        args_ptr = &OBJPTR(ARRAY_STORAGE, args_array.o)->buf[0];
+
+    ret_obj = OBJPTR(FUNCTION, func.o)->handler.handler(ctx, this_.o, num_args, args_ptr);
 
     KOS_destroy_top_locals(ctx, &func, &args_array);
 
