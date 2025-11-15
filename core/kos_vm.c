@@ -3709,9 +3709,7 @@ handle_return:
             if (depth) {
                 PROF_ZONE_N(INSTR, "return")
 
-                KOS_OBJ_ID         num_regs_obj;
                 const KOS_OBJ_ID   func_obj = get_current_func(stack_frame);
-                size_t             size;
                 KOS_BYTECODE_INSTR call_instr;
 
                 assert( ! error || KOS_is_exception_pending(ctx));
@@ -3720,10 +3718,12 @@ handle_return:
                 assert(depth > 0);
                 --depth;
 
-                size         = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->size);
-                num_regs_obj = KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[size - 1]);
-
-                assert(IS_SMALL_INT(num_regs_obj));
+#ifndef NDEBUG
+                {
+                    const size_t size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->size);
+                    assert(IS_SMALL_INT(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[size - 1])));
+                }
+#endif
 
                 rdest      = stack_frame->ret_reg;
                 call_instr = (KOS_BYTECODE_INSTR)stack_frame->call_opcode;

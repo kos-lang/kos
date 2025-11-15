@@ -227,11 +227,15 @@ int kos_stack_push(KOS_CONTEXT ctx,
     else if (state > KOS_GEN_INIT) {
 
         const KOS_OBJ_ID gen_stack = OBJPTR(FUNCTION, func.o)->generator_stack_frame;
+#ifndef NDEBUG
         uint32_t         size;
+#endif
 
         assert( ! IS_BAD_PTR(gen_stack));
         assert(GET_OBJ_TYPE(gen_stack) == OBJ_STACK);
+#ifndef NDEBUG
         size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, gen_stack)->size);
+#endif
         assert(size > KOS_STACK_EXTRA);
 
         if (IS_BAD_PTR(ctx->stack))
