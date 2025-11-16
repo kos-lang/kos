@@ -155,22 +155,25 @@ int kos_stack_push(KOS_CONTEXT ctx,
                    uint8_t     ret_reg,
                    uint8_t     instr)
 {
+    KOS_LOCAL        func;
+    KOS_STACK       *stack;
+    KOS_STACK       *new_stack;
+    KOS_STACK_FRAME *stack_frame;
+    const int64_t    catch_init = (int64_t)KOS_NO_CATCH << 8;
     int              error      = KOS_SUCCESS;
     uint32_t         stack_size;
     uint32_t         base_idx;
     uint32_t         state;
-    const int64_t    catch_init = (int64_t)KOS_NO_CATCH << 8;
     unsigned         room;
+    int              is_native;
     const KOS_TYPE   type       = GET_OBJ_TYPE(func_obj);
-    KOS_STACK       *stack;
-    KOS_STACK       *new_stack;
-    KOS_STACK_FRAME *stack_frame;
-    KOS_LOCAL        func;
 
     KOS_init_local_with(ctx, &func, func_obj);
 
     if (type != OBJ_FUNCTION && type != OBJ_CLASS)
         RAISE_EXCEPTION_STR(str_err_not_callable);
+
+    is_native = KOS_is_native_function(func.o);
 
     stack      = IS_BAD_PTR(ctx->stack) ? KOS_NULL : OBJPTR(STACK, ctx->stack);
     new_stack  = stack;
@@ -180,20 +183,23 @@ int kos_stack_push(KOS_CONTEXT ctx,
 
     assert((state > KOS_GEN_INIT) || (instr > INSTR_NEXT));
 
-    if (KOS_is_native_function(func.o)) {
+    if (is_native) {
         assert(OBJPTR(FUNCTION, func.o)->opts.num_regs == 0);
 
         /* For native generators, we retain the generator state on the stack */
         if (state >= KOS_GEN_INIT)
             ++num_regs;
-    }
-    else
-        num_regs = OBJPTR(FUNCTION, func.o)->opts.num_regs;
-    room = num_regs + KOS_STACK_EXTRA;
 
-    /* TODO allow more for arguments for native functions */
-    if (ctx->stack_depth + room > KOS_MAX_STACK_DEPTH)
-        RAISE_EXCEPTION_STR(str_err_stack_overflow);
+        room = num_regs + KOS_STACK_EXTRA;
+    }
+    else {
+        num_regs = OBJPTR(FUNCTION, func.o)->opts.num_regs;
+
+        room = num_regs + KOS_STACK_EXTRA;
+
+        if (ctx->stack_depth + room > KOS_MAX_STACK_DEPTH)
+            RAISE_EXCEPTION_STR(str_err_stack_overflow);
+    }
 
     /* Prepare stack for accommodating new stack frame */
 
@@ -214,8 +220,14 @@ int kos_stack_push(KOS_CONTEXT ctx,
                 cur_stack = OBJPTR(STACK, ctx->stack);
             }
 
-            if ( ! stack || KOS_atomic_read_relaxed_u32(cur_stack->size) + room > cur_stack->capacity)
-                TRY(push_new_stack(ctx));
+            if ( ! stack || KOS_atomic_read_relaxed_u32(cur_stack->size) + room > cur_stack->capacity) {
+                if ( ! stack || ! is_native)
+                    TRY(push_new_stack(ctx));
+
+                if (is_native)
+                    /* TODO move +1 into the function ??? */
+                    TRY(push_new_reentrant_stack(ctx, room + 1));
+            }
 
             new_stack = OBJPTR(STACK, ctx->stack);
             base_idx  = KOS_atomic_read_relaxed_u32(new_stack->size);
