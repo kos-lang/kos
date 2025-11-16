@@ -131,6 +131,10 @@ static int push_new_reentrant_stack(KOS_CONTEXT ctx,
                                     unsigned    room)
 {
     int              error;
+    /* KOS_STACK already has one element in the stack buffer, we use this
+     * as a pointer to previous/parent stack object.  Additional space is
+     * allocated to accommodate requested number of entries.
+     */
     const size_t     alloc_size = sizeof(KOS_STACK) + sizeof(KOS_OBJ_ID) * room;
     KOS_STACK *const new_stack  = (KOS_STACK *)kos_alloc_object(ctx,
                                                                 KOS_ALLOC_IMMOVABLE,
@@ -143,8 +147,9 @@ static int push_new_reentrant_stack(KOS_CONTEXT ctx,
 
     error = init_stack(ctx, new_stack);
 
-    if ( ! error)
-        new_stack->capacity = room;
+    if ( ! error) {
+        assert(new_stack->capacity >= room + 1);
+    }
 
     return error;
 }
@@ -225,8 +230,7 @@ int kos_stack_push(KOS_CONTEXT ctx,
                     TRY(push_new_stack(ctx));
 
                 if (is_native)
-                    /* TODO move +1 into the function ??? */
-                    TRY(push_new_reentrant_stack(ctx, room + 1));
+                    TRY(push_new_reentrant_stack(ctx, room));
             }
 
             new_stack = OBJPTR(STACK, ctx->stack);
@@ -275,9 +279,7 @@ int kos_stack_push(KOS_CONTEXT ctx,
         if (IS_BAD_PTR(ctx->stack))
             TRY(push_new_stack(ctx));
 
-        /* +1 because item at index 0 is used to point to previous stack frame,
-         * we still need to have 'room' left */
-        TRY(push_new_reentrant_stack(ctx, room + 1));
+        TRY(push_new_reentrant_stack(ctx, room));
 
         OBJPTR(FUNCTION, func.o)->generator_stack_frame = ctx->stack;
 
@@ -311,6 +313,7 @@ int kos_stack_push(KOS_CONTEXT ctx,
             KOS_atomic_write_relaxed_ptr(stack_frame->regs[idx], KOS_BADPTR);
     }
 
+    /* TODO add discount for native function arguments in reentrant stack object */
     ctx->stack_depth += room;
 
 cleanup:
@@ -376,6 +379,8 @@ void kos_stack_pop(KOS_CONTEXT ctx)
         }
 
         assert(GET_OBJ_TYPE(new_stack_obj) == OBJ_STACK);
+
+        /* TODO save last stack object to reduce unnecessary reallocation */
 
         stack      = OBJPTR(STACK, new_stack_obj);
         size       = KOS_atomic_read_relaxed_u32(stack->size);
