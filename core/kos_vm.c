@@ -664,8 +664,27 @@ static int init_registers(KOS_CONTEXT ctx,
         }
     }
     else if (KOS_is_native_function(func.o)) {
+#ifndef NDEBUG
+        int64_t          num_regs;
+        const KOS_OBJ_ID stack = ctx->stack;
+        uint32_t         size;
+
+        assert(GET_OBJ_TYPE(stack) == OBJ_STACK);
+        size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->size);
+        assert(size > KOS_STACK_EXTRA);
+
+        num_regs = GET_SMALL_INT(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[size - 1]));
+        assert(num_regs == num_input_args || num_regs == num_input_args + 1);
+#endif
+
         assert(OBJPTR(FUNCTION, func.o)->opts.rest_reg == KOS_NO_REG);
-        /* TODO */
+
+        if (num_input_args)
+            kos_atomic_move_ptr((KOS_ATOMIC(void *) *)&stack_frame->regs[0],
+                                (KOS_ATOMIC(void *) *)(IS_BAD_PTR(args.o)
+                                    ? &OBJPTR(STACK, stack_obj)->buf[rarg1_idx]
+                                    : kos_get_array_buffer(OBJPTR(ARRAY, args.o))),
+                                num_input_args);
     }
     else {
         assert(OBJPTR(FUNCTION, func.o)->opts.min_args     == 0);
@@ -1010,15 +1029,15 @@ static int prepare_call(KOS_CONTEXT        ctx,
             assert(instr > INSTR_NEXT);
             TRY(kos_stack_push(ctx, func.o, num_native_args, ret_reg, (uint8_t)instr));
 
-            if ( ! KOS_is_native_function(func.o))
-                TRY(init_registers(ctx,
-                                   func.o,
-                                   args.o,
-                                   stack_obj,
-                                   regs_idx + rarg1,
-                                   num_args,
-                                   *this_obj));
-            else {
+            TRY(init_registers(ctx,
+                               func.o,
+                               args.o,
+                               stack_obj,
+                               regs_idx + rarg1,
+                               num_args,
+                               *this_obj));
+
+            if (KOS_is_native_function(func.o)) {
                 if (IS_BAD_PTR(args.o)) {
                     args.o = make_args(ctx, stack_obj, regs_idx + rarg1, num_args);
                     TRY_OBJID(args.o);
@@ -1041,15 +1060,15 @@ static int prepare_call(KOS_CONTEXT        ctx,
 
             KOS_atomic_write_relaxed_u32(OBJPTR(FUNCTION, func.o)->state, KOS_GEN_READY);
 
-            if ( ! KOS_is_native_function(func.o))
-                TRY(init_registers(ctx,
-                                   func.o,
-                                   args.o,
-                                   stack_obj,
-                                   regs_idx + rarg1,
-                                   num_args,
-                                   *this_obj));
-            else {
+            TRY(init_registers(ctx,
+                               func.o,
+                               args.o,
+                               stack_obj,
+                               regs_idx + rarg1,
+                               num_args,
+                               *this_obj));
+
+            if (KOS_is_native_function(func.o)) {
                 if (IS_BAD_PTR(args.o)) {
                     args.o = make_args(ctx, stack_obj, regs_idx + rarg1, num_args);
                     TRY_OBJID(args.o);
