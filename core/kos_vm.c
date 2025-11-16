@@ -741,7 +741,7 @@ static void set_handler_reg(KOS_CONTEXT ctx,
     size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->size);
     assert(size > KOS_STACK_EXTRA);
 
-    assert(GET_SMALL_INT(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[size - 1])) == 1);
+    assert(GET_SMALL_INT(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[size - 1])) >= 1);
     KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, stack)->buf[size - 2], obj_id);
 }
 
@@ -756,7 +756,7 @@ static KOS_OBJ_ID get_handler_reg(KOS_CONTEXT ctx)
     size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->size);
     assert(size > KOS_STACK_EXTRA);
 
-    assert(GET_SMALL_INT(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[size - 1])) == 1);
+    assert(GET_SMALL_INT(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[size - 1])) >= 1);
 
     return KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[size - 2]);
 }
@@ -939,13 +939,14 @@ static int prepare_call(KOS_CONTEXT        ctx,
 {
     PROF_ZONE(VM)
 
-    int                error     = KOS_SUCCESS;
-    int                state_set = 0;
-    KOS_FUNCTION_STATE state;
-    const uint32_t     regs_idx  = ctx->regs_idx;
-    KOS_OBJ_ID         stack_obj = ctx->stack;
     KOS_LOCAL          func;
     KOS_LOCAL          args;
+    KOS_OBJ_ID         stack_obj       = ctx->stack;
+    int                error           = KOS_SUCCESS;
+    int                state_set       = 0;
+    const uint32_t     regs_idx        = ctx->regs_idx;
+    uint32_t           num_native_args = 0;
+    KOS_FUNCTION_STATE state;
 
     KOS_init_local_with(ctx, &args, *args_obj);
     KOS_init_local_with(ctx, &func, func_obj);
@@ -972,6 +973,9 @@ static int prepare_call(KOS_CONTEXT        ctx,
     if (IS_BAD_PTR(args.o)) {
         if (num_args < OBJPTR(FUNCTION, func.o)->opts.min_args)
             RAISE_EXCEPTION_STR(str_err_too_few_args);
+
+        if (KOS_is_native_function(func.o))
+            num_native_args = num_args;
     }
     else {
         const KOS_TYPE type = GET_OBJ_TYPE(args.o);
@@ -987,6 +991,9 @@ static int prepare_call(KOS_CONTEXT        ctx,
 
         if (KOS_get_array_size(args.o) < OBJPTR(FUNCTION, func.o)->opts.min_args)
             RAISE_EXCEPTION_STR(str_err_too_few_args);
+
+        if (KOS_is_native_function(func.o))
+            num_native_args = KOS_get_array_size(args.o);
     }
 
     if ((instr <= INSTR_NEXT) && (state < KOS_GEN_READY))
@@ -1001,7 +1008,7 @@ static int prepare_call(KOS_CONTEXT        ctx,
         /* Regular function */
         case KOS_FUN: {
             assert(instr > INSTR_NEXT);
-            TRY(kos_stack_push(ctx, func.o, 0, ret_reg, (uint8_t)instr));
+            TRY(kos_stack_push(ctx, func.o, num_native_args, ret_reg, (uint8_t)instr));
 
             if ( ! KOS_is_native_function(func.o))
                 TRY(init_registers(ctx,
@@ -1030,7 +1037,7 @@ static int prepare_call(KOS_CONTEXT        ctx,
             TRY_OBJID(func.o);
 
             assert(instr > INSTR_NEXT);
-            TRY(kos_stack_push(ctx, func.o, 0, ret_reg, (uint8_t)instr));
+            TRY(kos_stack_push(ctx, func.o, num_native_args, ret_reg, (uint8_t)instr));
 
             KOS_atomic_write_relaxed_u32(OBJPTR(FUNCTION, func.o)->state, KOS_GEN_READY);
 
@@ -3197,7 +3204,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx) /* lgtm [cpp/use-of-goto] */
                     if ((state == KOS_GEN_READY || state == KOS_GEN_ACTIVE) && ! KOS_is_native_function(func.o)) {
 
                         KOS_OBJ_ID this_obj = KOS_VOID;
-                        KOS_OBJ_ID args_obj = KOS_EMPTY_ARRAY;
+                        KOS_OBJ_ID args_obj = KOS_BADPTR;
 
                         error = prepare_call(ctx, instr, func.o, &this_obj,
                                              &args_obj, 0, 0, (uint8_t)rdest);
@@ -3515,6 +3522,8 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx) /* lgtm [cpp/use-of-goto] */
                             assert(ctx->local_list == &func);
 
                             if (state >= KOS_GEN_INIT) {
+                                assert(state > KOS_GEN_INIT);
+
                                 /* Avoid detecting as end of iterator in finish_call() */
                                 if ( ! IS_BAD_PTR(ret.o))
                                     clear_stack_flag(ctx, KOS_CAN_YIELD);

@@ -260,7 +260,12 @@ int kos_stack_push(KOS_CONTEXT ctx,
         TRY(chain_stack_frame(ctx, gen_stack));
 
         assert(IS_SMALL_INT(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, gen_stack)->buf[size - 1])));
-        assert((uint32_t)GET_SMALL_INT(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, gen_stack)->buf[size - 1])) == num_regs);
+        /* TODO fix the number of registers for native generators
+         * For the first call, allow more registers.
+         * For subsequent calls, reduce number of registers to 1.
+         * Double check what is actually stored in the registers.
+         */
+        assert(is_native || (uint32_t)GET_SMALL_INT(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, gen_stack)->buf[size - 1])) == num_regs);
 
         stack_frame = (KOS_STACK_FRAME *)&OBJPTR(STACK, gen_stack)->buf[1];
         stack_frame->call_opcode = instr;
