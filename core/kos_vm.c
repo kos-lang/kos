@@ -429,7 +429,7 @@ static uint32_t get_num_regs(KOS_CONTEXT ctx)
 
     size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, ctx->stack)->size);
     assert(size > KOS_STACK_EXTRA);
-    assert(ctx->regs_idx + 1U < size);
+    assert(ctx->regs_idx + 1U <= size);
 
     num_regs = size - 1U - ctx->regs_idx;
     assert(num_regs < KOS_NO_REG);
@@ -668,13 +668,15 @@ static int init_registers(KOS_CONTEXT ctx,
         int64_t          num_regs;
         const KOS_OBJ_ID stack = ctx->stack;
         uint32_t         size;
+        const uint32_t   required_num_args = (num_input_args < num_named_args) ? num_named_args : num_input_args;
 
         assert(GET_OBJ_TYPE(stack) == OBJ_STACK);
         size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->size);
         assert(size > KOS_STACK_EXTRA);
 
         num_regs = GET_SMALL_INT(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[size - 1]));
-        assert(num_regs == num_input_args || num_regs == num_input_args + 1);
+        assert(num_regs == get_num_regs(ctx));
+        assert(num_regs == required_num_args || num_regs == required_num_args + 1);
 #endif
 
         assert(OBJPTR(FUNCTION, func.o)->opts.rest_reg == KOS_NO_REG);
@@ -685,6 +687,32 @@ static int init_registers(KOS_CONTEXT ctx,
                                     ? &OBJPTR(STACK, stack_obj)->buf[rarg1_idx]
                                     : kos_get_array_buffer(OBJPTR(ARRAY, args.o))),
                                 num_input_args);
+
+        /* Move default values if not all named args were specified */
+        if (num_def_args) {
+            assert( ! IS_BAD_PTR(OBJPTR(FUNCTION, func.o)->defaults));
+            assert(GET_OBJ_TYPE(OBJPTR(FUNCTION, func.o)->defaults) == OBJ_ARRAY);
+            assert(KOS_get_array_size(OBJPTR(FUNCTION, func.o)->defaults) == num_def_args);
+        }
+        else {
+            assert( ! IS_BAD_PTR(OBJPTR(FUNCTION, func.o)->defaults));
+            assert(GET_OBJ_TYPE(OBJPTR(FUNCTION, func.o)->defaults) == OBJ_VOID);
+        }
+
+        if (num_input_args < num_named_args) {
+
+            KOS_OBJ_ID     defaults;
+            const uint32_t def_src_offs = num_input_args - num_non_def_args;
+            const uint32_t to_copy      = num_def_args - def_src_offs;
+
+            assert(num_def_args >= to_copy);
+
+            defaults = kos_get_array_storage(OBJPTR(FUNCTION, func.o)->defaults);
+
+            kos_atomic_move_ptr((KOS_ATOMIC(void *) *)&stack_frame->regs[num_input_args],
+                                (KOS_ATOMIC(void *) *)&OBJPTR(ARRAY_STORAGE, defaults)->buf[def_src_offs],
+                                to_copy);
+        }
     }
     else {
         assert(OBJPTR(FUNCTION, func.o)->opts.min_args     == 0);
@@ -947,6 +975,22 @@ cleanup:
     return error ? KOS_BADPTR : args.o;
 }
 
+/* Returns number of arguments to allocate for a native function */
+static uint32_t get_num_native_args(KOS_OBJ_ID func_obj, uint32_t num_input_args)
+{
+    uint32_t num_non_def_args;
+    uint32_t num_def_args;
+    uint32_t num_named_args;
+
+    assert((GET_OBJ_TYPE(func_obj) == OBJ_FUNCTION) || (GET_OBJ_TYPE(func_obj) == OBJ_CLASS));
+
+    num_non_def_args = OBJPTR(FUNCTION, func_obj)->opts.min_args;
+    num_def_args     = OBJPTR(FUNCTION, func_obj)->opts.num_def_args;
+    num_named_args   = num_non_def_args + num_def_args;
+
+    return (num_input_args < num_named_args) ? num_named_args : num_input_args;
+}
+
 static int prepare_call(KOS_CONTEXT        ctx,
                         KOS_BYTECODE_INSTR instr,
                         KOS_OBJ_ID         func_obj,
@@ -994,7 +1038,7 @@ static int prepare_call(KOS_CONTEXT        ctx,
             RAISE_EXCEPTION_STR(str_err_too_few_args);
 
         if (KOS_is_native_function(func.o))
-            num_native_args = num_args;
+            num_native_args = get_num_native_args(func.o, num_args);
     }
     else {
         const KOS_TYPE type = GET_OBJ_TYPE(args.o);
@@ -1012,7 +1056,7 @@ static int prepare_call(KOS_CONTEXT        ctx,
             RAISE_EXCEPTION_STR(str_err_too_few_args);
 
         if (KOS_is_native_function(func.o))
-            num_native_args = KOS_get_array_size(args.o);
+            num_native_args = get_num_native_args(func.o, KOS_get_array_size(args.o));
     }
 
     if ((instr <= INSTR_NEXT) && (state < KOS_GEN_READY))
