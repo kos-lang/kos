@@ -280,13 +280,18 @@ struct KOS_STACK_FRAME_HDR_S {
         KOS_ATOMIC(KOS_OBJ_ID)   placeholder;
         struct {
             KOS_ATOMIC(uint32_t) instr_offs;  /* Current instruction offset << 1                 */
-            uint8_t              dummy1;      /* Zero                                            */
+            uint8_t              flags;       /* Stack frame flags                               */
             uint8_t              ret_reg;     /* Register holding return value in the caller     */
             uint8_t              call_opcode; /* Opcode of instruction which called the function */
-            uint8_t              dummy2;      /* Zero                                            */
+            uint8_t              zero;        /* Contains zero                                   */
         };
     };
     KOS_ATOMIC(KOS_OBJ_ID)       regs[1];
+};
+
+/* Stack frame flags */
+enum KOS_STACK_FRAME_FLAGS {
+    KOS_NATIVE_GEN_REG = 1  /* Indicates that the last register contains native generator state */
 };
 
 /* Number of entries in addition to the number of registers */

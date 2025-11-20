@@ -171,7 +171,8 @@ int kos_stack_push(KOS_CONTEXT ctx,
     uint32_t         state;
     unsigned         room;
     int              is_native;
-    const KOS_TYPE   type       = GET_OBJ_TYPE(func_obj);
+    const KOS_TYPE   type        = GET_OBJ_TYPE(func_obj);
+    uint8_t          frame_flags = 0;
 
     KOS_init_local_with(ctx, &func, func_obj);
 
@@ -192,8 +193,10 @@ int kos_stack_push(KOS_CONTEXT ctx,
         assert(OBJPTR(FUNCTION, func.o)->opts.num_regs == 0);
 
         /* For native generators, we retain the generator state on the stack */
-        if (state >= KOS_GEN_INIT)
+        if (state >= KOS_GEN_INIT) {
             ++num_regs;
+            frame_flags |= KOS_NATIVE_GEN_REG;
+        }
 
         room = num_regs + KOS_STACK_EXTRA;
     }
@@ -271,6 +274,8 @@ int kos_stack_push(KOS_CONTEXT ctx,
         stack_frame->call_opcode = instr;
         stack_frame->ret_reg     = ret_reg;
 
+        assert( ! is_native || !! (stack_frame->flags & KOS_NATIVE_GEN_REG));
+
         /* Plus 1, because the first entry is a pointer to previous stack object.
          * Minus 1, because the number of registers is stored after the registers.
          */
@@ -303,10 +308,10 @@ int kos_stack_push(KOS_CONTEXT ctx,
     KOS_atomic_write_relaxed_ptr(new_stack->buf[base_idx + room - 1],
                                                           TO_SMALL_INT(num_regs));
     stack_frame->instr_offs  = 0;
-    stack_frame->dummy1      = 0;
+    stack_frame->flags       = frame_flags;
     stack_frame->call_opcode = instr;
     stack_frame->ret_reg     = ret_reg;
-    stack_frame->dummy2      = 0;
+    stack_frame->zero        = 0;
 
     ctx->regs_idx = base_idx + KOS_STACK_EXTRA - 1;
 
