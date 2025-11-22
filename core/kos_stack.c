@@ -172,7 +172,6 @@ int kos_stack_push(KOS_CONTEXT ctx,
     unsigned         room;
     int              is_native;
     const KOS_TYPE   type        = GET_OBJ_TYPE(func_obj);
-    uint8_t          frame_flags = 0;
 
     KOS_init_local_with(ctx, &func, func_obj);
 
@@ -192,22 +191,18 @@ int kos_stack_push(KOS_CONTEXT ctx,
     if (is_native) {
         assert(OBJPTR(FUNCTION, func.o)->opts.num_regs == 0);
 
-        /* For native generators, we retain the generator state on the stack */
-        if (state >= KOS_GEN_INIT) {
+        /* Reserve one more register for generator state */
+        if (state == KOS_GEN_INIT)
             ++num_regs;
-            frame_flags |= KOS_NATIVE_GEN_REG;
-        }
-
-        room = num_regs + KOS_STACK_EXTRA;
     }
     else {
         num_regs = OBJPTR(FUNCTION, func.o)->opts.num_regs;
 
-        room = num_regs + KOS_STACK_EXTRA;
-
-        if (ctx->stack_depth + room > KOS_MAX_STACK_DEPTH)
+        if (ctx->stack_depth + num_regs > KOS_MAX_STACK_DEPTH - KOS_STACK_EXTRA)
             RAISE_EXCEPTION_STR(str_err_stack_overflow);
     }
+
+    room = num_regs + KOS_STACK_EXTRA;
 
     /* Prepare stack for accommodating new stack frame */
 
@@ -263,18 +258,11 @@ int kos_stack_push(KOS_CONTEXT ctx,
         TRY(chain_stack_frame(ctx, gen_stack));
 
         assert(IS_SMALL_INT(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, gen_stack)->buf[size - 1])));
-        /* TODO fix the number of registers for native generators
-         * For the first call, allow more registers.
-         * For subsequent calls, reduce number of registers to 1.
-         * Double check what is actually stored in the registers.
-         */
         assert(is_native || (uint32_t)GET_SMALL_INT(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, gen_stack)->buf[size - 1])) == num_regs);
 
         stack_frame = (KOS_STACK_FRAME *)&OBJPTR(STACK, gen_stack)->buf[1];
         stack_frame->call_opcode = instr;
         stack_frame->ret_reg     = ret_reg;
-
-        assert( ! is_native || !! (stack_frame->flags & KOS_NATIVE_GEN_REG));
 
         /* Plus 1, because the first entry is a pointer to previous stack object.
          * Minus 1, because the number of registers is stored after the registers.
@@ -308,7 +296,7 @@ int kos_stack_push(KOS_CONTEXT ctx,
     KOS_atomic_write_relaxed_ptr(new_stack->buf[base_idx + room - 1],
                                                           TO_SMALL_INT(num_regs));
     stack_frame->instr_offs  = 0;
-    stack_frame->flags       = frame_flags;
+    stack_frame->flags       = 0;
     stack_frame->call_opcode = instr;
     stack_frame->ret_reg     = ret_reg;
     stack_frame->zero        = 0;

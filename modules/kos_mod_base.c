@@ -139,69 +139,66 @@ cleanup:
     return error ? KOS_BADPTR : KOS_VOID;
 }
 
-static KOS_OBJ_ID object_iterator(const KOS_CONTEXT      ctx,
-                                  const KOS_OBJ_ID       regs_obj,
-                                  const enum KOS_DEPTH_E depth)
+static KOS_OBJ_ID object_iterator(const KOS_CONTEXT             ctx,
+                                  const KOS_OBJ_ID              this_obj,
+                                  const uint32_t                num_args,
+                                  KOS_ATOMIC(KOS_OBJ_ID) *const args,
+                                  const enum KOS_DEPTH_E        depth)
 {
     int        error;
     KOS_OBJ_ID ret = KOS_BADPTR;
-    KOS_LOCAL  regs;
     KOS_LOCAL  array;
     KOS_LOCAL  walk;
     KOS_LOCAL  value;
 
-    KOS_init_locals(ctx, &regs, &array, &walk, &value, kos_end_locals);
+    assert(num_args > 1);
 
-    regs.o = regs_obj;
+    KOS_init_locals(ctx, &array, &walk, &value, kos_end_locals);
 
-    assert( ! IS_BAD_PTR(regs.o));
-    assert(GET_OBJ_TYPE(regs.o) == OBJ_ARRAY);
-    assert(KOS_get_array_size(regs.o) > 0);
+    walk.o = KOS_atomic_read_relaxed_obj(args[num_args - 1]);
 
-    walk.o = KOS_array_read(ctx, regs.o, 0);
-    TRY_OBJID(walk.o);
+    if (IS_BAD_PTR(walk.o)) {
+        walk.o = KOS_atomic_read_relaxed_obj(args[0]);
+        assert( ! IS_BAD_PTR(walk.o));
 
-    if (GET_OBJ_TYPE(walk.o) != OBJ_ITERATOR) {
         walk.o = KOS_new_iterator(ctx, walk.o, depth);
         TRY_OBJID(walk.o);
 
-        TRY(KOS_array_write(ctx, regs.o, 0, walk.o));
+        KOS_atomic_write_relaxed_ptr(args[num_args - 1], walk.o);
     }
 
-    {
-        array.o = KOS_new_array(ctx, 2);
-        TRY_OBJID(array.o);
+    array.o = KOS_new_array(ctx, 2);
+    TRY_OBJID(array.o);
 
-        error = KOS_iterator_next(ctx, walk.o);
+    error = KOS_iterator_next(ctx, walk.o);
 
-        if ( ! error) {
-            value.o = KOS_get_walk_value(walk.o);
+    if ( ! error) {
+        value.o = KOS_get_walk_value(walk.o);
 
-            assert( ! IS_BAD_PTR(KOS_get_walk_key(walk.o)));
-            assert( ! IS_BAD_PTR(value.o));
+        assert( ! IS_BAD_PTR(KOS_get_walk_key(walk.o)));
+        assert( ! IS_BAD_PTR(value.o));
 
-            if (GET_OBJ_TYPE(value.o) == OBJ_DYNAMIC_PROP) {
-                value.o = KOS_call_function(ctx,
-                                            OBJPTR(DYNAMIC_PROP, value.o)->getter,
-                                            OBJPTR(ITERATOR, walk.o)->obj,
-                                            KOS_EMPTY_ARRAY);
-                if (IS_BAD_PTR(value.o)) {
-                    assert(KOS_is_exception_pending(ctx));
-                    KOS_clear_exception(ctx);
+        if (GET_OBJ_TYPE(value.o) == OBJ_DYNAMIC_PROP) {
+            value.o = KOS_call_function(ctx,
+                                        OBJPTR(DYNAMIC_PROP, value.o)->getter,
+                                        OBJPTR(ITERATOR, walk.o)->obj,
+                                        KOS_EMPTY_ARRAY);
+            if (IS_BAD_PTR(value.o)) {
+                assert(KOS_is_exception_pending(ctx));
+                KOS_clear_exception(ctx);
 
-                    value.o = OBJPTR(DYNAMIC_PROP, KOS_get_walk_value(walk.o))->getter;
-                }
+                value.o = OBJPTR(DYNAMIC_PROP, KOS_get_walk_value(walk.o))->getter;
             }
-
-            TRY(KOS_array_write(ctx, array.o, 0, KOS_get_walk_key(walk.o)));
-            TRY(KOS_array_write(ctx, array.o, 1, value.o));
-
-            ret = array.o;
         }
+
+        TRY(KOS_array_write(ctx, array.o, 0, KOS_get_walk_key(walk.o)));
+        TRY(KOS_array_write(ctx, array.o, 1, value.o));
+
+        ret = array.o;
     }
 
 cleanup:
-    KOS_destroy_top_locals(ctx, &regs, &value);
+    KOS_destroy_top_locals(ctx, &array, &value);
 
     return ret;
 }
@@ -224,11 +221,11 @@ cleanup:
  *     [["y", 1], ["x", 0]]
  */
 static KOS_OBJ_ID shallow(const KOS_CONTEXT             ctx,
-                          const KOS_OBJ_ID              regs_obj,
+                          const KOS_OBJ_ID              this_obj,
                           const uint32_t                num_args,
                           KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    return object_iterator(ctx, regs_obj, KOS_SHALLOW);
+    return object_iterator(ctx, this_obj, num_args, args, KOS_SHALLOW);
 }
 
 /* @item base deep()
@@ -255,11 +252,11 @@ static const KOS_CONVERT deep_args[2] = {
 };
 
 static KOS_OBJ_ID deep(const KOS_CONTEXT             ctx,
-                       const KOS_OBJ_ID              regs_obj,
+                       const KOS_OBJ_ID              this_obj,
                        const uint32_t                num_args,
                        KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    return object_iterator(ctx, regs_obj, KOS_DEEP);
+    return object_iterator(ctx, this_obj, num_args, args, KOS_DEEP);
 }
 
 /* @item base number()

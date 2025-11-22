@@ -926,33 +926,29 @@ static KOS_OBJ_ID find_first_file(KOS_CONTEXT ctx, KOS_VECTOR *path_cstr_vec, KO
  *     > const files = [ fs.listdir(".") ... ]
  */
 static KOS_OBJ_ID listdir(const KOS_CONTEXT             ctx,
-                          const KOS_OBJ_ID              regs_obj,
+                          const KOS_OBJ_ID              this_obj,
                           const uint32_t                num_args,
                           KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    KOS_LOCAL  regs;
     KOS_LOCAL  dir_walk;
     KOS_OBJ_ID ret = KOS_BADPTR;
     int        error;
 
-    KOS_init_locals(ctx, &regs, &dir_walk, kos_end_locals);
+    assert(num_args > 1);
 
-    regs.o = regs_obj;
+    KOS_init_local(ctx, &dir_walk);
 
-    assert( ! IS_BAD_PTR(regs.o));
-    assert(GET_OBJ_TYPE(regs.o) == OBJ_ARRAY);
-    assert(KOS_get_array_size(regs.o) > 0);
+    dir_walk.o = KOS_atomic_read_relaxed_obj(args[num_args - 1]);
 
-    dir_walk.o = KOS_array_read(ctx, regs.o, 0);
-    TRY_OBJID(dir_walk.o);
-
-    if (GET_OBJ_TYPE(dir_walk.o) != OBJ_OBJECT) {
+    if (IS_BAD_PTR(dir_walk.o)) {
 
         KOS_VECTOR path_cstr;
 
-        TRY(KOS_array_write(ctx, regs.o, 0, KOS_VOID));
+        KOS_atomic_write_relaxed_ptr(args[num_args - 1], KOS_VOID);
 
         KOS_vector_init(&path_cstr);
+
+        dir_walk.o = KOS_atomic_read_relaxed_obj(args[0]);
 
         error = KOS_string_to_cstr_vec(ctx, dir_walk.o, &path_cstr);
 
@@ -968,13 +964,13 @@ static KOS_OBJ_ID listdir(const KOS_CONTEXT             ctx,
 
         TRY_OBJID(dir_walk.o);
 
-        TRY(KOS_array_write(ctx, regs.o, 0, dir_walk.o));
+        KOS_atomic_write_relaxed_ptr(args[num_args - 1], dir_walk.o);
     }
     else
         ret = get_next_dir_entry(ctx, dir_walk.o);
 
 cleanup:
-    KOS_destroy_top_locals(ctx, &regs, &dir_walk);
+    KOS_destroy_top_local(ctx, &dir_walk);
 
     return ret;
 }

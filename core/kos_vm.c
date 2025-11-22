@@ -440,7 +440,7 @@ static uint32_t get_num_regs(KOS_CONTEXT ctx)
 
 static KOS_STACK_FRAME *get_current_stack_frame(KOS_CONTEXT ctx)
 {
-    return (KOS_STACK_FRAME *)&OBJPTR(STACK, ctx->stack)->buf[ctx->regs_idx - 3];
+    return (KOS_STACK_FRAME *)&OBJPTR(STACK, ctx->stack)->buf[ctx->regs_idx - (KOS_STACK_EXTRA - 1)];
 }
 
 static KOS_OBJ_ID get_current_func(KOS_STACK_FRAME *stack_frame)
@@ -456,25 +456,6 @@ static KOS_OBJ_ID get_current_func(KOS_STACK_FRAME *stack_frame)
 static KOS_FUNCTION_STATE get_func_state(KOS_OBJ_ID func_obj)
 {
     return (KOS_FUNCTION_STATE)KOS_atomic_read_relaxed_u32(OBJPTR(FUNCTION, func_obj)->state);
-}
-
-static KOS_OBJ_ID make_args(KOS_CONTEXT ctx,
-                            KOS_OBJ_ID  stack,
-                            uint32_t    regs_idx,
-                            unsigned    num_args)
-{
-    KOS_OBJ_ID array_obj;
-
-    assert( ! kos_is_heap_object(stack));
-
-    array_obj = KOS_new_array(ctx, num_args);
-
-    if ( ! IS_BAD_PTR(array_obj) && num_args)
-        kos_atomic_move_ptr((KOS_ATOMIC(void *) *)kos_get_array_buffer(OBJPTR(ARRAY, array_obj)),
-                            (KOS_ATOMIC(void *) *)&OBJPTR(STACK, stack)->buf[regs_idx],
-                            num_args);
-
-    return array_obj;
 }
 
 static KOS_OBJ_ID slice_args(KOS_CONTEXT ctx,
@@ -776,38 +757,6 @@ static void clear_stack_flag(KOS_CONTEXT ctx, uint32_t clear_flag)
     }
 }
 
-static void set_handler_reg(KOS_CONTEXT ctx,
-                            KOS_OBJ_ID  obj_id)
-{
-    uint32_t         size;
-    const KOS_OBJ_ID stack = ctx->stack;
-
-    assert(GET_OBJ_TYPE(stack) == OBJ_STACK);
-    assert(KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->flags) & KOS_REENTRANT_STACK);
-
-    size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->size);
-    assert(size > KOS_STACK_EXTRA);
-
-    assert(GET_SMALL_INT(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[size - 1])) >= 1);
-    KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, stack)->buf[size - 2], obj_id);
-}
-
-static KOS_OBJ_ID get_handler_reg(KOS_CONTEXT ctx)
-{
-    uint32_t         size;
-    const KOS_OBJ_ID stack = ctx->stack;
-
-    assert(GET_OBJ_TYPE(stack) == OBJ_STACK);
-    assert(KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->flags) & KOS_REENTRANT_STACK);
-
-    size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->size);
-    assert(size > KOS_STACK_EXTRA);
-
-    assert(GET_SMALL_INT(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[size - 1])) >= 1);
-
-    return KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[size - 2]);
-}
-
 static void write_to_yield_reg(KOS_CONTEXT ctx,
                                KOS_OBJ_ID  obj_id)
 {
@@ -830,41 +779,6 @@ static KOS_OBJ_ID create_this(KOS_CONTEXT ctx, KOS_OBJ_ID func_obj)
         return proto_obj;
 
     return KOS_new_object_with_prototype(ctx, proto_obj);
-}
-
-static KOS_OBJ_ID set_default_args_for_handler(KOS_CONTEXT ctx,
-                                               KOS_OBJ_ID  func_obj,
-                                               KOS_OBJ_ID  args_obj)
-{
-    assert((GET_OBJ_TYPE(func_obj) == OBJ_FUNCTION) || (GET_OBJ_TYPE(func_obj) == OBJ_CLASS));
-    assert(GET_OBJ_TYPE(args_obj) == OBJ_ARRAY);
-    assert(KOS_is_native_function(func_obj));
-
-    if (OBJPTR(FUNCTION, func_obj)->opts.num_def_args) {
-
-        const uint32_t min_args     = OBJPTR(FUNCTION, func_obj)->opts.min_args;
-        const uint32_t max_args     = min_args + OBJPTR(FUNCTION, func_obj)->opts.num_def_args;
-        const uint32_t cur_num_args = KOS_get_array_size(args_obj);
-
-        if (cur_num_args < max_args) {
-            KOS_LOCAL args;
-
-            KOS_init_local_with(ctx, &args, args_obj);
-
-            if (KOS_array_insert(ctx,
-                                 args.o,
-                                 cur_num_args,
-                                 MAX_INT64,
-                                 OBJPTR(FUNCTION, func_obj)->defaults,
-                                 cur_num_args - min_args,
-                                 MAX_INT64) != KOS_SUCCESS)
-                args.o = KOS_BADPTR;
-
-            args_obj = KOS_destroy_top_local(ctx, &args);
-        }
-    }
-
-    return args_obj;
 }
 
 static KOS_OBJ_ID get_named_args(KOS_CONTEXT ctx,
@@ -995,7 +909,7 @@ static int prepare_call(KOS_CONTEXT        ctx,
                         KOS_BYTECODE_INSTR instr,
                         KOS_OBJ_ID         func_obj,
                         KOS_OBJ_ID        *this_obj,
-                        KOS_OBJ_ID        *args_obj,
+                        KOS_OBJ_ID         args_obj,
                         uint32_t           rarg1,
                         unsigned           num_args,
                         uint8_t            ret_reg)
@@ -1011,7 +925,7 @@ static int prepare_call(KOS_CONTEXT        ctx,
     uint32_t           num_native_args = 0;
     KOS_FUNCTION_STATE state;
 
-    KOS_init_local_with(ctx, &args, *args_obj);
+    KOS_init_local_with(ctx, &args, args_obj);
     KOS_init_local_with(ctx, &func, func_obj);
 
     assert(IS_BAD_PTR(stack_obj) || ! kos_is_heap_object(stack_obj));
@@ -1080,17 +994,6 @@ static int prepare_call(KOS_CONTEXT        ctx,
                                regs_idx + rarg1,
                                num_args,
                                *this_obj));
-
-            if (KOS_is_native_function(func.o)) {
-                if (IS_BAD_PTR(args.o)) {
-                    args.o = make_args(ctx, stack_obj, regs_idx + rarg1, num_args);
-                    TRY_OBJID(args.o);
-                }
-
-                args.o = set_default_args_for_handler(ctx, func.o, args.o);
-                TRY_OBJID(args.o);
-            }
-
             break;
         }
 
@@ -1111,18 +1014,6 @@ static int prepare_call(KOS_CONTEXT        ctx,
                                regs_idx + rarg1,
                                num_args,
                                *this_obj));
-
-            if (KOS_is_native_function(func.o)) {
-                if (IS_BAD_PTR(args.o)) {
-                    args.o = make_args(ctx, stack_obj, regs_idx + rarg1, num_args);
-                    TRY_OBJID(args.o);
-                }
-
-                args.o = set_default_args_for_handler(ctx, func.o, args.o);
-                TRY_OBJID(args.o);
-
-                set_handler_reg(ctx, args.o);
-            }
 
             OBJPTR(FUNCTION, func.o)->opts.min_args = 0;
 
@@ -1167,14 +1058,6 @@ static int prepare_call(KOS_CONTEXT        ctx,
                     write_to_yield_reg(ctx, value);
                 }
             }
-            else {
-                *this_obj = get_handler_reg(ctx);
-
-                if (IS_BAD_PTR(args.o)) {
-                    args.o = make_args(ctx, stack_obj, regs_idx + rarg1, num_args);
-                    TRY_OBJID(args.o);
-                }
-            }
 
             set_stack_flag(ctx, KOS_CAN_YIELD);
             break;
@@ -1197,7 +1080,7 @@ cleanup:
             KOS_atomic_write_release_u32(OBJPTR(FUNCTION, func.o)->state, state);
     }
 
-    *args_obj = KOS_destroy_top_locals(ctx, &func, &args);
+    KOS_destroy_top_locals(ctx, &func, &args);
 
     return error;
 }
@@ -1241,63 +1124,28 @@ static void finish_call(KOS_CONTEXT        ctx,
     KOS_atomic_write_relaxed_u32(OBJPTR(FUNCTION, func_obj)->state, state);
 }
 
-static KOS_OBJ_ID call_native_function(KOS_CONTEXT ctx,
-                                       KOS_OBJ_ID  func_obj,
-                                       KOS_OBJ_ID  this_obj,
-                                       KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID call_native_function(KOS_CONTEXT        ctx,
+                                       KOS_OBJ_ID         func_obj,
+                                       KOS_FUNCTION_STATE state,
+                                       KOS_OBJ_ID         this_obj)
 {
-    KOS_LOCAL               func;
-    KOS_LOCAL               this_;
-    KOS_LOCAL               args;
-    KOS_LOCAL               args_array;
-    KOS_OBJ_ID              ret_obj;
-    KOS_ATOMIC(KOS_OBJ_ID) *args_ptr = KOS_NULL;
-    size_t                  storage_size;
-    uint32_t                num_args = 0;
+    const KOS_OBJ_ID        stack_obj   = ctx->stack;
+    KOS_STACK_FRAME  *const stack_frame = get_current_stack_frame(ctx);
+    KOS_ATOMIC(KOS_OBJ_ID) *args;
+    int64_t                 num_args;
+    uint32_t                size;
 
-    KOS_init_locals(ctx, &func, &this_, &args, &args_array, kos_end_locals);
+    assert(GET_OBJ_TYPE(stack_obj) == OBJ_STACK);
+    size = OBJPTR(STACK, stack_obj)->size;
 
-    func.o  = func_obj;
-    this_.o = this_obj;
-    args.o  = args_obj;
+    assert(IS_SMALL_INT(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack_obj)->buf[size - 1])));
+    num_args = GET_SMALL_INT(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack_obj)->buf[size - 1]));
 
-    num_args = KOS_atomic_read_relaxed_u32(OBJPTR(ARRAY, args.o)->size);
+    args = (KOS_ATOMIC(KOS_OBJ_ID) *)&stack_frame->regs[0];
 
-    if (num_args) {
-        KOS_ARRAY_STORAGE *buf;
-        const uint32_t     capacity = num_args ? num_args : 1;
+    assert(state != KOS_GEN_INIT);
 
-        storage_size = sizeof(KOS_ARRAY_STORAGE) + (capacity - 1) * sizeof(KOS_OBJ_ID);
-
-        buf = (KOS_ARRAY_STORAGE *)kos_alloc_object(ctx,
-                                                    KOS_ALLOC_IMMOVABLE,
-                                                    OBJ_ARRAY_STORAGE,
-                                                    (uint32_t)storage_size);
-
-        if ( ! buf) {
-            KOS_destroy_top_locals(ctx, &func, &args_array);
-            return KOS_BADPTR;
-        }
-
-        args_array.o = OBJID(ARRAY_STORAGE, buf);
-
-        KOS_atomic_write_relaxed_u32(buf->capacity,       capacity);
-        KOS_atomic_write_relaxed_u32(buf->num_slots_open, num_args);
-        KOS_atomic_write_relaxed_ptr(buf->next,           KOS_BADPTR);
-
-        kos_atomic_move_ptr((KOS_ATOMIC(void *) *)&buf->buf[0],
-                            (KOS_ATOMIC(void *) *)kos_get_array_buffer(OBJPTR(ARRAY, args.o)),
-                            num_args);
-    }
-
-    if (num_args)
-        args_ptr = &OBJPTR(ARRAY_STORAGE, args_array.o)->buf[0];
-
-    ret_obj = OBJPTR(FUNCTION, func.o)->handler.handler(ctx, this_.o, num_args, args_ptr);
-
-    KOS_destroy_top_locals(ctx, &func, &args_array);
-
-    return ret_obj;
+    return OBJPTR(FUNCTION, func_obj)->handler.handler(ctx, this_obj, num_args, args);
 }
 
 static KOS_OBJ_ID read_buffer(KOS_CONTEXT ctx, KOS_OBJ_ID objptr, int idx)
@@ -3267,10 +3115,9 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx) /* lgtm [cpp/use-of-goto] */
                     if ((state == KOS_GEN_READY || state == KOS_GEN_ACTIVE) && ! KOS_is_native_function(func.o)) {
 
                         KOS_OBJ_ID this_obj = KOS_VOID;
-                        KOS_OBJ_ID args_obj = KOS_BADPTR;
 
                         error = prepare_call(ctx, instr, func.o, &this_obj,
-                                             &args_obj, 0, 0, (uint8_t)rdest);
+                                             KOS_BADPTR, 0, 0, (uint8_t)rdest);
                         if (error) {
                             KOS_destroy_top_locals(ctx, &func, &iter);
                             goto cleanup;
@@ -3519,7 +3366,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx) /* lgtm [cpp/use-of-goto] */
                 }
 
                 error = prepare_call(ctx, instr, func.o, &this_.o,
-                                     &args.o, num_args ? rarg1 : 0, num_args,
+                                     args.o, num_args ? rarg1 : 0, num_args,
                                      (uint8_t)rdest);
                 if (error) {
                     KOS_destroy_top_locals(ctx, &func, &args);
@@ -3570,37 +3417,31 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx) /* lgtm [cpp/use-of-goto] */
 #endif
                     }
                     else {
-                        if (IS_BAD_PTR(args.o)) {
+                        PROF_ZONE(VM)
+                        PROF_ZONE_NAME_FUN(func.o)
+
+                        ret.o = call_native_function(ctx, func.o, state, this_.o);
+
+                        assert(IS_BAD_PTR(ret.o) || GET_OBJ_TYPE(ret.o) <= OBJ_LAST_TYPE);
+
+                        assert(ctx->local_list == &func);
+
+                        if (state >= KOS_GEN_INIT) {
+                            assert(state > KOS_GEN_INIT);
+
+                            /* Avoid detecting as end of iterator in finish_call() */
+                            if ( ! IS_BAD_PTR(ret.o))
+                                clear_stack_flag(ctx, KOS_CAN_YIELD);
+
+                            if (KOS_is_exception_pending(ctx))
+                                error = KOS_ERROR_EXCEPTION;
+                        }
+                        else if (IS_BAD_PTR(ret.o)) {
                             assert(KOS_is_exception_pending(ctx));
                             error = KOS_ERROR_EXCEPTION;
                         }
                         else {
-                            PROF_ZONE(VM)
-                            PROF_ZONE_NAME_FUN(func.o)
-
-                            ret.o = call_native_function(ctx, func.o, this_.o, args.o);
-
-                            assert(IS_BAD_PTR(ret.o) || GET_OBJ_TYPE(ret.o) <= OBJ_LAST_TYPE);
-
-                            assert(ctx->local_list == &func);
-
-                            if (state >= KOS_GEN_INIT) {
-                                assert(state > KOS_GEN_INIT);
-
-                                /* Avoid detecting as end of iterator in finish_call() */
-                                if ( ! IS_BAD_PTR(ret.o))
-                                    clear_stack_flag(ctx, KOS_CAN_YIELD);
-
-                                if (KOS_is_exception_pending(ctx))
-                                    error = KOS_ERROR_EXCEPTION;
-                            }
-                            else if (IS_BAD_PTR(ret.o)) {
-                                assert(KOS_is_exception_pending(ctx));
-                                error = KOS_ERROR_EXCEPTION;
-                            }
-                            else {
-                                assert( ! KOS_is_exception_pending(ctx));
-                            }
+                            assert( ! KOS_is_exception_pending(ctx));
                         }
 
                         if (error) {
@@ -3954,7 +3795,7 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
         }
     }
 
-    error = prepare_call(ctx, INSTR_CALL, func.o, &this_.o, &args.o, 0, 0, KOS_NO_REG);
+    error = prepare_call(ctx, INSTR_CALL, func.o, &this_.o, args.o, 0, 0, KOS_NO_REG);
 
     if (error) {
         KOS_destroy_top_locals(ctx, &func, &ret);
@@ -3969,7 +3810,7 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
             PROF_ZONE(VM)
             PROF_ZONE_NAME_FUN(func.o)
 
-            ret.o = call_native_function(ctx, func.o, this_.o, args.o);
+            ret.o = call_native_function(ctx, func.o, state, this_.o);
 
             assert(ctx->local_list == &func);
 

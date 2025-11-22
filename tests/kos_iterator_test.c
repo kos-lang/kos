@@ -33,21 +33,18 @@ static KOS_OBJ_ID yield_256_and_512(const KOS_CONTEXT             ctx,
 {
     KOS_OBJ_ID value;
 
-    assert(GET_OBJ_TYPE(this_obj) == OBJ_ARRAY);
+    assert(num_args > 0);
 
-    if (KOS_get_array_size(this_obj) == 0) {
-        if (KOS_array_push(ctx, this_obj, TO_SMALL_INT(256), 0) != KOS_SUCCESS)
-            return KOS_BADPTR;
-    }
+    if (IS_BAD_PTR(args[num_args - 1]))
+        args[num_args - 1] = TO_SMALL_INT(256);
 
-    value = KOS_array_read(ctx, this_obj, 0);
+    value = args[num_args - 1];
     assert(IS_SMALL_INT(value));
 
     if (GET_SMALL_INT(value) <= 512) {
-        KOS_OBJ_ID new_value = TO_SMALL_INT(GET_SMALL_INT(value) << 1);
+        const KOS_OBJ_ID new_value = TO_SMALL_INT(GET_SMALL_INT(value) << 1);
 
-        if (KOS_array_write(ctx, this_obj, 0, new_value) != KOS_SUCCESS)
-            return KOS_BADPTR;
+        args[num_args - 1] = new_value;
 
         return value;
     }

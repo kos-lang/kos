@@ -125,11 +125,10 @@ static const KOS_CONVERT raw_lexer_args[3] = {
  * including C source code.
  */
 static KOS_OBJ_ID raw_lexer(const KOS_CONTEXT             ctx,
-                            const KOS_OBJ_ID              regs_obj,
+                            const KOS_OBJ_ID              this_obj,
                             const uint32_t                num_args,
                             KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    KOS_LOCAL           regs;
     KOS_LOCAL           lexer;
     KOS_LOCAL           init;
     KOS_LOCAL           value;
@@ -138,28 +137,22 @@ static KOS_OBJ_ID raw_lexer(const KOS_CONTEXT             ctx,
     KOS_NEXT_TOKEN_MODE next_token = NT_ANY;
     int                 error      = KOS_SUCCESS;
 
-    assert(GET_OBJ_TYPE(regs_obj) == OBJ_ARRAY);
+    assert(num_args > 2);
 
-    KOS_init_locals(ctx, &regs, &lexer, &init, &value, &token, kos_end_locals);
+    KOS_init_locals(ctx, &lexer, &init, &value, &token, kos_end_locals);
 
-    regs.o = regs_obj;
-
-    lexer.o = KOS_array_read(ctx, regs.o, 0);
-    assert( ! IS_BAD_PTR(lexer.o));
-    TRY_OBJID(lexer.o);
-
-    /* TODO improve passing args for the first time to built-in generators */
+    lexer.o = KOS_atomic_read_relaxed_obj(args[num_args - 1]);
 
     /* Instantiate the lexer on first invocation */
-    if ( ! KOS_object_get_private(lexer.o, &lexer_priv_class)) {
+    if (IS_BAD_PTR(lexer.o)) {
 
         KOS_OBJ_ID ignore_errors;
         uint32_t   buf_size;
 
-        init.o = lexer.o;
-
         lexer.o = KOS_new_object_with_private(ctx, KOS_VOID, &lexer_priv_class, finalize);
         TRY_OBJID(lexer.o);
+
+        init.o = KOS_atomic_read_relaxed_obj(args[0]);
 
         switch (GET_OBJ_TYPE(init.o)) {
 
@@ -223,29 +216,29 @@ static KOS_OBJ_ID raw_lexer(const KOS_CONTEXT             ctx,
         kos_lexer->lexer.report_error  = report_error;
         kos_lexer->lexer.report_cookie = kos_lexer;
 
-        assert(KOS_get_array_size(regs.o) > 1);
-        ignore_errors = KOS_array_read(ctx, regs.o, 1);
-        TRY_OBJID(ignore_errors);
+        ignore_errors = KOS_atomic_read_relaxed_obj(args[1]);
 
         if (GET_OBJ_TYPE(ignore_errors) != OBJ_BOOLEAN)
             RAISE_EXCEPTION_STR(str_err_bad_ignore_errors);
 
-        kos_lexer->ignore_errors = (ignore_errors == KOS_TRUE) ? 1 : 0;
+        kos_lexer->ignore_errors = KOS_get_bool(ignore_errors) ? 1 : 0;
 
-        TRY(KOS_array_resize(ctx, regs.o, 2));
-
-        TRY(KOS_array_write(ctx, regs.o, 0, lexer.o));
+        KOS_atomic_write_relaxed_ptr(args[num_args - 1], lexer.o);
     }
     else {
         assert(GET_OBJ_TYPE(lexer.o) == OBJ_OBJECT);
 
         kos_lexer = (KOS_LEXER_OBJ *)KOS_object_get_private(lexer.o, &lexer_priv_class);
 
-        if (num_args > 0) {
+        /* First arg gets overwritten with yield value */
+        /* TODO something is still not working */
+        init.o = KOS_atomic_read_relaxed_obj(args[0]);
+
+        if (GET_OBJ_TYPE(init.o) == OBJ_INTEGER) {
 
             int64_t i_value;
 
-            TRY(KOS_get_integer(ctx, args[0], &i_value));
+            TRY(KOS_get_integer(ctx, init.o, &i_value));
 
             if (i_value != 0 && i_value != 1)
                 RAISE_EXCEPTION_STR(str_err_invalid_arg);
@@ -372,7 +365,7 @@ static KOS_OBJ_ID raw_lexer(const KOS_CONTEXT             ctx,
     }
 
 cleanup:
-    token.o = KOS_destroy_top_locals(ctx, &regs, &token);
+    token.o = KOS_destroy_top_locals(ctx, &lexer, &token);
 
     return error ? KOS_BADPTR : token.o;
 }
