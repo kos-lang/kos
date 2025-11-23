@@ -12,6 +12,7 @@
 #include "../inc/kos_object.h"
 #include "kos_config.h"
 #include "kos_heap.h"
+#include "kos_math.h"
 #include "kos_object_internal.h"
 #include "kos_try.h"
 
@@ -191,9 +192,13 @@ int kos_stack_push(KOS_CONTEXT ctx,
     if (is_native) {
         assert(OBJPTR(FUNCTION, func.o)->opts.num_regs == 0);
 
-        /* Reserve one more register for generator state */
-        if (state == KOS_GEN_INIT)
-            ++num_regs;
+        if (state == KOS_GEN_INIT) {
+            /* Reserve two additional registers:
+             * - One for value passed to yield operator
+             * - One for generator state
+             */
+            num_regs += 2U;
+        }
     }
     else {
         num_regs = OBJPTR(FUNCTION, func.o)->opts.num_regs;

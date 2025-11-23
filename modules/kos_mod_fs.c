@@ -934,7 +934,7 @@ static KOS_OBJ_ID listdir(const KOS_CONTEXT             ctx,
     KOS_OBJ_ID ret = KOS_BADPTR;
     int        error;
 
-    assert(num_args > 1);
+    assert(num_args > 2);
 
     KOS_init_local(ctx, &dir_walk);
 

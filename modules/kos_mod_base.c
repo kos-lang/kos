@@ -151,7 +151,7 @@ static KOS_OBJ_ID object_iterator(const KOS_CONTEXT             ctx,
     KOS_LOCAL  walk;
     KOS_LOCAL  value;
 
-    assert(num_args > 1);
+    assert(num_args > 2);
 
     KOS_init_locals(ctx, &array, &walk, &value, kos_end_locals);
 

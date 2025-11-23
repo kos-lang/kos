@@ -230,11 +230,9 @@ static KOS_OBJ_ID raw_lexer(const KOS_CONTEXT             ctx,
 
         kos_lexer = (KOS_LEXER_OBJ *)KOS_object_get_private(lexer.o, &lexer_priv_class);
 
-        /* First arg gets overwritten with yield value */
-        /* TODO something is still not working */
-        init.o = KOS_atomic_read_relaxed_obj(args[0]);
+        init.o = KOS_atomic_read_relaxed_obj(args[num_args - 2]);
 
-        if (GET_OBJ_TYPE(init.o) == OBJ_INTEGER) {
+        if (IS_NUMERIC_OBJ(init.o)) {
 
             int64_t i_value;
 

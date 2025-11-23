@@ -33,7 +33,7 @@ static KOS_OBJ_ID yield_256_and_512(const KOS_CONTEXT             ctx,
 {
     KOS_OBJ_ID value;
 
-    assert(num_args > 0);
+    assert(num_args >= 2);
 
     if (IS_BAD_PTR(args[num_args - 1]))
         args[num_args - 1] = TO_SMALL_INT(256);

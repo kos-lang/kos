@@ -1168,11 +1168,15 @@ static int object_to_string_or_cstr_vec(KOS_CONTEXT        ctx,
 {
     int error = KOS_SUCCESS;
 
-    assert( ! IS_BAD_PTR(obj_id));
     assert(str || cstr_vec);
     assert( ! str || ! cstr_vec || quote_str);
 
-    if (IS_SMALL_INT(obj_id))
+    if (IS_BAD_PTR(obj_id)) {
+        const char null_str[] = "BADPTR";
+        error = KOS_append_cstr(ctx, cstr_vec, null_str, sizeof(null_str) - 1);
+    }
+
+    else if (IS_SMALL_INT(obj_id))
         error = int_to_str(ctx, GET_SMALL_INT(obj_id), str, cstr_vec);
 
     else switch (READ_OBJ_TYPE(obj_id)) {
@@ -1293,7 +1297,7 @@ int KOS_print_to_cstr_vec(KOS_CONTEXT             ctx,
                           KOS_QUOTE_STR           quote_str,
                           KOS_VECTOR             *cstr_vec,
                           const char             *sep,
-                          unsigned                sep_len)
+                          size_t                  sep_len)
 {
     int      error = KOS_SUCCESS;
     uint32_t i;
@@ -1307,13 +1311,10 @@ int KOS_print_to_cstr_vec(KOS_CONTEXT             ctx,
         TRY(KOS_vector_reserve(cstr_vec, cstr_vec->size + 128U));
 
     for (i = 0; i < num_args; i++) {
-        KOS_OBJ_ID obj = KOS_atomic_read_relaxed_obj(args[i]);
-        TRY_OBJID(obj);
+        const KOS_OBJ_ID obj = KOS_atomic_read_relaxed_obj(args[i]);
 
         if (i >= first_sep_i && sep_len) {
-            const size_t pos = cstr_vec->size;
-            TRY(KOS_vector_resize(cstr_vec, pos + sep_len + (pos ? 0 : 1)));
-            memcpy(&cstr_vec->buffer[pos - (pos ? 1 : 0)], sep, sep_len + 1);
+            TRY(KOS_append_cstr(ctx, cstr_vec, sep, sep_len));
         }
 
         TRY(KOS_object_to_string_or_cstr_vec(ctx, obj, quote_str, KOS_NULL, cstr_vec));

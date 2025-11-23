@@ -650,6 +650,7 @@ static int init_registers(KOS_CONTEXT ctx,
         const KOS_OBJ_ID stack = ctx->stack;
         uint32_t         size;
         const uint32_t   required_num_args = (num_input_args < num_named_args) ? num_named_args : num_input_args;
+        const KOS_FUNCTION_STATE state     = get_func_state(func.o);
 
         assert(GET_OBJ_TYPE(stack) == OBJ_STACK);
         size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->size);
@@ -657,7 +658,12 @@ static int init_registers(KOS_CONTEXT ctx,
 
         num_regs = GET_SMALL_INT(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[size - 1]));
         assert(num_regs == get_num_regs(ctx));
-        assert(num_regs == required_num_args || num_regs == required_num_args + 1);
+        if (state >= KOS_GEN_INIT) {
+            assert(num_regs == required_num_args + 2);
+        }
+        else {
+            assert(num_regs == required_num_args);
+        }
 #endif
 
         assert(OBJPTR(FUNCTION, func.o)->opts.rest_reg == KOS_NO_REG);
@@ -923,6 +929,7 @@ static int prepare_call(KOS_CONTEXT        ctx,
     int                state_set       = 0;
     const uint32_t     regs_idx        = ctx->regs_idx;
     uint32_t           num_native_args = 0;
+    const int          is_native       = KOS_is_native_function(func_obj);
     KOS_FUNCTION_STATE state;
 
     KOS_init_local_with(ctx, &args, args_obj);
@@ -951,7 +958,7 @@ static int prepare_call(KOS_CONTEXT        ctx,
         if (num_args < OBJPTR(FUNCTION, func.o)->opts.min_args)
             RAISE_EXCEPTION_STR(str_err_too_few_args);
 
-        if (KOS_is_native_function(func.o))
+        if (is_native)
             num_native_args = get_num_native_args(func.o, num_args);
     }
     else {
@@ -969,7 +976,7 @@ static int prepare_call(KOS_CONTEXT        ctx,
         if (KOS_get_array_size(args.o) < OBJPTR(FUNCTION, func.o)->opts.min_args)
             RAISE_EXCEPTION_STR(str_err_too_few_args);
 
-        if (KOS_is_native_function(func.o))
+        if (is_native)
             num_native_args = get_num_native_args(func.o, KOS_get_array_size(args.o));
     }
 
@@ -1040,23 +1047,27 @@ static int prepare_call(KOS_CONTEXT        ctx,
 
             TRY(kos_stack_push(ctx, func.o, 0, ret_reg, (uint8_t)instr));
 
-            if ( ! KOS_is_native_function(func.o)) {
-                if (state == KOS_GEN_ACTIVE) {
+            if (is_native || state == KOS_GEN_ACTIVE) {
 
-                    KOS_OBJ_ID value;
+                KOS_OBJ_ID value;
 
-                    if (IS_BAD_PTR(args.o))
-                        value = num_args ? KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack_obj)->buf[regs_idx + rarg1]) : KOS_VOID;
+                if (IS_BAD_PTR(args.o))
+                    value = num_args ? KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack_obj)->buf[regs_idx + rarg1]) : KOS_VOID;
 
-                    else {
+                else {
 
-                        num_args = KOS_get_array_size(args.o);
+                    num_args = KOS_get_array_size(args.o);
 
-                        value = num_args ? KOS_array_read(ctx, args.o, 0) : KOS_VOID;
-                    }
-
-                    write_to_yield_reg(ctx, value);
+                    value = num_args ? KOS_array_read(ctx, args.o, 0) : KOS_VOID;
                 }
+
+                if (is_native) {
+                    const uint32_t size = OBJPTR(STACK, ctx->stack)->size;
+
+                    KOS_atomic_write_relaxed_ptr(OBJPTR(STACK, ctx->stack)->buf[size - 3], value);
+                }
+                else
+                    write_to_yield_reg(ctx, value);
             }
 
             set_stack_flag(ctx, KOS_CAN_YIELD);
