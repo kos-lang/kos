@@ -51,7 +51,7 @@
 #endif
 
 #if !defined(__APPLE__) && !defined(AI_DEFAULT)
-#define AI_DEFAULT 0
+#define AI_DEFAULT (AI_ADDRCONFIG | AI_V4MAPPED)
 #endif
 
 #ifdef _WIN32
@@ -613,7 +613,10 @@ static KOS_OBJ_ID kos_bind(KOS_CONTEXT ctx,
     hints.ai_family = socket_holder->family;
     hints.ai_flags  = AI_DEFAULT | AI_PASSIVE;
 
-    error = getaddrinfo(address_cstr, port_cstr.buffer, &hints, &ai_alloc);
+    error = getaddrinfo(address_cstr[0] ? address_cstr : KOS_NULL,
+                        port_cstr.buffer,
+                        &hints,
+                        &ai_alloc);
 
     if (error) {
         const char *error_str = gai_strerror(error);
@@ -642,7 +645,8 @@ static KOS_OBJ_ID kos_bind(KOS_CONTEXT ctx,
     KOS_resume_context(ctx);
 
     if (error) {
-        KOS_raise_errno_value(ctx, "bind", saved_errno);
+        KOS_raise_printf(ctx, "bind(%s, %s): %s",
+                         address_cstr, port_cstr.buffer, strerror(saved_errno));
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
@@ -795,7 +799,8 @@ static KOS_OBJ_ID kos_connect(KOS_CONTEXT ctx,
     KOS_resume_context(ctx);
 
     if (error) {
-        KOS_raise_errno_value(ctx, "connect", saved_errno);
+        KOS_raise_printf(ctx, "connect(%s, %s): %s",
+                         address_cstr, port_cstr.buffer, strerror(saved_errno));
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
@@ -1968,9 +1973,9 @@ static const KOS_CONVERT getaddrinfo_args[3] = {
     KOS_DEFINE_TAIL_ARG()
 };
 
-/* @item net socket.prototype.getaddrinfo()
+/* @item net getaddrinfo()
  *
- *     socket.prototype.getaddrinfo(address, port = void)
+ *     getaddrinfo(address, port = void)
  *
  * Returns information about an address.
  *
