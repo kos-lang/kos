@@ -636,7 +636,7 @@ static KOS_OBJ_ID kos_bind(KOS_CONTEXT ctx,
     hints.ai_flags  = AI_DEFAULT | AI_PASSIVE;
 
     error = getaddrinfo(address_cstr[0] ? address_cstr : KOS_NULL,
-                        port_cstr.buffer[0] ? port_cstr.buffer : KOS_NULL,
+                        (port_cstr.size && port_cstr.buffer[0]) ? port_cstr.buffer : KOS_NULL,
                         &hints,
                         &ai_alloc);
 
@@ -795,7 +795,7 @@ static KOS_OBJ_ID kos_connect(KOS_CONTEXT ctx,
     hints.ai_flags  = AI_DEFAULT;
 
     error = getaddrinfo(address_cstr[0] ? address_cstr : KOS_NULL,
-                        port_cstr.buffer[0] ? port_cstr.buffer : KOS_NULL,
+                        (port_cstr.size && port_cstr.buffer[0]) ? port_cstr.buffer : KOS_NULL,
                         &hints,
                         &ai_alloc);
 
@@ -1832,7 +1832,7 @@ static KOS_OBJ_ID kos_sendto(KOS_CONTEXT ctx,
     hints.ai_flags  = AI_DEFAULT;
 
     error = getaddrinfo(address_cstr[0] ? address_cstr : KOS_NULL,
-                        port_cstr.buffer[0] ? port_cstr.buffer : KOS_NULL,
+                        (port_cstr.size && port_cstr.buffer[0]) ? port_cstr.buffer : KOS_NULL,
                         &hints,
                         &address_info);
 
