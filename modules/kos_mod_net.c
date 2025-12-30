@@ -537,14 +537,35 @@ static int get_port(KOS_CONTEXT ctx,
 {
     const KOS_TYPE type = GET_OBJ_TYPE(port_arg);
 
-    if (type == OBJ_SMALL_INTEGER || type == OBJ_INTEGER || type == OBJ_STRING) {
-        return KOS_object_to_string_or_cstr_vec(ctx, port_arg, KOS_DONT_QUOTE, KOS_NULL, port_cstr);
+    switch (type) {
+        case OBJ_SMALL_INTEGER:
+            /* fall through */
+        case OBJ_INTEGER:
+            {
+                int64_t value;
+
+                if (type == OBJ_SMALL_INTEGER)
+                    value = GET_SMALL_INT(port_arg);
+                else
+                    value = OBJPTR(INTEGER, port_arg)->value;
+
+                if (value < 0 || value > 0xFFFFu) {
+                    KOS_raise_printf(ctx, "invalid 'port' value %" PRId64, value);
+                    return KOS_ERROR_EXCEPTION;
+                }
+            }
+            break;
+
+        case OBJ_STRING:
+            break;
+
+        default:
+            KOS_raise_printf(ctx, "'port' is %s but expected string or integer",
+                             KOS_get_type_name(type));
+            return KOS_ERROR_EXCEPTION;
     }
-    else {
-        KOS_raise_printf(ctx, "'port' is %s but expected string or integer",
-                         KOS_get_type_name(type));
-        return KOS_ERROR_EXCEPTION;
-    }
+
+    return KOS_object_to_string_or_cstr_vec(ctx, port_arg, KOS_DONT_QUOTE, KOS_NULL, port_cstr);
 }
 
 KOS_DECLARE_STATIC_CONST_STRING(str_empty, "");
