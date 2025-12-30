@@ -24,6 +24,7 @@ do {
     expect_fail(() => sock.connect(address = -1))
     expect_fail(() => sock.connect(address = ""))
     expect_fail(() => sock.connect(port = 0x1_0000))
+    expect_fail(() => sock.connect(address = "", port = ""))
     expect_fail(() => sock.bind().connect("invalid.address"))
 
     expect_fail(() => sock.listen(-1))
@@ -46,7 +47,7 @@ do {
     expect_fail(() => sock.send(data="hello", flags="world"))
     expect_fail(() => sock.send(data="hello", flags=0xFFFF_FFFF))
 
-    expect_fail(() => sock_dgram.sendto("", 0, "hello"))
+    expect_fail(() => sock_dgram.sendto("", "", "hello"))
     expect_fail(() => sock_dgram.sendto("localhost", 8080, 123))
     expect_fail(() => sock_dgram.sendto("localhost", 8080, "hello", "world"))
     expect_fail(() => sock_dgram.sendto("localhost", 8080, "hello", 0xFFFF_FFFF))
