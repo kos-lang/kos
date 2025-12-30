@@ -50,6 +50,10 @@
 #define SO_REUSEPORT (SO_REUSEADDR + 0x10000)
 #endif
 
+#if !defined(__APPLE__) && !defined(AI_DEFAULT)
+#define AI_DEFAULT 0
+#endif
+
 #ifdef _WIN32
 typedef SOCKET         KOS_SOCKET;
 typedef ADDRESS_FAMILY KOS_ADDR_FAMILY;
