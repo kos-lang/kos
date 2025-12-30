@@ -83,8 +83,10 @@ static int load_native(KOS_CONTEXT ctx, KOS_OBJ_ID module_name, KOS_VECTOR *cpat
         --pos;
     else {
         assert(cpath->size);
-        assert(cpath->buffer[cpath->size - 1] == 0);
-        pos = (unsigned)cpath->size - 1;
+        if (cpath->size) {
+            assert(cpath->buffer[cpath->size - 1] == 0);
+            pos = (unsigned)cpath->size - 1;
+        }
     }
 
     if (KOS_vector_resize(cpath, pos + sizeof(ext))) {
