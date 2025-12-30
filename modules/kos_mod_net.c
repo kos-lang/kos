@@ -32,6 +32,7 @@
 #   define SHUT_RD   SD_RECEIVE
 #   define SHUT_WR   SD_SEND
 #   define SHUT_RDWR SD_BOTH
+#   pragma warning( disable : 4996 ) /* strerror: This function or variable may be unsafe */
 #else
 #   include <arpa/inet.h>
 #   include <errno.h>
@@ -652,7 +653,9 @@ static KOS_OBJ_ID kos_bind(KOS_CONTEXT ctx,
 
         reset_last_error();
 
-        error = bind(get_socket(socket_holder), address_info->ai_addr, address_info->ai_addrlen);
+        error = bind(get_socket(socket_holder),
+                     address_info->ai_addr,
+                     (ADDR_LEN)address_info->ai_addrlen);
 
         if ( ! error)
             break;
@@ -806,7 +809,9 @@ static KOS_OBJ_ID kos_connect(KOS_CONTEXT ctx,
 
         reset_last_error();
 
-        error = connect(get_socket(socket_holder), address_info->ai_addr, address_info->ai_addrlen);
+        error = connect(get_socket(socket_holder),
+                        address_info->ai_addr,
+                        (ADDR_LEN)address_info->ai_addrlen);
 
         if ( ! error)
             break;
@@ -1856,7 +1861,8 @@ static KOS_OBJ_ID kos_sendto(KOS_CONTEXT ctx,
     TRY_OBJID(arg);
 
     TRY(send_one_object(ctx, arg, (int)flags64, socket_holder, &cstr, &print_args,
-                        (const KOS_GENERIC_ADDR *)address_info->ai_addr, address_info->ai_addrlen));
+                        (const KOS_GENERIC_ADDR *)address_info->ai_addr,
+                        (ADDR_LEN)address_info->ai_addrlen));
 
 cleanup:
     release_socket(socket_holder);
