@@ -77,15 +77,15 @@ do {
         assert "port" in a
         assert a.port == 80
 
-        assert "family" in a
-        assert a.family == net.AF_INET || a.family == net.AF_INET6
+        assert "domain" in a
+        assert a.domain == net.AF_INET || a.domain == net.AF_INET6
 
-        if a.family == net.AF_INET6 {
+        if a.domain == net.AF_INET6 {
             ipv6 = true
         }
 
-        assert "socktype" in a
-        assert typeof a.socktype == "integer"
+        assert "type" in a
+        assert typeof a.type == "integer"
 
         assert "protocol" in a
         assert typeof a.protocol == "integer"
@@ -94,6 +94,10 @@ do {
     expect_fail(() => net.getaddrinfo(""))
     expect_fail(() => net.getaddrinfo(100))
     expect_fail(() => net.getaddrinfo("", []))
+
+    if ! ipv6 {
+        base.print("IPv6 not supported, skipping test")
+    }
 }
 
 do {

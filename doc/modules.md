@@ -4541,7 +4541,7 @@ Returns created socket object.
 `type` specifies the semantics of communication, e.g. `SOCK_STREAM`, `SOCK_DGRAM` or `SOCK_RAW`.
 
 `protocol` specifies particular protocol, 0 typically indicates default protocol, but it can
-be a specific protocol, for example `IPPROTO_TCP` or `IPPROTO_UDP`.
+be a specific protocol, for example `IPPROTO_TCP`, `IPPROTO_UDP` or `IPPROTO_ICMP`.
 
 On error throws an exception.
 
@@ -4575,6 +4575,7 @@ a hostname or a numeric IP address.  If not specified, the default address
 `port` specifies the port to bind.  It is an integer value from 0 to 65535.
 If `port` is not specified, a random port number is chosen.  Ports below 1024
 are typically reserved for system services and require administrator privileges.
+`port` can also be specified as a string, in which case it can be a service name.
 
 Returns the socket itself (`this`).
 
@@ -4621,7 +4622,8 @@ Connects the socket to a remote address.
 `address` specifies the IP address to connect to.  For IPv4 and IPv6 sockets this is
 a hostname or a numeric IP address.
 
-`port` specifies the port to bind.  It is an integer value from 1 to 65535.
+`port` specifies the port to bind.  It is an integer value from 1 to 65535 or
+a string which is the name of the service.
 
 Returns the socket itself (`this`).
 
@@ -4654,10 +4656,10 @@ On error throws an exception.
 Example:
 
     > getaddrinfo("localhost", "http") -> each(print)
-    {"socktype": 2, "family": 30, "port": 80, "address": "::1", "protocol": 17}
-    {"socktype": 1, "family": 30, "port": 80, "address": "::1", "protocol": 6}
-    {"socktype": 2, "family": 2, "port": 80, "address": "127.0.0.1", "protocol": 17}
-    {"socktype": 1, "family": 2, "port": 80, "address": "127.0.0.1", "protocol": 6}
+    {"type": 2, "domain": 30, "port": 80, "address": "::1", "protocol": 17}
+    {"type": 1, "domain": 30, "port": 80, "address": "::1", "protocol": 6}
+    {"type": 2, "domain": 2, "port": 80, "address": "127.0.0.1", "protocol": 17}
+    {"type": 1, "domain": 2, "port": 80, "address": "127.0.0.1", "protocol": 6}
 
 socket.prototype.getsockopt()
 -----------------------------
@@ -4667,7 +4669,7 @@ socket.prototype.getsockopt()
 Returns value of a socket option.
 
 `level` is protocol level at which the option is set, e.g.:
-`SOL_SOCKET`, `IPPROTO_IP`, `IPPROTO_TCP`, `IPPROTO_UDP`.
+`SOL_SOCKET`, `IPPROTO_IP`, `IPPROTO_TCP`, `IPPROTO_UDP`, `IPPROTO_ICMP`.
 
 `option` is an integer specifying the option to retrieve.
 
@@ -4794,7 +4796,8 @@ Send a string or a buffer containing bytes through a remote address.
 `address` specifies the IP address to send data to.  For IPv4 and IPv6 sockets this is
 a hostname or a numeric IP address.
 
-`port` specifies the remote port.  It is an integer value from 1 to 65535.
+`port` specifies the remote port.  It is an integer value from 1 to 65535 or
+a string which is the name of the service.
 
 `data` is either a buffer or a string object.  Empty buffers
 or strings are ignored and nothing is sent through the socket.
@@ -4817,7 +4820,7 @@ socket.prototype.setsockopt()
 Sets a socket option.
 
 `level` is protocol level at which the option is set, e.g.:
-`SOL_SOCKET`, `IPPROTO_IP`, `IPPROTO_TCP`, `IPPROTO_UDP`.
+`SOL_SOCKET`, `IPPROTO_IP`, `IPPROTO_TCP`, `IPPROTO_UDP`, `IPPROTO_ICMP`.
 
 `option` is an integer specifying the option to set and
 
