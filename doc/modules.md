@@ -34,6 +34,7 @@ Table of Contents
       * [buffer.prototype.unpack()](#bufferprototypeunpack)
     * [class()](#class)
       * [class.prototype.prototype](#classprototypeprototype)
+    * [code\_points()](#code_points)
     * [count()](#count)
     * [count\_elements()](#count_elements)
     * [deep()](#deep)
@@ -93,6 +94,7 @@ Table of Contents
     * [string()](#string)
       * [string.prototype.ascii](#stringprototypeascii)
       * [string.prototype.code()](#stringprototypecode)
+      * [string.prototype.code\_points()](#stringprototypecode_points)
       * [string.prototype.ends\_with()](#stringprototypeends_with)
       * [string.prototype.find()](#stringprototypefind)
       * [string.prototype.get()](#stringprototypeget)
@@ -1122,6 +1124,26 @@ Allows reading and setting prototype on class objects.
 
 The prototype set or retrieved is the prototype used when creating
 new objects of this class.
+
+code_points()
+-------------
+
+    code_points(str)
+
+Returns an array of code points for all characters in string `str`.
+
+This function is useful with `sort()` when sorting e.g. ASCII strings,
+because the default string comparison performs unicode compare and can rely
+on locale, leading to unexpected results.
+
+Examples:
+
+    > code_points("a")
+    [97]
+    > code_points("kos")
+    [107, 111, 115]
+    > ["world", "hello"].sort(code_points)
+    ["hello", "world"]
 
 count()
 -------
@@ -2435,6 +2457,26 @@ Examples:
     115
     > "language".code(-2)
     103
+
+string.prototype.code_points()
+------------------------------
+
+    string.prototype.code_points()
+
+Returns an array of code points for all characters in a string.
+
+This function is useful with `sort()` when sorting e.g. ASCII strings,
+because the default string comparison performs unicode compare and can rely
+on locale, leading to unexpected results.
+
+Examples:
+
+    > "a".code_points()
+    [97]
+    > "kos".code_points()
+    [107, 111, 115]
+    > ["world", "hello"].sort(x => x.code_points())
+    ["hello", "world"]
 
 string.prototype.ends_with()
 ----------------------------

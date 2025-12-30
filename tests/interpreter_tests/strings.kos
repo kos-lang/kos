@@ -510,6 +510,13 @@ do {
 }
 
 do {
+    assert "".code_points() == []
+    assert base.code_points("") == []
+    assert "ABCD".code_points() == [0x41, 0x42, 0x43, 0x44]
+    assert base.code_points("ABCD") == [0x41, 0x42, 0x43, 0x44]
+}
+
+do {
     assert "".lstrip() == ""
     assert "".rstrip() == ""
     assert "".strip()  == ""

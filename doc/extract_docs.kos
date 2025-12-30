@@ -26,7 +26,7 @@ fun remove_indentation(lines)
     }
 
     if num_stars == lines.size || (num_stars && ! lines[-1].size) {
-        for const i in range(lines.size) { 
+        for const i in range(lines.size) {
             lines[i] = lines[i][1:]
         }
 
@@ -167,9 +167,9 @@ public fun main(script, args...)
     print("=================")
     print("<!--ts-->")
     print("  * [Table of Contents](#table-of-contents)")
-    for const topic, items in sort(x => x[0], docs) {
+    for const topic, items in sort(x => x[0].code_points(), docs) {
         print("  * [\(make_toc_name(topic))](#\(make_link(topic)))")
-        for const item, contents in sort(x => x[0], items) {
+        for const item, contents in sort(x => x[0].code_points(), items) {
             const lead = item.scan(".") == -1 ? "" : "  "
             print("\(lead)    * [\(make_toc_name(item))](#\(make_link(item)))")
         }
@@ -177,11 +177,11 @@ public fun main(script, args...)
     print("<!--te-->")
 
     # Print module documentation
-    for const topic, items in sort(x => x[0], docs) {
+    for const topic, items in sort(x => x[0].code_points(), docs) {
         print(topic)
         print("=".repeats(topic.size))
         print()
-        for const item, contents in sort(x => x[0], items) {
+        for const item, contents in sort(x => x[0].code_points(), items) {
             print(item)
             print("-".repeats(item.size))
             print()

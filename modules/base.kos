@@ -2132,3 +2132,27 @@ public fun join(sep, args...)
         return join
     }
 }
+
+/* @item base code_points()
+ *
+ *     code_points(str)
+ *
+ * Returns an array of code points for all characters in string `str`.
+ *
+ * This function is useful with `sort()` when sorting e.g. ASCII strings,
+ * because the default string comparison performs unicode compare and can rely
+ * on locale, leading to unexpected results.
+ *
+ * Examples:
+ *
+ *     > code_points("a")
+ *     [97]
+ *     > code_points("kos")
+ *     [107, 111, 115]
+ *     > ["world", "hello"].sort(code_points)
+ *     ["hello", "world"]
+ */
+public fun code_points(str)
+{
+    return str.code_points()
+}

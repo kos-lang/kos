@@ -6,12 +6,13 @@
 #error "Missing DEFINE_INSTRUCTION macro"
 #endif
 
-/* BREAKPOINT */
-DEFINE_INSTRUCTION(BREAKPOINT, 0x80)
 /* We have relatively few instructions.  Most of binary code consists of
  * bytes lower than 128.  Use values 128 and up to increase the chances
  * of jumping into an area which doesn't contain instructions when there
  * is an error. */
+
+/* BREAKPOINT */
+DEFINE_INSTRUCTION(BREAKPOINT, 0x80)
 
 /* LOAD.INT8 <r.dest>, <int8> */
 DEFINE_INSTRUCTION(LOAD_INT8, 0x81)

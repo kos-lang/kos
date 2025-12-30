@@ -101,7 +101,7 @@ class create_defs {
             prev_token = token
         }
 
-        this.symbols.sort(x => x.token)
+        this.symbols.sort(x => x.token.code_points())
     }
 }
 

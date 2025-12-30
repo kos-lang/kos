@@ -4429,6 +4429,67 @@ cleanup:
     return error ? KOS_BADPTR : KOS_new_int(ctx, (int64_t)char_code);
 }
 
+/* @item base string.prototype.code_points()
+ *
+ *     string.prototype.code_points()
+ *
+ * Returns an array of code points for all characters in a string.
+ *
+ * This function is useful with `sort()` when sorting e.g. ASCII strings,
+ * because the default string comparison performs unicode compare and can rely
+ * on locale, leading to unexpected results.
+ *
+ * Examples:
+ *
+ *     > "a".code_points()
+ *     [97]
+ *     > "kos".code_points()
+ *     [107, 111, 115]
+ *     > ["world", "hello"].sort(x => x.code_points())
+ *     ["hello", "world"]
+ */
+
+static KOS_OBJ_ID code_points(KOS_CONTEXT ctx,
+                              KOS_OBJ_ID  this_obj,
+                              KOS_OBJ_ID  args_obj)
+{
+    KOS_LOCAL this_;
+    KOS_LOCAL ret_array;
+    unsigned  len;
+    unsigned  i;
+    int       error = KOS_SUCCESS;
+
+    KOS_init_local(     ctx, &ret_array);
+    KOS_init_local_with(ctx, &this_, this_obj);
+
+    if (GET_OBJ_TYPE(this_.o) != OBJ_STRING)
+        RAISE_EXCEPTION_STR(str_err_not_string);
+
+    len = KOS_get_string_length(this_.o);
+
+    ret_array.o = KOS_new_array(ctx, len);
+    TRY_OBJID(ret_array.o);
+
+    for (i = 0; i < len; i++) {
+
+        KOS_OBJ_ID char_code_obj;
+
+        const unsigned char_code = KOS_string_get_char_code(ctx, this_.o, (int)i);
+        if (char_code == ~0U)
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+
+        char_code_obj = KOS_new_int(ctx, (int64_t)char_code);
+        TRY_OBJID(char_code_obj);
+
+        TRY(KOS_array_write(ctx, ret_array.o, (int)i, char_code_obj));
+    }
+
+cleanup:
+    ret_array.o = KOS_destroy_top_locals(ctx, &this_, &ret_array);
+
+    return error ? KOS_BADPTR : ret_array.o;
+}
+
 /* @item base string.prototype.starts_with()
  *
  *     string.prototype.starts_with(str)
@@ -5184,6 +5245,7 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "ends_with",    ends_with,           ends_with_args);
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "find",         find,                find_args);
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "code",         code,                code_args);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "code_points",  code_points,         KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "lowercase",    lowercase,           KOS_NULL);
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "repeats",      repeats,             repeats_args);
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(string),    "rfind",        rfind,               rfind_args);
