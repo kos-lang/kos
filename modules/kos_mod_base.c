@@ -4295,9 +4295,10 @@ cleanup:
  *     ["hello", "world"]
  */
 
-static KOS_OBJ_ID code_points(KOS_CONTEXT ctx,
-                              KOS_OBJ_ID  this_obj,
-                              KOS_OBJ_ID  args_obj)
+static KOS_OBJ_ID code_points(const KOS_CONTEXT             ctx,
+                              const KOS_OBJ_ID              this_obj,
+                              const uint32_t                num_args,
+                              KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
     KOS_LOCAL this_;
     KOS_LOCAL ret_array;
