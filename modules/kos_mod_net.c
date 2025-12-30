@@ -107,6 +107,7 @@ KOS_DECLARE_STATIC_CONST_STRING(str_port,                     "port");
 KOS_DECLARE_STATIC_CONST_STRING(str_protocol,                 "protocol");
 KOS_DECLARE_STATIC_CONST_STRING(str_socket,                   "socket");
 KOS_DECLARE_STATIC_CONST_STRING(str_timeout_sec,              "timeout_sec");
+KOS_DECLARE_STATIC_CONST_STRING(str_type,                     "type");
 
 typedef struct KOS_SOCKET_HOLDER_S {
     KOS_ATOMIC(uint32_t) socket_fd;
@@ -625,12 +626,8 @@ static KOS_OBJ_ID kos_bind(const KOS_CONTEXT             ctx,
 
     TRY(KOS_extract_native_from_args(ctx, num_args, args, "argument", bind_args, &alloc, &address_cstr));
 
-    assert(KOS_get_array_size(args_obj) >= 2);
-    {
-        const KOS_OBJ_ID port_arg = KOS_array_read(ctx, args_obj, 1);
-        TRY_OBJID(port_arg);
-        TRY(get_port(ctx, port_arg, &port_cstr));
-    }
+    assert(num_args >= 2);
+    TRY(get_port(ctx, args[1], &port_cstr));
 
     TRY(acquire_socket_object(ctx, self.o, &socket_holder));
 
@@ -786,12 +783,8 @@ static KOS_OBJ_ID kos_connect(const KOS_CONTEXT             ctx,
 
     TRY(KOS_extract_native_from_args(ctx, num_args, args, "argument", connect_args, &alloc, &address_cstr));
 
-    assert(KOS_get_array_size(args_obj) >= 2);
-    {
-        const KOS_OBJ_ID port_arg = KOS_array_read(ctx, args_obj, 1);
-        TRY_OBJID(port_arg);
-        TRY(get_port(ctx, port_arg, &port_cstr));
-    }
+    assert(num_args >= 2);
+    TRY(get_port(ctx, args[1], &port_cstr));
 
     TRY(acquire_socket_object(ctx, self.o, &socket_holder));
 
@@ -1750,7 +1743,6 @@ static KOS_OBJ_ID kos_sendto(const KOS_CONTEXT             ctx,
     struct KOS_MEMPOOL_S alloc;
     KOS_VECTOR           port_cstr;
     KOS_VECTOR           cstr;
-    KOS_LOCAL            args;
     KOS_LOCAL            self;
     struct addrinfo     *address_info  = KOS_NULL;
     struct addrinfo      hints;
@@ -1767,17 +1759,10 @@ static KOS_OBJ_ID kos_sendto(const KOS_CONTEXT             ctx,
 
     KOS_init_local_with(ctx, &self, this_obj);
 
-    args.o  = args_obj;
-    self.o = this_obj;
-
     TRY(KOS_extract_native_from_args(ctx, num_args, args, "argument", sendto_args, &alloc, &address_cstr));
 
-    assert(KOS_get_array_size(args_obj) >= 2);
-    {
-        const KOS_OBJ_ID port_arg = KOS_array_read(ctx, args_obj, 1);
-        TRY_OBJID(port_arg);
-        TRY(get_port(ctx, port_arg, &port_cstr));
-    }
+    assert(num_args >= 2);
+    TRY(get_port(ctx, args[1], &port_cstr));
 
     TRY(acquire_socket_object(ctx, self.o, &socket_holder));
 
@@ -1815,9 +1800,6 @@ static KOS_OBJ_ID kos_sendto(const KOS_CONTEXT             ctx,
         KOS_raise_printf(ctx, "flags argument 0x%" PRIx64 " contains unrecognized bits", flags64);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
-
-    arg = KOS_array_read(ctx, args.o, 2);
-    TRY_OBJID(arg);
 
     TRY(send_one_object(ctx, args[2], (int)flags64, socket_holder, &cstr,
                         (const KOS_GENERIC_ADDR *)address_info->ai_addr,
