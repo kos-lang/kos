@@ -1876,14 +1876,15 @@ do {                                                                    \
 
 int kos_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 {
-    int        error = KOS_SUCCESS;
-    KOS_LOCAL  module;
-    KOS_LOCAL  file_proto;
-    KOS_LOCAL  file_lock;
-    KOS_LOCAL  priv;
-    KOS_OBJ_ID pipe_proto;
+    KOS_LOCAL module;
+    KOS_LOCAL pipe_proto;
+    KOS_LOCAL file_proto;
+    KOS_LOCAL file_lock;
+    KOS_LOCAL priv;
+    int       error = KOS_SUCCESS;
 
     KOS_init_local_with(ctx, &module, module_obj);
+    KOS_init_local(     ctx, &pipe_proto);
     KOS_init_local(     ctx, &file_proto);
     KOS_init_local(     ctx, &file_lock);
     KOS_init_local(     ctx, &priv);
@@ -1911,7 +1912,7 @@ int kos_module_io_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_CONSTRUCTOR(    ctx, module.o,               "file_lock", kos_lock_ctor,    KOS_NULL,  &file_lock.o);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, file_lock.o,  "release",   kos_unlock,       KOS_NULL);
 
-    TRY_ADD_CONSTRUCTOR(    ctx, module.o,               "pipe",      kos_pipe,         KOS_NULL,  &pipe_proto);
+    TRY_ADD_CONSTRUCTOR(    ctx, module.o,               "pipe",      kos_pipe,         KOS_NULL,  &pipe_proto.o);
 
     priv.o = KOS_new_array(ctx, 2);
     TRY_OBJID(priv.o);

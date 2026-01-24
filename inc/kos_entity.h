@@ -405,6 +405,7 @@ typedef enum KOS_FUNCTION_STATE_E {
 #define KOS_NO_REG 255U
 
 typedef struct KOS_FUNCTION_OPTS_S {
+    uint8_t flags;        /* Bitflags */
     uint8_t num_regs;     /* Number of registers used by the function */
     uint8_t closure_size; /* Number of registers preserved for a closure */
 
@@ -419,6 +420,10 @@ typedef struct KOS_FUNCTION_OPTS_S {
     uint8_t this_reg;     /* Register containing 'this' */
     uint8_t bind_reg;     /* First bound register */
 } KOS_FUNCTION_OPTS;
+
+typedef enum KOS_FUNCTION_FLAGS_E {
+    KOS_FUN_NATIVE = 1
+} KOS_FUNCTION_FLAGS;
 
 union KOS_HANDLER_U {
     KOS_OBJ_ID           bytecode; /* Buffer storage object with bytecode */
@@ -583,10 +588,10 @@ KOS_OBJ_ID KOS_get_named_arg(KOS_CONTEXT ctx,
 #ifdef __cplusplus
 static inline bool KOS_is_native_function(KOS_OBJ_ID func_obj)
 {
-    return IS_SMALL_INT(OBJPTR(FUNCTION, func_obj)->handler.bytecode);
+    return !! (OBJPTR(FUNCTION, func_obj)->opts.flags & KOS_FUN_NATIVE);
 }
 #else
-#define KOS_is_native_function(func_obj) (IS_SMALL_INT(OBJPTR(FUNCTION, (func_obj))->handler.bytecode))
+#define KOS_is_native_function(func_obj) ( !! (OBJPTR(FUNCTION, (func_obj))->opts.flags & KOS_FUN_NATIVE))
 #endif
 
 KOS_API

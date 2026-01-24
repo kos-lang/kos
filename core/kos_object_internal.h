@@ -271,22 +271,14 @@ uint32_t kos_string_iter_peek_next_code(KOS_STRING_ITER *iter);
  */
 
 struct KOS_STACK_FRAME_HDR_S {
-    KOS_ATOMIC(KOS_OBJ_ID)       func_obj;
-    KOS_ATOMIC(KOS_OBJ_ID)       catch_info;
-    union {
-        /* On 32-bit architectures we need another 32-bit value to store the
-         * return register and call instruction opcode.
-         */
-        KOS_ATOMIC(KOS_OBJ_ID)   placeholder;
-        struct {
-            KOS_ATOMIC(uint32_t) instr_offs;  /* Current instruction offset << 1                 */
-            uint8_t              flags;       /* Stack frame flags (unused)                      */
-            uint8_t              ret_reg;     /* Register holding return value in the caller     */
-            uint8_t              call_opcode; /* Opcode of instruction which called the function */
-            uint8_t              zero;        /* Contains zero                                   */
-        };
-    };
-    KOS_ATOMIC(KOS_OBJ_ID)       regs[1];
+    KOS_ATOMIC(KOS_OBJ_ID) func_obj;
+    KOS_ATOMIC(KOS_OBJ_ID) catch_info;
+    KOS_ATOMIC(uint32_t)   instr_offs;  /* Current instruction offset << 1                 */
+    uint8_t                flags;       /* Stack frame flags (unused)                      */
+    uint8_t                ret_reg;     /* Register holding return value in the caller     */
+    uint8_t                call_opcode; /* Opcode of instruction which called the function */
+    uint8_t                zero;        /* Contains zero                                   */
+    KOS_ATOMIC(KOS_OBJ_ID) regs[1];
 };
 
 /* Number of entries in addition to the number of registers */

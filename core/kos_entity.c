@@ -260,6 +260,7 @@ static int init_builtin_function(KOS_CONTEXT          ctx,
     unsigned  num_def_args = 0;
     int       error        = KOS_SUCCESS;
 
+    OBJPTR(FUNCTION, func_obj)->opts.flags     |= KOS_FUN_NATIVE;
     OBJPTR(FUNCTION, func_obj)->handler.handler = handler;
     OBJPTR(FUNCTION, func_obj)->name            = name_obj;
 
@@ -367,7 +368,7 @@ unsigned KOS_function_addr_to_line(KOS_OBJ_ID func_obj,
 
     assert( ! IS_BAD_PTR(func_obj));
     bytecode_obj = OBJPTR(FUNCTION, func_obj)->handler.bytecode;
-    if ( ! IS_SMALL_INT(bytecode_obj) && ! IS_BAD_PTR(bytecode_obj)) {
+    if ( ! KOS_is_native_function(func_obj) && ! IS_BAD_PTR(bytecode_obj)) {
 
         KOS_BYTECODE *const bytecode = (KOS_BYTECODE *)OBJPTR(OPAQUE, bytecode_obj);
 
@@ -403,7 +404,7 @@ uint32_t KOS_function_get_def_line(KOS_OBJ_ID func_obj)
 
     assert( ! IS_BAD_PTR(func_obj));
     bytecode_obj = OBJPTR(FUNCTION, func_obj)->handler.bytecode;
-    if ( ! IS_SMALL_INT(bytecode_obj) && ! IS_BAD_PTR(bytecode_obj))
+    if ( ! KOS_is_native_function(func_obj) && ! IS_BAD_PTR(bytecode_obj))
         def_line = ((KOS_BYTECODE *)OBJPTR(OPAQUE, bytecode_obj))->def_line;
 
     return def_line;
@@ -416,7 +417,7 @@ uint32_t KOS_function_get_num_instr(KOS_OBJ_ID func_obj)
 
     assert( ! IS_BAD_PTR(func_obj));
     bytecode_obj = OBJPTR(FUNCTION, func_obj)->handler.bytecode;
-    if ( ! IS_SMALL_INT(bytecode_obj) && ! IS_BAD_PTR(bytecode_obj))
+    if ( ! KOS_is_native_function(func_obj) && ! IS_BAD_PTR(bytecode_obj))
         num_instr = ((KOS_BYTECODE *)OBJPTR(OPAQUE, bytecode_obj))->num_instr;
 
     return num_instr;
@@ -429,7 +430,7 @@ uint32_t KOS_function_get_code_size(KOS_OBJ_ID func_obj)
 
     assert( ! IS_BAD_PTR(func_obj));
     bytecode_obj = OBJPTR(FUNCTION, func_obj)->handler.bytecode;
-    if ( ! IS_SMALL_INT(bytecode_obj) && ! IS_BAD_PTR(bytecode_obj))
+    if ( ! KOS_is_native_function(func_obj) && ! IS_BAD_PTR(bytecode_obj))
         bytecode_size = ((KOS_BYTECODE *)OBJPTR(OPAQUE, bytecode_obj))->bytecode_size;
 
     return bytecode_size;

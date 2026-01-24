@@ -1431,6 +1431,7 @@ template<typename Ret, typename... Args, unsigned int... indices>
 KOS_OBJ_ID invoke_internal(context ctx, Ret (*fun)(Args...), KOS_OBJ_ID this_obj, uint32_t num_args, KOS_ATOMIC(KOS_OBJ_ID)* args, seq<indices...>)
 {
     unused(args);
+    unused(num_args);
     return to_object_ptr(ctx, fun(extract_arg<indices, Args>(ctx, num_args, args)...));
 }
 
@@ -1438,6 +1439,7 @@ template<typename... Args, unsigned int... indices>
 KOS_OBJ_ID invoke_internal(context ctx, void (*fun)(Args...), KOS_OBJ_ID this_obj, uint32_t num_args, KOS_ATOMIC(KOS_OBJ_ID)* args, seq<indices...>)
 {
     unused(args);
+    unused(num_args);
     fun(extract_arg<indices, Args>(ctx, num_args, args)...);
     return KOS_VOID;
 }
@@ -1446,6 +1448,7 @@ template<typename T, typename Ret, typename... Args, unsigned int... indices>
 KOS_OBJ_ID invoke_internal(context ctx, Ret (T::*fun)(Args...), KOS_OBJ_ID this_obj, uint32_t num_args, KOS_ATOMIC(KOS_OBJ_ID)* args, seq<indices...>)
 {
     unused(args);
+    unused(num_args);
     T* const obj = private_class<T>::get(this_obj);
     return to_object_ptr(ctx, (obj->*fun)(extract_arg<indices, Args>(ctx, num_args, args)...));
 }
@@ -1454,6 +1457,7 @@ template<typename T, typename... Args, unsigned int... indices>
 KOS_OBJ_ID invoke_internal(context ctx, void (T::*fun)(Args...), KOS_OBJ_ID this_obj, uint32_t num_args, KOS_ATOMIC(KOS_OBJ_ID)* args, seq<indices...>)
 {
     unused(args);
+    unused(num_args);
     T* const obj = private_class<T>::get(this_obj);
     (obj->*fun)(extract_arg<indices, Args>(ctx, num_args, args)...);
     return KOS_VOID;
@@ -1463,6 +1467,7 @@ template<typename T, typename Ret, typename... Args, unsigned int... indices>
 KOS_OBJ_ID invoke_internal(context ctx, Ret (T::*fun)(Args...) const, KOS_OBJ_ID this_obj, uint32_t num_args, KOS_ATOMIC(KOS_OBJ_ID)* args, seq<indices...>)
 {
     unused(args);
+    unused(num_args);
     T* const obj = private_class<T>::get(this_obj);
     return to_object_ptr(ctx, (obj->*fun)(extract_arg<indices, Args>(ctx, num_args, args)...));
 }
@@ -1471,6 +1476,7 @@ template<typename T, typename... Args, unsigned int... indices>
 KOS_OBJ_ID invoke_internal(context ctx, void (T::*fun)(Args...) const, KOS_OBJ_ID this_obj, uint32_t num_args, KOS_ATOMIC(KOS_OBJ_ID)* args, seq<indices...>)
 {
     unused(args);
+    unused(num_args);
     T* const obj = private_class<T>::get(this_obj);
     (obj->*fun)(extract_arg<indices, Args>(ctx, num_args, args)...);
     return KOS_VOID;
@@ -1480,6 +1486,7 @@ template<typename Ret, typename... Args>
 KOS_OBJ_ID context::invoke_native(Ret (*fun)(Args...), KOS_OBJ_ID this_obj, uint32_t num_args, KOS_ATOMIC(KOS_OBJ_ID)* args)
 {
     unused(args);
+    unused(num_args);
     return invoke_internal(*this, fun, this_obj, num_args, args, typename idx_seq<sizeof...(Args)>::type());
 }
 
@@ -1487,6 +1494,7 @@ template<typename T, typename Ret, typename... Args>
 KOS_OBJ_ID context::invoke_native(Ret (T::*fun)(Args...), KOS_OBJ_ID this_obj, uint32_t num_args, KOS_ATOMIC(KOS_OBJ_ID)* args)
 {
     unused(args);
+    unused(num_args);
     return invoke_internal(*this, fun, this_obj, num_args, args, typename idx_seq<sizeof...(Args)>::type());
 }
 
@@ -1494,6 +1502,7 @@ template<typename T, typename Ret, typename... Args>
 KOS_OBJ_ID context::invoke_native(Ret (T::*fun)(Args...) const, KOS_OBJ_ID this_obj, uint32_t num_args, KOS_ATOMIC(KOS_OBJ_ID)* args)
 {
     unused(args);
+    unused(num_args);
     return invoke_internal(*this, fun, this_obj, num_args, args, typename idx_seq<sizeof...(Args)>::type());
 }
 #else
