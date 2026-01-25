@@ -50,6 +50,8 @@ static int alloc_page_with_objects(KOS_CONTEXT        ctx,
 
     remaining_size = kos_get_object_size(*(KOS_OBJ_HEADER *)storage);
 
+    memset(storage, 0, remaining_size);
+
     for ( ; num_objs; --num_objs, ++descs, ++dest) {
 
         KOS_OBJ_HEADER *hdr  = (KOS_OBJ_HEADER *)storage;
