@@ -33,6 +33,7 @@ KOS_DECLARE_STATIC_CONST_STRING(str_err_div_overflow,             "division over
 KOS_DECLARE_STATIC_CONST_STRING(str_err_generator_running,        "generator is running");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_byte_value,       "buffer element value out of range");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_index,            "index out of range");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_invalid_num_args,         "invalid number of function arguments");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_named_args_not_supported, "function does not support named arguments");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_no_setter,                "property is read-only");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_callable,             "object is not callable");
@@ -1152,11 +1153,16 @@ static KOS_OBJ_ID call_native_function(KOS_CONTEXT        ctx,
     assert(IS_SMALL_INT(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack_obj)->buf[size - 1])));
     num_args = GET_SMALL_INT(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack_obj)->buf[size - 1]));
 
+    if (num_args < 0 || num_args > 0xFFFFFFFFu) {
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_invalid_num_args));
+        return KOS_BADPTR;
+    }
+
     args = (KOS_ATOMIC(KOS_OBJ_ID) *)&stack_frame->regs[0];
 
     assert(state != KOS_GEN_INIT);
 
-    return OBJPTR(FUNCTION, func_obj)->handler.handler(ctx, this_obj, num_args, args);
+    return OBJPTR(FUNCTION, func_obj)->handler.handler(ctx, this_obj, (uint32_t)(uint64_t)num_args, args);
 }
 
 static KOS_OBJ_ID read_buffer(KOS_CONTEXT ctx, KOS_OBJ_ID objptr, int idx)
