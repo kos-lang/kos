@@ -2050,7 +2050,7 @@ static KOS_OBJ_ID re_find(const KOS_CONTEXT             ctx,
                           const uint32_t                num_args,
                           KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    KOS_OBJ_ID           match;
+    KOS_OBJ_ID           match = KOS_VOID;
     struct RE_POSS_STACK poss_stack;
     struct RE_OBJ       *re;
     int                  error = KOS_SUCCESS;

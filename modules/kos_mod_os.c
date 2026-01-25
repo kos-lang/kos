@@ -27,6 +27,7 @@
 #   include <windows.h>
 #   include <io.h>
 #   pragma warning( pop )
+#   pragma warning( disable : 4702 ) /* return after exit is unreachable */
 #   pragma warning( disable : 4996 ) /* 'getenv': This function may be unsafe */
 #else
 #   include <errno.h>
