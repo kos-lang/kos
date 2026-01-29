@@ -6,12 +6,14 @@
 #include "../inc/kos_array.h"
 #include "../inc/kos_constants.h"
 #include "../inc/kos_error.h"
+#include "../inc/kos_malloc.h"
 #include "../inc/kos_memory.h"
 #include "../inc/kos_module.h"
 #include "../inc/kos_object.h"
 #include "../inc/kos_string.h"
 #include "../inc/kos_utils.h"
 #include "kos_heap.h"
+#include "kos_math.h"
 #include "kos_object_internal.h"
 #include "kos_try.h"
 #include <limits.h>
@@ -557,4 +559,48 @@ cleanup:
     iter.o = KOS_destroy_top_local(ctx, &iter);
 
     return error ? KOS_BADPTR : iter.o;
+}
+
+KOS_OBJ_ID kos_alloc_const_array_storage(KOS_CONTEXT ctx, uint32_t num_elems)
+{
+    uint32_t     i;
+    const size_t size = sizeof(struct KOS_CONST_ARRAY_STORAGE_S) + sizeof(KOS_OBJ_ID) * (KOS_max(1u, num_elems) - 1);
+
+    struct KOS_CONST_ARRAY_STORAGE_S *ptr = (struct KOS_CONST_ARRAY_STORAGE_S *)
+        KOS_malloc_aligned(size, 32);
+
+    if ( ! ptr)  {
+        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+        return KOS_BADPTR;
+    }
+
+    memset(ptr, 0, size);
+
+    ptr->object.size_and_type = OBJ_ARRAY_STORAGE;
+    ptr->object.size          = num_elems;
+    ptr->object.next          = KOS_BADPTR;
+
+    for (i = 0; i < num_elems; i++)
+        ptr->object.buf[i] = KOS_BADPTR;
+
+    return KOS_CONST_ID(*ptr);
+}
+
+void kos_set_const_array_storage(KOS_OBJ_ID obj_id, uint32_t idx, KOS_OBJ_ID elem)
+{
+    assert(GET_OBJ_TYPE(obj_id) == OBJ_ARRAY_STORAGE);
+    assert(idx < OBJPTR(ARRAY_STORAGE, obj_id)->capacity);
+
+    OBJPTR(ARRAY_STORAGE, obj_id)->buf[idx] = elem;
+}
+
+void kos_free_const_array_storage(KOS_OBJ_ID obj_id)
+{
+    struct KOS_CONST_ARRAY_STORAGE_S *const ptr = (struct KOS_CONST_ARRAY_STORAGE_S *)OBJPTR(ARRAY_STORAGE, obj_id);
+
+    const size_t offset = (size_t)((uint8_t *)&ptr->object - (uint8_t *)ptr);
+
+    assert(GET_OBJ_TYPE(obj_id) == OBJ_ARRAY_STORAGE);
+
+    KOS_free_aligned((uint8_t *)ptr - offset);
 }

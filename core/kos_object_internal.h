@@ -216,6 +216,23 @@ static inline KOS_OBJ_ID kos_get_array_storage(KOS_OBJ_ID obj_id)
 int kos_array_copy_storage(KOS_CONTEXT ctx,
                            KOS_OBJ_ID  obj_id);
 
+struct KOS_CONST_ARRAY_STORAGE_S {
+    struct KOS_CONST_OBJECT_ALIGNMENT_S align;
+    struct {
+        uintptr_t  size_and_type;
+        uint32_t   size;
+        uint32_t   num_slots_open;
+        KOS_OBJ_ID next;
+        KOS_OBJ_ID buf[1];
+    } object;
+};
+
+KOS_OBJ_ID kos_alloc_const_array_storage(KOS_CONTEXT ctx, uint32_t num_elems);
+
+void kos_set_const_array_storage(KOS_OBJ_ID obj_id, uint32_t idx, KOS_OBJ_ID elem);
+
+void kos_free_const_array_storage(KOS_OBJ_ID obj_id);
+
 /*==========================================================================*/
 /* KOS_BUFFER                                                               */
 /*==========================================================================*/
