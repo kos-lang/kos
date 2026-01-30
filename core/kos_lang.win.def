@@ -49,14 +49,12 @@ EXPORTS
     KOS_get_env
     KOS_get_file_name
     KOS_get_index
-    KOS_get_index_arg
     KOS_get_integer
     KOS_get_library_function
     KOS_get_module
     KOS_get_named_arg
     KOS_get_num_cpus
     KOS_get_numeric
-    KOS_get_numeric_arg
     KOS_get_property_with_depth
     KOS_get_prototype
     KOS_get_time_us
@@ -164,7 +162,6 @@ EXPORTS
     KOS_string_get_hash
     KOS_string_iter_peek_next_code
     KOS_string_lowercase
-    KOS_string_printf
     KOS_string_repeat
     KOS_string_reverse
     KOS_string_scan

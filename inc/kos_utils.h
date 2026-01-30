@@ -72,27 +72,12 @@ KOS_API
 const char *KOS_get_type_name(KOS_TYPE type);
 
 KOS_API
-int KOS_get_numeric_arg(KOS_CONTEXT  ctx,
-                        KOS_OBJ_ID   args_obj,
-                        int          idx,
-                        KOS_NUMERIC *numeric);
-
-KOS_API
 KOS_NUMERIC KOS_get_numeric(KOS_OBJ_ID obj_id);
 
 KOS_API
 int KOS_get_integer(KOS_CONTEXT ctx,
                     KOS_OBJ_ID  obj_id,
                     int64_t    *ret);
-
-KOS_API
-int KOS_get_index_arg(KOS_CONTEXT           ctx,
-                      KOS_OBJ_ID            args_obj,
-                      int                   arg_idx,
-                      int                   begin_pos,
-                      int                   end_pos,
-                      enum KOS_VOID_INDEX_E void_index,
-                      int                  *found_pos);
 
 KOS_API
 int KOS_get_index(KOS_CONTEXT           ctx,
@@ -219,11 +204,6 @@ int KOS_is_generator(KOS_OBJ_ID fun_obj, KOS_FUNCTION_STATE *fun_state);
 #else
 #define KOS_CHECK_FORMAT(fmt_idx, arg_idx)
 #endif
-
-KOS_API
-KOS_OBJ_ID KOS_string_printf(KOS_CONTEXT ctx,
-                             const char *format,
-                             ...) KOS_CHECK_FORMAT(2, 3);
 
 KOS_API
 void KOS_raise_printf(KOS_CONTEXT ctx,

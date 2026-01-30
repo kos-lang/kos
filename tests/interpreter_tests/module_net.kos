@@ -19,6 +19,7 @@ do {
 
     expect_fail(() => sock.bind(address = -1))
     expect_fail(() => sock.bind(port = 0x1_0000))
+    expect_fail(() => sock.bind(port = []))
     expect_fail(() => sock.bind(address = "https://$&%,"))
 
     expect_fail(() => sock.connect(address = -1))
@@ -424,4 +425,12 @@ if ipv6 {
 
     assert udp_sender.close()   == udp_sender
     assert udp_receiver.close() == udp_receiver
+}
+
+##############################################################################
+# Connection failure
+
+do {
+    const sock = net.socket(net.AF_INET, net.SOCK_STREAM)
+    expect_fail(() => sock.connect(address = "localhost", port = 0x8000)) # count that this port is not used
 }

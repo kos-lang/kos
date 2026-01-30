@@ -548,15 +548,12 @@ static int get_port(KOS_CONTEXT ctx,
             /* fall through */
         case OBJ_INTEGER:
             {
-                int64_t value;
+                const KOS_NUMERIC num_value = KOS_get_numeric(port_arg);
 
-                if (type == OBJ_SMALL_INTEGER)
-                    value = GET_SMALL_INT(port_arg);
-                else
-                    value = OBJPTR(INTEGER, port_arg)->value;
+                assert(num_value.type == KOS_INTEGER_VALUE);
 
-                if (value < 0 || value > 0xFFFFu) {
-                    KOS_raise_printf(ctx, "invalid 'port' value %" PRId64, value);
+                if (num_value.u.i < 0 || num_value.u.i > 0xFFFFu) {
+                    KOS_raise_printf(ctx, "invalid 'port' value %" PRId64, num_value.u.i);
                     return KOS_ERROR_EXCEPTION;
                 }
             }

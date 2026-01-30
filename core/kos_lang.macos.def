@@ -48,14 +48,12 @@ _KOS_get_absolute_path
 _KOS_get_env
 _KOS_get_file_name
 _KOS_get_index
-_KOS_get_index_arg
 _KOS_get_integer
 _KOS_get_library_function
 _KOS_get_module
 _KOS_get_named_arg
 _KOS_get_num_cpus
 _KOS_get_numeric
-_KOS_get_numeric_arg
 _KOS_get_property_with_depth
 _KOS_get_prototype
 _KOS_get_time_us
@@ -162,7 +160,6 @@ _KOS_string_get_char_code
 _KOS_string_get_hash
 _KOS_string_iter_peek_next_code
 _KOS_string_lowercase
-_KOS_string_printf
 _KOS_string_repeat
 _KOS_string_reverse
 _KOS_string_scan

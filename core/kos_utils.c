@@ -44,7 +44,6 @@ static const char str_empty_array[]        = "[]";
 static const char str_empty_buffer[]       = "<>";
 static const char str_err_cannot_expand[]  = "cannot expand object";
 static const char str_err_invalid_string[] = "invalid string";
-static const char str_err_not_number[]     = "object is not a number";
 static const char str_function_open[]      = "<function ";
 static const char str_module_open[]        = "<module ";
 static const char str_module_close[]       = ">";
@@ -138,29 +137,6 @@ KOS_NUMERIC KOS_get_numeric(KOS_OBJ_ID obj_id)
     return numeric;
 }
 
-int KOS_get_numeric_arg(KOS_CONTEXT  ctx,
-                        KOS_OBJ_ID   args_obj,
-                        int          idx,
-                        KOS_NUMERIC *numeric)
-{
-    KOS_OBJ_ID arg;
-    int        error = KOS_SUCCESS;
-
-    assert(GET_OBJ_TYPE(args_obj) == OBJ_ARRAY);
-    assert(idx < (int)KOS_get_array_size(args_obj));
-
-    arg = KOS_array_read(ctx, args_obj, idx);
-    TRY_OBJID(arg);
-
-    *numeric = KOS_get_numeric(arg);
-
-    if (numeric->type == KOS_NON_NUMERIC)
-        RAISE_EXCEPTION(str_err_not_number);
-
-cleanup:
-    return error;
-}
-
 int KOS_get_integer(KOS_CONTEXT ctx,
                     KOS_OBJ_ID  obj_id,
                     int64_t    *ret)
@@ -210,25 +186,6 @@ int64_t KOS_fix_index(int64_t idx, unsigned length)
         idx = length;
 
     return idx;
-}
-
-int KOS_get_index_arg(KOS_CONTEXT           ctx,
-                      KOS_OBJ_ID            args_obj,
-                      int                   arg_idx,
-                      int                   begin_pos,
-                      int                   end_pos,
-                      enum KOS_VOID_INDEX_E void_index,
-                      int                  *found_pos)
-{
-    const KOS_OBJ_ID value = KOS_array_read(ctx, args_obj, arg_idx);
-    int              error = KOS_SUCCESS;
-
-    TRY_OBJID(value);
-
-    return KOS_get_index(ctx, value, begin_pos, end_pos, void_index, found_pos);
-
-cleanup:
-    return error;
 }
 
 int KOS_get_index(const KOS_CONTEXT           ctx,
@@ -1669,25 +1626,6 @@ static KOS_OBJ_ID string_vprintf(KOS_CONTEXT ctx,
 
 cleanup:
     KOS_vector_destroy(&buf);
-
-    return str;
-}
-
-KOS_OBJ_ID KOS_string_printf(KOS_CONTEXT ctx,
-                             const char *format,
-                             ...)
-{
-    va_list    args1;
-    va_list    args2;
-    KOS_OBJ_ID str;
-
-    va_start(args1, format);
-    va_start(args2, format);
-
-    str = string_vprintf(ctx, format, args1, args2);
-
-    va_end(args2);
-    va_end(args1);
 
     return str;
 }
