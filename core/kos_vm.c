@@ -459,13 +459,13 @@ static KOS_FUNCTION_STATE get_func_state(KOS_OBJ_ID func_obj)
     return (KOS_FUNCTION_STATE)KOS_atomic_read_relaxed_u32(OBJPTR(FUNCTION, func_obj)->state);
 }
 
-static void move_from_args(void      *dest,
-                           KOS_OBJ_ID args_obj,
-                           KOS_OBJ_ID stack_obj,
-                           uint32_t   rarg1_idx,
-                           uint32_t   num_args,
-                           uint32_t   src_offs,
-                           uint32_t   num_to_copy)
+static void move_from_args(volatile void *dest,
+                           KOS_OBJ_ID     args_obj,
+                           KOS_OBJ_ID     stack_obj,
+                           uint32_t       rarg1_idx,
+                           uint32_t       num_args,
+                           uint32_t       src_offs,
+                           uint32_t       num_to_copy)
 {
     KOS_ATOMIC(void *) *src = KOS_NULL;
 
