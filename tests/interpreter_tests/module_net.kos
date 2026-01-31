@@ -99,6 +99,7 @@ do {
     expect_fail(() => net.getaddrinfo(""))
     expect_fail(() => net.getaddrinfo(100))
     expect_fail(() => net.getaddrinfo("", []))
+    expect_fail(() => net.getaddrinfo("localhost", 0x1_0000))
 
     if ! ipv6 {
         base.print("IPv6 not supported, skipping test")

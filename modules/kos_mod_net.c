@@ -118,17 +118,16 @@ typedef struct KOS_SOCKET_HOLDER_S {
 #endif
 } KOS_SOCKET_HOLDER;
 
-static int acquire_socket(KOS_SOCKET_HOLDER *socket_holder)
+static int32_t acquire_socket(KOS_SOCKET_HOLDER *socket_holder)
 {
     uint32_t ref_count;
 
     assert(socket_holder);
 
-    do {
+    do
         ref_count = KOS_atomic_read_relaxed_u32(socket_holder->ref_count);
-        if ((int32_t)ref_count <= 0)
-            return (int)ref_count;
-    } while ( ! KOS_atomic_cas_weak_u32(socket_holder->ref_count, ref_count, ref_count + 1));
+    while ((int32_t)ref_count > 0 &&
+           ! KOS_atomic_cas_weak_u32(socket_holder->ref_count, ref_count, ref_count + 1));
 
     return (int)ref_count;
 }
@@ -1849,7 +1848,7 @@ static KOS_OBJ_ID getsockopt_bool(KOS_CONTEXT        ctx,
     KOS_resume_context(ctx);
 
     if (error) {
-        KOS_raise_errno_value(ctx, "setsockopt", saved_errno);
+        KOS_raise_errno_value(ctx, "getsockopt", saved_errno);
         return KOS_BADPTR;
     }
 
@@ -1882,7 +1881,7 @@ static KOS_OBJ_ID getsockopt_int(KOS_CONTEXT        ctx,
     KOS_resume_context(ctx);
 
     if (error) {
-        KOS_raise_errno_value(ctx, "setsockopt", saved_errno);
+        KOS_raise_errno_value(ctx, "getsockopt", saved_errno);
         return KOS_BADPTR;
     }
 
@@ -1921,7 +1920,7 @@ static KOS_OBJ_ID getsockopt_time(KOS_CONTEXT        ctx,
     KOS_resume_context(ctx);
 
     if (error) {
-        KOS_raise_errno_value(ctx, "setsockopt", saved_errno);
+        KOS_raise_errno_value(ctx, "getsockopt", saved_errno);
         return KOS_BADPTR;
     }
 
