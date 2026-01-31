@@ -3821,50 +3821,6 @@ static int count_contig_arg_siblings(const KOS_AST_NODE *node)
     return count;
 }
 
-static int gen_load_array(KOS_COMP_UNIT      *program,
-                          const KOS_AST_NODE *node,
-                          int32_t             operand1,
-                          int32_t             operand2)
-{
-    static const char str_resize[] = "resize";
-
-    KOS_NUMERIC numeric;
-    KOS_TOKEN   token;
-    KOS_REG    *resize_fun = KOS_NULL;
-    KOS_REG    *const_size = KOS_NULL;
-    int         str_idx    = 0;
-    int         error      = KOS_SUCCESS;
-
-    if (operand2 < 256)
-        return gen_instr2(program, INSTR_NEW_ARRAY8, operand1, operand2);
-
-    TRY(gen_instr2(program, INSTR_NEW_ARRAY8, operand1, 0));
-
-    memset(&token, 0, sizeof(token));
-    token.begin  = str_resize;
-    token.length = sizeof(str_resize) - 1;
-    token.type   = TT_IDENTIFIER;
-
-    TRY(gen_str(program, &token, &str_idx));
-
-    TRY(gen_reg(program, &resize_fun));
-    TRY(gen_reg(program, &const_size));
-
-    TRY(gen_get_prop_instr(program, NT_REFINEMENT, resize_fun->reg, operand1, str_idx));
-
-    numeric.type = KOS_INTEGER_VALUE;
-    numeric.u.i  = operand2;
-    TRY(gen_load_number(program, const_size->reg, &numeric));
-
-    TRY(gen_instr5(program, INSTR_CALL_N, resize_fun->reg, resize_fun->reg, operand1, const_size->reg, 1));
-
-    free_reg(program, const_size);
-    free_reg(program, resize_fun);
-
-cleanup:
-    return error;
-}
-
 static int estimate_initial_array_size(const KOS_AST_NODE *node)
 {
     int count = 0;
@@ -3889,7 +3845,8 @@ static int gen_array(KOS_COMP_UNIT      *program,
         *reg = KOS_NULL;
 
     TRY(gen_reg(program, reg));
-    TRY(gen_load_array(program, node, (*reg)->reg, num_fixed));
+    assert(num_fixed < 256);
+    TRY(gen_instr2(program, INSTR_NEW_ARRAY8, (*reg)->reg, num_fixed));
 
     for (i = 0; node; node = node->next, ++i) {
 
@@ -6122,7 +6079,8 @@ static int function_literal(KOS_COMP_UNIT      *program,
 
         if (num_used_def_args > 0) {
             TRY(gen_reg(program, &defaults_reg));
-            TRY(gen_load_array(program, node, defaults_reg->reg, num_used_def_args));
+            assert(num_used_def_args < 256);
+            TRY(gen_instr2(program, INSTR_NEW_ARRAY8, defaults_reg->reg, num_used_def_args));
         }
 
         for (i = 0; node && node->type == NT_ASSIGNMENT; node = node->next, ++i) {
