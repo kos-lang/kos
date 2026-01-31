@@ -88,12 +88,10 @@ static int acquire_file(KOS_FILE_HOLDER *file_holder)
 
     assert(file_holder);
 
-    do {
+    do
         ref_count = KOS_atomic_read_relaxed_u32(*(KOS_ATOMIC(uint32_t)*)&file_holder->ref_count);
-
-        if ((int32_t)ref_count <= 0)
-            return (int)ref_count;
-    } while ( ! KOS_atomic_cas_weak_u32(*(KOS_ATOMIC(uint32_t)*)&file_holder->ref_count, ref_count, ref_count + 1));
+    while (ref_count > 0 &&
+           ! KOS_atomic_cas_weak_u32(*(KOS_ATOMIC(uint32_t)*)&file_holder->ref_count, ref_count, ref_count + 1));
 
     return (int)ref_count;
 }
