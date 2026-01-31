@@ -246,6 +246,7 @@ Table of Contents
     * [exit()](#exit)
     * [getenv()](#getenv)
     * [getloadavg()](#getloadavg)
+    * [kill()](#kill)
     * [process()](#process)
       * [process.prototype.pid](#processprototypepid)
       * [process.prototype.wait()](#processprototypewait)
@@ -4530,7 +4531,7 @@ net
 getaddrinfo()
 -------------
 
-    getaddrinfo(address, port = void)
+    getaddrinfo(address, port = void, domain = AF_UNSPEC)
 
 Returns information about an address.
 
@@ -4979,6 +4980,23 @@ Example:
 
      > getloadavg()
      [1.38, 4.75, 5.60]
+
+kill()
+------
+
+    kill(pid, signal)
+
+Sends a signal to a process.
+
+`pid` is the process pid.
+
+`signal` is the signal number to send.
+
+This function always returns `void`.
+
+Example:
+
+     > kill(process.pid, 9)
 
 process()
 ---------

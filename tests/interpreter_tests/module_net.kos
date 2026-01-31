@@ -114,6 +114,15 @@ do {
     }
 }
 
+if ipv6 {
+    const addr = net.getaddrinfo(address="google.com", domain=net.AF_INET6)
+    assert typeof addr == "array"
+    for const a in addr {
+        assert typeof a.address == "string"
+        assert a.address.count(":") > 0
+    }
+}
+
 ##############################################################################
 # socket.getsockopt()
 

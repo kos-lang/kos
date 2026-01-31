@@ -1931,15 +1931,16 @@ static KOS_OBJ_ID getsockopt_time(KOS_CONTEXT        ctx,
 #endif
 }
 
-static const KOS_CONVERT getaddrinfo_args[3] = {
+static const KOS_CONVERT getaddrinfo_args[4] = {
     KOS_DEFINE_MANDATORY_ARG(str_address),
-    KOS_DEFINE_OPTIONAL_ARG( str_port, KOS_CONST_ID(str_empty)),
+    KOS_DEFINE_OPTIONAL_ARG( str_port,   KOS_CONST_ID(str_empty)),
+    KOS_DEFINE_OPTIONAL_ARG( str_domain, TO_SMALL_INT(AF_UNSPEC)),
     KOS_DEFINE_TAIL_ARG()
 };
 
 /* @item net getaddrinfo()
  *
- *     getaddrinfo(address, port = void)
+ *     getaddrinfo(address, port = void, domain = AF_UNSPEC)
  *
  * Returns information about an address.
  *
@@ -1973,18 +1974,19 @@ static KOS_OBJ_ID kos_getaddrinfo(const KOS_CONTEXT             ctx,
                                   const uint32_t                num_args,
                                   KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    KOS_LOCAL            addr_infos;
-    KOS_LOCAL            val;
-    KOS_LOCAL            one_info;
-    struct addrinfo     *info      = KOS_NULL;
-    struct addrinfo     *cur_info;
-    KOS_VECTOR           address_cstr;
-    KOS_VECTOR           port_cstr;
-    unsigned             num_addrs = 0;
-    int                  i;
-    int                  error;
+    KOS_LOCAL        addr_infos;
+    KOS_LOCAL        val;
+    KOS_LOCAL        one_info;
+    struct addrinfo *info      = KOS_NULL;
+    struct addrinfo *cur_info;
+    struct addrinfo  hints;
+    KOS_VECTOR       address_cstr;
+    KOS_VECTOR       port_cstr;
+    unsigned         num_addrs = 0;
+    int              i;
+    int              error;
 
-    assert(num_args >= 2);
+    assert(num_args >= 3);
 
     KOS_vector_init(&address_cstr);
     KOS_vector_init(&port_cstr);
@@ -2032,11 +2034,28 @@ static KOS_OBJ_ID kos_getaddrinfo(const KOS_CONTEXT             ctx,
     if ( ! port_cstr.size || ! port_cstr.buffer[0])
         port_cstr.buffer = KOS_NULL;
 
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_flags  = AI_DEFAULT;
+    {
+        int64_t int_value;
+        TRY(KOS_get_integer(ctx, args[2], &int_value));
+
+        if (int_value != AF_UNSPEC && int_value != AF_INET && int_value != AF_INET6
+#ifndef _WIN32
+            && int_value != AF_LOCAL
+#endif
+           ) {
+            KOS_raise_printf(ctx, "invalid domain");
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+        hints.ai_family = (int)int_value;
+    }
+
     KOS_suspend_context(ctx);
 
     error = getaddrinfo(address_cstr.buffer,
                         port_cstr.buffer,
-                        KOS_NULL,
+                        &hints,
                         &info);
 
     KOS_resume_context(ctx);
