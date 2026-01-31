@@ -6,6 +6,7 @@ import test_tools.expect_fail
 import fs
 import os
 import io
+import kos
 
 ##############################################################################
 # os.spawn
@@ -40,6 +41,8 @@ const bin_true = find_program("true")
 const bin_false = find_program("false")
 
 const bin_cat = find_program("cat")
+
+const bin_sleep = find_program("sleep")
 
 do {
     expect_fail(() => os.spawn())
@@ -250,6 +253,24 @@ do {
     expect_fail(() => os.spawn(program = "." ++ sep ++ name))
 
     fs.remove(name)
+}
+
+# Terminate via signal
+if bin_sleep {
+    const proc = os.spawn(program = bin_sleep, args = ["60"])
+
+    os.kill(proc.pid, 9)
+
+    const ret = proc.wait()
+
+    assert ret.status == 128 + 9
+    assert ret.signal == 9
+}
+
+# Reap wait object via GC
+if bin_true {
+    fun { os.spawn(program = bin_true, args = ["5"]) } ()
+    kos.collect_garbage()
 }
 
 ##############################################################################

@@ -17,6 +17,9 @@
 #include "../core/kos_math.h"
 #include "../core/kos_try.h"
 #include "kos_mod_io.h"
+
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -96,6 +99,7 @@ KOS_DECLARE_STATIC_CONST_STRING(str_err_not_spawned,    "object is not a spawned
 KOS_DECLARE_STATIC_CONST_STRING(str_err_use_spawn,      "use os.spawn() to launch processes");
 KOS_DECLARE_STATIC_CONST_STRING(str_inherit_env,        "inherit_env");
 KOS_DECLARE_STATIC_CONST_STRING(str_key,                "key");
+KOS_DECLARE_STATIC_CONST_STRING(str_pid,                "pid");
 KOS_DECLARE_STATIC_CONST_STRING(str_program,            "program");
 KOS_DECLARE_STATIC_CONST_STRING(str_signal,             "signal");
 KOS_DECLARE_STATIC_CONST_STRING(str_status,             "status");
@@ -1729,6 +1733,84 @@ cleanup:
     return error ? KOS_BADPTR : ret.o;
 }
 
+/* @item os kill()
+ *
+ *     kill(pid, signal)
+ *
+ * Sends a signal to a process.
+ *
+ * `pid` is the process pid.
+ *
+ * `signal` is the signal number to send.
+ *
+ * This function always returns `void`.
+ *
+ * Example:
+ *
+ *      > kill(process.pid, 9)
+ */
+const KOS_CONVERT kill_args[3] = {
+    KOS_DEFINE_MANDATORY_ARG(str_pid   ),
+    KOS_DEFINE_MANDATORY_ARG(str_signal),
+    KOS_DEFINE_TAIL_ARG()
+};
+static KOS_OBJ_ID kos_kill(const KOS_CONTEXT             ctx,
+                           const KOS_OBJ_ID              this_obj,
+                           const uint32_t                num_args,
+                           KOS_ATOMIC(KOS_OBJ_ID) *const args)
+{
+    int64_t  pid;
+    int64_t  signal;
+    int      error;
+
+    assert(num_args > 1);
+
+    if (KOS_get_integer(ctx, args[0], &pid))
+        return KOS_BADPTR;
+
+    if (pid <= 0 || pid > 0xFFFFFFFFu) {
+        KOS_raise_printf(ctx, "invalid pid %" PRId64, pid);
+        return KOS_BADPTR;
+    }
+
+    if (KOS_get_integer(ctx, args[1], &signal))
+        return KOS_BADPTR;
+
+#ifdef _WIN32
+    if (siangl == 9) {
+        DWORD last_error;
+        BOOL  ok;
+
+        const HANDLE handle = OpenProcess(PROCESS_TERMINATE, FALSE, (DWORD)pid);
+        if (handle == KOS_NULL) {
+            KOS_raise_last_error(ctx, "OpenProcess", (unsigned)GetLastError());
+            return KOS_BADPTR;
+        }
+
+        ok = TerimanteProcess(handle, 128 + 9);
+        last_error = GetLastError();
+
+        CloseHandle(handle);
+
+        if ( ! ok) {
+            KOS_raise_printf(ctx, "TerminateProcess", (unsigned)last_error);
+            return KOS_BADPTR;
+        }
+    }
+    else {
+        KOS_raise_printf(ctx, "unsupported signal %d", signal);
+        return KOS_BADPTR;
+    }
+#else
+    error = kill((pid_t)pid, signal);
+
+    if (error < 0)
+        KOS_raise_errno(ctx, "failed to send signal");
+#endif
+
+    return KOS_VOID;
+}
+
 KOS_INIT_MODULE(os, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
 {
     int       error = KOS_SUCCESS;
@@ -1775,6 +1857,7 @@ KOS_INIT_MODULE(os, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_FUNCTION(       ctx, module.o,               "exit",       kos_exit,       exit_args);
     TRY_ADD_FUNCTION(       ctx, module.o,               "getenv",     kos_getenv,     getenv_args);
     TRY_ADD_FUNCTION(       ctx, module.o,               "getloadavg", kos_getloadavg, KOS_NULL);
+    TRY_ADD_FUNCTION(       ctx, module.o,               "kill",       kos_kill,       kill_args);
 
     TRY_ADD_CONSTRUCTOR(    ctx, module.o,               "process",    process_ctor,   KOS_NULL, &wait_proto.o);
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, wait_proto.o, "wait",       wait_for_child, KOS_NULL);
