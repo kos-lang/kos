@@ -1777,8 +1777,8 @@ static KOS_OBJ_ID kos_kill(const KOS_CONTEXT             ctx,
         return KOS_BADPTR;
 
 #ifdef _WIN32
-    if (siangl == 9) {
-        DWORD last_error;
+    if (signal == 9) {
+        DWORD last_error = 0;
         BOOL  ok;
 
         const HANDLE handle = OpenProcess(PROCESS_TERMINATE, FALSE, (DWORD)pid);
@@ -1787,8 +1787,10 @@ static KOS_OBJ_ID kos_kill(const KOS_CONTEXT             ctx,
             return KOS_BADPTR;
         }
 
-        ok = TerimanteProcess(handle, 128 + 9);
-        last_error = GetLastError();
+        ok = TerminateProcess(handle, 128 + 9);
+
+        if ( ! ok)
+            last_error = GetLastError();
 
         CloseHandle(handle);
 
