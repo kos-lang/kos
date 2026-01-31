@@ -225,7 +225,7 @@ else
     endif
 
     ifneq (,$(filter FreeBSD OpenBSD NetBSD DragonFly,$(UNAME)))
-        EXE_LDFLAGS += -lpthread
+        EXE_LDFLAGS += -lpthread -lm
     endif
 
     LINK_CPP = $(CXX)
