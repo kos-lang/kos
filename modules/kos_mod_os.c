@@ -1759,9 +1759,8 @@ static KOS_OBJ_ID kos_kill(const KOS_CONTEXT             ctx,
                            const uint32_t                num_args,
                            KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    int64_t  pid;
-    int64_t  signal;
-    int      error;
+    int64_t pid;
+    int64_t signal;
 
     assert(num_args > 1);
 
@@ -1804,10 +1803,12 @@ static KOS_OBJ_ID kos_kill(const KOS_CONTEXT             ctx,
         return KOS_BADPTR;
     }
 #else
-    error = kill((pid_t)pid, signal);
+    {
+        const int error = kill((pid_t)pid, signal);
 
-    if (error < 0)
-        KOS_raise_errno(ctx, "failed to send signal");
+        if (error < 0)
+            KOS_raise_errno(ctx, "failed to send signal");
+    }
 #endif
 
     return KOS_VOID;
