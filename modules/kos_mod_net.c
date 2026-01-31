@@ -51,10 +51,6 @@
 #define SO_REUSEPORT (SO_REUSEADDR + 0x10000)
 #endif
 
-#if !defined(__APPLE__) && !defined(AI_DEFAULT)
-#define AI_DEFAULT (AI_ADDRCONFIG | AI_V4MAPPED)
-#endif
-
 #ifdef _WIN32
 typedef SOCKET         KOS_SOCKET;
 typedef ADDRESS_FAMILY KOS_ADDR_FAMILY;
@@ -631,7 +627,7 @@ static KOS_OBJ_ID kos_bind(const KOS_CONTEXT             ctx,
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = socket_holder->family;
-    hints.ai_flags  = AI_DEFAULT | AI_PASSIVE;
+    hints.ai_flags  = AI_PASSIVE;
 
     error = getaddrinfo(address_cstr[0] ? address_cstr : KOS_NULL,
                         (port_cstr.size && port_cstr.buffer[0]) ? port_cstr.buffer : KOS_NULL,
@@ -788,7 +784,6 @@ static KOS_OBJ_ID kos_connect(const KOS_CONTEXT             ctx,
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = socket_holder->family;
-    hints.ai_flags  = AI_DEFAULT;
 
     error = getaddrinfo(address_cstr[0] ? address_cstr : KOS_NULL,
                         (port_cstr.size && port_cstr.buffer[0]) ? port_cstr.buffer : KOS_NULL,
@@ -1766,7 +1761,6 @@ static KOS_OBJ_ID kos_sendto(const KOS_CONTEXT             ctx,
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = socket_holder->family;
-    hints.ai_flags  = AI_DEFAULT;
 
     error = getaddrinfo(address_cstr[0] ? address_cstr : KOS_NULL,
                         (port_cstr.size && port_cstr.buffer[0]) ? port_cstr.buffer : KOS_NULL,
@@ -2035,7 +2029,6 @@ static KOS_OBJ_ID kos_getaddrinfo(const KOS_CONTEXT             ctx,
         port_cstr.buffer = KOS_NULL;
 
     memset(&hints, 0, sizeof(hints));
-    hints.ai_flags  = AI_DEFAULT;
     {
         int64_t int_value;
         TRY(KOS_get_integer(ctx, args[2], &int_value));
