@@ -2043,6 +2043,7 @@ static KOS_OBJ_ID kos_getaddrinfo(const KOS_CONTEXT             ctx,
         }
         hints.ai_family = (int)int_value;
     }
+    hints.ai_flags = AI_ALL;
 
     KOS_suspend_context(ctx);
 
