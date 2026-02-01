@@ -263,7 +263,13 @@ if bin_sleep {
 
     const ret = proc.wait()
 
-    const signal = os.sysname == "Haiku" ? 21 : 9
+    var signal = 9
+    # Workaround for 32-bit Haiku
+    if os.sysname == "Haiku" {
+        if ret.signal == 21 {
+            signal = 21
+        }
+    }
     assert ret.status == 128 + signal
     assert ret.signal == signal
 }

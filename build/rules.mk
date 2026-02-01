@@ -284,7 +284,11 @@ builtin_modules ?= 1
 ifeq ($(builtin_modules), 1)
     ifeq ($(UNAME), Haiku)
         # Needed for net module
-        EXE_LDFLAGS += -lnet
+        ifeq ($(shell uname -m), BePC)
+            EXE_LDFLAGS += -lnet
+        else
+            EXE_LDFLAGS += -lnetwork
+        endif
     endif
     ifeq ($(UNAME), Windows)
         # Needed for net module
