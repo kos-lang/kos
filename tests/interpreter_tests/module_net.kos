@@ -151,6 +151,21 @@ if ipv6 {
 }
 
 ##############################################################################
+# socket.port
+
+do {
+    const s = net.socket(domain = net.AF_INET, type = net.SOCK_STREAM)
+    s.bind()
+    assert s.port != 0
+}
+
+if ipv6 {
+    const s = net.socket(domain = net.AF_INET6, type = net.SOCK_STREAM)
+    s.bind()
+    assert s.port != 0
+}
+
+##############################################################################
 # socket.getsockopt()
 
 do {
@@ -472,7 +487,13 @@ do {
     srecv.bind()
     srecv.listen()
 
-    const req_size = 8 * 1024 * 1024
+    const req_size = 1024 * 1024
+
+    const send_buf = base.buffer()
+    send_buf.resize(req_size)
+    for const i in base.range(req_size) {
+        send_buf[i] = i & 0xFF
+    }
 
     const recv_thread = fun {
         const sdata = srecv.accept().socket
@@ -507,12 +528,6 @@ do {
 
     ssend.connect("localhost", port)
     ssend.blocking = false
-
-    const send_buf = base.buffer()
-    send_buf.resize(req_size)
-    for const i in base.range(req_size) {
-        send_buf[i] = i & 0xFF
-    }
 
     ssend.send(send_buf)
     ssend.shutdown()
