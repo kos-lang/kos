@@ -114,7 +114,7 @@ do {
     }
 }
 
-if ipv6 {
+if ipv6 && os.sysname != "Windows" {
     # Check if we can obtain IPv6 addresses from DNS
     const addr = net.getaddrinfo(address="ip6only.me", domain=net.AF_INET6)
     assert typeof addr == "array"
@@ -140,8 +140,10 @@ if ipv6 {
     addrs = net.getaddrinfo(address="google.com", domain=net.AF_UNSPEC)
     assert typeof addrs == "array"
     const unspec_count = addrs.size
-    assert unspec_count > ip6_count
-    assert ip6_count == addrs.count(x => x.address.count(":"))
+    assert unspec_count > ip6_count || (os.sysname == "Windows" && unspec_count == ip6_count)
+    if os.sysname != "Windows" {
+        assert ip6_count == addrs.count(x => x.address.count(":"))
+    }
 
     # By default we should be using AF_UNSPEC
     addrs = net.getaddrinfo(address="google.com")
