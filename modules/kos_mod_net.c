@@ -2043,7 +2043,13 @@ static KOS_OBJ_ID kos_getaddrinfo(const KOS_CONTEXT             ctx,
         }
         hints.ai_family = (int)int_value;
     }
+#ifdef __HAIKU__
+    hints.ai_flags = 0;
+#elif defined(_WIN32)
+    hints.ai_flags = AI_ADDRCONFIG | AI_V4MAPPED;
+#else
     hints.ai_flags = AI_ALL;
+#endif
 
     KOS_suspend_context(ctx);
 
