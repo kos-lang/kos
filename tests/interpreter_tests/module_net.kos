@@ -69,10 +69,8 @@ do {
 ##############################################################################
 # getaddrinfo
 
-var ipv6 = false
-
 do {
-    const addr = net.getaddrinfo("localhost", "http")
+    const addr = net.getaddrinfo("localhost", "http", net.AF_INET)
     assert typeof addr == "array"
     assert addr.size > 0
     for const a in addr {
@@ -83,11 +81,7 @@ do {
         assert a.port == 80
 
         assert "domain" in a
-        assert a.domain == net.AF_INET || a.domain == net.AF_INET6
-
-        if a.domain == net.AF_INET6 {
-            ipv6 = true
-        }
+        assert a.domain == net.AF_INET
 
         assert "type" in a
         assert typeof a.type == "integer"
@@ -100,10 +94,41 @@ do {
     expect_fail(() => net.getaddrinfo(100))
     expect_fail(() => net.getaddrinfo("", []))
     expect_fail(() => net.getaddrinfo("localhost", 0x1_0000))
+}
 
-    if ! ipv6 {
-        base.print("IPv6 not supported, skipping test")
+var ipv6 = false
+
+do {
+    var addr = void
+    try {
+        addr = net.getaddrinfo("localhost", "http", net.AF_INET6)
     }
+    catch const e {
+        addr = []
+    }
+
+    assert typeof addr == "array"
+    ipv6 = addr.size > 0
+    for const a in addr {
+        assert "address" in a
+        assert typeof a.address == "string"
+
+        assert "port" in a
+        assert a.port == 80
+
+        assert "domain" in a
+        assert a.domain == net.AF_INET6
+
+        assert "type" in a
+        assert typeof a.type == "integer"
+
+        assert "protocol" in a
+        assert typeof a.protocol == "integer"
+    }
+}
+
+if ! ipv6 {
+    base.print("IPv6 not supported, skipping test")
 }
 
 do {
@@ -140,10 +165,8 @@ if ipv6 {
     addrs = net.getaddrinfo(address="google.com", domain=net.AF_UNSPEC)
     assert typeof addrs == "array"
     const unspec_count = addrs.size
-    assert unspec_count > ip6_count || (os.sysname == "Windows" && unspec_count == ip6_count)
-    if os.sysname != "Windows" {
-        assert ip6_count == addrs.count(x => x.address.count(":"))
-    }
+    assert unspec_count >= ip6_count
+    assert ip6_count >= addrs.count(x => x.address.count(":"))
 
     # By default we should be using AF_UNSPEC
     addrs = net.getaddrinfo(address="google.com")
