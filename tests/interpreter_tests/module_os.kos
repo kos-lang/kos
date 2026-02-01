@@ -263,8 +263,9 @@ if bin_sleep {
 
     const ret = proc.wait()
 
-    assert ret.status == 128 + 9
-    assert ret.signal == 9
+    const signal = os.sysname == "Haiku" ? 21 : 9
+    assert ret.status == 128 + signal
+    assert ret.signal == signal
 }
 
 # Reap wait object via GC
