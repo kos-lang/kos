@@ -109,9 +109,7 @@ typedef struct KOS_SOCKET_HOLDER_S {
     KOS_ATOMIC(uint32_t) socket_fd;
     KOS_ATOMIC(uint32_t) ref_count;
     int                  family;
-#ifdef _WIN32
     int                  blocking;
-#endif
 } KOS_SOCKET_HOLDER;
 
 static int32_t acquire_socket(KOS_SOCKET_HOLDER *socket_holder)
@@ -164,9 +162,7 @@ static KOS_SOCKET_HOLDER *make_socket_holder(KOS_CONTEXT ctx,
         socket_holder->socket_fd = (uint32_t)socket_fd;
         socket_holder->ref_count = 1;
         socket_holder->family    = family;
-#ifdef _WIN32
         socket_holder->blocking  = 1;
-#endif
     }
     else
         KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
@@ -810,6 +806,17 @@ static KOS_OBJ_ID kos_connect(const KOS_CONTEXT             ctx,
         if ( ! error)
             break;
 
+        /* For non-blocking sockets, silently ignore */
+        if ( ! socket_holder->blocking) {
+#ifdef _WIN32
+            if (WSAGetLastError() == WSAEWOULDBLOCK)
+                error = 0;
+#else
+            if (errno == EINPROGRESS)
+                error = 0;
+#endif
+        }
+
         if ( ! address_info->ai_next)
             break;
     }
@@ -1316,8 +1323,10 @@ static KOS_OBJ_ID get_blocking(const KOS_CONTEXT             ctx,
     {
         const int flags = fcntl(get_socket(socket_holder), F_GETFL);
 
-        if (flags != -1)
+        if (flags != -1) {
             blocking = ! (flags & O_NONBLOCK);
+            socket_holder->blocking = blocking;
+        }
         else
             saved_errno = get_error();
     }
@@ -1388,6 +1397,8 @@ static KOS_OBJ_ID set_blocking(const KOS_CONTEXT             ctx,
 
             if (fcntl(get_socket(socket_holder), F_SETFL, flags) == -1)
                 saved_errno = get_error();
+            else
+                socket_holder->blocking = blocking;
         }
     }
 #endif
@@ -1407,6 +1418,62 @@ cleanup:
     return error ? KOS_BADPTR : self.o;
 }
 
+/* @item net socket.prototype.port
+ *
+ *     socket.prototype.port
+ *
+ * Port to each the socket has been bound.
+ *
+ * If the socket was bound to ephemeral port 0, then this member
+ * returns the actual port number, as integer.
+ *
+ * If the socket is not bound, binding is pending or an error occurs, returns 0.
+ */
+static KOS_OBJ_ID get_bound_port(const KOS_CONTEXT             ctx,
+                                 const KOS_OBJ_ID              this_obj,
+                                 const uint32_t                num_args,
+                                 KOS_ATOMIC(KOS_OBJ_ID) *const args)
+{
+    struct sockaddr_storage sock_addr;
+    socklen_t               sock_addr_len = sizeof sock_addr;
+    KOS_SOCKET_HOLDER      *socket_holder = KOS_NULL;
+    int                     error         = KOS_SUCCESS;
+    int                     port          = 0;
+
+    TRY(acquire_socket_object(ctx, this_obj, &socket_holder));
+
+    KOS_suspend_context(ctx);
+
+    reset_last_error();
+
+    if (socket_holder->family == AF_INET || socket_holder->family == AF_INET6) {
+
+        error = getsockname(get_socket(socket_holder), (struct sockaddr *)&sock_addr, &sock_addr_len);
+
+        if (error == 0) {
+            if (socket_holder->family == AF_INET) {
+                struct sockaddr_in *const ipv4 = (struct sockaddr_in *)&sock_addr;
+                port = ntohs(ipv4->sin_port);
+            } else if (socket_holder->family == AF_INET6) {
+                struct sockaddr_in6 *const ipv6 = (struct sockaddr_in6 *)&sock_addr;
+                port = ntohs(ipv6->sin6_port);
+            }
+        }
+        else {
+            /* On error, just return 0 */
+            error = 0;
+            port  = 0;
+        }
+    }
+
+    KOS_resume_context(ctx);
+
+cleanup:
+    release_socket(socket_holder);
+
+    return error ? KOS_BADPTR : KOS_new_int(ctx, port);
+}
+
 static int send_loop(KOS_SOCKET              socket_fd,
                      const char             *data,
                      DATA_LEN                size,
@@ -1415,7 +1482,7 @@ static int send_loop(KOS_SOCKET              socket_fd,
                      ADDR_LEN                addr_len)
 {
     const int send_timeout_sec = 30;
-    int       num_sent;
+    int       total_sent       = 0;
 
     for (;;) {
 #ifdef _WIN32
@@ -1425,6 +1492,7 @@ static int send_loop(KOS_SOCKET              socket_fd,
         struct timeval timeout;
         int            nfds = socket_fd + 1;
 #endif
+        int            num_sent;
         fd_set         fds;
 
         reset_last_error();
@@ -1433,6 +1501,9 @@ static int send_loop(KOS_SOCKET              socket_fd,
             num_sent = sendto(socket_fd, data, size, flags, &addr->addr, addr_len);
         else
             num_sent = send(socket_fd, data, size, flags);
+
+        if (num_sent >= 0)
+            total_sent += num_sent;
 
         if ((DATA_LEN)num_sent == size)
             break;
@@ -1449,11 +1520,15 @@ static int send_loop(KOS_SOCKET              socket_fd,
              * buffer is full and we need to wait to send more data.
              */
 #ifdef _WIN32
-            if (error != WSAEWOULDBLOCK)
+            if (error != WSAEWOULDBLOCK) {
+                total_sent = -1;
                 break;
+            }
 #else
-            if (error != EAGAIN && error != EWOULDBLOCK)
+            if (error != EAGAIN && error != EWOULDBLOCK) {
+                total_sent = -1;
                 break;
+            }
 #endif
         }
 
@@ -1467,11 +1542,13 @@ static int send_loop(KOS_SOCKET              socket_fd,
 
         nfds = select(nfds, KOS_NULL, &fds, KOS_NULL, &timeout);
 
-        if (nfds < 0)
+        if (nfds < 0) {
+            total_sent = -1;
             break;
+        }
     }
 
-    return num_sent;
+    return total_sent;
 }
 
 static int send_one_object(KOS_CONTEXT             ctx,
@@ -1521,12 +1598,15 @@ static int send_one_object(KOS_CONTEXT             ctx,
                                  addr,
                                  addr_len);
 
-            assert((num_writ < 0) || ((size_t)num_writ == to_write));
-
             if (num_writ < 0)
                 saved_errno = get_error();
 
             KOS_resume_context(ctx);
+
+            if (num_writ >= 0 && (size_t)num_writ < to_write) {
+                KOS_raise_printf(ctx, "failed to send all data");
+                RAISE_ERROR(KOS_ERROR_EXCEPTION);
+            }
         }
     }
     else if (GET_OBJ_TYPE(obj.o) == OBJ_STRING) {
@@ -2543,7 +2623,8 @@ static const KOS_CONVERT shutdown_args[2] = {
  *
  * Returns the socket itself (`this`).
  *
- * On error throws an exception.
+ * On error throws an exception.  If the socket is not connected, it's not
+ * treated as an error.
  */
 static KOS_OBJ_ID kos_shutdown(const KOS_CONTEXT             ctx,
                                const KOS_OBJ_ID              this_obj,
@@ -2573,8 +2654,12 @@ static KOS_OBJ_ID kos_shutdown(const KOS_CONTEXT             ctx,
     KOS_resume_context(ctx);
 
     if (error) {
-        KOS_raise_errno_value(ctx, "shutdown", saved_errno);
-        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        if (saved_errno != ENOTCONN) {
+            KOS_raise_errno_value(ctx, "shutdown", saved_errno);
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+        else
+            error = KOS_SUCCESS;
     }
 
 cleanup:
@@ -2644,6 +2729,7 @@ KOS_INIT_MODULE(net, 0)(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_FUNCTION(ctx, module.o, socket_proto.o, "write",       kos_write,       KOS_NULL);
 
     TRY_ADD_MEMBER_PROPERTY(ctx, module.o, socket_proto.o, "blocking",    get_blocking,    KOS_NULL);
+    TRY_ADD_MEMBER_PROPERTY(ctx, module.o, socket_proto.o, "port",        get_bound_port,  KOS_NULL);
 
     TRY_ADD_FUNCTION(       ctx, module.o,                 "getaddrinfo", kos_getaddrinfo, getaddrinfo_args);
 

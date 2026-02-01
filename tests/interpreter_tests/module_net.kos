@@ -378,11 +378,6 @@ do {
         }
     }
 
-    if os.sysname != "Windows" {
-        expect_fail(() => udp_sender.shutdown())
-        expect_fail(() => udp_receiver.shutdown())
-    }
-
     assert got
     const data = base.string(got.data)
     assert data.size > 3
@@ -441,11 +436,6 @@ if ipv6 {
         }
     }
 
-    if os.sysname != "Windows" {
-        expect_fail(() => udp_sender.shutdown())
-        expect_fail(() => udp_receiver.shutdown())
-    }
-
     assert got
     const data = base.string(got.data)
     assert data.size > 3
@@ -470,4 +460,65 @@ if ipv6 {
 do {
     const sock = net.socket(net.AF_INET, net.SOCK_STREAM)
     expect_fail(() => sock.connect(address = "localhost", port = 0x8000)) # count that this port is not used
+}
+
+##############################################################################
+# Send/receive on non-blocking socket
+
+do {
+    const ssend = net.socket(net.AF_INET, net.SOCK_STREAM)
+    const srecv = net.socket(net.AF_INET, net.SOCK_STREAM)
+
+    srecv.bind()
+    srecv.listen()
+
+    const req_size = 8 * 1024 * 1024
+
+    const recv_thread = fun {
+        const sdata = srecv.accept().socket
+        sdata.blocking = false
+
+        const recv_buf = base.buffer()
+
+        var base_offs = 0
+
+        while base_offs < req_size && sdata.wait(30) {
+            const buf = sdata.recv(req_size - base_offs, recv_buf)
+            assert buf.size == recv_buf.size
+
+            for const i in base.range(buf.size) {
+                const expect = (base_offs + i) & 0xFF
+                assert buf[i] == expect
+            }
+
+            base_offs += buf.size
+            buf.resize(0)
+        }
+
+        sdata.shutdown()
+        sdata.close()
+
+        assert base_offs == req_size
+    }.async()
+
+    const port = srecv.port
+    assert typeof port == "integer"
+    assert port != 0
+
+    ssend.connect("localhost", port)
+    ssend.blocking = false
+
+    const send_buf = base.buffer()
+    send_buf.resize(req_size)
+    for const i in base.range(req_size) {
+        send_buf[i] = i & 0xFF
+    }
+
+    ssend.send(send_buf)
+    ssend.shutdown()
+    ssend.close()
+
+    srecv.close()
+
+    recv_thread.wait()
 }

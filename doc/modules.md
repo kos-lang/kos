@@ -230,6 +230,7 @@ Table of Contents
       * [socket.prototype.connect()](#socketprototypeconnect)
       * [socket.prototype.getsockopt()](#socketprototypegetsockopt)
       * [socket.prototype.listen()](#socketprototypelisten)
+      * [socket.prototype.port](#socketprototypeport)
       * [socket.prototype.read()](#socketprototyperead)
       * [socket.prototype.recv()](#socketprototyperecv)
       * [socket.prototype.recvfrom()](#socketprototyperecvfrom)
@@ -4702,6 +4703,18 @@ Returns the socket itself (`this`).
 
 On error throws an exception.
 
+socket.prototype.port
+---------------------
+
+    socket.prototype.port
+
+Port to each the socket has been bound.
+
+If the socket was bound to ephemeral port 0, then this member
+returns the actual port number, as integer.
+
+If the socket is not bound, binding is pending or an error occurs, returns 0.
+
 socket.prototype.read()
 -----------------------
 
@@ -4846,7 +4859,8 @@ Shuts down one or two directions of the connection.
 
 Returns the socket itself (`this`).
 
-On error throws an exception.
+On error throws an exception.  If the socket is not connected, it's not
+treated as an error.
 
 socket.prototype.wait()
 -----------------------
