@@ -307,6 +307,8 @@ static inline int kos_atomic_cas_weak_ptr(_Atomic(void *) *dest, void *oldv, voi
 #define KOS_atomic_full_barrier __faststorefence
 #elif defined(_M_IX86)
 #define KOS_atomic_full_barrier() do { volatile uint32_t barrier; __asm { xchg barrier, eax }; } while (0)
+#elif defined(_M_ARM64)
+#error "Compile Kos for ARM64 with C++ compiler: set CLANG_VER=c++11 CPPLANG_VER=c++11"
 #else
 #error "Atomic operations not implemented for this compiler or architecture"
 #endif

@@ -108,6 +108,7 @@ ifeq ($(UNAME), Windows)
     CFLAGS += -wd4711 # function 'x' selected for automatic inline expansion
     CFLAGS += -wd4774 # _scprintf' : format string expected in argument 1 is not a string literal (in MS headers)
     CFLAGS += -wd4820 # 'x' bytes padding added after data member 'y'
+    CFLAGS += -wd4865 # DISPLAYCONFIG_OUTPUT_TECHNOLOGY_OTHER: the underlying type will change from int to __int64
     CFLAGS += -wd4987 # nonstandard extension used (in MS headers)
     CFLAGS += -wd5026 # move constructor was implicitly defined as deleted
     CFLAGS += -wd5027 # move assignment operator was implicitly defined as deleted
