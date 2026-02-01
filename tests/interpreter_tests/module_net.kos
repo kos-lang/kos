@@ -556,7 +556,7 @@ do {
     ssend.shutdown()
     ssend.close()
 
-    srecv.close()
-
     recv_thread.wait()
+
+    srecv.close()
 }
