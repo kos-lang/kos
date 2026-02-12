@@ -524,7 +524,7 @@ uint32_t KOS_string_get_hash(KOS_OBJ_ID obj_id)
 
             case KOS_STRING_ELEM_8: {
                 const uint8_t *s   = (uint8_t *)buf;
-                const uint8_t *end = s + str->header.length;
+                const uint8_t *end = s ? (s + str->header.length) : s;
 
                 while (s < end)
                     hash = (hash * 33U) ^ (uint32_t)*(s++);
@@ -711,7 +711,10 @@ KOS_OBJ_ID KOS_string_add_n(KOS_CONTEXT         ctx,
 
     KOS_init_local(ctx, &new_str);
 
-    if (num_strings == 1)
+    if (num_strings == 0)
+        new_str.o = KOS_STR_EMPTY;
+
+    else if (num_strings == 1)
         new_str.o = str_array->o;
 
     else {
@@ -1210,16 +1213,18 @@ static int compare_slice(KOS_STRING *str_a,
 
         const unsigned cmp_len = KOS_min(a_len, b_len);
 
-        const uint8_t *pa    = (const uint8_t *)kos_get_string_buffer(str_a) + (a_begin << a_elem_size);
-        const uint8_t *pb    = (const uint8_t *)kos_get_string_buffer(str_b) + (b_begin << a_elem_size);
+        const uint8_t* sa    = (const uint8_t *)kos_get_string_buffer(str_a);
+        const uint8_t* sb    = (const uint8_t *)kos_get_string_buffer(str_b);
+        const uint8_t *pa    = sa ? (sa + (a_begin << a_elem_size)) : sa;
+        const uint8_t *pb    = sb ? (sb + (b_begin << a_elem_size)) : sb;
         const unsigned num_b = cmp_len << a_elem_size;
-        const uint8_t *pend  = pa + num_b;
+        const uint8_t *pend  = pa ? (pa + num_b) : pa;
         const uint8_t *pend8 = (const uint8_t *)((uintptr_t)pend & ~(uintptr_t)7);
 
         uint32_t ca = 0;
         uint32_t cb = 0;
 
-        if (((uintptr_t)pa & 7U) == ((uintptr_t)pb & 7U) && pa + 8 < pend8) {
+        if (((uintptr_t)pa & 7U) == ((uintptr_t)pb & 7U) && (pa ? (pa + 8) : pa) < pend8) {
 
             while (((uintptr_t)pa & 7U) && *pa == *pb) {
                 ++pa;
@@ -1867,7 +1872,7 @@ void KOS_init_string_iter(KOS_STRING_ITER *iter, KOS_OBJ_ID str_id)
     ptr = (const uint8_t *)kos_get_string_buffer(OBJPTR(STRING, str_id));
 
     iter->ptr       = ptr;
-    iter->end       = ptr + (KOS_get_string_length(str_id) << elem_size);
+    iter->end       = ptr ? (ptr + (KOS_get_string_length(str_id) << elem_size)) : ptr;
     iter->elem_size = elem_size;
 }
 

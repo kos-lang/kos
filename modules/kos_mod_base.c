@@ -3108,7 +3108,8 @@ static int pack_format(KOS_CONTEXT               ctx,
                     if (copy_size < size)
                         memset(dst + copy_size, 0, size - copy_size);
 
-                    dst += size;
+                    if (dst)
+                        dst += size;
                 }
             }
             break;

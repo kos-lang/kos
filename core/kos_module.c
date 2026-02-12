@@ -1397,7 +1397,7 @@ static int compile_module(KOS_CONTEXT ctx,
                     &program.allocator,
                     module_idx,
                     data,
-                    data + data_size);
+                    data ? (data + data_size) : data);
 
     /* Construct AST from source code */
     error = kos_parser_parse(&parser, &ast);

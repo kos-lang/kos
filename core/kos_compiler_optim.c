@@ -1291,21 +1291,21 @@ static int optimize_binary_op(KOS_COMP_UNIT      *program,
 
         case OT_ADD:
             if (numeric_a.type == KOS_INTEGER_VALUE)
-                numeric_a.u.i += numeric_b.u.i;
+                numeric_a.u.i = kos_add_int64(numeric_a.u.i, numeric_b.u.i);
             else
                 numeric_a.u.d += numeric_b.u.d;
             break;
 
         case OT_SUB:
             if (numeric_a.type == KOS_INTEGER_VALUE)
-                numeric_a.u.i -= numeric_b.u.i;
+                numeric_a.u.i = kos_sub_int64(numeric_a.u.i, numeric_b.u.i);
             else
                 numeric_a.u.d -= numeric_b.u.d;
             break;
 
         case OT_MUL:
             if (numeric_a.type == KOS_INTEGER_VALUE)
-                numeric_a.u.i *= numeric_b.u.i;
+                numeric_a.u.i = kos_mul_int64(numeric_a.u.i, numeric_b.u.i);
             else
                 numeric_a.u.d *= numeric_b.u.d;
             break;
@@ -1436,7 +1436,7 @@ static int optimize_unary_op(KOS_COMP_UNIT      *program,
 
         case OT_SUB:
             if (numeric_a.type == KOS_INTEGER_VALUE)
-                numeric_a.u.i = -numeric_a.u.i;
+                numeric_a.u.i = kos_sub_int64(0, numeric_a.u.i);
             else
                 numeric_a.u.d = -numeric_a.u.d;
             break;

@@ -165,6 +165,13 @@ do {
     assert b == -3
     assert a == 1
 }
+do {
+    fun negate(a)
+    {
+        return -a
+    }
+    assert negate(-0x8000_0000_0000_0000) == -0x8000_0000_0000_0000
+}
 
 # positive zero equals negative zero
 do {

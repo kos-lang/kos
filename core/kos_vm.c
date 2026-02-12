@@ -55,11 +55,11 @@ static KOS_OBJ_ID add_integer(KOS_CONTEXT ctx,
     switch (GET_OBJ_TYPE(bobj)) {
 
         case OBJ_SMALL_INTEGER:
-            ret = KOS_new_int(ctx, a + GET_SMALL_INT(bobj));
+            ret = KOS_new_int(ctx, kos_add_int64(a, GET_SMALL_INT(bobj)));
             break;
 
         case OBJ_INTEGER:
-            ret = KOS_new_int(ctx, a + OBJPTR(INTEGER, bobj)->value);
+            ret = KOS_new_int(ctx, kos_add_int64(a, OBJPTR(INTEGER, bobj)->value));
             break;
 
         case OBJ_FLOAT:
@@ -111,11 +111,11 @@ static KOS_OBJ_ID sub_integer(KOS_CONTEXT ctx,
     switch (GET_OBJ_TYPE(bobj)) {
 
         case OBJ_SMALL_INTEGER:
-            ret = KOS_new_int(ctx, a - GET_SMALL_INT(bobj));
+            ret = KOS_new_int(ctx, kos_sub_int64(a, GET_SMALL_INT(bobj)));
             break;
 
         case OBJ_INTEGER:
-            ret = KOS_new_int(ctx, a - OBJPTR(INTEGER, bobj)->value);
+            ret = KOS_new_int(ctx, kos_sub_int64(a, OBJPTR(INTEGER, bobj)->value));
             break;
 
         case OBJ_FLOAT:
@@ -168,11 +168,11 @@ static KOS_OBJ_ID mul_integer(KOS_CONTEXT ctx,
     switch (GET_OBJ_TYPE(bobj)) {
 
         case OBJ_SMALL_INTEGER:
-            ret = KOS_new_int(ctx, a * GET_SMALL_INT(bobj));
+            ret = KOS_new_int(ctx, kos_mul_int64(a, GET_SMALL_INT(bobj)));
             break;
 
         case OBJ_INTEGER:
-            ret = KOS_new_int(ctx, a * OBJPTR(INTEGER, bobj)->value);
+            ret = KOS_new_int(ctx, kos_mul_int64(a, OBJPTR(INTEGER, bobj)->value));
             break;
 
         case OBJ_FLOAT:

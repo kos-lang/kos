@@ -28,6 +28,10 @@ uint64_t kos_double_to_uint64_t(double value);
 
 uint32_t kos_float_to_uint32_t(float value);
 
+int64_t kos_add_int64(int64_t a, int64_t b);
+int64_t kos_sub_int64(int64_t a, int64_t b);
+int64_t kos_mul_int64(int64_t a, int64_t b);
+
 unsigned kos_print_float(char *buf, unsigned size, double value);
 
 struct KOS_RNG_PCG32 {

@@ -861,17 +861,20 @@ static void set_seq_fail(const char *begin, const char *end)
 
 static void skip_bom(KOS_LEXER *lexer)
 {
-    const char *begin   = lexer->prefetch_begin;
-    const char *buf_end = lexer->buf_end;
-    const char *bom_end = begin + 3;
+    const char *begin = lexer->prefetch_begin;
 
-    if (bom_end <= buf_end &&
-        begin[0] == '\xEF' &&
-        begin[1] == '\xBB' &&
-        begin[2] == '\xBF') {
+    if (begin) {
+        const char *buf_end = lexer->buf_end;
+        const char *bom_end = begin + 3;
 
-        lexer->prefetch_begin = bom_end;
-        lexer->prefetch_end   = bom_end;
+        if (bom_end <= buf_end &&
+            begin[0] == '\xEF' &&
+            begin[1] == '\xBB' &&
+            begin[2] == '\xBF') {
+
+            lexer->prefetch_begin = bom_end;
+            lexer->prefetch_end   = bom_end;
+        }
     }
 }
 

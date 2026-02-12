@@ -768,7 +768,7 @@ static int add_addr2line(KOS_COMP_UNIT   *program,
 
 static int is_sint8(int64_t value)
 {
-    return (uint64_t)(value + 128) < 256;
+    return (int8_t)value == value;
 }
 
 static void write_uimm(uint8_t *bytecode, int *offs, uint32_t value)
@@ -782,7 +782,7 @@ static void write_uimm(uint8_t *bytecode, int *offs, uint32_t value)
 
 static uint32_t encode_signed(int32_t value)
 {
-    return (uint32_t)((value << 1) ^ (value >> 31));
+    return ((uint32_t)value << 1) ^ (value >> 31);
 }
 
 /* Calculates how many bytes are needed to encode a signed immediate operand */

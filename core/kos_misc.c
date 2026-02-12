@@ -154,7 +154,7 @@ int kos_parse_int(const char *begin,
 
         if ( ! error) {
             if (minus)
-                *value = -(int64_t)v;
+                *value = (int64_t)-v;
             else
                 *value = (int64_t)v;
         }
@@ -530,6 +530,41 @@ uint32_t kos_float_to_uint32_t(float value)
     } conv;
     conv.f = value;
     return conv.u;
+}
+
+int64_t kos_add_int64(int64_t a, int64_t b)
+{
+    return (int64_t)((uint64_t)a + (uint64_t)b);
+}
+
+int64_t kos_sub_int64(int64_t a, int64_t b)
+{
+    return (int64_t)((uint64_t)a - (uint64_t)b);
+}
+
+int64_t kos_mul_int64(int64_t a, int64_t b)
+{
+    const uint64_t ua = (a >= 0) ? a : ((a == INT64_MIN) ? -(a + 1) : -a);
+    const uint64_t ub = (b >= 0) ? b : ((b == INT64_MIN) ? -(b + 1) : -b);
+
+    uint64_t plus = 0;
+
+    if (a == INT64_MIN) {
+        plus = ub;
+
+        if (b == INT64_MIN) {
+            plus += ua;
+        }
+    }
+    else if (b == INT64_MIN) {
+        plus = ua;
+    }
+
+    const uint64_t result = ua * ub + plus;
+
+    const uint64_t result_sign = ((uint64_t)a ^ (uint64_t)b) >> 63;
+
+    return (int64_t)(result_sign ? -result : result);
 }
 
 unsigned kos_print_float(char *buf, unsigned size, double value)

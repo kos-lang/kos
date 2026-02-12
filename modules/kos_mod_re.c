@@ -1642,8 +1642,12 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
     str.o = str_obj;
 
     KOS_init_string_iter(&iter, str.o);
-    iter.end = iter.ptr + ((uintptr_t)end_pos << iter.elem_size);
-    iter.ptr += (uintptr_t)pos << iter.elem_size;
+    if (iter.ptr) {
+        iter.end = iter.ptr + ((uintptr_t)end_pos << iter.elem_size);
+        iter.ptr += (uintptr_t)pos << iter.elem_size;
+    }
+    else
+        iter.end = KOS_NULL;
 
     while (bytecode < bytecode_end) {
         const enum RE_INSTR instr = (enum RE_INSTR)*bytecode;
@@ -1721,7 +1725,8 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
                 KOS_STRING_ITER iter0;
 
                 KOS_init_string_iter(&iter0, str.o);
-                iter0.ptr += (uintptr_t)begin_pos << iter0.elem_size;
+                if (iter0.ptr)
+                    iter0.ptr += (uintptr_t)begin_pos << iter0.elem_size;
 
                 if (iter.ptr > iter0.ptr) {
                     const uint32_t prev_code = peek_prev_char(&iter);
@@ -1927,7 +1932,10 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
                     goto cleanup;
 
                 bytecode = &re->bytecode[poss_stack->current->instr_idx];
-                iter.ptr = iter.end - ((unsigned)poss_stack->current->str_end_offs << iter.elem_size);
+                if (iter.end)
+                    iter.ptr = iter.end - ((unsigned)poss_stack->current->str_end_offs << iter.elem_size);
+                else
+                    iter.ptr = KOS_NULL;
             }
         }
     }
