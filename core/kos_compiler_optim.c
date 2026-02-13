@@ -1424,7 +1424,12 @@ static int optimize_unary_op(KOS_COMP_UNIT      *program,
         assert(op == OT_NOT);
 
         if (numeric_a.type == KOS_FLOAT_VALUE) {
-            numeric_a.u.i = (int64_t)floor(numeric_a.u.d);
+            if (numeric_a.u.d > (double)INT64_MAX)
+                numeric_a.u.i = INT64_MAX;
+            else if (numeric_a.u.d < (double)INT64_MIN)
+                numeric_a.u.i = INT64_MIN;
+            else
+                numeric_a.u.i = (int64_t)floor(numeric_a.u.d);
             numeric_a.type = KOS_INTEGER_VALUE;
         }
     }
