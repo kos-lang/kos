@@ -160,7 +160,7 @@ if [ "$RUN_ASAN" = "1" ]; then
     RUN_CPP14="1"
     export builtin_modules=0
     export MallocNanoZone=0 # Work around MacOS issue with address sanitizer
-    export sanitizer=
+    unset sanitizer
 fi
 
 if [ "$RUN_SEQFAIL" = "1" ]; then
