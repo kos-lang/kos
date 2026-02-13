@@ -26,7 +26,7 @@ jobs:
       - name: Build
         run: |
           export PATH=`pwd`/cov-analysis-linux64/bin:$PATH
-          cov-build --dir cov-int make -j $(grep -c ^processor /proc/cpuinfo)
+          cov-build --dir cov-int make -j $(nproc) build debug=0
 
       - name: Submit
         run: |
