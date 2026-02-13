@@ -1104,7 +1104,7 @@ static int strcmp_8_16(KOS_STRING *a,
     const uint16_t *sb      = (const uint16_t *)kos_get_string_buffer(b);
     const uint8_t  *pa      = sa ? sa + a_begin : sa;
     const uint16_t *pb      = sb ? sb + b_begin : sb;
-    const uint8_t  *pend    = pa + cmp_len;
+    const uint8_t  *pend    = pa ? pa + cmp_len : pa;
     int             result  = 0;
 
     for (;;) {
