@@ -407,7 +407,7 @@ unsigned KOS_string_to_utf8(KOS_OBJ_ID obj_id,
         case KOS_STRING_ASCII: {
             num_out = str->header.length;
 
-            if (buf) {
+            if (buf && num_out) {
                 assert(num_out <= buf_size);
                 memcpy(buf, src_buf, num_out);
             }
@@ -420,7 +420,7 @@ unsigned KOS_string_to_utf8(KOS_OBJ_ID obj_id,
             num_out = KOS_utf8_calc_buf_size_8((const uint8_t *)src_buf, str->header.length);
 
             /* Fill out the buffer. */
-            if (buf) {
+            if (buf && num_out) {
                 assert(num_out <= buf_size);
                 if (num_out == str->header.length)
                     memcpy(buf, src_buf, num_out);
@@ -436,7 +436,7 @@ unsigned KOS_string_to_utf8(KOS_OBJ_ID obj_id,
             num_out = KOS_utf8_calc_buf_size_16((const uint16_t *)src_buf, str->header.length);
 
             /* Fill out the buffer. */
-            if (buf) {
+            if (buf && num_out) {
                 assert(num_out <= buf_size);
                 KOS_utf8_encode_16((const uint16_t *)src_buf, str->header.length, pdest);
             }
@@ -450,7 +450,7 @@ unsigned KOS_string_to_utf8(KOS_OBJ_ID obj_id,
             num_out = KOS_utf8_calc_buf_size_32((const uint32_t *)src_buf, str->header.length);
 
             /* Fill out the buffer. */
-            if (buf && num_out != ~0U) {
+            if (buf && num_out && num_out != ~0U) {
                 assert(num_out <= buf_size);
                 KOS_utf8_encode_32((const uint32_t *)src_buf, str->header.length, pdest);
             }
@@ -1139,7 +1139,7 @@ static int strcmp_8_32(KOS_STRING *a,
     const uint32_t *sb      = (const uint32_t *)kos_get_string_buffer(b);
     const uint8_t  *pa      = sa ? sa + a_begin : sa;
     const uint32_t *pb      = sb ? sb + b_begin : sb;
-    const uint8_t  *pend    = pa + cmp_len;
+    const uint8_t  *pend    = pa ? pa + cmp_len : pa;
     int             result  = 0;
 
     for (;;) {
@@ -1172,7 +1172,7 @@ static int strcmp_16_32(KOS_STRING *a,
     const unsigned  cmp_len = KOS_min(a_len, b_len);
     const uint16_t *pa      = (const uint16_t *)kos_get_string_buffer(a) + a_begin;
     const uint32_t *pb      = (const uint32_t *)kos_get_string_buffer(b) + b_begin;
-    const uint16_t *pend    = pa + cmp_len;
+    const uint16_t *pend    = pa ? pa + cmp_len : pa;
     int             result  = 0;
 
     for (;;) {
