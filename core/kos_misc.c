@@ -154,7 +154,7 @@ int kos_parse_int(const char *begin,
 
         if ( ! error) {
             if (minus)
-                *value = (int64_t)-v;
+                *value = (int64_t)(0u-v);
             else
                 *value = (int64_t)v;
         }
@@ -564,7 +564,7 @@ int64_t kos_mul_int64(int64_t a, int64_t b)
 
     const uint64_t result_sign = ((uint64_t)a ^ (uint64_t)b) >> 63;
 
-    return (int64_t)(result_sign ? -result : result);
+    return (int64_t)(result_sign ? 0 - result : result);
 }
 
 unsigned kos_print_float(char *buf, unsigned size, double value)
