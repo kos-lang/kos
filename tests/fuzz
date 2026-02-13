@@ -5,8 +5,6 @@
 
 set -e
 
-export CFLAGS=-fsanitize=fuzzer-no-link,address
-export LDFLAGS=-fsanitize=fuzzer,address
 export CC=clang
 export CXX=clang++
 

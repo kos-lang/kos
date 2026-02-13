@@ -10,8 +10,11 @@ modules += tests
 
 include build/rules.mk
 
-# By default, only build the interpreter
-default: interpreter modules_ext
+# By default build and run tests
+default: test
+
+# Only build
+build: interpreter modules_ext
 
 $(modules):
 	@$(MAKE) -C $@
@@ -29,7 +32,7 @@ interpreter tests: core modules
 fuzz: core modules
 	@$(MAKE) -C tests fuzz
 
-test: default tests
+test: build tests
 	@$(MAKE) -C tests $@
 
 cldep:
@@ -43,15 +46,15 @@ $(modules): cldep
 modules_ext: interpreter
 endif
 
-install: default
+install: build
 	@$(MAKE) -C interpreter $@
 
-doc: default
+doc: build
 	@echo Extract docs
 	@env $(out_dir_base_rel)/interpreter/kos$(exe_suffix) doc/extract_docs.kos modules/*.kos modules/*.c > doc/modules.md
 
-defs: default
+defs: build
 	@echo Extract defs
 	@env $(out_dir_base_rel)/interpreter/kos$(exe_suffix) build/extract_defs.kos core/kos_lang inc/*h modules/*h
 
-.PHONY: cldep clean_gcov defs doc install modules_ext test fuzz time_us $(modules)
+.PHONY: cldep clean_gcov build default defs doc install modules_ext test fuzz time_us $(modules)

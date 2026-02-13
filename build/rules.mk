@@ -11,7 +11,7 @@ inv_path = $(if $1,$(subst $(space),/,$(patsubst %,..,$(subst /,$(space),$1)))/,
 ##############################################################################
 # Set default output directory
 
-debug ?= 0
+debug ?= 1
 
 ifeq ($(debug), 0)
     out_dir_base_rel = Out/release
@@ -124,6 +124,8 @@ ifeq ($(UNAME), Windows)
     LD_DEFS = -def:$1.win.def
 else
     ifeq ($(debug), 0)
+        sanitizer ?= 0
+
         CFLAGS += -O3 -DNDEBUG -ffunction-sections -fdata-sections
         CFLAGS += -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=1
         symbols ?= 0
@@ -176,6 +178,8 @@ else
             endif
         endif
     else
+        sanitizer ?= address,undefined
+
         CFLAGS += -O0 -g
         STRIP  ?= true
     endif
@@ -245,8 +249,23 @@ else
 
     # Special handling of fuzzer
     fuzz ?= 0
+    ifeq ($(fuzz), 1)
+        CFLAGS  += -fno-sanitize-recover=undefined -fsanitize=address,undefined,fuzzer-no-link
+        LDFLAGS += -fno-sanitize-recover=undefined -fsanitize=address,undefined,fuzzer
+    endif
     ifneq ($(fuzz), 0)
         CFLAGS += -DCONFIG_FUZZ
+        override sanitizer := 0
+    endif
+
+    # Configure sanitizers
+    ifneq ($(sanitizer), 0)
+        CFLAGS  += -fsanitize=$(sanitizer)
+        LDFLAGS += -fsanitize=$(sanitizer)
+        ifeq (undefined,$(findstring undefined,$(sanitizer)))
+            CFLAGS  += -fno-sanitize-recover=undefined
+            LDFLAGS += -fno-sanitize-recover=undefined
+        endif
     endif
 endif
 

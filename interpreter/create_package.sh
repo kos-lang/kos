@@ -60,7 +60,7 @@ fi
 
 compile_kos()
 {
-    make -j "$JOBS" "$@" builtin_modules=0 strict=1
+    make -j "$JOBS" "$@" builtin_modules=0 strict=1 debug=0
 }
 
 collect_package()

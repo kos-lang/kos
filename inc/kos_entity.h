@@ -142,7 +142,7 @@ static inline KOS_OBJ_ID KOS_object_id(KOS_TYPE type, T *ptr)
                static_cast<uint8_t>(
                    reinterpret_cast<uintptr_t>(
                        ptr->header.size_and_type))));
-    return reinterpret_cast<KOS_OBJ_ID>(reinterpret_cast<uint8_t *>(ptr) + 1);
+    return reinterpret_cast<KOS_OBJ_ID>(reinterpret_cast<uintptr_t>(ptr) + 1);
 }
 #define OBJID(tag, ptr) KOS_object_id<KOS_##tag>(OBJ_##tag, ptr)
 

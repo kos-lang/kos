@@ -65,11 +65,11 @@ fi
 
 rm -rf Out
 
-$MAKE -k -j "$JOBS" time_us interpreter native=1
+$MAKE -k -j "$JOBS" time_us build debug=0 native=1
 
 if [ $JS = 1 ]; then
     rm -rf "$JS_INTERPRETER/Out"
-    $MAKE -k -j "$JOBS" native=1 -C "$JS_INTERPRETER"
+    $MAKE -k -j "$JOBS" debug=0 native=1 -C "$JS_INTERPRETER"
 fi
 
 runtest()
