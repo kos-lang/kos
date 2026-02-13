@@ -3582,7 +3582,12 @@ static int maybe_int(const KOS_AST_NODE *node,
         *value = numeric.u.i;
     else {
         assert(numeric.type == KOS_FLOAT_VALUE);
-        *value = (int64_t)floor(numeric.u.d);
+        if (numeric.u.d > INT64_MAX)
+            *value = INT64_MAX;
+        else if (numeric.u.d < INT64_MIN)
+            *value = INT64_MIN;
+        else
+            *value = (int64_t)floor(numeric.u.d);
     }
 
     return 1;
