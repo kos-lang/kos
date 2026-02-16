@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: MIT
- * SPDX-FileCopyrightText: Copyright (c) 2014-2024 Chris Dragan
+ * SPDX-FileCopyrightText: Copyright (c) 2014-2026 Chris Dragan
  */
 
 #ifndef KOS_CONST_STRINGS_H_INCLUDED
