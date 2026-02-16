@@ -1115,7 +1115,7 @@ static int strcmp_8_16(KOS_STRING *a,
             }
         }
         else {
-            result = (int)(a_len - b_len);
+            result = (int)a_len - (int)b_len;
             break;
         }
         ++pa;
@@ -1148,7 +1148,7 @@ static int strcmp_8_32(KOS_STRING *a,
             }
         }
         else {
-            result = (int)(a_len - b_len);
+            result = (int)a_len - (int)b_len;
             break;
         }
         ++pa;
@@ -1181,7 +1181,7 @@ static int strcmp_16_32(KOS_STRING *a,
             }
         }
         else {
-            result = (int)(a_len - b_len);
+            result = (int)a_len - (int)b_len;
             break;
         }
         ++pa;
@@ -1211,7 +1211,7 @@ static int compare_slice(KOS_STRING *str_a,
     assert(b_begin <= b_end);
 
     if ( ! cmp_len) {
-        return (int)(a_len - b_len);
+        return (int)a_len - (int)b_len;
     }
 
     assert(kos_get_string_buffer(str_a));
