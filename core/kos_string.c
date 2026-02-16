@@ -1228,7 +1228,7 @@ static int compare_slice(KOS_STRING *str_a,
         uint32_t ca = 0;
         uint32_t cb = 0;
 
-        if (((uintptr_t)pa & 7U) == ((uintptr_t)pb & 7U) && (pa ? (pa + 8) : pa) < pend8) {
+        if (((uintptr_t)pa & 7U) == ((uintptr_t)pb & 7U) && pa + 8 < pend8) {
 
             while (((uintptr_t)pa & 7U) && *pa == *pb) {
                 ++pa;
