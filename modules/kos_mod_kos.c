@@ -282,6 +282,9 @@ static KOS_OBJ_ID raw_lexer(const KOS_CONTEXT             ctx,
 
         buf_size = KOS_string_to_utf8(value.o, KOS_NULL, 0);
 
+        if ( ! buf_size)
+            continue;
+
         if (buf_size > kos_lexer->own_buf_size) {
             own_buf = (char *)KOS_realloc(own_buf, buf_size);
 
@@ -294,6 +297,7 @@ static KOS_OBJ_ID raw_lexer(const KOS_CONTEXT             ctx,
             kos_lexer->own_buf_size = buf_size;
         }
 
+        assert(own_buf);
         KOS_string_to_utf8(value.o, own_buf, buf_size);
         kos_lexer_update(&kos_lexer->lexer, own_buf, own_buf + buf_size);
     }

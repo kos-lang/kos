@@ -221,6 +221,19 @@ do {
 }
 
 do {
+    const lexer = kos.raw_lexer(fun { yield "" ; yield "" } ())
+    expect_fail(_ => lexer())
+    expect_fail(_ => lexer())
+}
+
+do {
+    const lexer = kos.raw_lexer(fun { yield "" ; yield "" ; yield " " ; yield "" ; yield "0" ; yield "" } ())
+    assert lexer("").token == " "
+    assert lexer("").token == "0"
+    expect_fail(_ => lexer())
+}
+
+do {
     const ver = kos.version
     assert typeof ver == "array"
     assert ver.size == 3
