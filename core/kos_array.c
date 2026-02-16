@@ -474,7 +474,8 @@ int KOS_array_resize(KOS_CONTEXT ctx, KOS_OBJ_ID obj_id, uint32_t size)
         uint32_t           old_size;
 
         if (size > capacity) {
-            const uint32_t new_cap = KOS_max(capacity * 2, size);
+            const uint32_t double_cap = (capacity > UINT32_MAX / 2) ? UINT32_MAX : capacity * 2;
+            const uint32_t new_cap    = KOS_max(double_cap, size);
 
             TRY(KOS_array_reserve(ctx, array.o, new_cap));
 
@@ -740,7 +741,8 @@ int KOS_array_push(KOS_CONTEXT ctx,
         len = KOS_get_array_size(array.o);
 
         if (len >= capacity) {
-            const uint32_t new_cap = KOS_max(capacity * 2, len + 1);
+            const uint32_t double_cap = (capacity > UINT32_MAX / 2) ? UINT32_MAX : capacity * 2;
+            const uint32_t new_cap    = KOS_max(double_cap, len + 1);
 
             TRY(KOS_array_reserve(ctx, array.o, new_cap));
 

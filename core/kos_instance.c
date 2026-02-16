@@ -782,7 +782,7 @@ static int save_module_lib(KOS_CONTEXT ctx, KOS_SHARED_LIB lib)
     }
 
     if (libs->num_libs >= libs->capacity) {
-        const uint32_t new_capacity = libs->capacity + 8;
+        const uint32_t new_capacity = KOS_min(libs->capacity + 8, 0xFFFFu);
         KOS_LIB_LIST  *new_libs     = (KOS_LIB_LIST *)KOS_realloc(libs,
                 sizeof(KOS_LIB_LIST) + (new_capacity - 1) * sizeof(KOS_SHARED_LIB));
 

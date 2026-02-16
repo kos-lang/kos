@@ -1770,7 +1770,7 @@ static int push_jump_array(KOS_COMP_UNIT *program,
                            int            offs)
 {
     if (jump_array->num_jumps >= jump_array->capacity) {
-        const uint16_t  new_capacity = jump_array->capacity * 2;
+        const uint16_t  new_capacity = (jump_array->capacity < 0x8000) ? jump_array->capacity * 2 : 0xFFFF;
         uint32_t *const new_buf      = (uint32_t *)KOS_mempool_alloc(&program->allocator,
                                                                      sizeof(uint32_t) * new_capacity);
 
@@ -1782,6 +1782,9 @@ static int push_jump_array(KOS_COMP_UNIT *program,
 
         jump_array->entries  = new_buf;
         jump_array->capacity = new_capacity;
+
+        if (jump_array->num_jumps > new_capacity)
+            return KOS_ERROR_OUT_OF_MEMORY;
     }
 
     add_jump_instr_at_offset(program,

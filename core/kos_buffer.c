@@ -241,7 +241,8 @@ int KOS_buffer_resize(KOS_CONTEXT ctx,
 
             if (size > capacity) {
                 KOS_LOCAL      obj;
-                const uint32_t new_capacity = size > capacity * 2 ? size : capacity * 2;
+                const uint32_t new_capacity = (capacity > UINT32_MAX / 2 || size > capacity * 2)
+                                              ? size : capacity * 2;
 
                 KOS_init_local_with(ctx, &obj, obj_id);
 
@@ -355,7 +356,8 @@ uint8_t *KOS_buffer_make_room(KOS_CONTEXT ctx,
 
             if (off_heap_size > capacity) {
                 KOS_LOCAL      obj;
-                const uint32_t new_capacity = new_size > capacity * 2 ? new_size : capacity * 2;
+                const uint32_t new_capacity = (capacity > UINT32_MAX / 2 || new_size > capacity * 2)
+                                              ? new_size : capacity * 2;
                 int            error;
 
                 KOS_init_local_with(ctx, &obj, obj_id);
