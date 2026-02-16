@@ -806,77 +806,81 @@ static int gen_instr(KOS_COMP_UNIT *program,
                      int            num_args,
                      ...)
 {
-    int cur_offs = program->cur_offs;
-    int error;
+    uint8_t *buf;
+    int      cur_offs = program->cur_offs;
+    int      error;
+    va_list  args;
+    int      i;
+
+    KOS_BYTECODE_INSTR instr = INSTR_BREAKPOINT;
 
     assert((size_t)program->cur_offs == program->code_gen_buf.size);
+    assert(num_args >= 0);
+
+    if (num_args >= (INT32_MAX - 1) / 5)
+        return KOS_ERROR_OUT_OF_MEMORY;
 
     error = KOS_vector_resize(&program->code_gen_buf,
                               (size_t)cur_offs + 1 + 5 * num_args); /* Over-estimate */
+    if (error)
+        return error;
 
     if (program->code_buf.size + program->code_gen_buf.size > KOS_MAX_CODE_SIZE)
-        error = KOS_ERROR_OUT_OF_MEMORY;
+        return KOS_ERROR_OUT_OF_MEMORY;
 
-    if (!error) {
+    buf = (uint8_t *)program->code_gen_buf.buffer;
 
-        KOS_BYTECODE_INSTR instr = INSTR_BREAKPOINT;
+    va_start(args, num_args);
+    for (i = 0; i <= num_args; i++) {
 
-        va_list  args;
-        int      i;
-        uint8_t *buf = (uint8_t *)program->code_gen_buf.buffer;
+        int32_t value = (int32_t)va_arg(args, int32_t);
 
-        va_start(args, num_args);
-        for (i = 0; i <= num_args; i++) {
+        if (i == 0) {
+            assert(value >= INSTR_BREAKPOINT && value <= INSTR_CANCEL);
+            instr = (KOS_BYTECODE_INSTR)value;
+            buf[cur_offs++] = (uint8_t)value;
+        }
+        else {
+            const int size = kos_get_operand_size(instr, i - 1);
 
-            int32_t value = (int32_t)va_arg(args, int32_t);
+            if (size == -1) {
+                assert( ! kos_is_register(instr, i - 1));
 
-            if (i == 0) {
-                assert(value >= INSTR_BREAKPOINT && value <= INSTR_CANCEL);
-                instr = (KOS_BYTECODE_INSTR)value;
+                if (kos_is_signed_op(instr, i - 1))
+                    write_simm(buf, &cur_offs, value);
+                else {
+                    assert(value >= 0);
+                    write_uimm(buf, &cur_offs, (uint32_t)value);
+                }
+            }
+            else if (size == 1) {
+                if ( ! kos_is_register(instr, i - 1)) {
+                    if (kos_is_signed_op(instr, i - 1)) {
+                        assert((uint32_t)(value + 128) < 256U);
+                    }
+                    else {
+                        assert((uint32_t)value < 256U);
+                    }
+                }
                 buf[cur_offs++] = (uint8_t)value;
             }
             else {
-                const int size = kos_get_operand_size(instr, i - 1);
-
-                if (size == -1) {
-                    assert( ! kos_is_register(instr, i - 1));
-
-                    if (kos_is_signed_op(instr, i - 1))
-                        write_simm(buf, &cur_offs, value);
-                    else {
-                        assert(value >= 0);
-                        write_uimm(buf, &cur_offs, (uint32_t)value);
-                    }
-                }
-                else if (size == 1) {
-                    if ( ! kos_is_register(instr, i - 1)) {
-                        if (kos_is_signed_op(instr, i - 1)) {
-                            assert((uint32_t)(value + 128) < 256U);
-                        }
-                        else {
-                            assert((uint32_t)value < 256U);
-                        }
-                    }
+                int ibyte;
+                for (ibyte = 0; ibyte < size; ibyte++) {
                     buf[cur_offs++] = (uint8_t)value;
-                }
-                else {
-                    int ibyte;
-                    for (ibyte = 0; ibyte < size; ibyte++) {
-                        buf[cur_offs++] = (uint8_t)value;
-                        value >>= 8;
-                    }
+                    value >>= 8;
                 }
             }
         }
-        va_end(args);
-
-        assert((size_t)cur_offs <= program->code_gen_buf.size);
-
-        program->cur_offs          = cur_offs;
-        program->code_gen_buf.size = (unsigned int)cur_offs;
-
-        ++program->cur_frame->num_instr;
     }
+    va_end(args);
+
+    assert((size_t)cur_offs <= program->code_gen_buf.size);
+
+    program->cur_offs          = cur_offs;
+    program->code_gen_buf.size = (unsigned int)cur_offs;
+
+    ++program->cur_frame->num_instr;
 
     return error;
 }

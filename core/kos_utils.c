@@ -53,8 +53,9 @@ static const char str_object_open[]        = "{";
 static const char str_object_sep[]         = ", ";
 static const char str_recursive_array[]    = "[...]";
 static const char str_recursive_object[]   = "{...}";
-KOS_DECLARE_STATIC_CONST_STRING(str_err_not_array,     "object is not an array");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_not_generator, "function is not a generator");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_array,       "object is not an array");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_generator,   "function is not a generator");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_string_too_long, "string too long");
 
 static const int8_t extra_len_map[256] = {
     /* 0 .. 127 */
@@ -732,6 +733,11 @@ static KOS_OBJ_ID array_to_str(KOS_CONTEXT        ctx,
         return KOS_new_const_ascii_string(ctx, str_empty_array,
                                           sizeof(str_empty_array) - 1);
 
+    if (length > 0xFFFF * 4 + 1) {
+        KOS_raise_exception(ctx, KOS_CONST_ID(str_err_string_too_long));
+        return KOS_BADPTR;
+    }
+
     KOS_init_locals(ctx, &array, &str_comma, &aux_array, &value, kos_end_locals);
 
     array.o = array_obj;
@@ -825,6 +831,11 @@ static int vector_append_buffer(KOS_CONTEXT ctx,
     assert(GET_OBJ_TYPE(obj_id) == OBJ_BUFFER);
 
     size = KOS_get_buffer_size(obj_id);
+
+    if (size >= (UINT32_MAX - 2) / 3) {
+        KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+        RAISE_ERROR(KOS_ERROR_EXCEPTION);
+    }
 
     error = KOS_vector_reserve(cstr_vec, cstr_vec->size + size * 3 + 2);
     if (error) {
