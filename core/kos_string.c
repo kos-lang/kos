@@ -1100,12 +1100,10 @@ static int strcmp_8_16(KOS_STRING *a,
                        unsigned    b_len)
 {
     const unsigned  cmp_len = KOS_min(a_len, b_len);
-    const uint8_t  *sa      = (const uint8_t  *)kos_get_string_buffer(a);
-    const uint16_t *sb      = (const uint16_t *)kos_get_string_buffer(b);
-    const uint8_t  *pa      = sa ? sa + a_begin : sa;
-    const uint16_t *pb      = sb ? sb + b_begin : sb;
-    const uint8_t  *pend    = pa ? pa + cmp_len : pa;
     int             result  = 0;
+    const uint8_t  *pa      = (const uint8_t  *)kos_get_string_buffer(a) + a_begin;
+    const uint16_t *pb      = (const uint16_t *)kos_get_string_buffer(b) + b_begin;
+    const uint8_t  *pend    = pa + cmp_len;
 
     for (;;) {
         if (pa < pend) {
@@ -1135,12 +1133,10 @@ static int strcmp_8_32(KOS_STRING *a,
                        unsigned    b_len)
 {
     const unsigned  cmp_len = KOS_min(a_len, b_len);
-    const uint8_t  *sa      = (const uint8_t  *)kos_get_string_buffer(a);
-    const uint32_t *sb      = (const uint32_t *)kos_get_string_buffer(b);
-    const uint8_t  *pa      = sa ? sa + a_begin : sa;
-    const uint32_t *pb      = sb ? sb + b_begin : sb;
-    const uint8_t  *pend    = pa ? pa + cmp_len : pa;
     int             result  = 0;
+    const uint8_t  *pa      = (const uint8_t  *)kos_get_string_buffer(a) + a_begin;
+    const uint32_t *pb      = (const uint32_t *)kos_get_string_buffer(b) + b_begin;
+    const uint8_t  *pend    = pa + cmp_len;
 
     for (;;) {
         if (pa < pend) {
@@ -1170,10 +1166,10 @@ static int strcmp_16_32(KOS_STRING *a,
                         unsigned    b_len)
 {
     const unsigned  cmp_len = KOS_min(a_len, b_len);
+    int             result  = 0;
     const uint16_t *pa      = (const uint16_t *)kos_get_string_buffer(a) + a_begin;
     const uint32_t *pb      = (const uint32_t *)kos_get_string_buffer(b) + b_begin;
-    const uint16_t *pend    = pa ? pa + cmp_len : pa;
-    int             result  = 0;
+    const uint16_t *pend    = pa + cmp_len;
 
     for (;;) {
         if (pa < pend) {
@@ -1202,27 +1198,31 @@ static int compare_slice(KOS_STRING *str_a,
                          unsigned    b_begin,
                          unsigned    b_end)
 {
-    int      result      = 0;
-    unsigned a_len       = a_end - a_begin;
-    unsigned b_len       = b_end - b_begin;
-    unsigned a_elem_size = kos_get_string_elem_size(str_a);
-    unsigned b_elem_size = kos_get_string_elem_size(str_b);
+    int            result      = 0;
+    unsigned       a_len       = a_end - a_begin;
+    unsigned       b_len       = b_end - b_begin;
+    unsigned       a_elem_size = kos_get_string_elem_size(str_a);
+    unsigned       b_elem_size = kos_get_string_elem_size(str_b);
+    const unsigned cmp_len     = KOS_min(a_len, b_len);
 
     assert(a_end   <= str_a->header.length);
     assert(a_begin <= a_end);
     assert(b_end   <= str_b->header.length);
     assert(b_begin <= b_end);
 
+    if ( ! cmp_len) {
+        return (int)(a_len - b_len);
+    }
+
+    assert(kos_get_string_buffer(str_a));
+    assert(kos_get_string_buffer(str_b));
+
     if (a_elem_size == b_elem_size) {
 
-        const unsigned cmp_len = KOS_min(a_len, b_len);
-
-        const uint8_t* sa    = (const uint8_t *)kos_get_string_buffer(str_a);
-        const uint8_t* sb    = (const uint8_t *)kos_get_string_buffer(str_b);
-        const uint8_t *pa    = sa ? (sa + (a_begin << a_elem_size)) : sa;
-        const uint8_t *pb    = sb ? (sb + (b_begin << a_elem_size)) : sb;
+        const uint8_t* pa    = (const uint8_t *)kos_get_string_buffer(str_a) + (a_begin << a_elem_size);
+        const uint8_t* pb    = (const uint8_t *)kos_get_string_buffer(str_b) + (b_begin << a_elem_size);
         const unsigned num_b = cmp_len << a_elem_size;
-        const uint8_t *pend  = pa ? (pa + num_b) : pa;
+        const uint8_t *pend  = pa + num_b;
         const uint8_t *pend8 = (const uint8_t *)((uintptr_t)pend & ~(uintptr_t)7);
 
         uint32_t ca = 0;
