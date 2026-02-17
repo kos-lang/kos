@@ -14,7 +14,7 @@
 #endif
 
 #ifndef KOS_VERSION_REVISION
-#   define KOS_VERSION_REVISION 0
+#   define KOS_VERSION_REVISION 1
 #endif
 
 #endif
