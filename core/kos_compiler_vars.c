@@ -12,6 +12,7 @@
 #include <stdint.h>
 
 static const char str_err_const_assignment[]        = "const variable is not assignable";
+static const char str_err_invalid_module_path[]     = "invalid module path";
 static const char str_err_module_global_conflict[]  = "unable to import module, a global variable with this name already exists";
 static const char str_err_no_such_module_variable[] = "no such global in module";
 static const char str_err_redefined_var[]           = "redefined variable";
@@ -440,10 +441,10 @@ static uint16_t get_module_path_len(const KOS_AST_NODE *node)
             ++total_len;
 
         total_len += node->token.length;
-    }
 
-    if (total_len > 0xFFFFU)
-        total_len = 0;
+        if (total_len > 0xFFFFU)
+            return 0;
+    }
 
     return (uint16_t)total_len;
 }
@@ -468,6 +469,12 @@ int kos_get_module_path_name(KOS_COMP_UNIT       *program,
         char *dst;
 
         *name_len = get_module_path_len(node);
+
+        if ( ! *name_len) {
+            program->error_token = &node->token;
+            program->error_str   = str_err_invalid_module_path;
+            return KOS_ERROR_COMPILE_FAILED;
+        }
 
         path = (char *)KOS_mempool_alloc(&program->allocator, *name_len + 1);
         dst  = path;
