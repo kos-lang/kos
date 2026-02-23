@@ -603,19 +603,23 @@ static int add_class_range(struct RE_PARSE_CTX *re_ctx,
 
     if (begin == desc->num_ranges) {
 
-        range += desc->num_ranges - 1;
+        if (desc->num_ranges) {
 
-        assert( ! desc->num_ranges || (begin_code > range->begin_code));
+            range += desc->num_ranges - 1;
 
-        if (desc->num_ranges && (begin_code <= range->end_code + 1)) {
+            assert(begin_code > range->begin_code);
 
-            if (end_code > range->end_code)
-                range->end_code = end_code;
+            if (begin_code <= range->end_code + 1) {
 
-            return KOS_vector_resize(&re_ctx->class_data, old_size);
+                if (end_code > range->end_code)
+                    range->end_code = end_code;
+
+                return KOS_vector_resize(&re_ctx->class_data, old_size);
+            }
+
+            ++range;
         }
 
-        ++range;
         ++desc->num_ranges;
 
         range->begin_code = begin_code;
@@ -1940,7 +1944,8 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
         }
     }
 
-    end_pos -= (uint32_t)((iter.end - iter.ptr) >> iter.elem_size);
+    if (iter.end)
+        end_pos -= (uint32_t)((iter.end - iter.ptr) >> iter.elem_size);
 
     ret.o = KOS_new_object(ctx);
     TRY_OBJID(ret.o);
