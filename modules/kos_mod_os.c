@@ -1806,8 +1806,10 @@ static KOS_OBJ_ID kos_kill(const KOS_CONTEXT             ctx,
     {
         const int error = kill((pid_t)pid, signal);
 
-        if (error < 0)
-            KOS_raise_errno(ctx, "failed to send signal");
+        if (error < 0) {
+            if (errno != ESRCH || (signal != SIGKILL && signal != SIGTERM))
+                KOS_raise_errno(ctx, "failed to send signal");
+        }
     }
 #endif
 
