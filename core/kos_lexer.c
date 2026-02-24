@@ -347,8 +347,10 @@ static unsigned prefetch_next(KOS_LEXER *lexer, const char **begin, const char *
     if (b < lexer->buf_end) {
         lt = lexem_types[(unsigned char)*b];
 
-        if (lt == LT_UTF8_TAIL)
+        if (lt == LT_UTF8_TAIL)  {
             lt = LT_INVALID_UTF8;
+            e = b + 1;
+        }
         else if ((lt & LT_UTF8_MULTI) != 0) {
             const unsigned len = lt & LT_UTF8_MASK;
 
@@ -501,7 +503,7 @@ static int collect_escape(KOS_LEXER *lexer, int *format)
                         break;
                     }
                 }
-                if (count > 6) {
+                if (count > 6 && ! error) {
                     error = report_error(lexer, &esc_pos, (uint32_t)(end - esc_begin), str_err_too_many_hex_digits);
                 }
             }
@@ -606,6 +608,11 @@ static void collect_block_comment(KOS_LEXER *lexer)
     const char *begin, *end;
 
     unsigned c = prefetch_next(lexer, &begin, &end);
+
+    if (c == LT_INVALID_UTF8) {
+        retract(lexer, begin);
+        return;
+    }
 
     while (c != LT_EOF) {
         const char prev = *begin;
@@ -839,7 +846,7 @@ static void set_seq_fail(const char *begin, const char *end)
     while ((begin < end) && (*begin == ' '))
         ++begin;
 
-    if ((begin + sizeof(str_seq) >= end) || memcmp(begin, str_seq, sizeof(str_seq) - 1))
+    if ((begin + sizeof(str_seq) - 1 >= end) || memcmp(begin, str_seq, sizeof(str_seq) - 1))
         return;
 
     begin += sizeof(str_seq) - 1;

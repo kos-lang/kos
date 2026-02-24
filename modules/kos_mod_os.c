@@ -994,7 +994,7 @@ static int find_program(KOS_CONTEXT  ctx,
             if (does_file_exist(buf_mgr.buf))
                 goto found_program;
 
-            path_env += path_len + 1;
+            path_env += path_len + (colon ? 1 : 0);
         }
     }
 
@@ -1023,7 +1023,8 @@ found_program:
         else
             memmove(&buf_mgr.buf[cwd_len + 1], buf_mgr.buf, prog_len + 1);
 
-        memcpy(buf_mgr.buf, cur_wd, cwd_len);
+        if (cwd_len)
+            memcpy(buf_mgr.buf, cur_wd, cwd_len);
         buf_mgr.buf[cwd_len] = '/';
         free(cur_wd);
     }

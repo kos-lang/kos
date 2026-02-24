@@ -424,7 +424,7 @@ static void finalize_objects(KOS_CONTEXT ctx,
             const uint32_t  size = kos_get_object_size(*hdr);
 
             assert(size > 0U);
-            assert(size <= (size_t)((uint8_t *)page - (uint8_t *)ptr));
+            assert(size <= (size_t)((uint8_t *)end - (uint8_t *)ptr));
 
             finalize_object(ctx, hdr, &gc_stats);
 
@@ -2589,7 +2589,7 @@ static int evacuate(KOS_CONTEXT              ctx,
 
             push_page_with_objects(heap, page);
 
-            if (num_slots_used != PAGE_ALREADY_EVACED) {
+            if (page_flags != PAGE_ALREADY_EVACED) {
                 ++stats.num_pages_kept;
                 stats.size_kept += num_slots_used << KOS_OBJ_ALIGN_BITS;
                 KOS_atomic_write_relaxed_u32(page->flags, PAGE_ALREADY_EVACED);
@@ -2702,10 +2702,8 @@ cleanup:
 
 static void update_gc_threshold(KOS_HEAP *heap)
 {
-    if (heap->used_heap_size >= heap->gc_threshold)
+    if (heap->used_heap_size > (uint64_t)heap->gc_threshold * KOS_GC_THRESHOLD / 100U)
         heap->gc_threshold = heap->max_heap_size;
-    else
-        heap->gc_threshold = heap->max_heap_size * KOS_GC_THRESHOLD / 100U;
 }
 
 static void engage_in_gc(KOS_CONTEXT ctx, enum GC_STATE_E new_state)

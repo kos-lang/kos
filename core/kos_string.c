@@ -100,7 +100,7 @@ static KOS_OBJ_ID new_string(KOS_CONTEXT     ctx,
         uint32_t max_code;
         unsigned count = KOS_utf8_get_len(s, length, escape, &max_code);
 
-        if (count < 0xFFFFU) {
+        if (count <= 0xFFFFU) {
 
             elem_size = string_size_from_max_code(max_code);
 
@@ -638,7 +638,7 @@ KOS_OBJ_ID KOS_string_add_n_ptr(KOS_CONTEXT             ctx,
 
         new_str.o = KOS_STR_EMPTY;
 
-        for (cur_ptr = args; cur_ptr != end; ++cur_ptr) {
+        for (cur_ptr = args; cur_ptr != end && new_len <= 0xFFFFU; ++cur_ptr) {
             KOS_OBJ_ID cur_str = KOS_atomic_read_relaxed_obj(*cur_ptr);
             unsigned   cur_len;
 
@@ -729,7 +729,7 @@ KOS_OBJ_ID KOS_string_add_n(KOS_CONTEXT         ctx,
 
         new_str.o = KOS_STR_EMPTY;
 
-        for (cur_ptr = str_array; cur_ptr != end; ++cur_ptr) {
+        for (cur_ptr = str_array; cur_ptr != end && new_len <= 0xFFFFU; ++cur_ptr) {
             KOS_OBJ_ID cur_str = cur_ptr->o;
             unsigned   cur_len;
 
@@ -831,7 +831,7 @@ KOS_OBJ_ID KOS_string_add(KOS_CONTEXT ctx,
 
         new_str.o = KOS_STR_EMPTY;
 
-        for (i = 0; i < num_strings; ++i) {
+        for (i = 0; i < num_strings && new_len <= 0xFFFFU; ++i) {
             KOS_OBJ_ID cur_str = KOS_array_read(ctx, str_array.o, i);
             unsigned   cur_len;
 

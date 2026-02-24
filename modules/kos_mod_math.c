@@ -19,7 +19,7 @@ static const char str_err_m1_or_less[]    = "value is not greater than -1";
 static const char str_err_negative_root[] = "invalid base";
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_number, "object is not a number");
 static const char str_err_outside_m1_1[]  = "value outside of [-1, 1] range";
-static const char str_err_pow_0_0[]       = "0 to the power of 0";
+KOS_DECLARE_STATIC_CONST_STRING(str_err_pow_0_minus, "zero cannot be raised to negative power");
 static const char str_err_zero_or_less[]  = "value is not positive";
 
 /* @item math abs()
@@ -665,9 +665,11 @@ static KOS_OBJ_ID kos_pow(const KOS_CONTEXT             ctx,
 
     if (val1 == 0) {
         if (val2 == 0)
-            RAISE_EXCEPTION(str_err_pow_0_0);
-        else
+            ret = TO_SMALL_INT(1);
+        else if (val2 > 0)
             ret = TO_SMALL_INT(0);
+        else
+            RAISE_EXCEPTION_STR(str_err_pow_0_minus);
     }
     else if (val1 == 1 || val2 == 0)
         ret = TO_SMALL_INT(1);

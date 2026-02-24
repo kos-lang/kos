@@ -341,19 +341,24 @@ uint8_t *KOS_buffer_make_room(KOS_CONTEXT ctx,
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_read_only));
     else {
         for (;;) {
-            const uint32_t   old_size = KOS_atomic_read_relaxed_u32(OBJPTR(BUFFER, obj_id)->size);
-            const uint32_t   new_size = old_size + size_delta;
-            const KOS_OBJ_ID data_id  = get_storage(obj_id);
-            const uint32_t   capacity = IS_BAD_PTR(data_id) ? 0 :
-                    KOS_atomic_read_relaxed_u32(OBJPTR(BUFFER_STORAGE, data_id)->capacity);
+            uint32_t   new_size;
+            KOS_OBJ_ID data_id;
+            uint32_t   capacity;
+            uint32_t   off_heap_size;
 
-            /* Ensure that the new buffer is allocated off heap */
-            const uint32_t off_heap_size = KOS_max(new_size, KOS_MAX_HEAP_OBJ_SIZE * 2U);
+            const uint32_t old_size = KOS_atomic_read_relaxed_u32(OBJPTR(BUFFER, obj_id)->size);
 
             if (size_delta > 0xFFFFFFFFU - old_size) {
                 KOS_raise_exception(ctx, KOS_CONST_ID(str_err_make_room_size));
                 break;
             }
+
+            new_size = old_size + size_delta;
+            data_id  = get_storage(obj_id);
+            capacity = IS_BAD_PTR(data_id) ? 0 : KOS_atomic_read_relaxed_u32(OBJPTR(BUFFER_STORAGE, data_id)->capacity);
+
+            /* Ensure that the new buffer is allocated off heap */
+            off_heap_size = KOS_max(new_size, KOS_MAX_HEAP_OBJ_SIZE * 2U);
 
             if (off_heap_size > capacity) {
                 KOS_LOCAL      obj;

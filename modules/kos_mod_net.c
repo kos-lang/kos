@@ -998,8 +998,10 @@ static KOS_OBJ_ID kos_recv(const KOS_CONTEXT             ctx,
 
     num_read = recv(get_socket(socket_holder), (char *)(data + offset), (DATA_LEN)to_read, (int)flags64);
 
-    if (num_read < -1)
+    if (num_read < 0) {
         saved_errno = get_error();
+        num_read    = 0;
+    }
 
     KOS_resume_context(ctx);
 
@@ -1135,8 +1137,10 @@ static KOS_OBJ_ID kos_recvfrom(const KOS_CONTEXT             ctx,
                         (struct sockaddr *)&addr,
                         &addr_len);
 
-    if (num_read < -1)
+    if (num_read < 0) {
         saved_errno = get_error();
+        num_read    = 0;
+    }
 
     KOS_resume_context(ctx);
 
@@ -1145,7 +1149,7 @@ static KOS_OBJ_ID kos_recvfrom(const KOS_CONTEXT             ctx,
     TRY(KOS_buffer_resize(ctx, buf.o, (unsigned)(offset + num_read)));
 
     if (saved_errno) {
-        KOS_raise_errno_value(ctx, "recv", saved_errno);
+        KOS_raise_errno_value(ctx, "recvfrom", saved_errno);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 

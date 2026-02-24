@@ -506,7 +506,7 @@ static int predefine_globals(KOS_CONTEXT    ctx,
 
         TRY(kos_compiler_predefine_global(program,
                                           cpath.buffer,
-                                          (uint16_t)cpath.size - 1,
+                                          (uint16_t)(cpath.size - 1),
                                           (int)GET_SMALL_INT(KOS_get_walk_value(walk.o))));
     }
 
@@ -519,7 +519,7 @@ static int predefine_globals(KOS_CONTEXT    ctx,
 
         TRY(KOS_string_to_cstr_vec(ctx, KOS_get_walk_key(walk.o), &cpath));
 
-        TRY(kos_compiler_predefine_module(program, cpath.buffer, (uint16_t)cpath.size - 1,
+        TRY(kos_compiler_predefine_module(program, cpath.buffer, (uint16_t)(cpath.size - 1),
                                           (int)GET_SMALL_INT(KOS_get_walk_value(walk.o))));
     }
 
@@ -1223,7 +1223,7 @@ int kos_comp_walk_globals(void                          *vframe,
         TRY(KOS_string_to_cstr_vec(ctx, KOS_get_walk_key(walk.o), &name));
 
         TRY(callback(name.buffer,
-                     (uint16_t)name.size - 1U,
+                     (uint16_t)(name.size - 1U),
                      module_idx,
                      (int)GET_SMALL_INT(KOS_get_walk_value(walk.o)),
                      cookie));

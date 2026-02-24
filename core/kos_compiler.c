@@ -526,7 +526,7 @@ static int constants_compare_node(KOS_RED_BLACK_NODE *a,
     const KOS_COMP_CONST *const_b = (const KOS_COMP_CONST *)b;
 
     if (const_a->type != const_b->type)
-        return (int)const_a->type < (int)const_b->type ? -1 : 0;
+        return (int)const_a->type < (int)const_b->type ? -1 : 1;
 
     else switch (const_a->type) {
 
@@ -534,12 +534,12 @@ static int constants_compare_node(KOS_RED_BLACK_NODE *a,
             assert(const_a->type == KOS_COMP_CONST_INTEGER);
             return ((const KOS_COMP_INTEGER *)const_a)->value
                  < ((const KOS_COMP_INTEGER *)const_b)->value
-                 ? -1 : 0;
+                 ? -1 : 1;
 
         case KOS_COMP_CONST_FLOAT:
             return ((const KOS_COMP_FLOAT *)const_a)->value
                  < ((const KOS_COMP_FLOAT *)const_b)->value
-                 ? -1 : 0;
+                 ? -1 : 1;
 
         case KOS_COMP_CONST_STRING: {
             const KOS_COMP_STRING *str_a = (const KOS_COMP_STRING *)const_a;
@@ -551,10 +551,10 @@ static int constants_compare_node(KOS_RED_BLACK_NODE *a,
         case KOS_COMP_CONST_FUNCTION:
             return ((const KOS_COMP_FUNCTION *)const_a)->bytecode_offset
                  < ((const KOS_COMP_FUNCTION *)const_b)->bytecode_offset
-                 ? -1 : 0;
+                 ? -1 : 1;
 
         case KOS_COMP_CONST_PROTOTYPE:
-            return const_a->index < const_b->index ? -1 : 0;
+            return const_a->index < const_b->index ? -1 : 1;
     }
 }
 
@@ -3589,7 +3589,7 @@ static int maybe_int(const KOS_AST_NODE *node,
         *value = numeric.u.i;
     else {
         assert(numeric.type == KOS_FLOAT_VALUE);
-        if (numeric.u.d > (double)INT64_MAX)
+        if (numeric.u.d >= (double)INT64_MAX)
             *value = INT64_MAX;
         else if (numeric.u.d < (double)INT64_MIN)
             *value = INT64_MIN;

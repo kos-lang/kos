@@ -1656,7 +1656,7 @@ static KOS_OBJ_ID set_file_size(const KOS_CONTEXT             ctx,
     if (ftruncate(fileno(get_file(file_holder)), (off_t)size)) {
         const int stored_errno = errno;
         KOS_resume_context(ctx);
-        KOS_raise_errno_value(ctx, "fseek", stored_errno);
+        KOS_raise_errno_value(ctx, "ftruncate", stored_errno);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 #endif

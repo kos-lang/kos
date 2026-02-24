@@ -1228,20 +1228,24 @@ static int write_buffer(KOS_CONTEXT ctx, KOS_OBJ_ID objptr, int idx, KOS_OBJ_ID 
 
     TRY(KOS_get_integer(ctx, value, &byte_value));
 
-    if (byte_value < 0 || byte_value > 255)
+    if (byte_value < 0 || byte_value > 255) {
         RAISE_EXCEPTION_STR(str_err_invalid_byte_value);
+        return KOS_ERROR_EXCEPTION;
+    }
 
     size = KOS_get_buffer_size(objptr);
 
     if (idx < 0)
         idx += (int)size;
 
-    if ((uint32_t)idx >= size)
+    if ((uint32_t)idx >= size) {
         RAISE_EXCEPTION_STR(str_err_invalid_index);
+        return KOS_ERROR_EXCEPTION;
+    }
     else {
         uint8_t *const buf = KOS_buffer_data_volatile(ctx, objptr);
         if ( ! buf)
-            goto cleanup;
+            return KOS_ERROR_EXCEPTION;
         buf[idx] = (uint8_t)byte_value;
     }
 
