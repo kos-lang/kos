@@ -3,6 +3,7 @@
  */
 
 #include "../inc/kos_buffer.h"
+#include "../inc/kos_constants.h"
 #include "../inc/kos_error.h"
 #include "../inc/kos_utils.h"
 #include "kos_heap.h"
@@ -19,7 +20,7 @@ KOS_DECLARE_STATIC_CONST_STRING(str_err_read_only,        "buffer is read-only")
 
 #define KOS_buffer_alloc_size(cap) (sizeof(KOS_BUFFER_STORAGE) + ((cap) - 1U))
 
-static KOS_BUFFER_STORAGE *alloc_buffer(KOS_CONTEXT ctx, unsigned capacity)
+static KOS_BUFFER_STORAGE *alloc_buffer(KOS_CONTEXT ctx, uint32_t capacity)
 {
     KOS_BUFFER_STORAGE *const data = (KOS_BUFFER_STORAGE *)
             kos_alloc_object(ctx,
@@ -72,9 +73,9 @@ static KOS_BUFFER_STORAGE *alloc_buffer(KOS_CONTEXT ctx, unsigned capacity)
 }
 
 KOS_OBJ_ID KOS_new_buffer(KOS_CONTEXT ctx,
-                          unsigned    size)
+                          uint32_t    size)
 {
-    const unsigned capacity = (size + (KOS_BUFFER_CAPACITY_ALIGN-1)) & ~(KOS_BUFFER_CAPACITY_ALIGN-1);
+    const uint32_t capacity = KOS_align_up(KOS_min(size, UINT32_MAX - KOS_BUFFER_CAPACITY_ALIGN), KOS_BUFFER_CAPACITY_ALIGN);
     KOS_LOCAL      obj;
 
     KOS_init_local_with(ctx, &obj, OBJID(BUFFER, (KOS_BUFFER *)
@@ -107,7 +108,7 @@ KOS_OBJ_ID KOS_new_buffer(KOS_CONTEXT ctx,
 
 KOS_OBJ_ID KOS_new_external_buffer(KOS_CONTEXT  ctx,
                                    void        *ptr,
-                                   unsigned     size,
+                                   uint32_t     size,
                                    void        *priv,
                                    KOS_FINALIZE finalize)
 {
@@ -128,7 +129,7 @@ KOS_OBJ_ID KOS_new_external_buffer(KOS_CONTEXT  ctx,
         OBJPTR(BUFFER, obj.o)->data  = KOS_BADPTR;
 
         data = (KOS_BUFFER_EXTERNAL_STORAGE *)alloc_buffer(ctx,
-                (unsigned)(sizeof(KOS_BUFFER_EXTERNAL_STORAGE) - sizeof(KOS_BUFFER_STORAGE)));
+                (uint32_t)(sizeof(KOS_BUFFER_EXTERNAL_STORAGE) - sizeof(KOS_BUFFER_STORAGE)));
 
         if (data) {
             KOS_atomic_write_release_ptr(OBJPTR(BUFFER, obj.o)->data,
@@ -160,7 +161,7 @@ static KOS_OBJ_ID get_storage(KOS_OBJ_ID obj_id)
 
 int KOS_buffer_reserve(KOS_CONTEXT ctx,
                        KOS_OBJ_ID  obj_id,
-                       unsigned    new_capacity)
+                       uint32_t    new_capacity)
 {
     KOS_LOCAL obj;
     KOS_LOCAL old_buf;
@@ -170,8 +171,6 @@ int KOS_buffer_reserve(KOS_CONTEXT ctx,
 
     KOS_init_local_with(ctx, &obj, obj_id);
     KOS_init_local(ctx, &old_buf);
-
-    new_capacity = (new_capacity + (KOS_BUFFER_CAPACITY_ALIGN-1)) & ~(KOS_BUFFER_CAPACITY_ALIGN-1);
 
     if (GET_OBJ_TYPE(obj.o) != OBJ_BUFFER)
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_not_buffer));
@@ -186,6 +185,8 @@ int KOS_buffer_reserve(KOS_CONTEXT ctx,
             old_buf.o = get_storage(obj.o);
             capacity  = IS_BAD_PTR(old_buf.o) ? 0
                       : KOS_atomic_read_relaxed_u32(OBJPTR(BUFFER_STORAGE, old_buf.o)->capacity);
+
+            new_capacity = KOS_align_up(KOS_min(new_capacity, UINT32_MAX - KOS_BUFFER_CAPACITY_ALIGN), KOS_BUFFER_CAPACITY_ALIGN);
 
             if (new_capacity > capacity) {
 
@@ -219,7 +220,7 @@ int KOS_buffer_reserve(KOS_CONTEXT ctx,
 
 int KOS_buffer_resize(KOS_CONTEXT ctx,
                       KOS_OBJ_ID  obj_id,
-                      unsigned    size)
+                      uint32_t    size)
 {
     int error = KOS_ERROR_EXCEPTION;
 
@@ -328,7 +329,7 @@ uint8_t *KOS_buffer_data_volatile(KOS_CONTEXT ctx,
 
 uint8_t *KOS_buffer_make_room(KOS_CONTEXT ctx,
                               KOS_OBJ_ID  obj_id,
-                              unsigned    size_delta)
+                              uint32_t    size_delta)
 {
     uint8_t *ret = KOS_NULL;
 

@@ -1489,7 +1489,7 @@ static KOS_OBJ_ID buffer_constructor(const KOS_CONTEXT             ctx,
                             RAISE_EXCEPTION_STR(str_err_invalid_byte_value);
 
                         if (size >= capacity) {
-                            capacity *= 2;
+                            capacity = (capacity < UINT32_MAX / 2) ? (capacity * 2) : UINT32_MAX;
                             TRY(KOS_buffer_resize(ctx, buffer.o, capacity));
                         }
 

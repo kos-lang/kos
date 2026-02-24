@@ -57,29 +57,29 @@ extern "C" {
 
 KOS_API
 KOS_OBJ_ID KOS_new_buffer(KOS_CONTEXT ctx,
-                          unsigned    size);
+                          uint32_t    size);
 
 KOS_API
 KOS_OBJ_ID KOS_new_external_buffer(KOS_CONTEXT  ctx,
                                    void        *ptr,
-                                   unsigned     size,
+                                   uint32_t     size,
                                    void        *priv,
                                    KOS_FINALIZE finalize);
 
 KOS_API
 int KOS_buffer_reserve(KOS_CONTEXT ctx,
                        KOS_OBJ_ID  obj_id,
-                       unsigned    new_capacity);
+                       uint32_t    new_capacity);
 
 KOS_API
 int KOS_buffer_resize(KOS_CONTEXT ctx,
                       KOS_OBJ_ID  obj_id,
-                      unsigned    size);
+                      uint32_t    size);
 
 KOS_API
 uint8_t *KOS_buffer_make_room(KOS_CONTEXT ctx,
                               KOS_OBJ_ID  obj_id,
-                              unsigned    size_delta);
+                              uint32_t    size_delta);
 
 KOS_API
 uint8_t *KOS_buffer_data(KOS_CONTEXT ctx,
