@@ -70,6 +70,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: Out/debug/kos.info
+          fail-on-error: false
 
   windows:
     strategy:
