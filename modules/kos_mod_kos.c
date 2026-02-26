@@ -494,7 +494,7 @@ static KOS_OBJ_ID execute(const KOS_CONTEXT             ctx,
     KOS_vector_init(&name_cstr);
     KOS_vector_init(&data_cstr);
 
-    assert(num_args > 1);
+    assert(num_args > 2);
 
     if (args[2] == KOS_TRUE)
         flags |= KOS_IMPORT_BASE;

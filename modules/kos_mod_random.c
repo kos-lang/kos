@@ -222,7 +222,7 @@ static KOS_OBJ_ID rand_integer(const KOS_CONTEXT             ctx,
     if (args[0] != KOS_VOID)
         value = min_value +
             (int64_t)kos_rng_random_range(&rng->rng,
-                                          (uint64_t)(max_value - min_value));
+                                          (uint64_t)max_value - (uint64_t)min_value);
     else
         value = (int64_t)kos_rng_random(&rng->rng);
 

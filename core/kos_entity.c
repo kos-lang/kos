@@ -383,7 +383,7 @@ unsigned KOS_function_addr_to_line(KOS_OBJ_ID func_obj,
             while (ptr < end && offs > ptr->offs)
                 ptr++;
 
-            if (ptr >= end || offs < ptr->offs)
+            if (ptr >= end || (offs < ptr->offs && ptr > (const KOS_LINE_ADDR *)&bytecode->bytecode[bytecode->addr2line_offset]))
                 ptr--;
 
             if (ptr < end) {
