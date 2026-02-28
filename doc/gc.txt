@@ -35,7 +35,7 @@ Collector algorithm
 1. Paint all nodes white.
 2. Paint root nodes black.
 3. Paint all direct children of root nodes gray.
-4. For all gray nodes, paint their white chidren gray.  Repeat until no gray
+4. For all gray nodes, paint their white children gray.  Repeat until no gray
    nodes are left.
 5. Recycle remaining white nodes.
 

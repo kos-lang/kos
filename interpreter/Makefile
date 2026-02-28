@@ -31,12 +31,12 @@ ifdef tracy
 endif
 
 install: $(kos_exe) $(wildcard ../modules/*.kos)
-	@./install.sh $(out_dir_base) $(destdir)
+	@./install.sh $(out_dir_base) $(prefix)
 
 ifeq ($(UNAME), Windows)
-destdir ?= c:/Program\ Files
+prefix ?= c:/Program\ Files
 else
-destdir ?= /usr
+prefix ?= /usr
 endif
 
 .PHONY: install

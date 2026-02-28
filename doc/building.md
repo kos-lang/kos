@@ -15,10 +15,11 @@ available CPUs or CPU cores).  For example:
 
     make -j 2
 
-It is also recommended to test whether the build works correctly, by running
-the Kos test suite:
+This will by default make the full debug build and run all the test.
 
-    make test
+If you prefer to make a release build, run this instead:
+
+    make debug=0
 
 Note: Kos Makefiles use GNU make.  On some Operating Systems, like FreeBSD, you
 need to invoke `gmake` instead of `make`.
@@ -37,19 +38,24 @@ to run `make` with `sudo`:
     sudo make install
 
 To specify a different installation directory than the default, especially
-when only installing for the current user, use the `destdir` variable,
+when only installing for the current user, use the `prefix` variable,
 like so:
 
-    make install destdir=../mydir
+    make install prefix=/usr/local
 
 Both absolute and relative directories are supported.  If directory names
 contain spaces, double quotes must be used and the spaces must be escaped
 with a backslash:
 
-    make install "destdir=../my\ dir"
+    make install "prefix=../my\ dir"
 
-The Kos executable is installed in `$destdir/bin` and Kos modules are installed
-in `$destdir/share/kos/modules`.
+The Kos executable is installed in `$prefix/bin` and Kos modules are installed
+in `$prefix/share/kos/modules`.
+
+If you want to build Kos without running tests (e.g. when cross-compiling),
+use the `build` target:
+
+    make build
 
 Finally, if Kos is installed in non-default directory, the PATH environment
 variable must be updated in shell startup scripts to point to the Kos
@@ -79,7 +85,7 @@ above path to match the actual location of the `vcvarsall.bat` script.
 After setting up the environment like above, run MSYS2 or Cygwin bash
 prompt and then run `make`.
 
-When installing Kos on Windows from sources, `destdir` defaults to `C:\Program Files`
+When installing Kos on Windows from sources, `prefix` defaults to `C:\Program Files`
 directory, Kos executable is installed in `C:\Program Files\Kos` and
 modules are installed in `C:\Program Files\Kos\modules`.
 
@@ -105,8 +111,8 @@ Optional configuration
 These optional settings can be either passed to make on the command line or
 set as environment variables:
 
-* **debug=1** - Enables debug build (default is release).
+* **debug=0** - Enables release build (default is debug).
 * **strict=1** - Enables strict warnings, treats warnings as errors.
 * **native=1** - (Non-Windows platforms) Enables optimizations for the
 current system; the produced executables may not work on other, older systems.
-* **destdir=path** - Specifies installation directory, relative or absolute.
+* **prefix=path** - Specifies installation directory, relative or absolute.
