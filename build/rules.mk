@@ -459,7 +459,7 @@ else #------------------------------------------------------------------------
 define LINK_EXE
 $(out_dir)/$1$(exe_suffix): $$(call OBJECTS_FROM_SOURCES,$3) $4
 	@echo Link $(out_dir_rel)/$1$(exe_suffix)
-	@$($2) $$^ -o $$@ $4 $$(EXE_LDFLAGS) $$(LDFLAGS)
+	@$($2) $$^ -o $$@ $$(EXE_LDFLAGS) $$(LDFLAGS)
 	@$(STRIP) $$@
 endef
 
