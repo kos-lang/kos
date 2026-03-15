@@ -216,8 +216,8 @@ struct RE_CLASS_DESC {
 };
 
 struct RE_CLASS_RANGE {
-    uint32_t begin_code;
-    uint32_t end_code;
+    uint32_t begin_code; /* Code of the first character in this range */
+    uint32_t bitmap[4];  /* Bits in this bitmap indicate if subsequent codes belong to this range */
 };
 
 struct RE_OBJ {
@@ -559,126 +559,80 @@ static int add_class_range(struct RE_PARSE_CTX *re_ctx,
                            uint32_t             begin_code,
                            uint32_t             end_code)
 {
-    struct RE_CLASS_DESC  *desc = (struct RE_CLASS_DESC *)re_ctx->class_descs.buffer + class_id;
-    struct RE_CLASS_RANGE *range;
-    size_t                 begin;
-    size_t                 end;
-    const size_t           old_size = re_ctx->class_data.size;
-    const size_t           new_size = old_size + sizeof(struct RE_CLASS_RANGE);
-    const int              error    = KOS_vector_resize(&re_ctx->class_data, new_size);
+    struct RE_CLASS_DESC *desc = (struct RE_CLASS_DESC *)re_ctx->class_descs.buffer + class_id;
 
     assert(class_id == (re_ctx->class_descs.size / sizeof(struct RE_CLASS_DESC)) - 1);
-
-    if (error) {
-        KOS_raise_exception(re_ctx->ctx, KOS_STR_OUT_OF_MEMORY);
-        return KOS_ERROR_EXCEPTION;
-    }
-
     assert(begin_code <= end_code);
 
-    range = (struct RE_CLASS_RANGE *)re_ctx->class_data.buffer + desc->begin_idx;
-    begin = 0;
-    end   = desc->num_ranges;
+    /* Insert each contiguous 128-bit sequence of codes into a range */
+    while (begin_code <= end_code) {
+        struct RE_CLASS_RANGE* range = (struct RE_CLASS_RANGE *)re_ctx->class_data.buffer + desc->begin_idx;
 
-    assert((char *)(range + end + 1) == re_ctx->class_data.buffer + re_ctx->class_data.size);
+        const uint32_t range_shift  = 7;
+        const uint32_t range_size   = 1U << range_shift;
+        const uint32_t range_mask   = range_size - 1U;
+        uint32_t       num_ranges   = desc->num_ranges;
+        const uint32_t cur_end_code = KOS_min(end_code, (begin_code & ~range_mask) + range_mask);
 
-    while (begin < end) {
+        assert(sizeof(range->bitmap) * 8 == range_size);
 
-        const size_t   mid      = (begin + end) / 2;
-        const uint32_t mid_code = range[mid].begin_code;
-
-        assert(mid < end);
-
-        if (begin_code == mid_code) {
-            begin = mid;
-            end   = mid;
-            break;
+        /* Find existing range in which the current sequence of codes can fit */
+        for ( ; num_ranges; --num_ranges, ++range) {
+            if (begin_code < range->begin_code + range_size && cur_end_code >= range->begin_code)
+                break;
         }
 
-        if (begin_code < mid_code)
-            end = mid;
-        else
-            begin = mid + 1;
-    }
+        /* If an existing range for the current codes wasn't found, create a new one */
+        if ( ! num_ranges) {
+            const size_t old_size = re_ctx->class_data.size;
+            const size_t new_size = old_size + sizeof(struct RE_CLASS_RANGE);
+            const int    error    = KOS_vector_resize(&re_ctx->class_data, new_size);
 
-    if (begin == desc->num_ranges) {
-
-        if (desc->num_ranges) {
-
-            range += desc->num_ranges - 1;
-
-            assert(begin_code > range->begin_code);
-
-            if (begin_code <= range->end_code + 1) {
-
-                if (end_code > range->end_code)
-                    range->end_code = end_code;
-
-                return KOS_vector_resize(&re_ctx->class_data, old_size);
+            if (error) {
+                KOS_raise_exception(re_ctx->ctx, KOS_STR_OUT_OF_MEMORY);
+                return KOS_ERROR_EXCEPTION;
             }
 
-            ++range;
+            range = (struct RE_CLASS_RANGE *)re_ctx->class_data.buffer + desc->begin_idx;
+
+            assert((char *)(range + desc->num_ranges + 1) == re_ctx->class_data.buffer + re_ctx->class_data.size);
+
+            range += desc->num_ranges;
+            ++desc->num_ranges;
+
+            range->begin_code = begin_code & ~range_mask;
+            memset(range->bitmap, 0, sizeof(range->bitmap));
         }
 
-        ++desc->num_ranges;
+        /* Set the codes in the current range */
+        {
+            const uint32_t slot_shift = 5;
+            const uint32_t slot_mask  = (1U << slot_shift) - 1U;
 
-        range->begin_code = begin_code;
-        range->end_code   = end_code;
+            const uint32_t begin_code_offs = begin_code - range->begin_code;
+            const uint32_t end_code_offs   = cur_end_code - range->begin_code;
 
-        return KOS_SUCCESS;
+            const uint32_t begin_slot = begin_code_offs >> slot_shift;
+            const uint32_t last_slot  = end_code_offs >> slot_shift;
+
+            uint32_t slot_idx;
+
+            assert(sizeof(range->bitmap[0]) * 8 == 1U << slot_shift);
+
+            for (slot_idx = begin_slot; slot_idx <= last_slot; slot_idx++) {
+                uint32_t bitmask = ~0U;
+
+                if (slot_idx == begin_slot)
+                    bitmask <<= begin_code_offs & slot_mask;
+                if (slot_idx == last_slot)
+                    bitmask &= ~0U >> (slot_mask - (end_code_offs & slot_mask));
+
+                range->bitmap[slot_idx] |= bitmask;
+            }
+        }
+
+        begin_code = cur_end_code + 1;
     }
-
-    assert(begin_code <= range[begin].begin_code);
-
-    if (begin && (begin_code <= range[begin - 1].end_code + 1))
-        range[--begin].end_code = end_code;
-
-    for ( ; end < desc->num_ranges; ++end)
-        if (end_code + 1 < range[end].begin_code)
-            break;
-
-    if (begin < end) {
-
-        struct RE_CLASS_RANGE *joined_range  = &range[begin];
-        const uint32_t         last_end_code = range[end - 1].end_code;
-        const size_t           num_to_delete = end - begin - 1;
-
-        if (begin_code < joined_range->begin_code)
-            joined_range->begin_code = begin_code;
-
-        if (last_end_code > end_code)
-            end_code = last_end_code;
-
-        if (end_code > joined_range->end_code)
-            joined_range->end_code = end_code;
-
-        if (num_to_delete && (end < desc->num_ranges))
-            memmove((void *)(joined_range + 1),
-                    (void *)&range[end],
-                    (desc->num_ranges - end) * sizeof(struct RE_CLASS_RANGE));
-
-        assert(num_to_delete < desc->num_ranges);
-
-        desc->num_ranges -= (uint16_t)num_to_delete;
-
-        return KOS_vector_resize(&re_ctx->class_data,
-                                 old_size - num_to_delete * sizeof(struct RE_CLASS_RANGE));
-    }
-
-    assert(begin == end);
-    assert(begin < desc->num_ranges);
-    assert(end_code + 1 < range[begin].begin_code);
-
-    range += begin;
-
-    memmove((void *)(range + 1),
-            (void *)range,
-            (desc->num_ranges - end) * sizeof(struct RE_CLASS_RANGE));
-
-    range->begin_code = begin_code;
-    range->end_code   = end_code;
-
-    ++desc->num_ranges;
 
     return KOS_SUCCESS;
 }
@@ -1510,30 +1464,37 @@ static int match_class(uint32_t             code,
 {
     struct RE_CLASS_DESC   class_desc;
     struct RE_CLASS_RANGE *range;
-    uint32_t               begin = 0;
-    uint32_t               end;
+    uint32_t               num_ranges;
+    uint32_t               i          = 0;
+    const uint32_t         slot_shift = 5;
 
     assert(class_id < re->num_classes);
 
     class_desc = re->class_descs[class_id];
 
-    range = re->class_data + class_desc.begin_idx;
-    end   = class_desc.num_ranges;
+    range      = re->class_data + class_desc.begin_idx;
+    num_ranges = class_desc.num_ranges;
 
-    assert(end);
+    assert(num_ranges);
 
-    do {
-        const uint32_t mid = (begin + end) / 2;
+    for (; i < num_ranges; i++) {
 
-        assert(mid < end);
+        const uint32_t begin_code = range[i].begin_code;
+        uint32_t       code_offs;
+        uint32_t       slot_idx;
+        uint32_t       bit;
 
-        if (code < range[mid].begin_code)
-            end = mid;
-        else if (code > range[mid].end_code)
-            begin = mid + 1;
-        else
+        if (code < begin_code || code >= begin_code + sizeof(range[i].bitmap) * 8)
+            continue;
+
+        assert(1U << slot_shift == sizeof(range[i].bitmap[0]) * 8);
+        code_offs = code - begin_code;
+        slot_idx = code_offs >> slot_shift;
+        bit      = code_offs & ((1U << slot_shift) - 1U);
+
+        if (range[i].bitmap[slot_idx] & (1U << bit))
             return 1;
-    } while (begin < end);
+    }
 
     return 0;
 }
