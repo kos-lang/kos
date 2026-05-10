@@ -1,5 +1,5 @@
-_kos_call_function
 _KOS_append_cstr
+_KOS_apply_function
 _KOS_array_cas
 _KOS_array_fill
 _KOS_array_insert
@@ -19,6 +19,8 @@ _KOS_buffer_make_room
 _KOS_buffer_reserve
 _KOS_buffer_resize
 _KOS_buffer_slice
+_KOS_call_function
+_KOS_call_generator
 _KOS_clear_ctrl_c_event
 _KOS_collect_garbage
 _KOS_compare

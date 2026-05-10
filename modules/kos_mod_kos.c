@@ -270,7 +270,7 @@ static KOS_OBJ_ID raw_lexer(const KOS_CONTEXT             ctx,
             TRY_OBJID(init.o);
         }
 
-        value.o = KOS_call_generator(ctx, init.o, KOS_VOID, KOS_EMPTY_ARRAY);
+        value.o = KOS_call_generator(ctx, init.o);
         if (IS_BAD_PTR(value.o)) { /* end of iterator */
             if (KOS_is_exception_pending(ctx))
                 RAISE_ERROR(KOS_ERROR_EXCEPTION);

@@ -3777,11 +3777,17 @@ handle_return:
 #endif
 }
 
-KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
-                             KOS_OBJ_ID             func_obj,
-                             KOS_OBJ_ID             this_obj,
-                             KOS_OBJ_ID             args_obj,
-                             enum KOS_CALL_FLAVOR_E call_flavor)
+enum KOS_CALL_FLAVOR_E {
+    KOS_CALL_FUNCTION,
+    KOS_CALL_GENERATOR,
+    KOS_APPLY_FUNCTION
+};
+
+static KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
+                                    KOS_OBJ_ID             func_obj,
+                                    KOS_OBJ_ID             this_obj,
+                                    KOS_OBJ_ID             args_obj,
+                                    enum KOS_CALL_FLAVOR_E call_flavor)
 {
     int                error  = KOS_SUCCESS;
     KOS_TYPE           type;
@@ -3876,6 +3882,27 @@ KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
     ret.o = KOS_destroy_top_locals(ctx, &func, &ret);
 
     return error ? KOS_BADPTR : ret.o;
+}
+
+KOS_OBJ_ID KOS_call_function(KOS_CONTEXT ctx,
+                             KOS_OBJ_ID  func_obj,
+                             KOS_OBJ_ID  this_obj,
+                             KOS_OBJ_ID  args_obj)
+{
+    return kos_call_function(ctx, func_obj, this_obj, args_obj, KOS_CALL_FUNCTION);
+}
+
+KOS_OBJ_ID KOS_apply_function(KOS_CONTEXT ctx,
+                              KOS_OBJ_ID  func_obj,
+                              KOS_OBJ_ID  this_obj,
+                              KOS_OBJ_ID  args_obj)
+{
+    return kos_call_function(ctx, func_obj, this_obj, args_obj, KOS_APPLY_FUNCTION);
+}
+
+KOS_OBJ_ID KOS_call_generator(KOS_CONTEXT ctx, KOS_OBJ_ID func_obj)
+{
+    return kos_call_function(ctx, func_obj, KOS_VOID, KOS_EMPTY_ARRAY, KOS_CALL_GENERATOR);
 }
 
 KOS_OBJ_ID KOS_run_module(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)

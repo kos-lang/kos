@@ -8,6 +8,8 @@
 #include "../inc/kos_entity.h"
 #include <stddef.h>
 
+struct KOS_PAGE_HEADER_S;
+
 typedef enum KOS_ALLOC_FLAG_E {
     KOS_ALLOC_MOVABLE,
     KOS_ALLOC_IMMOVABLE
@@ -42,6 +44,10 @@ void *kos_alloc_object_page(KOS_CONTEXT ctx,
 void kos_heap_release_thread_page(KOS_CONTEXT ctx);
 
 void kos_print_heap(KOS_CONTEXT ctx);
+
+void kos_heap_dump(KOS_CONTEXT ctx);
+
+void kos_heap_dump_page(struct KOS_PAGE_HEADER_S *page);
 
 #ifdef CONFIG_MAD_GC
 int kos_trigger_mad_gc(KOS_CONTEXT ctx);

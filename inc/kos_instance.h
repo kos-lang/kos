@@ -340,27 +340,28 @@ KOS_OBJ_ID KOS_format_exception(KOS_CONTEXT ctx,
 KOS_API
 void KOS_raise_generator_end(KOS_CONTEXT ctx);
 
-enum KOS_CALL_FLAVOR_E {
-    KOS_CALL_FUNCTION,
-    KOS_CALL_GENERATOR,
-    KOS_APPLY_FUNCTION
-};
-
 KOS_API
-KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
-                             KOS_OBJ_ID             func_obj,
-                             KOS_OBJ_ID             this_obj,
-                             KOS_OBJ_ID             args_obj,
-                             enum KOS_CALL_FLAVOR_E call_flavor);
+KOS_OBJ_ID KOS_call_function(KOS_CONTEXT ctx,
+                             KOS_OBJ_ID  func_obj,
+                             KOS_OBJ_ID  this_obj,
+                             KOS_OBJ_ID  args_obj);
 
-#define KOS_call_function(ctx, func_obj, this_obj, args_obj) \
-    kos_call_function((ctx), (func_obj), (this_obj), (args_obj), KOS_CALL_FUNCTION)
+/* This is like KOS_call_function().  If that function is a class constructor, it will construct
+ * the object with `this` passed in the call if it is non-void.  This is used primarily by
+ * function.prototype.apply().
+ */
+KOS_API
+KOS_OBJ_ID KOS_apply_function(KOS_CONTEXT ctx,
+                              KOS_OBJ_ID  func_obj,
+                              KOS_OBJ_ID  this_obj,
+                              KOS_OBJ_ID  args_obj);
 
-#define KOS_call_generator(ctx, func_obj, this_obj, args_obj) \
-    kos_call_function((ctx), (func_obj), (this_obj), (args_obj), KOS_CALL_GENERATOR)
-
-#define KOS_apply_function(ctx, func_obj, this_obj, args_obj) \
-    kos_call_function((ctx), (func_obj), (this_obj), (args_obj), KOS_APPLY_FUNCTION)
+/* This is like KOS_call_function(), it calls the function with this=void and empty argument list.
+ * If the object is an instantiated generator and it throws generator_end exception, this function
+ * suppresses the exception, but still returns KOS_BAD_PTR.
+ */
+KOS_API
+KOS_OBJ_ID KOS_call_generator(KOS_CONTEXT ctx, KOS_OBJ_ID func_obj);
 
 KOS_API
 void KOS_init_local_with(KOS_CONTEXT ctx, KOS_LOCAL *local, KOS_OBJ_ID obj_id);

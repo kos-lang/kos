@@ -1225,6 +1225,566 @@ void kos_print_heap(KOS_CONTEXT ctx)
     kos_unlock_mutex(heap->mutex);
 }
 
+enum KOS_MARK_STATE_E {
+    WHITE     = 0,
+    GRAY      = 1,
+    BLACK     = 2,
+    COLORMASK = 3
+};
+
+/* ========================================================================= */
+/* Heap visualization                                                        */
+/* ========================================================================= */
+
+static const char *gc_state_name(uint32_t state)
+{
+    switch (state) {
+        case GC_INACTIVE: return "INACTIVE";
+        case GC_INIT:     return "INIT";
+        case GC_MARK:     return "MARK";
+        case GC_EVACUATE: return "EVACUATE";
+        case GC_UPDATE:   return "UPDATE";
+        default:          return "?";
+    }
+}
+
+static char type_letter(KOS_TYPE type)
+{
+    switch (type) {
+        case OBJ_INTEGER:        return 'I';
+        case OBJ_FLOAT:          return 'F';
+        case OBJ_VOID:           return 'V';
+        case OBJ_BOOLEAN:        return 'L';
+        case OBJ_STRING:         return 'S';
+        case OBJ_OBJECT:         return 'O';
+        case OBJ_ARRAY:          return 'A';
+        case OBJ_BUFFER:         return 'B';
+        case OBJ_FUNCTION:       return 'f';
+        case OBJ_CLASS:          return 'C';
+        case OBJ_MODULE:         return 'M';
+        case OBJ_OPAQUE:         return 'X';
+        case OBJ_HUGE_TRACKER:   return 'H';
+        case OBJ_OBJECT_STORAGE: return 'T';
+        case OBJ_ARRAY_STORAGE:  return 'a';
+        case OBJ_BUFFER_STORAGE: return 'b';
+        case OBJ_DYNAMIC_PROP:   return 'D';
+        case OBJ_ITERATOR:       return 'N';
+        case OBJ_STACK:          return 'K';
+        default:                 return '?';
+    }
+}
+
+static const char *type_abbrev(KOS_TYPE type)
+{
+    switch (type) {
+        case OBJ_INTEGER:        return "int";
+        case OBJ_FLOAT:          return "flt";
+        case OBJ_VOID:           return "voi";
+        case OBJ_BOOLEAN:        return "boo";
+        case OBJ_STRING:         return "str";
+        case OBJ_OBJECT:         return "obj";
+        case OBJ_ARRAY:          return "arr";
+        case OBJ_BUFFER:         return "buf";
+        case OBJ_FUNCTION:       return "fun";
+        case OBJ_CLASS:          return "cls";
+        case OBJ_MODULE:         return "mod";
+        case OBJ_OPAQUE:         return "opq";
+        case OBJ_HUGE_TRACKER:   return "hug";
+        case OBJ_OBJECT_STORAGE: return "sto";
+        case OBJ_ARRAY_STORAGE:  return "ast";
+        case OBJ_BUFFER_STORAGE: return "bst";
+        case OBJ_DYNAMIC_PROP:   return "dyn";
+        case OBJ_ITERATOR:       return "itr";
+        case OBJ_STACK:          return "stk";
+        default:                 return "???";
+    }
+}
+
+/* Read the 2-bit mark color for a slot from the page bitmap. */
+static uint32_t read_slot_color(KOS_PAGE *page, uint32_t slot_idx)
+{
+    const uint32_t *bitmap = (const uint32_t *)((uint8_t *)page + KOS_BITMAP_OFFS);
+    const uint32_t  word   = bitmap[slot_idx >> 4];
+    const uint32_t  shift  = (slot_idx & 0xFU) * 2;
+
+    return (word >> shift) & COLORMASK;
+}
+
+static void dump_set_color(int tty, uint32_t mark_color)
+{
+    if ( ! tty)
+        return;
+
+    switch (mark_color) {
+        case BLACK: fputs("\033[32m", stderr); break;
+        case GRAY:  fputs("\033[33m", stderr); break;
+        case WHITE: fputs("\033[31m", stderr); break;
+        default:    fputs("\033[90m", stderr); break;
+    }
+}
+
+static void dump_reset(int tty)
+{
+    if (tty)
+        fputs("\033[0m", stderr);
+}
+
+static void dump_dim(int tty)
+{
+    if (tty)
+        fputs("\033[90m", stderr);
+}
+
+/* Print a box-drawing character, falling back to ASCII when not a TTY. */
+static void dump_str(int tty, const char *unicode_str, const char *ascii_str)
+{
+    fputs(tty ? unicode_str : ascii_str, stderr);
+}
+
+/* Print a horizontal rule of a given width using box-drawing chars. */
+static void dump_hline(int tty, const char *left, const char *mid, const char *right,
+                       const char *al, const char *am, const char *ar,
+                       unsigned width)
+{
+    unsigned i;
+
+    dump_dim(tty);
+    dump_str(tty, left, al);
+    for (i = 0; i < width; i++)
+        dump_str(tty, mid, am);
+    dump_str(tty, right, ar);
+    dump_reset(tty);
+    fputc('\n', stderr);
+}
+
+static void dump_top_border(int tty, unsigned width)
+{
+    dump_hline(tty,
+               "\xe2\x95\x94", "\xe2\x95\x90", "\xe2\x95\x97",  /* top-left, horiz, top-right */
+               "+", "-", "+",
+               width);
+}
+
+static void dump_mid_border(int tty, unsigned width)
+{
+    dump_hline(tty,
+               "\xe2\x95\xa0", "\xe2\x95\x90", "\xe2\x95\xa3",  /* left-tee, horiz, right-tee */
+               "+", "-", "+",
+               width);
+}
+
+static void dump_bot_border(int tty, unsigned width)
+{
+    dump_hline(tty,
+               "\xe2\x95\x9a", "\xe2\x95\x90", "\xe2\x95\x9d",  /* bot-left, horiz, bot-right */
+               "+", "-", "+",
+               width);
+}
+
+/* Print left border + space. */
+static void dump_row_start(int tty)
+{
+    dump_dim(tty);
+    dump_str(tty, "\xe2\x95\x91", "|");  /* double vertical */
+    dump_reset(tty);
+    fputc(' ', stderr);
+}
+
+/* Print space + right border + newline.  pad fills remaining width. */
+static void dump_row_end(int tty, unsigned used, unsigned width)
+{
+    unsigned i;
+
+    for (i = used; i + 2 < width; i++)
+        fputc(' ', stderr);
+
+    fputc(' ', stderr);
+    dump_dim(tty);
+    dump_str(tty, "\xe2\x95\x91", "|");  /* double vertical */
+    dump_reset(tty);
+    fputc('\n', stderr);
+}
+
+/* Note: this function does not acquire any lock.  It is intended to be
+ * called from a debugger or from within GC code where the heap mutex is
+ * already held.  Do not call while another thread may be allocating on
+ * the same page.  Do not call during GC evacuation -- the object headers
+ * may contain forwarding pointers instead of type/size information. */
+void kos_heap_dump_page(struct KOS_PAGE_HEADER_S *page)
+{
+    const int      tty           = KOS_is_file_interactive(stderr);
+    const uint32_t num_allocated = KOS_atomic_read_relaxed_u32(page->num_allocated);
+    const unsigned box_width     = (KOS_SLOTS_PER_PAGE > 78) ? KOS_SLOTS_PER_PAGE + 2 : 80;
+    uint8_t       *slots_base    = (uint8_t *)get_slots(page);
+    uint32_t       slot_idx      = 0;
+    uint32_t       prev_color    = ~0U;
+    unsigned       printed;
+    char           line_buf[256];
+
+    dump_top_border(tty, box_width);
+
+    /* Header */
+    dump_row_start(tty);
+    printed = (unsigned)snprintf(line_buf, sizeof(line_buf),
+                                 "Page %p  %u/%u slots",
+                                 (void *)page, num_allocated,
+                                 (unsigned)KOS_SLOTS_PER_PAGE);
+    fputs(line_buf, stderr);
+    dump_row_end(tty, printed, box_width);
+
+    dump_mid_border(tty, box_width);
+
+    /* Slot map */
+    dump_row_start(tty);
+    printed = 0;
+
+    while (slot_idx < num_allocated) {
+
+        KOS_OBJ_HEADER *const hdr   = (KOS_OBJ_HEADER *)(slots_base + ((size_t)slot_idx << KOS_OBJ_ALIGN_BITS));
+        const KOS_TYPE        type  = kos_get_object_type(*hdr);
+        const uint32_t        size  = kos_get_object_size(*hdr);
+        const uint32_t        slots = size >> KOS_OBJ_ALIGN_BITS;
+        const uint32_t        color = read_slot_color(page, slot_idx);
+        uint32_t              s;
+
+        if (slots == 0 || slot_idx + slots > num_allocated)
+            break;
+
+        /* Switch color only when it changes */
+        if (color != prev_color) {
+            if (prev_color != ~0U)
+                dump_reset(tty);
+            dump_set_color(tty, color);
+            prev_color = color;
+        }
+
+        /* First slot: type letter */
+        if (tty) {
+            fputc(type_letter(type), stderr);
+        }
+        else {
+            /* No TTY: uppercase=black, lowercase=gray, digit=white */
+            char ch = type_letter(type);
+            if (color == GRAY && ch >= 'A' && ch <= 'Z')
+                ch = (char)(ch + ('a' - 'A'));
+            else if (color == WHITE)
+                ch = (char)((type >> 1) % 10 + '0');
+            fputc(ch, stderr);
+        }
+        ++printed;
+
+        /* Continuation slots */
+        for (s = 1; s < slots; s++) {
+            fputc('~', stderr);
+            ++printed;
+        }
+
+        slot_idx += slots;
+    }
+
+    if (prev_color != ~0U)
+        dump_reset(tty);
+
+    /* Free slots */
+    if (slot_idx < KOS_SLOTS_PER_PAGE) {
+        dump_dim(tty);
+        while (slot_idx < KOS_SLOTS_PER_PAGE) {
+            dump_str(tty, "\xc2\xb7", ".");  /* middle dot or period */
+            ++printed;
+            ++slot_idx;
+        }
+        dump_reset(tty);
+    }
+
+    dump_row_end(tty, printed, box_width);
+
+    dump_mid_border(tty, box_width);
+
+    /* Legend: mark colors */
+    dump_row_start(tty);
+    if (tty) {
+        fputs("\033[32m" "\xe2\x96\x88" "\033[0m" "=black  "
+              "\033[33m" "\xe2\x96\x88" "\033[0m" "=gray  "
+              "\033[31m" "\xe2\x96\x88" "\033[0m" "=white  "
+              "\033[90m" "\xc2\xb7" "\033[0m" "=free", stderr);
+        printed = 32;  /* 4 items: "X=XXXXX  " visible chars */
+    }
+    else {
+        fputs("UPPER=black  lower=gray  digit=white  .=free", stderr);
+        printed = 45;
+    }
+    dump_row_end(tty, printed, box_width);
+
+    /* Legend: type letters */
+    dump_row_start(tty);
+    printed = (unsigned)snprintf(line_buf, sizeof(line_buf),
+        "I=int F=flt V=voi L=boo S=str O=obj A=arr B=buf "
+        "f=fun C=cls M=mod K=stk T=sto a=ast b=bst X=opq H=hug D=dyn N=itr");
+    fputs(line_buf, stderr);
+    dump_row_end(tty, printed, box_width);
+
+    dump_bot_border(tty, box_width);
+}
+
+#define MAX_DUMP_TYPES 5  /* Max type counts shown per page row */
+
+void kos_heap_dump(KOS_CONTEXT ctx)
+{
+    const int            tty  = KOS_is_file_interactive(stderr);
+    KOS_INSTANCE  *const inst = ctx->inst;
+    KOS_HEAP      *const heap = get_heap(ctx);
+    KOS_PAGE            *page;
+    unsigned             num_used_pages  = 0;
+    unsigned             num_free_pages  = 0;
+    unsigned             total_black     = 0;
+    unsigned             total_gray      = 0;
+    unsigned             total_white     = 0;
+    /* Page row: prefix + KOS_SLOTS_PER_PAGE color bar + margins */
+    const unsigned       bar_prefix      = 32;
+    const unsigned       min_width       = bar_prefix + KOS_SLOTS_PER_PAGE + 2;
+    const unsigned       box_width       = (min_width > 80) ? min_width : 80;
+    char                 line_buf[256];
+    unsigned             printed;
+
+    kos_lock_mutex(heap->mutex);
+
+    dump_top_border(tty, box_width);
+
+    /* Header */
+    {
+        const uint32_t gc_state = KOS_atomic_read_relaxed_u32(heap->gc_state);
+
+        dump_row_start(tty);
+        printed = (unsigned)snprintf(line_buf, sizeof(line_buf),
+            "Heap Dump  cycle: %u  state: %s  used: %u/%u B  malloc: %u B",
+            heap->gc_cycles, gc_state_name(gc_state),
+            heap->used_heap_size, heap->heap_size, heap->malloc_size);
+        fputs(line_buf, stderr);
+        dump_row_end(tty, printed, box_width);
+    }
+
+    dump_mid_border(tty, box_width);
+
+    /* Walk used pages */
+    page = heap->used_pages.head;
+
+    for ( ; page; page = page->next) {
+
+        const uint32_t num_allocated = KOS_atomic_read_relaxed_u32(page->num_allocated);
+        const int      is_cur        = (page == ctx->cur_page);
+        const char    *prefix        = is_cur ? (tty ? "\xe2\x96\xb8 " : "> ") : "  ";
+        uint8_t       *slots_base    = (uint8_t *)get_slots(page);
+        unsigned       type_counts[(OBJ_LAST_POSSIBLE >> 1) + 1];
+        unsigned       page_black    = 0;
+        unsigned       page_gray     = 0;
+        unsigned       page_white    = 0;
+        uint32_t       slot_idx      = 0;
+        uint32_t       prev_color    = ~0U;
+        unsigned       top_count     = 0;
+        unsigned       pct;
+        unsigned       bar_chars;
+        unsigned       i;
+
+        memset(type_counts, 0, sizeof(type_counts));
+
+        /* Single pass: count types/colors and emit color bar simultaneously */
+        dump_row_start(tty);
+        printed = (unsigned)snprintf(line_buf, sizeof(line_buf),
+            "%s%p  %3u/%u  ",
+            prefix, (void *)page,
+            num_allocated, (unsigned)KOS_SLOTS_PER_PAGE);
+        /* Adjust printed for the UTF-8 arrow (3 bytes, 1 visible char) */
+        if (tty && is_cur)
+            printed -= 2;
+        fputs(line_buf, stderr);
+
+        bar_chars = 0;
+
+        while (slot_idx < num_allocated) {
+
+            KOS_OBJ_HEADER *const hdr   = (KOS_OBJ_HEADER *)(slots_base + ((size_t)slot_idx << KOS_OBJ_ALIGN_BITS));
+            const KOS_TYPE        type  = kos_get_object_type(*hdr);
+            const uint32_t        size  = kos_get_object_size(*hdr);
+            const uint32_t        slots = size >> KOS_OBJ_ALIGN_BITS;
+            const uint32_t        color = read_slot_color(page, slot_idx);
+            uint32_t              s;
+
+            if (slots == 0 || slot_idx + slots > num_allocated)
+                break;
+
+            if ((type >> 1) <= (OBJ_LAST_POSSIBLE >> 1))
+                type_counts[type >> 1] += slots;
+
+            switch (color) {
+                case BLACK: page_black += slots; break;
+                case GRAY:  page_gray  += slots; break;
+                default:    page_white += slots; break;
+            }
+
+            /* Emit color bar chars for this object */
+            if (color != prev_color) {
+                if (prev_color != ~0U)
+                    dump_reset(tty);
+                dump_set_color(tty, color);
+                prev_color = color;
+            }
+            for (s = 0; s < slots; s++) {
+                dump_str(tty, "\xe2\x96\x88",
+                         color == BLACK ? "#" : (color == GRAY ? "=" : "-"));
+                ++bar_chars;
+            }
+
+            slot_idx += slots;
+        }
+
+        if (prev_color != ~0U)
+            dump_reset(tty);
+
+        /* Free slot markers */
+        if (slot_idx < KOS_SLOTS_PER_PAGE) {
+            dump_dim(tty);
+            while (slot_idx < KOS_SLOTS_PER_PAGE) {
+                dump_str(tty, "\xc2\xb7", ".");
+                ++bar_chars;
+                ++slot_idx;
+            }
+            dump_reset(tty);
+        }
+
+        pct = num_allocated ? (page_black + page_gray + page_white) * 100 / KOS_SLOTS_PER_PAGE : 0;
+        printed += bar_chars;
+        dump_row_end(tty, printed, box_width);
+
+        total_black += page_black;
+        total_gray  += page_gray;
+        total_white += page_white;
+
+        /* Type breakdown row with utilization */
+        dump_row_start(tty);
+        printed = (unsigned)snprintf(line_buf, sizeof(line_buf),
+            "  %*s  %3u%%  ",
+            /* Pad to match the pointer width printed above */
+            (int)(sizeof(void *) * 2 + 2), "",
+            pct);
+        fputs(line_buf, stderr);
+
+        /* Find the highest type count */
+        for (i = 0; i <= (OBJ_LAST_POSSIBLE >> 1); i++) {
+            if (type_counts[i] > top_count)
+                top_count = type_counts[i];
+        }
+
+        /* Print type counts, sorted by descending count */
+        {
+            unsigned remaining = MAX_DUMP_TYPES;
+
+            while (remaining > 0 && top_count > 0) {
+                unsigned next_top_count = 0;
+
+                for (i = 0; i <= (OBJ_LAST_POSSIBLE >> 1); i++) {
+                    if (type_counts[i] == top_count) {
+                        unsigned n = (unsigned)snprintf(line_buf, sizeof(line_buf),
+                            "%s:%u ", type_abbrev((KOS_TYPE)(i << 1)), type_counts[i]);
+                        fputs(line_buf, stderr);
+                        printed += n;
+                        if (--remaining == 0)
+                            break;
+                    }
+                    else if (type_counts[i] > next_top_count && type_counts[i] < top_count) {
+                        next_top_count = type_counts[i];
+                    }
+                }
+
+                top_count = next_top_count;
+            }
+        }
+
+        dump_row_end(tty, printed, box_width);
+
+        ++num_used_pages;
+    }
+
+    /* Free pages */
+    page = heap->free_pages;
+    for ( ; page; page = page->next)
+        ++num_free_pages;
+
+    if (num_free_pages > 0) {
+        dump_row_start(tty);
+        printed = (unsigned)snprintf(line_buf, sizeof(line_buf),
+            "  (%u free page%s)", num_free_pages, num_free_pages == 1 ? "" : "s");
+        fputs(line_buf, stderr);
+        dump_row_end(tty, printed, box_width);
+    }
+
+    dump_mid_border(tty, box_width);
+
+    /* Summary */
+    dump_row_start(tty);
+    printed = (unsigned)snprintf(line_buf, sizeof(line_buf),
+        "%u used page%s  (%u black, %u gray, %u white)  %u free  malloc: %u B",
+        num_used_pages, num_used_pages == 1 ? "" : "s",
+        total_black, total_gray, total_white,
+        num_free_pages, heap->malloc_size);
+    fputs(line_buf, stderr);
+    dump_row_end(tty, printed, box_width);
+
+    dump_mid_border(tty, box_width);
+
+    /* Roots summary */
+    {
+        unsigned num_protos   = 0;
+        unsigned num_modules  = 0;
+        unsigned num_threads  = 0;
+        unsigned num_locals   = 0;
+        KOS_CONTEXT thread_ctx;
+        const KOS_OBJ_ID *proto_ptr = &inst->prototypes.object_proto;
+        const KOS_OBJ_ID *proto_end = proto_ptr + sizeof(inst->prototypes) / sizeof(KOS_OBJ_ID);
+
+        while (proto_ptr < proto_end) {
+            if ( ! IS_BAD_PTR(*proto_ptr))
+                ++num_protos;
+            ++proto_ptr;
+        }
+
+        if ( ! IS_BAD_PTR(inst->modules.search_paths)) ++num_modules;
+        if ( ! IS_BAD_PTR(inst->modules.module_names)) ++num_modules;
+        if ( ! IS_BAD_PTR(inst->modules.modules))      ++num_modules;
+        if ( ! IS_BAD_PTR(inst->modules.init_module))   ++num_modules;
+        if ( ! IS_BAD_PTR(inst->modules.module_inits))  ++num_modules;
+
+        kos_lock_mutex(inst->threads.ctx_mutex);
+
+        thread_ctx = &inst->threads.main_thread;
+        for ( ; thread_ctx; thread_ctx = thread_ctx->next) {
+            KOS_LOCAL  *local;
+            KOS_ULOCAL *ulocal;
+
+            ++num_threads;
+
+            for (local = thread_ctx->local_list; local; local = local->next)
+                ++num_locals;
+            for (ulocal = thread_ctx->ulocal_list; ulocal; ulocal = ulocal->next)
+                ++num_locals;
+        }
+
+        kos_unlock_mutex(inst->threads.ctx_mutex);
+
+        dump_row_start(tty);
+        printed = (unsigned)snprintf(line_buf, sizeof(line_buf),
+            "Roots: %u prototypes  %u modules  %u thread%s  %u local%s",
+            num_protos, num_modules,
+            num_threads, num_threads == 1 ? "" : "s",
+            num_locals, num_locals == 1 ? "" : "s");
+        fputs(line_buf, stderr);
+        dump_row_end(tty, printed, box_width);
+    }
+
+    dump_bot_border(tty, box_width);
+
+    kos_unlock_mutex(heap->mutex);
+}
+
 static void stop_the_world(KOS_INSTANCE *inst)
 {
     KOS_HEAP *const heap = &inst->heap;
@@ -1262,12 +1822,6 @@ static void stop_the_world(KOS_INSTANCE *inst)
     }
 }
 
-enum KOS_MARK_STATE_E {
-    WHITE     = 0,
-    GRAY      = 1,
-    BLACK     = 2,
-    COLORMASK = 3
-};
 
 static void set_marking_in_pages(KOS_PAGE             *page,
                                  enum KOS_MARK_STATE_E state,

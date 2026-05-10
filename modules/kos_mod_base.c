@@ -668,7 +668,7 @@ static KOS_OBJ_ID string_constructor(const KOS_CONTEXT             ctx,
                         for (;;) {
                             KOS_TYPE type;
 
-                            ret.o = KOS_call_generator(ctx, obj.o, KOS_VOID, KOS_EMPTY_ARRAY);
+                            ret.o = KOS_call_generator(ctx, obj.o);
                             if (IS_BAD_PTR(ret.o)) { /* end of iterator */
                                 if (KOS_is_exception_pending(ctx))
                                     RAISE_ERROR(KOS_ERROR_EXCEPTION);
@@ -1244,7 +1244,7 @@ static KOS_OBJ_ID array_constructor(const KOS_CONTEXT             ctx,
 
                     for (;;) {
 
-                        gen_ret.o = KOS_call_generator(ctx, arg.o, KOS_VOID, KOS_EMPTY_ARRAY);
+                        gen_ret.o = KOS_call_generator(ctx, arg.o);
                         if (IS_BAD_PTR(gen_ret.o)) { /* end of iterator */
                             if (KOS_is_exception_pending(ctx))
                                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
@@ -1476,7 +1476,7 @@ static KOS_OBJ_ID buffer_constructor(const KOS_CONTEXT             ctx,
                         int64_t  value;
                         uint8_t *data;
 
-                        KOS_OBJ_ID ret_val = KOS_call_generator(ctx, arg.o, KOS_VOID, KOS_EMPTY_ARRAY);
+                        KOS_OBJ_ID ret_val = KOS_call_generator(ctx, arg.o);
                         if (IS_BAD_PTR(ret_val)) { /* end of iterator */
                             if (KOS_is_exception_pending(ctx))
                                 RAISE_ERROR(KOS_ERROR_EXCEPTION);
