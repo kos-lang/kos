@@ -134,6 +134,8 @@ void kos_set_global_event(KOS_CONTEXT ctx, enum KOS_GLOBAL_EVENT_E event);
 
 void kos_clear_global_event(KOS_CONTEXT ctx, enum KOS_GLOBAL_EVENT_E event);
 
+void kos_raise_generator_close(KOS_CONTEXT ctx);
+
 void kos_raise_panic(KOS_CONTEXT ctx);
 
 /*==========================================================================*/

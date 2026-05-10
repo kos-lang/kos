@@ -84,7 +84,8 @@ enum KOS_STACK_FLAGS_E {
     KOS_NORMAL_STACK    = 0U,
     KOS_REENTRANT_STACK = 1U,   /* Stack of a generator or closure      */
     KOS_CAN_YIELD       = 2U,   /* Indicates that a generator can yield */
-    KOS_GENERATOR_DONE  = 4U    /* Indicates that frame will be popped  */ /* TODO reuse KOS_CAN_YIELD? */
+    KOS_GENERATOR_DONE  = 4U,   /* Indicates that frame will be popped  */
+    KOS_GENERATOR_CLOSE = 8U    /* Indicates that a generator is being closed */
 };
 
 /* Stack management:
@@ -209,6 +210,7 @@ struct KOS_PROTOTYPES_S {
     KOS_OBJ_ID generator_proto;
     KOS_OBJ_ID exception_proto;
     KOS_OBJ_ID generator_end_proto;
+    KOS_OBJ_ID generator_close_proto;
     KOS_OBJ_ID panic_proto;
     KOS_OBJ_ID ctrl_c_proto;
     KOS_OBJ_ID thread_proto;
@@ -275,6 +277,9 @@ static inline void KOS_clear_exception(KOS_CONTEXT ctx)
 #define KOS_get_exception(ctx) ((ctx)->exception)
 #define KOS_clear_exception(ctx) (void)((ctx)->exception = KOS_BADPTR)
 #endif
+
+KOS_API
+KOS_OBJ_ID KOS_get_exception_value(KOS_CONTEXT ctx);
 
 #ifdef __cplusplus
 extern "C" {
@@ -362,6 +367,14 @@ KOS_OBJ_ID KOS_apply_function(KOS_CONTEXT ctx,
  */
 KOS_API
 KOS_OBJ_ID KOS_call_generator(KOS_CONTEXT ctx, KOS_OBJ_ID func_obj);
+
+/* Closes a non-native unfinished generator.
+ *
+ * If the function is not a generator, or if this is not an instantiated generator or if it is
+ * a finished generator, this function simply returns KOS_VOID.
+ */
+KOS_API
+KOS_OBJ_ID KOS_close_generator(KOS_CONTEXT ctx, KOS_OBJ_ID func_obj);
 
 KOS_API
 void KOS_init_local_with(KOS_CONTEXT ctx, KOS_LOCAL *local, KOS_OBJ_ID obj_id);

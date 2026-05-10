@@ -43,6 +43,7 @@ static const char str_format_question_marks[]   = "???";
 KOS_DECLARE_STATIC_CONST_STRING(str_description,               "description");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_ctrl_c,                "user pressed Ctrl-C");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_ctrl_c_already_hooked, "Ctrl-C already hooked");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_generator_close,       "closing generator");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_generator_end,         "end of generator");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_array,             "object is not an array");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_panic,                 "detected bytecode corruption");
@@ -291,35 +292,36 @@ static void clear_instance(KOS_INSTANCE *inst)
     /* Disable GC during early init */
     inst->flags = KOS_INST_MANUAL_GC;
 
-    inst->args                           = KOS_BADPTR;
-    inst->prototypes.object_proto        = KOS_BADPTR;
-    inst->prototypes.number_proto        = KOS_BADPTR;
-    inst->prototypes.integer_proto       = KOS_BADPTR;
-    inst->prototypes.float_proto         = KOS_BADPTR;
-    inst->prototypes.string_proto        = KOS_BADPTR;
-    inst->prototypes.boolean_proto       = KOS_BADPTR;
-    inst->prototypes.array_proto         = KOS_BADPTR;
-    inst->prototypes.buffer_proto        = KOS_BADPTR;
-    inst->prototypes.function_proto      = KOS_BADPTR;
-    inst->prototypes.class_proto         = KOS_BADPTR;
-    inst->prototypes.generator_proto     = KOS_BADPTR;
-    inst->prototypes.exception_proto     = KOS_BADPTR;
-    inst->prototypes.generator_end_proto = KOS_BADPTR;
-    inst->prototypes.panic_proto         = KOS_BADPTR;
-    inst->prototypes.ctrl_c_proto        = KOS_BADPTR;
-    inst->prototypes.thread_proto        = KOS_BADPTR;
-    inst->prototypes.module_proto        = KOS_BADPTR;
-    inst->modules.search_paths           = KOS_BADPTR;
-    inst->modules.module_names           = KOS_BADPTR;
-    inst->modules.modules                = KOS_BADPTR;
-    inst->modules.init_module            = get_init_module();
-    inst->modules.module_inits           = KOS_BADPTR;
-    inst->modules.libs                   = KOS_NULL;
-    inst->modules.load_chain             = KOS_NULL;
-    inst->threads.threads                = KOS_NULL;
-    inst->threads.can_create             = 0;
-    inst->threads.num_threads            = 0;
-    inst->threads.max_threads            = KOS_MAX_THREADS;
+    inst->args                             = KOS_BADPTR;
+    inst->prototypes.object_proto          = KOS_BADPTR;
+    inst->prototypes.number_proto          = KOS_BADPTR;
+    inst->prototypes.integer_proto         = KOS_BADPTR;
+    inst->prototypes.float_proto           = KOS_BADPTR;
+    inst->prototypes.string_proto          = KOS_BADPTR;
+    inst->prototypes.boolean_proto         = KOS_BADPTR;
+    inst->prototypes.array_proto           = KOS_BADPTR;
+    inst->prototypes.buffer_proto          = KOS_BADPTR;
+    inst->prototypes.function_proto        = KOS_BADPTR;
+    inst->prototypes.class_proto           = KOS_BADPTR;
+    inst->prototypes.generator_proto       = KOS_BADPTR;
+    inst->prototypes.exception_proto       = KOS_BADPTR;
+    inst->prototypes.generator_end_proto   = KOS_BADPTR;
+    inst->prototypes.generator_close_proto = KOS_BADPTR;
+    inst->prototypes.panic_proto           = KOS_BADPTR;
+    inst->prototypes.ctrl_c_proto          = KOS_BADPTR;
+    inst->prototypes.thread_proto          = KOS_BADPTR;
+    inst->prototypes.module_proto          = KOS_BADPTR;
+    inst->modules.search_paths             = KOS_BADPTR;
+    inst->modules.module_names             = KOS_BADPTR;
+    inst->modules.modules                  = KOS_BADPTR;
+    inst->modules.init_module              = get_init_module();
+    inst->modules.module_inits             = KOS_BADPTR;
+    inst->modules.libs                     = KOS_NULL;
+    inst->modules.load_chain               = KOS_NULL;
+    inst->threads.threads                  = KOS_NULL;
+    inst->threads.can_create               = 0;
+    inst->threads.num_threads              = 0;
+    inst->threads.max_threads              = KOS_MAX_THREADS;
 
     init_context(&inst->threads.main_thread, inst);
 }
@@ -328,23 +330,24 @@ static int init_prototypes(KOS_CONTEXT ctx, struct KOS_PROTOTYPES_S *prototypes)
 {
     int error = KOS_SUCCESS;
 
-    TRY_OBJID(prototypes->object_proto        = KOS_new_object_with_prototype(ctx, KOS_VOID));
-    TRY_OBJID(prototypes->number_proto        = KOS_new_object(ctx));
-    TRY_OBJID(prototypes->integer_proto       = KOS_new_object_with_prototype(ctx, prototypes->number_proto));
-    TRY_OBJID(prototypes->float_proto         = KOS_new_object_with_prototype(ctx, prototypes->number_proto));
-    TRY_OBJID(prototypes->string_proto        = KOS_new_object(ctx));
-    TRY_OBJID(prototypes->boolean_proto       = KOS_new_object(ctx));
-    TRY_OBJID(prototypes->array_proto         = KOS_new_object(ctx));
-    TRY_OBJID(prototypes->buffer_proto        = KOS_new_object(ctx));
-    TRY_OBJID(prototypes->function_proto      = KOS_new_object(ctx));
-    TRY_OBJID(prototypes->class_proto         = KOS_new_object_with_prototype(ctx, prototypes->function_proto));
-    TRY_OBJID(prototypes->generator_proto     = KOS_new_object_with_prototype(ctx, prototypes->function_proto));
-    TRY_OBJID(prototypes->exception_proto     = KOS_new_object(ctx));
-    TRY_OBJID(prototypes->generator_end_proto = KOS_new_object(ctx));
-    TRY_OBJID(prototypes->panic_proto         = KOS_new_object(ctx));
-    TRY_OBJID(prototypes->ctrl_c_proto        = KOS_new_object(ctx));
-    TRY_OBJID(prototypes->thread_proto        = KOS_new_object(ctx));
-    TRY_OBJID(prototypes->module_proto        = KOS_new_object(ctx));
+    TRY_OBJID(prototypes->object_proto          = KOS_new_object_with_prototype(ctx, KOS_VOID));
+    TRY_OBJID(prototypes->number_proto          = KOS_new_object(ctx));
+    TRY_OBJID(prototypes->integer_proto         = KOS_new_object_with_prototype(ctx, prototypes->number_proto));
+    TRY_OBJID(prototypes->float_proto           = KOS_new_object_with_prototype(ctx, prototypes->number_proto));
+    TRY_OBJID(prototypes->string_proto          = KOS_new_object(ctx));
+    TRY_OBJID(prototypes->boolean_proto         = KOS_new_object(ctx));
+    TRY_OBJID(prototypes->array_proto           = KOS_new_object(ctx));
+    TRY_OBJID(prototypes->buffer_proto          = KOS_new_object(ctx));
+    TRY_OBJID(prototypes->function_proto        = KOS_new_object(ctx));
+    TRY_OBJID(prototypes->class_proto           = KOS_new_object_with_prototype(ctx, prototypes->function_proto));
+    TRY_OBJID(prototypes->generator_proto       = KOS_new_object_with_prototype(ctx, prototypes->function_proto));
+    TRY_OBJID(prototypes->exception_proto       = KOS_new_object(ctx));
+    TRY_OBJID(prototypes->generator_end_proto   = KOS_new_object(ctx));
+    TRY_OBJID(prototypes->generator_close_proto = KOS_new_object_with_prototype(ctx, prototypes->generator_end_proto));
+    TRY_OBJID(prototypes->panic_proto           = KOS_new_object(ctx));
+    TRY_OBJID(prototypes->ctrl_c_proto          = KOS_new_object(ctx));
+    TRY_OBJID(prototypes->thread_proto          = KOS_new_object(ctx));
+    TRY_OBJID(prototypes->module_proto          = KOS_new_object(ctx));
 
 cleanup:
     return error;
@@ -432,6 +435,8 @@ int KOS_instance_init(KOS_INSTANCE *inst,
 
     TRY(KOS_set_property(ctx, inst->prototypes.generator_end_proto, KOS_CONST_ID(str_description),
                          KOS_CONST_ID(str_err_generator_end)));
+    TRY(KOS_set_property(ctx, inst->prototypes.generator_close_proto, KOS_CONST_ID(str_description),
+                         KOS_CONST_ID(str_err_generator_close)));
     TRY(KOS_set_property(ctx, inst->prototypes.panic_proto, KOS_CONST_ID(str_description),
                          KOS_CONST_ID(str_err_panic)));
     TRY(KOS_set_property(ctx, inst->prototypes.ctrl_c_proto, KOS_CONST_ID(str_description),
@@ -1055,6 +1060,11 @@ void KOS_raise_generator_end(KOS_CONTEXT ctx)
     raise_internal_exception(ctx, ctx->inst->prototypes.generator_end_proto);
 }
 
+void kos_raise_generator_close(KOS_CONTEXT ctx)
+{
+    raise_internal_exception(ctx, ctx->inst->prototypes.generator_close_proto);
+}
+
 void kos_raise_panic(KOS_CONTEXT ctx)
 {
     raise_internal_exception(ctx, ctx->inst->prototypes.panic_proto);
@@ -1357,33 +1367,37 @@ int KOS_unhook_ctrl_c(KOS_CONTEXT ctx)
     return KOS_SUCCESS;
 }
 
-void KOS_clear_ctrl_c_event(KOS_CONTEXT ctx)
+KOS_OBJ_ID KOS_get_exception_value(KOS_CONTEXT ctx)
 {
+    KOS_INSTANCE *const inst = ctx->inst;
     KOS_LOCAL exception;
-    int       clear_flag = 0;
 
     KOS_init_local_with(ctx, &exception, KOS_get_exception(ctx));
 
-    if ( ! IS_BAD_PTR(exception.o)) {
-
-        KOS_OBJ_ID value;
+    if ( ! IS_BAD_PTR(exception.o) &&
+        KOS_get_prototype(ctx, exception.o) == inst->prototypes.exception_proto) {
 
         KOS_clear_exception(ctx);
 
-        value = KOS_get_property(ctx, exception.o, KOS_STR_VALUE);
+        const KOS_OBJ_ID value = KOS_get_property(ctx, exception.o, KOS_STR_VALUE);
 
-        if ( ! IS_BAD_PTR(value)) {
-            if (KOS_has_prototype(ctx, value, ctx->inst->prototypes.ctrl_c_proto))
-                clear_flag = 1;
-        }
-        else
+        if (IS_BAD_PTR(value)) {
             KOS_clear_exception(ctx);
-
-        KOS_raise_exception(ctx, exception.o);
+            KOS_raise_exception(ctx, exception.o);
+        }
+        else {
+            KOS_raise_exception(ctx, exception.o);
+            exception.o = value;
+        }
     }
 
-    KOS_destroy_top_local(ctx, &exception);
+    return KOS_destroy_top_local(ctx, &exception);
+}
 
-    if (clear_flag)
+void KOS_clear_ctrl_c_event(KOS_CONTEXT ctx)
+{
+    const KOS_OBJ_ID exception = KOS_get_exception_value(ctx);
+
+    if (KOS_has_prototype(ctx, exception, ctx->inst->prototypes.ctrl_c_proto))
         kos_clear_global_event(ctx, KOS_EVENT_CTRL_C);
 }

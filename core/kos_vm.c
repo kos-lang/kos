@@ -390,33 +390,14 @@ static KOS_OBJ_ID mod_float(KOS_CONTEXT ctx,
 
 static int is_generator_end_exception(KOS_CONTEXT ctx)
 {
-    int                 ret       = 0;
     KOS_INSTANCE *const inst      = ctx->inst;
-    KOS_LOCAL           exception;
+    const KOS_OBJ_ID    exception = KOS_get_exception_value(ctx);
 
-    KOS_init_local_with(ctx, &exception, KOS_get_exception(ctx));
+    if ( ! IS_BAD_PTR(exception) &&
+        KOS_has_prototype(ctx, exception, inst->prototypes.generator_end_proto))
+        return 1;
 
-    if (KOS_get_prototype(ctx, exception.o) == inst->prototypes.exception_proto) {
-
-        KOS_OBJ_ID value;
-
-        KOS_clear_exception(ctx);
-
-        value = KOS_get_property(ctx, exception.o, KOS_STR_VALUE);
-
-        if (IS_BAD_PTR(value)) {
-            KOS_clear_exception(ctx);
-            KOS_raise_exception(ctx, exception.o);
-        }
-        else if (KOS_get_prototype(ctx, value) != inst->prototypes.generator_end_proto)
-            KOS_raise_exception(ctx, exception.o);
-        else
-            ret = 1;
-    }
-
-    KOS_destroy_top_local(ctx, &exception);
-
-    return ret;
+    return 0;
 }
 
 #ifndef NDEBUG
@@ -763,12 +744,17 @@ cleanup:
     return error;
 }
 
+static uint32_t get_stack_flags(KOS_OBJ_ID stack)
+{
+    return KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->flags);
+}
+
 static void set_stack_flag(KOS_CONTEXT ctx, uint32_t new_flag)
 {
-    KOS_OBJ_ID stack = ctx->stack;
+    const KOS_OBJ_ID stack = ctx->stack;
 
     for (;;) {
-        uint32_t flags = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->flags);
+        uint32_t flags = get_stack_flags(stack);
 
         if (KOS_atomic_cas_weak_u32(OBJPTR(STACK, stack)->flags, flags, flags | new_flag))
             break;
@@ -777,10 +763,10 @@ static void set_stack_flag(KOS_CONTEXT ctx, uint32_t new_flag)
 
 static void clear_stack_flag(KOS_CONTEXT ctx, uint32_t clear_flag)
 {
-    KOS_OBJ_ID stack = ctx->stack;
+    const KOS_OBJ_ID stack = ctx->stack;
 
     for (;;) {
-        uint32_t flags = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->flags);
+        uint32_t flags = get_stack_flags(stack);
 
         if (KOS_atomic_cas_weak_u32(OBJPTR(STACK, stack)->flags, flags, flags & ~clear_flag))
             break;
@@ -1136,7 +1122,7 @@ static void finish_call(KOS_CONTEXT        ctx,
     if ( ! KOS_is_exception_pending(ctx)) {
 
         if (state >= KOS_GEN_INIT) {
-            if (KOS_atomic_read_relaxed_u32(OBJPTR(STACK, ctx->stack)->flags) & KOS_CAN_YIELD) {
+            if (get_stack_flags(ctx->stack) & KOS_CAN_YIELD) {
                 state = KOS_GEN_DONE;
                 if (instr != INSTR_NEXT_JUMP) {
                     KOS_LOCAL saved_func;
@@ -1255,7 +1241,7 @@ static KOS_OBJ_ID read_stack(KOS_CONTEXT ctx, KOS_OBJ_ID objptr, int idx)
     KOS_OBJ_ID ret = KOS_BADPTR;
 
     assert(GET_OBJ_TYPE(objptr) == OBJ_STACK);
-    assert(KOS_atomic_read_relaxed_u32(OBJPTR(STACK, objptr)->flags) & KOS_REENTRANT_STACK);
+    assert(get_stack_flags(objptr) & KOS_REENTRANT_STACK);
 
     size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, objptr)->size);
     assert(size >= 1 + KOS_STACK_EXTRA);
@@ -1282,7 +1268,7 @@ static int write_stack(KOS_CONTEXT ctx, KOS_OBJ_ID objptr, int idx, KOS_OBJ_ID v
     uint32_t size;
 
     assert(GET_OBJ_TYPE(objptr) == OBJ_STACK);
-    assert(KOS_atomic_read_relaxed_u32(OBJPTR(STACK, objptr)->flags) & KOS_REENTRANT_STACK);
+    assert(get_stack_flags(objptr) & KOS_REENTRANT_STACK);
 
     size = KOS_atomic_read_relaxed_u32(OBJPTR(STACK, objptr)->size);
     assert(size >= 1 + KOS_STACK_EXTRA);
@@ -1311,13 +1297,13 @@ static void set_closure_stack_size(KOS_CONTEXT      ctx,
     assert(stack == ctx->stack);
     assert(get_current_stack_frame(ctx) == stack_frame);
 
-    if (KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->flags) & KOS_REENTRANT_STACK) {
+    if (get_stack_flags(stack) & KOS_REENTRANT_STACK) {
 
         const KOS_OBJ_ID func_obj = get_current_func(stack_frame);
 
         assert(ctx->regs_idx >= 3);
 
-        if (KOS_atomic_read_relaxed_u32(OBJPTR(STACK, stack)->flags) & KOS_GENERATOR_DONE) {
+        if (get_stack_flags(stack) & KOS_GENERATOR_DONE) {
 
             const uint32_t closure_size = OBJPTR(FUNCTION, func_obj)->opts.closure_size;
             const uint32_t size         = closure_size + 1U + KOS_STACK_EXTRA;
@@ -1520,6 +1506,11 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx) /* lgtm [cpp/use-of-goto] */
 
     assert( ! kos_is_heap_object(module));
     assert( ! kos_is_heap_object(stack));
+
+    if (KOS_is_exception_pending(ctx)) {
+        assert(get_stack_flags(stack) & KOS_GENERATOR_CLOSE);
+        goto cleanup;
+    }
 
 #if KOS_DISPATCH_TABLE
     NEXT_INSTRUCTION;
@@ -3031,7 +3022,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx) /* lgtm [cpp/use-of-goto] */
                 }
                 else {
                     regs.o = ctx->stack;
-                    assert(KOS_atomic_read_relaxed_u32(OBJPTR(STACK, regs.o)->flags) & KOS_REENTRANT_STACK);
+                    assert(get_stack_flags(regs.o) & KOS_REENTRANT_STACK);
                 }
 
                 assert( ! IS_SMALL_INT(closures.o));
@@ -3540,12 +3531,12 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx) /* lgtm [cpp/use-of-goto] */
                 assert(rsrc  < num_regs);
                 assert(rdest < num_regs);
 
-                if ( ! (KOS_atomic_read_relaxed_u32(OBJPTR(STACK, ctx->stack)->flags) & KOS_CAN_YIELD))
+                if ( ! (get_stack_flags(ctx->stack) & KOS_CAN_YIELD))
                     RAISE_EXCEPTION_STR(str_err_cannot_yield);
 
                 out = read_reg(stack_frame, rsrc);
 
-                assert(KOS_atomic_read_relaxed_u32(OBJPTR(STACK, ctx->stack)->flags) & KOS_REENTRANT_STACK);
+                assert(get_stack_flags(ctx->stack) & KOS_REENTRANT_STACK);
                 OBJPTR(STACK, ctx->stack)->yield_reg = (uint8_t)rdest;
 
                 clear_stack_flag(ctx, KOS_CAN_YIELD);
@@ -3779,8 +3770,9 @@ handle_return:
 
 enum KOS_CALL_FLAVOR_E {
     KOS_CALL_FUNCTION,
+    KOS_APPLY_FUNCTION,
     KOS_CALL_GENERATOR,
-    KOS_APPLY_FUNCTION
+    KOS_CLOSE_GENERATOR
 };
 
 static KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
@@ -3838,6 +3830,8 @@ static KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
             PROF_ZONE(VM)
             PROF_ZONE_NAME_FUN(func.o)
 
+            assert(call_flavor != KOS_CLOSE_GENERATOR);
+
             ret.o = call_native_function(ctx, func.o, state, this_.o);
 
             assert(ctx->local_list == &func);
@@ -3856,6 +3850,12 @@ static KOS_OBJ_ID kos_call_function(KOS_CONTEXT            ctx,
             }
         }
         else {
+            if (call_flavor == KOS_CLOSE_GENERATOR) {
+                assert(get_stack_flags(ctx->stack) & KOS_REENTRANT_STACK);
+                set_stack_flag(ctx, KOS_GENERATOR_CLOSE);
+                kos_raise_generator_close(ctx);
+            }
+
             ret.o = execute(ctx);
             assert( ! IS_BAD_PTR(ret.o) || KOS_is_exception_pending(ctx));
             assert(ctx->local_list == &func);
@@ -3903,6 +3903,40 @@ KOS_OBJ_ID KOS_apply_function(KOS_CONTEXT ctx,
 KOS_OBJ_ID KOS_call_generator(KOS_CONTEXT ctx, KOS_OBJ_ID func_obj)
 {
     return kos_call_function(ctx, func_obj, KOS_VOID, KOS_EMPTY_ARRAY, KOS_CALL_GENERATOR);
+}
+
+KOS_OBJ_ID KOS_close_generator(KOS_CONTEXT ctx, KOS_OBJ_ID func_obj)
+{
+    KOS_FUNCTION_STATE state;
+    KOS_OBJ_ID         ret;
+
+    if (GET_OBJ_TYPE(func_obj) != OBJ_FUNCTION)
+        return KOS_VOID;
+
+    state = get_func_state(func_obj);
+
+    if ((state != KOS_GEN_ACTIVE && state != KOS_GEN_RUNNING) ||
+        KOS_is_native_function(func_obj)){
+
+        if (state == KOS_GEN_READY)
+            KOS_atomic_write_relaxed_u32(OBJPTR(FUNCTION, func_obj)->state, KOS_GEN_DONE);
+
+        return KOS_VOID;
+    }
+
+    ret = kos_call_function(ctx, func_obj, KOS_VOID, KOS_EMPTY_ARRAY, KOS_CLOSE_GENERATOR);
+
+    if (IS_BAD_PTR(ret)) {
+        assert(KOS_is_exception_pending(ctx));
+        if (is_generator_end_exception(ctx)) {
+            KOS_clear_exception(ctx);
+            ret = KOS_VOID;
+        }
+    }
+    else
+        ret = KOS_VOID;
+
+    return ret;
 }
 
 KOS_OBJ_ID KOS_run_module(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)

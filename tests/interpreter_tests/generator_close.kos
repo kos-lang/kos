@@ -1,0 +1,115 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Copyright (c) 2014-2026 Chris Dragan
+
+import base: shallow, exception
+import test_tools.expect_fail
+
+var triggered = false
+
+fun simple_generator(count)
+{
+    defer {
+        triggered = true
+    }
+
+    while count > 0 {
+        count -= 1
+        yield count
+    }
+}
+
+fun generator_closure(count)
+{
+    defer {
+        triggered = true
+    }
+
+    fun add(value)
+    {
+        count += value
+        return count
+    }
+
+    while count > 0 {
+        count -= 1
+        const ret = yield count
+        if ret {
+            yield add
+        }
+    }
+}
+
+# Close uninitialized generator
+do {
+    assert simple_generator.close() == void
+    assert ! triggered
+
+    # Native generator function
+    assert shallow.close() == void
+}
+
+# Close non-generator
+do {
+    shallow.close.apply(class{}, []) == void
+    shallow.close.apply(fun{},   []) == void
+}
+
+# Close native generator
+do {
+    const it = shallow({a: 1, b: 2})
+    const x, y = it()
+    assert x == "a" || x == "b"
+    if x == "a" {
+        assert y == 1
+    }
+    else {
+        assert y == 2
+    }
+    assert it.close() == void
+
+    assert it.state == "done"
+
+    expect_fail(it)
+}
+
+# Close simple generator
+do {
+    const it = simple_generator(2)
+    assert it() == 1
+    assert it.state == "active"
+
+    assert ! triggered
+    it.close()
+    assert triggered
+    triggered = false
+    assert it.state == "done"
+
+    expect_fail(it)
+    assert ! triggered
+}
+
+# Close generator with closure
+do {
+    const it = generator_closure(10)
+    assert it() == 9
+    assert it.state == "active"
+    assert it() == 8
+
+    const adder = it(true)
+    assert typeof adder == "function"
+
+    assert it() == 7
+    assert adder(11) == 18
+    assert it() == 17
+
+    assert ! triggered
+    it.close()
+    assert triggered
+    assert it.state == "done"
+
+    triggered = false
+    expect_fail(it)
+    assert ! triggered
+
+    assert adder(0) == 17
+}

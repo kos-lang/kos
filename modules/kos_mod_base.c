@@ -4716,6 +4716,41 @@ static KOS_OBJ_ID get_gen_state(const KOS_CONTEXT             ctx,
     return ret;
 }
 
+/* @item base generator.prototype.close()
+ *
+ *     generator.prototype.close()
+ *
+ * Finishes a generator, making sure all pending objects in it are closed.
+ *
+ * This will run any defer sections and release objects held using `with` statement
+ * even if the generator wasn't finish yet.
+ *
+ * Calling this on a non-generator function or on a generator which either hasn't
+ * been instantiated or is done is a no-op.
+ *
+ * Returns `void`, unless the generator threw an exception during cleanup.
+ *
+ * Examples:
+ *
+ *     > shallow().close()
+ */
+/* @item base generator.prototype.release()
+ *
+ *     generator.prototype.release()
+ *
+ * Finishes a generator, making sure all pending objects in it are closed.
+ *
+ * This is equivalent to `generator.prototype.close()`.  The `release()` variant
+ * is used e.g. in conjunction with the `with` statement.
+ */
+static KOS_OBJ_ID close_generator(const KOS_CONTEXT             ctx,
+                                  const KOS_OBJ_ID              this_obj,
+                                  const uint32_t                num_args,
+                                  KOS_ATOMIC(KOS_OBJ_ID) *const args)
+{
+    return KOS_close_generator(ctx, this_obj);
+}
+
 /* @item base class.prototype.prototype
  *
  *     class.prototype.prototype
@@ -5080,6 +5115,8 @@ int kos_module_base_init(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)
     TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(function),  "size",         get_code_size,       KOS_NULL);
 
     TRY_ADD_MEMBER_PROPERTY( ctx, module.o, PROTO(generator), "state",        get_gen_state,       KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(generator), "close",        close_generator,     KOS_NULL);
+    TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(generator), "release",      close_generator,     KOS_NULL);
 
     TRY_ADD_MEMBER_FUNCTION( ctx, module.o, PROTO(module),    "get",          get_module_global,   module_global_args);
     TRY_ADD_STATIC_FUNCTION( ctx, module.o, "module",         "load",         module_load,         module_load_args);

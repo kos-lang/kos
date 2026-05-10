@@ -23,6 +23,7 @@ EXPORTS
     KOS_call_function
     KOS_call_generator
     KOS_clear_ctrl_c_event
+    KOS_close_generator
     KOS_collect_garbage
     KOS_compare
     KOS_delete_property
@@ -49,6 +50,7 @@ EXPORTS
     KOS_function_get_num_instr
     KOS_get_absolute_path
     KOS_get_env
+    KOS_get_exception_value
     KOS_get_file_name
     KOS_get_index
     KOS_get_integer
