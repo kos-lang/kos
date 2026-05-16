@@ -3653,7 +3653,7 @@ handle_return:
             if (depth) {
                 PROF_ZONE_N(INSTR, "return")
 
-                const KOS_OBJ_ID   func_obj = get_current_func(stack_frame);
+                KOS_OBJ_ID         func_obj = get_current_func(stack_frame);
                 KOS_BYTECODE_INSTR call_instr;
 
                 assert( ! error || KOS_is_exception_pending(ctx));
@@ -3683,6 +3683,18 @@ handle_return:
                 if (KOS_is_exception_pending(ctx))
                     error = KOS_ERROR_EXCEPTION;
 
+                if (error &&
+                    (call_instr == INSTR_NEXT_JUMP) &&
+                    (get_func_state(func_obj) == KOS_GEN_DONE)) {
+
+                    if (is_generator_end_exception(ctx)) {
+                        KOS_clear_exception(ctx);
+                        error = KOS_SUCCESS;
+                    }
+
+                    func_obj = get_current_func(stack_frame);
+                }
+
                 stack       = ctx->stack;
                 stack_frame = get_current_stack_frame(ctx);
 #ifndef NDEBUG
@@ -3695,15 +3707,6 @@ handle_return:
                 assert( ! kos_is_heap_object(module));
                 assert( ! kos_is_heap_object(stack));
                 bytecode    = get_bytecode(stack_frame);
-
-                if (error &&
-                    (call_instr == INSTR_NEXT_JUMP) &&
-                    (get_func_state(func_obj) == KOS_GEN_DONE) &&
-                    is_generator_end_exception(ctx)) {
-
-                    KOS_clear_exception(ctx);
-                    error = KOS_SUCCESS;
-                }
 
                 if (error) {
                     assert(KOS_is_exception_pending(ctx));
@@ -3926,7 +3929,7 @@ KOS_OBJ_ID KOS_call_generator(KOS_CONTEXT ctx, KOS_OBJ_ID func_obj)
 KOS_OBJ_ID KOS_close_generator(KOS_CONTEXT ctx, KOS_OBJ_ID func_obj)
 {
     KOS_FUNCTION_STATE state;
-    KOS_OBJ_ID         ret;
+    KOS_LOCAL          ret;
 
     if (GET_OBJ_TYPE(func_obj) != OBJ_FUNCTION)
         return KOS_VOID;
@@ -3942,19 +3945,21 @@ KOS_OBJ_ID KOS_close_generator(KOS_CONTEXT ctx, KOS_OBJ_ID func_obj)
         return KOS_VOID;
     }
 
-    ret = kos_call_function(ctx, func_obj, KOS_VOID, KOS_EMPTY_ARRAY, KOS_CLOSE_GENERATOR);
+    KOS_init_local(ctx, &ret);
 
-    if (IS_BAD_PTR(ret)) {
+    ret.o = kos_call_function(ctx, func_obj, KOS_VOID, KOS_EMPTY_ARRAY, KOS_CLOSE_GENERATOR);
+
+    if (IS_BAD_PTR(ret.o)) {
         assert(KOS_is_exception_pending(ctx));
         if (is_generator_end_exception(ctx)) {
             KOS_clear_exception(ctx);
-            ret = KOS_VOID;
+            ret.o = KOS_VOID;
         }
     }
     else
-        ret = KOS_VOID;
+        ret.o = KOS_VOID;
 
-    return ret;
+    return KOS_destroy_top_local(ctx, &ret);
 }
 
 KOS_OBJ_ID KOS_run_module(KOS_CONTEXT ctx, KOS_OBJ_ID module_obj)

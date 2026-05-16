@@ -1386,8 +1386,9 @@ KOS_OBJ_ID KOS_get_exception_value(KOS_CONTEXT ctx)
             KOS_raise_exception(ctx, exception.o);
         }
         else {
-            KOS_raise_exception(ctx, exception.o);
+            const KOS_OBJ_ID restore = exception.o;
             exception.o = value;
+            KOS_raise_exception(ctx, restore);
         }
     }
 
