@@ -393,8 +393,7 @@ static int is_generator_end_exception(KOS_CONTEXT ctx)
     KOS_INSTANCE *const inst      = ctx->inst;
     const KOS_OBJ_ID    exception = KOS_get_exception_value(ctx);
 
-    if ( ! IS_BAD_PTR(exception) &&
-        KOS_has_prototype(ctx, exception, inst->prototypes.generator_end_proto))
+    if ( ! IS_BAD_PTR(exception) && KOS_has_prototype(ctx, exception, inst->prototypes.generator_end_proto))
         return 1;
 
     return 0;
@@ -3525,18 +3524,20 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx) /* lgtm [cpp/use-of-goto] */
             BEGIN_INSTRUCTION(YIELD): { /* <r.dest>, <r.src> */
                 PROF_ZONE_N(INSTR, "YIELD")
                 const uint8_t rsrc = bytecode[2];
+                uint32_t      flags;
 
                 rdest = bytecode[1];
 
                 assert(rsrc  < num_regs);
                 assert(rdest < num_regs);
 
-                if ( ! (get_stack_flags(ctx->stack) & KOS_CAN_YIELD))
+                flags = get_stack_flags(ctx->stack);
+                if ( ! (flags & KOS_CAN_YIELD) || (flags & KOS_GENERATOR_CLOSE))
                     RAISE_EXCEPTION_STR(str_err_cannot_yield);
 
                 out = read_reg(stack_frame, rsrc);
 
-                assert(get_stack_flags(ctx->stack) & KOS_REENTRANT_STACK);
+                assert(flags & KOS_REENTRANT_STACK);
                 OBJPTR(STACK, ctx->stack)->yield_reg = (uint8_t)rdest;
 
                 clear_stack_flag(ctx, KOS_CAN_YIELD);
@@ -3583,6 +3584,23 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx) /* lgtm [cpp/use-of-goto] */
                 /* TODO simply call a debugger function from instance */
 
                 bytecode += 1;
+                NEXT_INSTRUCTION;
+            }
+
+            BEGIN_INSTRUCTION(THROW_CLOSE): { /* <r.src> */
+                PROF_ZONE_N(INSTR, "THROW.CLOSE")
+                const unsigned rsrc = bytecode[1];
+
+                assert(rsrc < num_regs);
+
+                /* If se're closing a generator, rethrow the exception and bypass the catch clause */
+                if (get_stack_flags(stack) & KOS_GENERATOR_CLOSE) {
+                    KOS_raise_exception(ctx, read_reg(stack_frame, rsrc));
+                    goto cleanup;
+                }
+
+                /* If we're not closing a generator, this instruction is a no-op */
+                bytecode += 2;
                 NEXT_INSTRUCTION;
             }
 

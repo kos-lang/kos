@@ -3337,6 +3337,9 @@ static int try_stmt(KOS_COMP_UNIT      *program,
 
         TRY(restore_parent_scope_catch(program));
 
+        if (is_generator(program))
+            TRY(gen_instr1(program, INSTR_THROW_CLOSE, except_reg->reg));
+
         node = node->next;
         assert(node);
         assert(!node->next);

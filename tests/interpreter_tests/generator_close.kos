@@ -18,27 +18,6 @@ fun simple_generator(count)
     }
 }
 
-fun generator_closure(count)
-{
-    defer {
-        triggered = true
-    }
-
-    fun add(value)
-    {
-        count += value
-        return count
-    }
-
-    while count > 0 {
-        count -= 1
-        const ret = yield count
-        if ret {
-            yield add
-        }
-    }
-}
-
 # Close uninitialized generator
 do {
     assert simple_generator.close() == void
@@ -90,7 +69,28 @@ do {
 
 # Close generator with closure
 do {
-    const it = generator_closure(10)
+    fun generator(count)
+    {
+        defer {
+            triggered = true
+        }
+
+        fun add(value)
+        {
+            count += value
+            return count
+        }
+
+        while count > 0 {
+            count -= 1
+            const ret = yield count
+            if ret {
+                yield add
+            }
+        }
+    }
+
+    const it = generator(10)
     assert it() == 9
     assert it.state == "active"
     assert it() == 8
@@ -112,4 +112,153 @@ do {
     assert ! triggered
 
     assert adder(0) == 17
+}
+
+# Close generator with "with"
+do {
+    class closable {
+        fun release() {
+            triggered = true
+        }
+    }
+
+    fun generator(count)
+    {
+        with closable() {
+            while count > 0 {
+                count -= 1
+                yield count
+            }
+        }
+    }
+
+    const it = generator(3)
+    assert it() == 2
+
+    assert ! triggered
+    it.close()
+    assert triggered
+    triggered = false
+
+    expect_fail(it)
+    assert ! triggered
+}
+
+# A yield during generator close
+do {
+    fun generator(count)
+    {
+        defer {
+            yield -1
+            triggered = true
+        }
+
+        while count > 0 {
+            count -= 1
+            yield count
+        }
+    }
+
+    const it = generator(5)
+    assert it() == 4
+    assert it() == 3
+
+    assert ! triggered
+    expect_fail(_ => it.close())
+    assert ! triggered
+
+    expect_fail(it)
+    assert ! triggered
+}
+
+# Close generator with "catch"
+do {
+    var went_past_exception = false
+    fun generator(count)
+    {
+        defer {
+            triggered = true
+        }
+
+        while count > 0 {
+            count -= 1
+            try {
+                yield count
+            }
+            catch const e {
+            }
+            went_past_exception = true
+        }
+    }
+
+    # Not started, so no trigger
+    generator(3).close()
+    assert ! triggered
+    assert ! went_past_exception
+
+    # Instantiate and init the generator
+    const it = generator(5)
+    assert it() == 4
+
+    # Close the generator and ensure it triggers properly
+    assert ! triggered
+    it.close()
+    assert triggered
+    triggered = false
+    assert ! went_past_exception
+
+    # Cannot use the generator again
+    expect_fail(it)
+    assert ! triggered
+}
+
+# Close generator with double "catch"
+do {
+    var catch_count = 0
+
+    fun generator
+    {
+        defer {
+            triggered = true
+        }
+
+        try {
+            try {
+                yield 42
+                throw void
+            }
+            catch const e {
+                catch_count += 1
+            }
+        }
+        catch const e {
+            catch_count += 10
+        }
+    }
+
+    # Instantiate without closing
+    for const i in generator() {
+        assert i == 42
+        assert ! triggered
+        assert ! catch_count
+    }
+    assert triggered
+    assert catch_count == 1
+
+    # Instantiate and close
+    triggered = 0
+    catch_count = 0
+    const it = generator()
+    assert it() == 42
+    assert ! triggered
+    assert ! catch_count
+
+    it.close()
+    assert triggered
+    assert ! catch_count
+    triggered = false
+
+    # Cannot use the generator again
+    expect_fail(it)
+    assert ! triggered
 }

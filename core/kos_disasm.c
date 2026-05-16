@@ -25,7 +25,8 @@ static int get_num_operands(KOS_BYTECODE_INSTR instr)
         case INSTR_LOAD_VOID:           /* fall through */
         case INSTR_JUMP:                /* fall through */
         case INSTR_RETURN:              /* fall through */
-        case INSTR_THROW:
+        case INSTR_THROW:               /* fall through */
+        case INSTR_THROW_CLOSE:
             return 1;
 
         case INSTR_LOAD_CONST:          /* fall through */
@@ -393,6 +394,7 @@ static const char *const str_instr[] = {
     "TAIL.CALL.FUN",
     "YIELD",
     "THROW",
+    "THROW.CLOSE",
     "CATCH",
     "CANCEL"
 };
