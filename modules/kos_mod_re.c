@@ -617,7 +617,7 @@ static int add_class_range(struct RE_PARSE_CTX *re_ctx,
 
             uint32_t slot_idx;
 
-            assert(sizeof(range->bitmap[0]) * 8 == 1U << slot_shift);
+            assert((unsigned int)sizeof(range->bitmap[0]) * 8 == 1U << slot_shift);
 
             for (slot_idx = begin_slot; slot_idx <= last_slot; slot_idx++) {
                 uint32_t bitmask = ~0U;
@@ -1487,7 +1487,7 @@ static int match_class(uint32_t             code,
         if (code < begin_code || code >= begin_code + sizeof(range[i].bitmap) * 8)
             continue;
 
-        assert(1U << slot_shift == sizeof(range[i].bitmap[0]) * 8);
+        assert(1U << slot_shift == (unsigned int)sizeof(range[i].bitmap[0]) * 8);
         code_offs = code - begin_code;
         slot_idx = code_offs >> slot_shift;
         bit      = code_offs & ((1U << slot_shift) - 1U);
