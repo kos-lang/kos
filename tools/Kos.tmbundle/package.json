@@ -1,9 +1,14 @@
 {
-     "name": "Kos",
+     "name": "kos",
+     "displayName": "Kos",
+     "description": "Syntax highlighting for the Kos programming language",
      "version": "1.0.0",
      "engines": {
-         "vscode": ">=0.9.0-pre.1"
+         "vscode": "^1.0.0"
      },
+     "categories": [
+         "Programming Languages"
+     ],
      "publisher": "Chris Dragan",
      "contributes": {
          "languages": [{

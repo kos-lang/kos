@@ -63,9 +63,9 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>\b([:.])\b</string>
+					<string>[:.\/]</string>
 					<key>name</key>
-					<string>keyword.control.kos</string>
+					<string>punctuation.separator.kos</string>
 				</dict>
 				<dict>
 					<key>match</key>
@@ -78,7 +78,6 @@
 		<dict>
 			<key>begin</key>
 			<string>\?</string>
-	<!--
 			<key>beginCaptures</key>
 			<dict>
 				<key>0</key>
@@ -87,10 +86,8 @@
 					<string>keyword.operator.ternary.kos</string>
 				</dict>
 			</dict>
-	-->
 			<key>end</key>
 			<string>([^:"'`\[\]{}(\)]*)(:)</string>
-	<!--
 			<key>endCaptures</key>
 			<dict>
 				<key>1</key>
@@ -109,7 +106,6 @@
 					<string>keyword.operator.ternary.kos</string>
 				</dict>
 			</dict>
-	-->
 			<key>name</key>
 			<string>meta.ternary-if.kos</string>
 			<key>patterns</key>
@@ -168,13 +164,13 @@
 		</dict>
 		<dict>
 			<key>match</key>
-			<string>(?&lt;!\.)\b(extends|get|set|static)\b(?!\$)</string>
+			<string>(?&lt;!\.)\b(extends|get|match|set|static)\b(?!\$)</string>
 			<key>name</key>
 			<string>keyword.other.kos</string>
 		</dict>
 		<dict>
 			<key>match</key>
-			<string>(?&lt;!\.)\b(__line__|false|true|void)\b</string>
+			<string>(?&lt;!\.)\b(__line__|false|true|void|_)\b</string>
 			<key>name</key>
 			<string>constant.language.kos</string>
 		</dict>
@@ -295,24 +291,23 @@
 			<array>
 				<dict>
 					<key>match</key>
-					<string>(?&lt;!\w|\$)0[xX]\h+\b</string>
+					<string>(?&lt;!\w|\$)0[xX][\h_]+\b</string>
 					<key>name</key>
 					<string>constant.numeric.hex.kos</string>
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>(?&lt;!\w|\$)0[bB][01]+\b</string>
+					<string>(?&lt;!\w|\$)0[bB][01_]+\b</string>
 					<key>name</key>
 					<string>constant.numeric.binary.kos</string>
 				</dict>
 				<dict>
 					<key>match</key>
 					<string>(?x)
-					(?&lt;!\w|\$)							    # Ensure word boundary
-					[+-]?                                   # Optional sign
+					(?&lt;!\w|\$)								# Ensure word boundary
 					(?&gt;
-						(0|[1-9][0-9]*)(\.[0-9]*)?		    # 0 or 1 or 1. or 1.0
-						([eEpP][+-]?[0-9]+)?				# Exponent
+						(0|[1-9][0-9_]*)(\.[0-9_]*)?		# 0 or 1 or 1. or 1.0
+						([eEpP][+-]?[0-9_]+)?				# Exponent
 					)
 					(?!\w)									# Ensure word boundary
 				</string>
@@ -339,7 +334,19 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>!=|!=|&lt;=|&gt;=|==|==|&lt;|&gt;</string>
+					<string>!=|&lt;=|&gt;=|==</string>
+					<key>name</key>
+					<string>keyword.operator.comparison.kos</string>
+				</dict>
+				<dict>
+					<key>match</key>
+					<string>&gt;&gt;&gt;|&gt;&gt;|&lt;&lt;</string>
+					<key>name</key>
+					<string>keyword.operator.bitwise.shift.kos</string>
+				</dict>
+				<dict>
+					<key>match</key>
+					<string>&lt;|&gt;</string>
 					<key>name</key>
 					<string>keyword.operator.comparison.kos</string>
 				</dict>
@@ -363,9 +370,9 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>%|\*|/|\-|\+</string>
+					<string>-&gt;</string>
 					<key>name</key>
-					<string>keyword.operator.arithmetic.kos</string>
+					<string>keyword.operator.stream.kos</string>
 				</dict>
 				<dict>
 					<key>match</key>
@@ -375,15 +382,15 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>\.\.\.</string>
+					<string>%|\*|/|\-|\+</string>
 					<key>name</key>
-					<string>keyword.operator.spread.kos</string>
+					<string>keyword.operator.arithmetic.kos</string>
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>-&gt;</string>
+					<string>\.\.\.</string>
 					<key>name</key>
-					<string>keyword.operator.stream.kos</string>
+					<string>keyword.operator.spread.kos</string>
 				</dict>
 			</array>
 		</dict>
@@ -393,7 +400,40 @@
 			<array>
 				<dict>
 					<key>begin</key>
-					<string>[rR]?"</string>
+					<string>[rR]"</string>
+					<key>beginCaptures</key>
+					<dict>
+						<key>0</key>
+						<dict>
+							<key>name</key>
+							<string>punctuation.definition.string.begin.kos</string>
+						</dict>
+					</dict>
+					<key>end</key>
+					<string>(?&lt;!\\)"</string>
+					<key>endCaptures</key>
+					<dict>
+						<key>0</key>
+						<dict>
+							<key>name</key>
+							<string>punctuation.definition.string.end.kos</string>
+						</dict>
+					</dict>
+					<key>name</key>
+					<string>string.quoted.double.kos</string>
+					<key>patterns</key>
+					<array>
+						<dict>
+							<key>match</key>
+							<string>\n</string>
+							<key>name</key>
+							<string>invalid.illegal.character-not-allowed-here.kos</string>
+						</dict>
+					</array>
+				</dict>
+				<dict>
+					<key>begin</key>
+					<string>"</string>
 					<key>beginCaptures</key>
 					<dict>
 						<key>0</key>
@@ -423,12 +463,6 @@
 						<dict>
 							<key>include</key>
 							<string>#interpolation</string>
-						</dict>
-						<dict>
-							<key>match</key>
-							<string>\\\[rn]</string>
-							<key>name</key>
-							<string>constant.character.escape.newline.kos</string>
 						</dict>
 						<dict>
 							<key>match</key>
