@@ -648,8 +648,16 @@ int KOS_array_insert(KOS_CONTEXT ctx,
 
     src_delta = (uint32_t)(src_end - src_begin);
 
-    if (src_delta > dest_delta)
-        TRY(KOS_array_resize(ctx, dest.o, dest_len - dest_delta + src_delta));
+    if (src_delta > dest_delta) {
+        const uint32_t new_len = dest_len - dest_delta + src_delta;
+
+        if (new_len < src_delta) {
+            KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+
+        TRY(KOS_array_resize(ctx, dest.o, new_len));
+    }
 
     dest_buf = get_data(dest.o);
     if (src_begin != src_end)
