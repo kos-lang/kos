@@ -747,3 +747,23 @@ do {
         assert find_code(code) == 2
     }
 }
+
+# Max class size
+do {
+    const cls  = "[\x{0}-\x{10FFFF}]"
+    const last = "\x{10FFFF}"
+
+    const r     = re.re(cls.repeats(8))
+    const found = r.find(last.repeats(8))
+
+    assert found
+    assert found.begin == 0
+    assert found.end   == 8
+
+    try {
+        re.re(cls.repeats(9))
+    }
+    catch const e {
+        assert e.value == "regular expression too long"
+    }
+}

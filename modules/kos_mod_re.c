@@ -535,20 +535,29 @@ static uint16_t generate_class(struct RE_PARSE_CTX *re_ctx)
     struct RE_CLASS_DESC *desc;
     uint16_t              class_id;
 
-    const size_t   new_size  = re_ctx->class_descs.size + sizeof(struct RE_CLASS_DESC);
-    const uint16_t begin_idx = (uint16_t)(re_ctx->class_data.size / sizeof(struct RE_CLASS_RANGE));
-    const int      error     = KOS_vector_resize(&re_ctx->class_descs, new_size);
+    const size_t range_count = re_ctx->class_data.size  / sizeof(struct RE_CLASS_RANGE);
+    const size_t class_count = re_ctx->class_descs.size / sizeof(struct RE_CLASS_DESC);
 
-    if (error) {
-        KOS_raise_exception(re_ctx->ctx, KOS_STR_OUT_OF_MEMORY);
+    if (range_count > 0xFFFFU || class_count >= 0xFFFFU) {
+        KOS_raise_exception(re_ctx->ctx, KOS_CONST_ID(str_err_too_long));
         return NO_CLASS_ID;
+    }
+
+    {
+        const size_t new_size = re_ctx->class_descs.size + sizeof(struct RE_CLASS_DESC);
+        const int    error    = KOS_vector_resize(&re_ctx->class_descs, new_size);
+
+        if (error) {
+            KOS_raise_exception(re_ctx->ctx, KOS_STR_OUT_OF_MEMORY);
+            return NO_CLASS_ID;
+        }
     }
 
     class_id = (uint16_t)(re_ctx->class_descs.size / sizeof(struct RE_CLASS_DESC)) - 1;
 
     desc = (struct RE_CLASS_DESC *)re_ctx->class_descs.buffer + class_id;
 
-    desc->begin_idx  = begin_idx;
+    desc->begin_idx  = (uint16_t)range_count;
     desc->num_ranges = 0;
 
     return class_id;
