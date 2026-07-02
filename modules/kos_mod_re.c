@@ -869,6 +869,11 @@ static int parse_group(struct RE_PARSE_CTX *re_ctx)
     unsigned group_id   = re_ctx->num_groups++;
     uint32_t group_type = peek_next_char(&re_ctx->iter);
 
+    if (re_ctx->num_groups > 0xFFFFU) {
+        KOS_raise_exception(re_ctx->ctx, KOS_CONST_ID(str_err_too_long));
+        return KOS_ERROR_EXCEPTION;
+    }
+
     if (group_type == '?') {
         consume_next_char(re_ctx);
 
@@ -992,6 +997,11 @@ static int emit_multiplicity(struct RE_PARSE_CTX *re_ctx,
     const unsigned count_id = re_ctx->num_counts++;
     uint32_t       jump_offs;
     uint32_t       count_size;
+
+    if (re_ctx->num_counts > 0xFFFFU) {
+        KOS_raise_exception(re_ctx->ctx, KOS_CONST_ID(str_err_too_long));
+        return KOS_ERROR_EXCEPTION;
+    }
 
     if (lazy)
         consume_next_char(re_ctx);
