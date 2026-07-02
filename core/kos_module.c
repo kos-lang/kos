@@ -202,9 +202,16 @@ static int find_module(KOS_CONTEXT            ctx,
     }
 
     /* Check if module name is a path and a path is allowed */
-    sep_pos = rfind_path(maybe_path, length, '.');
-    if (sep_pos && maybe_path[sep_pos - 1] == '.' && ! is_path)
-        RAISE_ERROR(KOS_ERROR_NOT_FOUND);
+    if ( ! is_path) {
+        unsigned j;
+        for (j = 0; j < length; j++)
+            if (maybe_path[j] == '/' || maybe_path[j] == '\\')
+                RAISE_ERROR(KOS_ERROR_NOT_FOUND);
+
+        sep_pos = rfind_path(maybe_path, length, '.');
+        if (sep_pos && maybe_path[sep_pos - 1] == '.')
+            RAISE_ERROR(KOS_ERROR_NOT_FOUND);
+    }
 
     /* Check if file exists */
     if (is_path) {
