@@ -3199,6 +3199,7 @@ static KOS_OBJ_ID execute(KOS_CONTEXT ctx) /* lgtm [cpp/use-of-goto] */
 
                             assert(ctx->regs_idx == regs_idx);
 
+                            pair   = saved_pair.o;
                             iter.o = KOS_destroy_top_locals(ctx, &saved_pair, &iter);
 
                             TRY_OBJID(value);

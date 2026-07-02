@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: Copyright (c) 2014-2026 Chris Dragan
 
+import base.deep
 import base.print
 import base.range
 import base.generator_end
@@ -1282,4 +1283,28 @@ do {
         }
     }
     assert i == 1
+}
+
+# looping over dynamic properties
+do {
+    const a = [10, 20, 30]
+
+    for const k, v in deep(a) {
+        if k == "size" {
+            assert v == 3
+
+            # Allocate a lot so mad_gc reuses the stale pair slot / marks the
+            # stale id left in a register, walking freed memory.
+            var junk = []
+            var i = 0
+            while i < 5000 {
+                junk.push([i, i, i])
+                i = i + 1
+            }
+
+            assert k == "size"
+            assert v == 3
+            break
+        }
+    }
 }
