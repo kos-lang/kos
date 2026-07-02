@@ -510,9 +510,15 @@ static int acquire_file_object(KOS_CONTEXT       ctx,
                                KOS_OBJ_ID        file_obj,
                                KOS_FILE_HOLDER **file_holder)
 {
-    *file_holder = (KOS_FILE_HOLDER *)KOS_object_get_private(file_obj, &file_priv_class);
+    const KOS_MUTEX mutex = ctx->inst->threads.priv_mutex;
+    int             acquired;
 
-    if ( ! *file_holder || (acquire_file(*file_holder) <= 0)) {
+    kos_lock_mutex(mutex);
+    *file_holder = (KOS_FILE_HOLDER *)KOS_object_get_private(file_obj, &file_priv_class);
+    acquired     = *file_holder && (acquire_file(*file_holder) > 0);
+    kos_unlock_mutex(mutex);
+
+    if ( ! acquired) {
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_file_not_open));
         return KOS_ERROR_EXCEPTION;
     }
@@ -585,8 +591,12 @@ static KOS_OBJ_ID kos_close(const KOS_CONTEXT             ctx,
 
     file_holder = (KOS_FILE_HOLDER *)KOS_object_swap_private(this_obj, &file_priv_class, closed_holder);
 
-    if (file_holder)
+    if (file_holder) {
+        const KOS_MUTEX mutex = ctx->inst->threads.priv_mutex;
+        kos_lock_mutex(mutex);
         release_file(file_holder);
+        kos_unlock_mutex(mutex);
+    }
 
     return this_obj;
 }
@@ -772,7 +782,13 @@ static KOS_OBJ_ID read_line(const KOS_CONTEXT             ctx,
     do {
         char *ret;
 
-        if (KOS_vector_resize(&buf, (size_t)(last_size + size_delta))) {
+        if ((int64_t)last_size + (int64_t)size_delta > (int64_t)INT_MAX) {
+            KOS_resume_context(ctx);
+            KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+            RAISE_ERROR(KOS_ERROR_EXCEPTION);
+        }
+
+        if (KOS_vector_resize(&buf, (size_t)last_size + (size_t)size_delta)) {
             KOS_resume_context(ctx);
             KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
             RAISE_ERROR(KOS_ERROR_EXCEPTION);
