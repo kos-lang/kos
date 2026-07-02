@@ -628,11 +628,10 @@ static int gen_str(KOS_COMP_UNIT   *program,
     return gen_str_esc(program, token, KOS_UTF8_WITH_ESCAPE, str_idx);
 }
 
-static uint16_t calc_assert_str_len(const char *begin,
-                                    const char *end)
+static size_t calc_assert_str_len(const char *begin, const char *end)
 {
-    uint16_t length         = 0;
-    int      last_printable = 0;
+    size_t length         = 0;
+    int    last_printable = 0;
 
     for ( ; begin < end; ++begin) {
 
@@ -681,6 +680,7 @@ static int gen_assert_str(KOS_COMP_UNIT      *program,
     char          *buf;
     uint16_t       length;
     const uint16_t max_length = 64;
+    size_t         raw_length;
 
     static const char assertion_failed[] = "Assertion failed: ";
 
@@ -701,10 +701,12 @@ static int gen_assert_str(KOS_COMP_UNIT      *program,
     assert(begin < end);
     assert((uint8_t)*begin > 0x20);
 
-    length = calc_assert_str_len(begin, end) + sizeof(assertion_failed) - 1;
+    raw_length = calc_assert_str_len(begin, end) + sizeof(assertion_failed) - 1;
 
-    if (length > max_length)
-        length = max_length;
+    if (raw_length > max_length)
+        raw_length = max_length;
+
+    length = (uint16_t)raw_length;
 
     buf = (char *)KOS_mempool_alloc(&program->allocator, length);
 
