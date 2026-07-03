@@ -80,6 +80,7 @@ typedef struct KOS_FILE_HOLDER_S {
     KOS_ATOMIC(FILE *)   file;
     KOS_ATOMIC(int32_t)  ref_count;
     KOS_ATOMIC(uint32_t) closed;
+    KOS_ATOMIC(uint32_t) finalized;
     int                  owner;
 } KOS_FILE_HOLDER;
 
@@ -129,6 +130,7 @@ static KOS_FILE_HOLDER *make_file_holder(KOS_CONTEXT ctx,
         file_holder->file      = file;
         file_holder->ref_count = 1;
         file_holder->closed    = 0;
+        file_holder->finalized = 0;
         file_holder->owner     = owner;
     }
     else
@@ -161,8 +163,12 @@ static void file_finalize(KOS_CONTEXT ctx,
     if (priv) {
         KOS_FILE_HOLDER *const file_holder = (KOS_FILE_HOLDER *)priv;
 
+        KOS_atomic_write_release_u32(*(KOS_ATOMIC(uint32_t) *)&file_holder->finalized, 1U);
+
         close_file_holder(file_holder);
-        KOS_free(file_holder);
+
+        if (KOS_atomic_read_relaxed_u32(*(KOS_ATOMIC(uint32_t) *)&file_holder->ref_count) == 0U)
+            KOS_free(file_holder);
     }
 }
 
@@ -196,6 +202,35 @@ static KOS_OBJ_ID make_file_object(KOS_CONTEXT     ctx,
 cleanup:
     return error ? KOS_BADPTR : obj_id;
 }
+
+#ifdef CONFIG_FUZZ
+static int fuzz_fix_filename(KOS_VECTOR *filename_cstr, const char* flags)
+{
+    int         error      = KOS_SUCCESS;
+    const char  dev_zero[] = "/dev/zero";
+    const char  dev_null[] = "/dev/null";
+    const char *dev_file   = dev_null;
+
+    const char *const read_only[]   = { "re", "rbe", "r+be" };
+    const size_t      num_read_only = sizeof(read_only) / sizeof(read_only[0]);
+    size_t            idx;
+
+    for (idx = 0; idx < num_read_only; idx++) {
+        if (strcmp(flags, read_only[idx]) == 0)
+            break;
+    }
+
+    if (idx < num_read_only)
+        dev_file = dev_zero;
+
+    TRY(KOS_vector_resize(filename_cstr, strlen(dev_file) + 1));
+
+    memcpy(filename_cstr->buffer, dev_file, strlen(dev_file) + 1);
+
+cleanup:
+    return error;
+}
+#endif
 
 /* @item io file()
  *
@@ -282,6 +317,10 @@ static KOS_OBJ_ID kos_open(const KOS_CONTEXT             ctx,
     KOS_suspend_context(ctx);
 
     fix_path_separators(&filename_cstr);
+
+#ifdef CONFIG_FUZZ
+    TRY(fuzz_fix_filename(&filename_cstr, flags_cstr.buffer));
+#endif
 
     errno = 0;
 
@@ -448,7 +487,8 @@ static KOS_OBJ_ID kos_pipe(const KOS_CONTEXT             ctx,
 
     KOS_suspend_context(ctx);
 
-#ifdef _WIN32
+#ifdef CONFIG_FUZZ
+#elif defined(_WIN32)
     if ( ! CreatePipe(&read_pipe, &write_pipe, KOS_NULL, 0x10000))
         /* This is not correct, but unlikely to happen */
         stored_errno = EPIPE;
@@ -1723,6 +1763,10 @@ static void file_lock_finalize(KOS_CONTEXT ctx,
 #endif
 
         release_file(file_holder);
+
+        if (KOS_atomic_read_relaxed_u32(*(KOS_ATOMIC(uint32_t) *)&file_holder->ref_count) == 0U &&
+            KOS_atomic_read_relaxed_u32(*(KOS_ATOMIC(uint32_t) *)&file_holder->finalized) != 0U)
+            KOS_free(file_holder);
     }
 }
 
@@ -1774,7 +1818,8 @@ static KOS_OBJ_ID kos_lock(const KOS_CONTEXT             ctx,
 
     KOS_suspend_context(ctx);
 
-#ifdef _WIN32
+#ifdef CONFIG_FUZZ
+#elif defined(_WIN32)
     {
         HANDLE     handle;
         OVERLAPPED overlapped;
@@ -1866,7 +1911,11 @@ static int add_std_file(KOS_CONTEXT ctx,
     KOS_init_local_with(ctx, &module, module_obj);
     KOS_init_local_with(ctx, &name,   name_obj);
 
+#ifdef CONFIG_FUZZ
+    obj = KOS_VOID;
+#else
     obj = make_file_object(ctx, module.o, file, NO_CLOSE);
+#endif
     TRY_OBJID(obj);
 
     error = KOS_module_add_global(ctx, module.o, name.o, obj, KOS_NULL);

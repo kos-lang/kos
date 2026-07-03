@@ -294,7 +294,9 @@ static KOS_OBJ_ID kos_remove(const KOS_CONTEXT             ctx,
 
     KOS_suspend_context(ctx);
 
-#ifdef _WIN32
+#ifdef CONFIG_FUZZ
+    ret = KOS_TRUE;
+#elif defined(_WIN32)
     if (DeleteFile(filename_cstr.buffer))
         ret = KOS_TRUE;
     else {
@@ -513,7 +515,14 @@ cleanup:
     return error ? KOS_BADPTR : KOS_atomic_read_relaxed_obj(args[0]);
 }
 
-#ifdef _WIN32
+#ifdef CONFIG_FUZZ
+static int make_directory(KOS_CONTEXT ctx,
+                          const char *path_cstr,
+                          int         fail_if_exists)
+{
+    return KOS_SUCCESS;
+}
+#elif defined(_WIN32)
 static int make_directory(KOS_CONTEXT ctx,
                           const char *path_cstr,
                           int         fail_if_exists)
@@ -676,7 +685,9 @@ static KOS_OBJ_ID kos_rmdir(const KOS_CONTEXT             ctx,
 
     KOS_suspend_context(ctx);
 
-#ifdef _WIN32
+#ifdef CONFIG_FUZZ
+    ret = KOS_TRUE;
+#elif defined(_WIN32)
     if (RemoveDirectory(path_cstr.buffer))
         ret = KOS_TRUE;
     else {

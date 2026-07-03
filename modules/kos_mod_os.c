@@ -1033,6 +1033,7 @@ found_program:
     return KOS_SUCCESS;
 }
 
+#ifndef CONFIG_FUZZ
 /* Sends errno to parent process, if the child cannot run execve() */
 static void send_errno_and_exit(int fd)
 {
@@ -1041,6 +1042,7 @@ static void send_errno_and_exit(int fd)
 
     exit((num_writ == sizeof(err_value)) ? 1 : 2);
 }
+#endif
 
 static int get_file(KOS_CONTEXT ctx, KOS_OBJ_ID file_obj, FILE **file)
 {
@@ -1055,6 +1057,7 @@ static int get_file(KOS_CONTEXT ctx, KOS_OBJ_ID file_obj, FILE **file)
     return KOS_SUCCESS;
 }
 
+#ifndef CONFIG_FUZZ
 static void redirect_io(FILE *src_file,
                         int   target_fd,
                         int   status_fd)
@@ -1074,6 +1077,7 @@ static void redirect_io(FILE *src_file,
     if (fcntl(target_fd, F_SETFD, 0) == -1)
         send_errno_and_exit(status_fd);
 }
+#endif
 #endif
 
 /* @item os spawn()
@@ -1125,7 +1129,6 @@ static KOS_OBJ_ID spawn(const KOS_CONTEXT             ctx,
     FILE              *stdin_file        = KOS_NULL;
     FILE              *stdout_file       = KOS_NULL;
     FILE              *stderr_file       = KOS_NULL;
-    int                exec_status_fd[2] = { -1, -1 };
 #endif
     int                error             = KOS_SUCCESS;
 
@@ -1175,7 +1178,8 @@ static KOS_OBJ_ID spawn(const KOS_CONTEXT             ctx,
     if (args[7] != KOS_VOID)
         TRY(get_file(ctx, args[7], &stderr_file));
 
-#ifdef _WIN32
+#ifdef CONFIG_FUZZ
+#elif defined(_WIN32)
     {
         PROCESS_INFORMATION proc_info;
         STARTUPINFO         startup_info;
@@ -1220,6 +1224,7 @@ static KOS_OBJ_ID spawn(const KOS_CONTEXT             ctx,
     }
 #else
     {
+        int   exec_status_fd[2] = { -1, -1 };
         pid_t child_pid;
         int   err_value = 0;
 
@@ -1559,7 +1564,9 @@ static KOS_OBJ_ID kos_exit(const KOS_CONTEXT             ctx,
     if (exit_code < 0 || exit_code > 255)
         exit_code = 1;
 
+#ifndef CONFIG_FUZZ
     exit((int)exit_code);
+#endif
 
     return KOS_VOID;
 }
@@ -1776,7 +1783,8 @@ static KOS_OBJ_ID kos_kill(const KOS_CONTEXT             ctx,
     if (KOS_get_integer(ctx, args[1], &signal))
         return KOS_BADPTR;
 
-#ifdef _WIN32
+#ifdef CONFIG_FUZZ
+#elif defined(_WIN32)
     if (signal == 9) {
         DWORD last_error = 0;
         BOOL  ok;
@@ -1808,8 +1816,10 @@ static KOS_OBJ_ID kos_kill(const KOS_CONTEXT             ctx,
         const int error = kill((pid_t)pid, signal);
 
         if (error < 0) {
-            if (errno != ESRCH || (signal != SIGKILL && signal != SIGTERM))
+            if (errno != ESRCH || (signal != SIGKILL && signal != SIGQUIT && signal != SIGTERM)) {
                 KOS_raise_errno(ctx, "failed to send signal");
+                return KOS_BADPTR;
+            }
         }
     }
 #endif
