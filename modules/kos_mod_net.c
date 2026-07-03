@@ -108,6 +108,7 @@ KOS_DECLARE_STATIC_CONST_STRING(str_type,                     "type");
 typedef struct KOS_SOCKET_HOLDER_S {
     KOS_ATOMIC(uint32_t) socket_fd;
     KOS_ATOMIC(uint32_t) ref_count;
+    KOS_ATOMIC(uint32_t) closed;
     int                  family;
     int                  blocking;
 } KOS_SOCKET_HOLDER;
@@ -138,16 +139,24 @@ static void release_socket(KOS_SOCKET_HOLDER *socket_holder)
 
             if (socket_fd >= 0)
                 closesocket(socket_fd);
-
-            KOS_free(socket_holder);
         }
     }
 }
 
+static void close_socket_holder(KOS_SOCKET_HOLDER *socket_holder)
+{
+    if (socket_holder && KOS_atomic_swap_u32(socket_holder->closed, 1U) == 0U)
+        release_socket(socket_holder);
+}
+
 static void socket_finalize(KOS_CONTEXT ctx, void *priv)
 {
-    if (priv)
-        release_socket((KOS_SOCKET_HOLDER *)priv);
+    if (priv) {
+        KOS_SOCKET_HOLDER *const socket_holder = (KOS_SOCKET_HOLDER *)priv;
+
+        close_socket_holder(socket_holder);
+        KOS_free(socket_holder);
+    }
 }
 
 KOS_DECLARE_PRIVATE_CLASS(socket_priv_class);
@@ -161,6 +170,7 @@ static KOS_SOCKET_HOLDER *make_socket_holder(KOS_CONTEXT ctx,
     if (socket_holder) {
         socket_holder->socket_fd = (uint32_t)socket_fd;
         socket_holder->ref_count = 1;
+        socket_holder->closed    = 0;
         socket_holder->family    = family;
         socket_holder->blocking  = 1;
     }
@@ -201,15 +211,10 @@ static int acquire_socket_object(KOS_CONTEXT         ctx,
                                  KOS_OBJ_ID          socket_obj,
                                  KOS_SOCKET_HOLDER **socket_holder)
 {
-    const KOS_MUTEX mutex = ctx->inst->threads.priv_mutex;
-    int             acquired;
-
-    kos_lock_mutex(mutex);
     *socket_holder = (KOS_SOCKET_HOLDER *)KOS_object_get_private(socket_obj, &socket_priv_class);
-    acquired       = *socket_holder && (acquire_socket(*socket_holder) > 0);
-    kos_unlock_mutex(mutex);
 
-    if ( ! acquired) {
+    if ( ! *socket_holder || (acquire_socket(*socket_holder) <= 0)) {
+        *socket_holder = KOS_NULL;
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_socket_not_open));
         return KOS_ERROR_EXCEPTION;
     }
@@ -711,7 +716,6 @@ static KOS_OBJ_ID kos_close(const KOS_CONTEXT             ctx,
                             const uint32_t                num_args,
                             KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    KOS_SOCKET_HOLDER *closed_holder;
     KOS_SOCKET_HOLDER *socket_holder;
 
     if (GET_OBJ_TYPE(this_obj) != OBJ_OBJECT) {
@@ -719,18 +723,9 @@ static KOS_OBJ_ID kos_close(const KOS_CONTEXT             ctx,
         return KOS_BADPTR;
     }
 
-    closed_holder = make_socket_holder(ctx, KOS_INVALID_SOCKET, -1);
-    if ( ! closed_holder)
-        return KOS_BADPTR;
+    socket_holder = (KOS_SOCKET_HOLDER *)KOS_object_get_private(this_obj, &socket_priv_class);
 
-    socket_holder = (KOS_SOCKET_HOLDER *)KOS_object_swap_private(this_obj, &socket_priv_class, closed_holder);
-
-    {
-        const KOS_MUTEX mutex = ctx->inst->threads.priv_mutex;
-        kos_lock_mutex(mutex);
-        release_socket(socket_holder);
-        kos_unlock_mutex(mutex);
-    }
+    close_socket_holder(socket_holder);
 
     return this_obj;
 

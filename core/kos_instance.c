@@ -396,13 +396,6 @@ int KOS_instance_init(KOS_INSTANCE *inst,
         kos_tls_destroy(inst->threads.thread_key);
         goto cleanup;
     }
-    error = kos_create_mutex(&inst->threads.priv_mutex);
-    if (error) {
-        kos_destroy_mutex(&inst->threads.new_mutex);
-        kos_destroy_mutex(&inst->threads.ctx_mutex);
-        kos_tls_destroy(inst->threads.thread_key);
-        goto cleanup;
-    }
     thread_ok = 1;
 
     TRY(kos_heap_init(inst));
@@ -465,7 +458,6 @@ cleanup:
 
         if (thread_ok) {
             kos_tls_destroy(inst->threads.thread_key);
-            kos_destroy_mutex(&inst->threads.priv_mutex);
             kos_destroy_mutex(&inst->threads.new_mutex);
             kos_destroy_mutex(&inst->threads.ctx_mutex);
         }
@@ -550,7 +542,6 @@ void KOS_instance_destroy(KOS_INSTANCE *inst)
 
     kos_tls_destroy(inst->threads.thread_key);
 
-    kos_destroy_mutex(&inst->threads.priv_mutex);
     kos_destroy_mutex(&inst->threads.new_mutex);
     kos_destroy_mutex(&inst->threads.ctx_mutex);
 

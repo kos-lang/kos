@@ -233,7 +233,6 @@ struct KOS_THREAD_MGMT_S {
     struct KOS_THREAD_CONTEXT_S main_thread; /* Main thread's context           */
     KOS_MUTEX                   ctx_mutex;   /* Mutex for registering contexts  */
     KOS_MUTEX                   new_mutex;   /* Mutex for creating threads      */
-    KOS_MUTEX                   priv_mutex;  /* Mutex for private handles       */
     KOS_ATOMIC(KOS_THREAD *)   *threads;     /* Array of thread objects         */
     KOS_ATOMIC(uint32_t)        num_threads; /* Number of used thread slots     */
     uint32_t                    max_threads; /* Maximum number of threads       */

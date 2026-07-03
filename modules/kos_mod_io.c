@@ -77,9 +77,10 @@ static void fix_path_separators(KOS_VECTOR *buf)
 }
 
 typedef struct KOS_FILE_HOLDER_S {
-    KOS_ATOMIC(FILE *)  file;
-    KOS_ATOMIC(int32_t) ref_count;
-    int                 owner;
+    KOS_ATOMIC(FILE *)   file;
+    KOS_ATOMIC(int32_t)  ref_count;
+    KOS_ATOMIC(uint32_t) closed;
+    int                  owner;
 } KOS_FILE_HOLDER;
 
 static int acquire_file(KOS_FILE_HOLDER *file_holder)
@@ -108,10 +109,14 @@ static void release_file(KOS_FILE_HOLDER *file_holder)
 
             if (file && file_holder->owner)
                 fclose(file);
-
-            KOS_free(file_holder);
         }
     }
+}
+
+static void close_file_holder(KOS_FILE_HOLDER *file_holder)
+{
+    if (file_holder && KOS_atomic_swap_u32(file_holder->closed, 1U) == 0U)
+        release_file(file_holder);
 }
 
 static KOS_FILE_HOLDER *make_file_holder(KOS_CONTEXT ctx,
@@ -123,6 +128,7 @@ static KOS_FILE_HOLDER *make_file_holder(KOS_CONTEXT ctx,
     if (file_holder) {
         file_holder->file      = file;
         file_holder->ref_count = 1;
+        file_holder->closed    = 0;
         file_holder->owner     = owner;
     }
     else
@@ -152,8 +158,12 @@ static FILE *get_file(KOS_FILE_HOLDER *file_holder)
 static void file_finalize(KOS_CONTEXT ctx,
                           void       *priv)
 {
-    if (priv)
-        release_file((KOS_FILE_HOLDER *)priv);
+    if (priv) {
+        KOS_FILE_HOLDER *const file_holder = (KOS_FILE_HOLDER *)priv;
+
+        close_file_holder(file_holder);
+        KOS_free(file_holder);
+    }
 }
 
 KOS_DECLARE_PRIVATE_CLASS(file_priv_class);
@@ -510,15 +520,10 @@ static int acquire_file_object(KOS_CONTEXT       ctx,
                                KOS_OBJ_ID        file_obj,
                                KOS_FILE_HOLDER **file_holder)
 {
-    const KOS_MUTEX mutex = ctx->inst->threads.priv_mutex;
-    int             acquired;
-
-    kos_lock_mutex(mutex);
     *file_holder = (KOS_FILE_HOLDER *)KOS_object_get_private(file_obj, &file_priv_class);
-    acquired     = *file_holder && (acquire_file(*file_holder) > 0);
-    kos_unlock_mutex(mutex);
 
-    if ( ! acquired) {
+    if ( ! *file_holder || (acquire_file(*file_holder) <= 0)) {
+        *file_holder = KOS_NULL;
         KOS_raise_exception(ctx, KOS_CONST_ID(str_err_file_not_open));
         return KOS_ERROR_EXCEPTION;
     }
@@ -577,7 +582,6 @@ static KOS_OBJ_ID kos_close(const KOS_CONTEXT             ctx,
                             const uint32_t                num_args,
                             KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    KOS_FILE_HOLDER *closed_holder;
     KOS_FILE_HOLDER *file_holder;
 
     if (GET_OBJ_TYPE(this_obj) != OBJ_OBJECT) {
@@ -585,18 +589,9 @@ static KOS_OBJ_ID kos_close(const KOS_CONTEXT             ctx,
         return KOS_BADPTR;
     }
 
-    closed_holder = make_file_holder(ctx, KOS_NULL, 1);
-    if ( ! closed_holder)
-        return KOS_BADPTR;
+    file_holder = (KOS_FILE_HOLDER *)KOS_object_get_private(this_obj, &file_priv_class);
 
-    file_holder = (KOS_FILE_HOLDER *)KOS_object_swap_private(this_obj, &file_priv_class, closed_holder);
-
-    if (file_holder) {
-        const KOS_MUTEX mutex = ctx->inst->threads.priv_mutex;
-        kos_lock_mutex(mutex);
-        release_file(file_holder);
-        kos_unlock_mutex(mutex);
-    }
+    close_file_holder(file_holder);
 
     return this_obj;
 }
