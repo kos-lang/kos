@@ -56,8 +56,10 @@ Table of Contents
       * [function.prototype.registers](#functionprototyperegisters)
       * [function.prototype.size](#functionprototypesize)
     * [generator()](#generator)
+      * [generator.prototype.close()](#generatorprototypeclose)
       * [generator.prototype.iterator()](#generatorprototypeiterator)
       * [generator.prototype.next()](#generatorprototypenext)
+      * [generator.prototype.release()](#generatorprototyperelease)
       * [generator.prototype.slice()](#generatorprototypeslice)
       * [generator.prototype.state](#generatorprototypestate)
     * [generator\_end()](#generator_end)
@@ -1551,6 +1553,25 @@ Throws an exception if the `func` argument is not a generator.
 
 The prototype of `generator.prototype` is `function.prototype`.
 
+generator.prototype.close()
+---------------------------
+
+    generator.prototype.close()
+
+Finishes a generator, making sure all pending objects in it are closed.
+
+This will run any defer sections and release objects held using `with` statement
+even if the generator wasn't finish yet.
+
+Calling this on a non-generator function or on a generator which either hasn't
+been instantiated or is done is a no-op.
+
+Returns `void`, unless the generator threw an exception during cleanup.
+
+Examples:
+
+    > shallow().close()
+
 generator.prototype.iterator()
 ------------------------------
 
@@ -1594,6 +1615,16 @@ Examples:
     0
     > it.next()
     1
+
+generator.prototype.release()
+-----------------------------
+
+    generator.prototype.release()
+
+Finishes a generator, making sure all pending objects in it are closed.
+
+This is equivalent to `generator.prototype.close()`.  The `release()` variant
+is used e.g. in conjunction with the `with` statement.
 
 generator.prototype.slice()
 ---------------------------
