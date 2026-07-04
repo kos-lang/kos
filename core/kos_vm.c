@@ -659,7 +659,12 @@ static int init_registers(KOS_CONTEXT ctx,
         assert(size > KOS_STACK_EXTRA);
 
         num_regs = GET_SMALL_INT(KOS_atomic_read_relaxed_obj(OBJPTR(STACK, stack)->buf[size - 1]));
-        assert(num_regs == get_num_regs(ctx));
+        /* get_num_regs() is used for non-native functions and requires the number
+         * of arguments to fit in in the registers.  So only check it if we won't assert.
+         */
+        if (num_regs < KOS_NO_REG) {
+            assert(num_regs == get_num_regs(ctx));
+        }
         if (state >= KOS_GEN_INIT) {
             assert(num_regs == required_num_args + 2);
         }

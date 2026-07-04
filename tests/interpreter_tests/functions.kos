@@ -917,6 +917,15 @@ do {
                  191, 192, 193, 194, 195, 196, 197, 198, 199, 200)
 }
 
+# lots of args passed to native function
+do {
+    const num_args = 10_000
+
+    const a = []
+    a.push("a".repeats(num_args)...)
+    assert a.size == num_args
+}
+
 # independent argument from two functions up
 do {
     fun f1(a)
