@@ -1260,8 +1260,6 @@ static KOS_OBJ_ID array_constructor(const KOS_CONTEXT             ctx,
                         else
                             TRY(KOS_array_push(ctx, ret.o, gen_ret.o, KOS_NULL));
 
-                        gen_ret.o = KOS_BADPTR;
-
                         ++cur_size;
                     }
                 }
