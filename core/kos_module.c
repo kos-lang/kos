@@ -944,7 +944,8 @@ static int alloc_constants(KOS_CONTEXT    ctx,
         }
 
         for (arg_idx = 0; arg_idx < func_const->num_named_args; arg_idx++) {
-            const uint32_t str_idx = func_const->arg_name_str_idx[arg_idx];
+            const uint32_t pos_idx = func_const->named_args[arg_idx].pos_idx;
+            const uint32_t str_idx = func_const->named_args[arg_idx].str_idx;
 
             name = KOS_array_read(ctx, OBJPTR(MODULE, module.o)->constants, (int)str_idx);
             TRY_OBJID(name);
@@ -953,7 +954,7 @@ static int alloc_constants(KOS_CONTEXT    ctx,
             TRY(KOS_set_property(ctx,
                                  OBJPTR(FUNCTION, obj.o)->arg_map,
                                  name,
-                                 TO_SMALL_INT((int64_t)arg_idx)));
+                                 TO_SMALL_INT((int64_t)pos_idx)));
         }
 
         if (func_const->flags & KOS_COMP_FUN_GENERATOR)

@@ -5,6 +5,10 @@ import base
 import base.generator_end
 import test_tools.expect_fail
 
+# Force first constant in this module to be a float
+# There was a bug where placeholder args would use constant index 0 (so make it a non-string)
+public const first_const = 0.5
+
 ##############################################################################
 
 do {

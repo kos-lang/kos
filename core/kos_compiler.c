@@ -1548,8 +1548,8 @@ static KOS_COMP_FUNCTION *alloc_func_constant(KOS_COMP_UNIT *program,
                                               uint8_t        num_named_args)
 {
     KOS_COMP_FUNCTION *constant;
-    const size_t       alloc_size = sizeof(KOS_COMP_FUNCTION) - sizeof(uint32_t)
-                                    + (num_named_args * sizeof(uint32_t));
+    const size_t       alloc_size = sizeof(KOS_COMP_FUNCTION)
+                                    + ((num_named_args - 1) * sizeof(KOS_COMP_NAMED_ARG));
 
     constant = (KOS_COMP_FUNCTION *)KOS_mempool_alloc(&program->allocator, alloc_size);
 
@@ -5638,13 +5638,17 @@ static int prealloc_arg_names(KOS_COMP_UNIT      *program,
                node->type == NT_PLACEHOLDER ||
                node->type == NT_ASSIGNMENT);
 
-        if (gen_str(program, &ident_node->token, &arg_str_idx))
-            return 0;
+        if (node->type != NT_PLACEHOLDER) {
+
+            if (gen_str(program, &ident_node->token, &arg_str_idx))
+                return 0;
+
+            ++count;
+            if (count == KOS_MAX_REGS)
+                break;
+        }
 
         node = node->next;
-        ++count;
-        if (count == KOS_MAX_REGS)
-            break;
     }
 
     return count;
@@ -5745,6 +5749,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
         int           rest_used    = 0;
         int           have_rest    = 0;
         int           num_def_args = 0;
+        int           named_i      = 0;
         int           i;
 
         assert(arg_node);
@@ -5755,9 +5760,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
 
         for (i = 0; arg_node && arg_node->type != NT_ELLIPSIS; arg_node = arg_node->next, ++i) {
 
-            KOS_AST_NODE *ident_node =
-                arg_node->type != NT_ASSIGNMENT ? arg_node : arg_node->children;
-            int           arg_str_idx = 0;
+            KOS_AST_NODE *ident_node = arg_node->type != NT_ASSIGNMENT ? arg_node : arg_node->children;
 
             assert(arg_node->type == NT_IDENTIFIER  ||
                    arg_node->type == NT_PLACEHOLDER ||
@@ -5779,13 +5782,17 @@ static int gen_function(KOS_COMP_UNIT      *program,
                 assert( ! var);
             }
             else {
+                int arg_str_idx = 0;
+
                 assert(ident_node->is_var);
                 assert(var);
                 assert(var->num_reads || ! var->num_assignments);
 
                 TRY(gen_str(program, &ident_node->token, &arg_str_idx));
-                assert(i < constant->num_named_args);
-                constant->arg_name_str_idx[i] = arg_str_idx;
+                assert(named_i < constant->num_named_args);
+                constant->named_args[named_i].pos_idx = i;
+                constant->named_args[named_i].str_idx = arg_str_idx;
+                ++named_i;
             }
 
             /* Enumerate all args with default values, even if they are unused,

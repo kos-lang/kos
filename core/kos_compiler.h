@@ -176,6 +176,11 @@ typedef struct KOS_COMP_STRING_S {
     KOS_UTF8_ESCAPE escape;
 } KOS_COMP_STRING;
 
+typedef struct KOS_COMP_NAMED_ARG_S {
+    uint8_t  pos_idx; /* Argument's position on the argument list */
+    uint32_t str_idx; /* Constant index with the argument's name  */
+} KOS_COMP_NAMED_ARG;
+
 typedef struct KOS_COMP_FUNCTION_S {
     KOS_COMP_CONST header;
     uint32_t       bytecode_offset;     /* Offset in the buffer where bytecode is generated */
@@ -205,7 +210,7 @@ typedef struct KOS_COMP_FUNCTION_S {
 
     uint8_t        num_named_args;
 
-    uint32_t       arg_name_str_idx[1]; /* Array of constant indexes containing argument names */
+    KOS_COMP_NAMED_ARG named_args[1];   /* Array of named arg descriptors */
 } KOS_COMP_FUNCTION;
 
 typedef struct KOS_PRE_GLOBAL_S {
