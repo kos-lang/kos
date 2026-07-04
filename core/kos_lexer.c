@@ -259,7 +259,7 @@ static const struct KOS_OP_SPECIFIER_S operator_map[][7] = {
     { { "%",      OT_MOD    }, { "%=",     OT_SETMOD }, { KOS_NULL, OT_NONE      } },
     { { "&",      OT_AND    }, { "&&",     OT_LOGAND }, { "&=",     OT_SETAND    }, { KOS_NULL, OT_NONE   } },
     { { "*",      OT_MUL    }, { "*=",     OT_SETMUL }, { KOS_NULL, OT_NONE }    },
-    { { "+",      OT_ADD    }, { "++",     OT_CONCAT }, { "++=",    OT_SETCONCAT }, { "+=",     OT_SETADD }, { KOS_NULL, OT_NONE   } },
+    { { "+",      OT_ADD    }, { "++",     OT_CONCAT }, { "++=",    OT_SETCONCAT }, { "+=\0",   OT_SETADD }, { KOS_NULL, OT_NONE   } },
     { { "-",      OT_SUB    }, { "-=",     OT_SETSUB }, { "->",     OT_ARROW     }, { KOS_NULL, OT_NONE   } },
     { { ".",      OT_DOT    }, { "...",    OT_MORE   }, { KOS_NULL, OT_NONE      } },
     { { "/",      OT_DIV    }, { "/=",     OT_SETDIV }, { KOS_NULL, OT_NONE      } },
