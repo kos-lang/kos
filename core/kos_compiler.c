@@ -5790,7 +5790,7 @@ static int gen_function(KOS_COMP_UNIT      *program,
 
                 TRY(gen_str(program, &ident_node->token, &arg_str_idx));
                 assert(named_i < constant->num_named_args);
-                constant->named_args[named_i].pos_idx = i;
+                constant->named_args[named_i].pos_idx = (uint8_t)i;
                 constant->named_args[named_i].str_idx = arg_str_idx;
                 ++named_i;
             }
