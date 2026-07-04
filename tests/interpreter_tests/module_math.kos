@@ -128,10 +128,11 @@ do {
     assert ! math.is_nan(1.7976931348623157e308)
     assert ! math.is_nan(math.infinity)
     assert ! math.is_nan(-math.infinity)
-    assert ! math.is_nan(false)
-    assert ! math.is_nan(void)
-    assert ! math.is_nan({})
+    assert math.is_nan(false)
+    assert math.is_nan(void)
+    assert math.is_nan({})
     assert math.is_nan(math.nan)
+    expect_fail(_ => math.is_nan(~math.nan))
 }
 
 # math.exp

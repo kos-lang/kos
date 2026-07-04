@@ -156,6 +156,12 @@ int KOS_get_integer(KOS_CONTEXT ctx,
             break;
 
         case OBJ_FLOAT: {
+            if (KOS_is_nan(obj_id)) {
+                KOS_raise_printf(ctx, "unable to convert NaN to integer");
+                error = KOS_ERROR_EXCEPTION;
+                break;
+            }
+
             const double number = OBJPTR(FLOAT, obj_id)->value;
             if (number <= -9223372036854775808.0 || number >= 9223372036854775808.0) {
                 KOS_raise_printf(ctx, "number %f is out of range for conversion to integer", number);
@@ -164,7 +170,6 @@ int KOS_get_integer(KOS_CONTEXT ctx,
             else
                 *ret = (int64_t)floor(number);
             break;
-
         }
 
         default:
@@ -174,6 +179,41 @@ int KOS_get_integer(KOS_CONTEXT ctx,
     }
 
     return error;
+}
+
+int KOS_is_nan(KOS_OBJ_ID obj_id)
+{
+    const KOS_TYPE type = GET_OBJ_TYPE(obj_id);
+    if (type != OBJ_FLOAT)
+        return type > OBJ_FLOAT;
+
+#if defined(__cplusplus) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L)
+    return !! isnan(OBJPTR(FLOAT, obj_id)->value);
+#else
+    {
+        KOS_NUMERIC_VALUE value;
+
+        value.d = OBJPTR(FLOAT, obj_id)->value;
+        return !! (((value.i >> 52) & 0x7FF) == 0x7FF && ((uint64_t)value.i << 12));
+    }
+#endif
+}
+
+int KOS_is_infinity(KOS_OBJ_ID obj_id)
+{
+    if (GET_OBJ_TYPE(obj_id) != OBJ_FLOAT)
+        return 0;
+
+#if defined(__cplusplus) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L)
+    return !! isinf(OBJPTR(FLOAT, obj_id)->value);
+#else
+    {
+        KOS_NUMERIC_VALUE value;
+
+        value.d = OBJPTR(FLOAT, obj_id)->value;
+        return !! (((value.i >> 52) & 0x7FF) == 0x7FF && ! ((uint64_t)value.i << 12));
+    }
+#endif
 }
 
 int64_t KOS_fix_index(int64_t idx, unsigned length)

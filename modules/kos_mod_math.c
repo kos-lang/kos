@@ -228,7 +228,10 @@ static KOS_OBJ_ID kos_ceil(const KOS_CONTEXT             ctx,
             break;
 
         case OBJ_FLOAT:
-            ret = KOS_new_float(ctx, ceil(OBJPTR(FLOAT, args[0])->value));
+            if (KOS_is_nan(args[0]) || KOS_is_infinity(args[0]))
+                ret = args[0];
+            else
+                ret = KOS_new_float(ctx, ceil(OBJPTR(FLOAT, args[0])->value));
             break;
 
         default:
@@ -390,7 +393,10 @@ static KOS_OBJ_ID kos_floor(const KOS_CONTEXT             ctx,
             break;
 
         case OBJ_FLOAT:
-            ret = KOS_new_float(ctx, floor(OBJPTR(FLOAT, args[0])->value));
+            if (KOS_is_nan(args[0]) || KOS_is_infinity(args[0]))
+                ret = args[0];
+            else
+                ret = KOS_new_float(ctx, floor(OBJPTR(FLOAT, args[0])->value));
             break;
 
         default:
@@ -564,19 +570,7 @@ static KOS_OBJ_ID kos_is_infinity(const KOS_CONTEXT             ctx,
                                   const uint32_t                num_args,
                                   KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    KOS_OBJ_ID ret = KOS_BADPTR;
-
-    if (GET_OBJ_TYPE(args[0]) == OBJ_FLOAT) {
-
-        KOS_NUMERIC_VALUE value;
-
-        value.d = OBJPTR(FLOAT, args[0])->value;
-        ret     = KOS_BOOL(((value.i >> 52) & 0x7FF) == 0x7FF && ! ((uint64_t)value.i << 12));
-    }
-    else
-        ret = KOS_FALSE;
-
-    return ret;
+    return KOS_BOOL(KOS_is_infinity(args[0]));
 }
 
 /* @item math is_nan()
@@ -600,19 +594,7 @@ static KOS_OBJ_ID kos_is_nan(const KOS_CONTEXT             ctx,
                              const uint32_t                num_args,
                              KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-    KOS_OBJ_ID ret = KOS_BADPTR;
-
-    if (GET_OBJ_TYPE(args[0]) == OBJ_FLOAT) {
-
-        KOS_NUMERIC_VALUE value;
-
-        value.d = OBJPTR(FLOAT, args[0])->value;
-        ret     = KOS_BOOL(((value.i >> 52) & 0x7FF) == 0x7FF && ((uint64_t)value.i << 12));
-    }
-    else
-        ret = KOS_FALSE;
-
-    return ret;
+    return KOS_BOOL(KOS_is_nan(args[0]));
 }
 
 /* @item math pow()

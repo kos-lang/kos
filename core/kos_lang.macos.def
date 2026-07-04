@@ -80,6 +80,8 @@ _KOS_instance_unregister_thread
 _KOS_io_get_file
 _KOS_is_file_interactive
 _KOS_is_generator
+_KOS_is_infinity
+_KOS_is_nan
 _KOS_iterator_next
 _KOS_load_file
 _KOS_load_library

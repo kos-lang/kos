@@ -80,6 +80,12 @@ int KOS_get_integer(KOS_CONTEXT ctx,
                     int64_t    *ret);
 
 KOS_API
+int KOS_is_nan(KOS_OBJ_ID obj_id);
+
+KOS_API
+int KOS_is_infinity(KOS_OBJ_ID obj_id);
+
+KOS_API
 int KOS_get_index(KOS_CONTEXT           ctx,
                   KOS_OBJ_ID            value,
                   int                   begin_pos,

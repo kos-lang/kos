@@ -81,6 +81,8 @@ EXPORTS
     KOS_io_get_file
     KOS_is_file_interactive
     KOS_is_generator
+    KOS_is_infinity
+    KOS_is_nan
     KOS_iterator_next
     KOS_load_file
     KOS_load_library
