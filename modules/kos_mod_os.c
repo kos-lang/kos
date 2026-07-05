@@ -261,7 +261,7 @@ static int append_arg(KOS_CONTEXT             ctx,
     }
 
     assert(need_quote == 0 || need_quote == 2);
-    if (make_room(ctx, alloc, args, args->size + elem_size + need_quote + extra_bs))
+    if (make_room(ctx, alloc, args, args->size + elem_size + (args->size ? 1 : 0) + need_quote + extra_bs))
         return KOS_ERROR_EXCEPTION;
 
     if (args->size)
