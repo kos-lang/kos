@@ -129,7 +129,7 @@ KOS_OBJ_ID KOS_new_external_buffer(KOS_CONTEXT  ctx,
         OBJPTR(BUFFER, obj.o)->data  = KOS_BADPTR;
 
         data = (KOS_BUFFER_EXTERNAL_STORAGE *)alloc_buffer(ctx,
-                (uint32_t)(sizeof(KOS_BUFFER_EXTERNAL_STORAGE) - sizeof(KOS_BUFFER_STORAGE)));
+                (uint32_t)(sizeof(KOS_BUFFER_EXTERNAL_STORAGE) - (sizeof(KOS_BUFFER_STORAGE) - 1)));
 
         if (data) {
             KOS_atomic_write_release_ptr(OBJPTR(BUFFER, obj.o)->data,
