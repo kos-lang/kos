@@ -322,3 +322,49 @@ do {
     expect_fail(()=>math.log1p(-3))
     expect_fail(()=>math.log1p(-math.infinity))
 }
+
+# NaN passed to functions
+do {
+    assert math.is_nan(math.abs(math.nan))
+    assert math.is_nan(math.acos(math.nan))
+    assert math.is_nan(math.asin(math.nan))
+    assert math.is_nan(math.atan(math.nan))
+    assert math.is_nan(math.ceil(math.nan))
+    assert math.is_nan(math.cos(math.nan))
+    assert math.is_nan(math.exp(math.nan))
+    assert math.is_nan(math.expm1(math.nan))
+    assert math.is_nan(math.floor(math.nan))
+    assert math.is_nan(math.log(math.nan))
+    assert math.is_nan(math.log10(math.nan))
+    assert math.is_nan(math.log1p(math.nan))
+    assert math.is_nan(math.max(math.nan))
+    assert math.is_nan(math.min(math.nan))
+    assert math.is_nan(math.pow(math.nan, 2))
+    assert math.is_nan(math.pow(2, math.nan))
+    assert math.is_nan(math.sin(math.nan))
+    assert math.is_nan(math.sqrt(math.nan))
+    assert math.is_nan(math.tan(math.nan))
+}
+
+# infinity passed to functions
+do {
+    assert math.is_infinity(math.abs(math.infinity))
+    expect_fail(_ => math.acos(math.infinity))
+    expect_fail(_ => math.asin(math.infinity))
+    assert math.atan(math.infinity) == math.pi / 2
+    assert math.is_infinity(math.ceil(math.infinity))
+    assert math.is_nan(math.cos(math.infinity))
+    assert math.is_infinity(math.exp(math.infinity))
+    assert math.is_infinity(math.expm1(math.infinity))
+    assert math.is_infinity(math.floor(math.infinity))
+    assert math.is_infinity(math.log(math.infinity))
+    assert math.is_infinity(math.log10(math.infinity))
+    assert math.is_infinity(math.log1p(math.infinity))
+    assert math.is_infinity(math.max(math.infinity))
+    assert math.is_infinity(math.min(math.infinity))
+    assert math.is_infinity(math.pow(math.infinity, 2))
+    assert math.is_infinity(math.pow(2, math.infinity))
+    assert math.is_nan(math.sin(math.infinity))
+    assert math.is_infinity(math.sqrt(math.infinity))
+    assert math.is_nan(math.tan(math.infinity))
+}
