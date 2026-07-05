@@ -976,7 +976,7 @@ static KOS_OBJ_ID kos_recv(const KOS_CONTEXT             ctx,
     else
         TRY(KOS_get_integer(ctx, args[2], &flags64));
 
-    if (flags64 & (MSG_OOB | MSG_PEEK | MSG_WAITALL)) {
+    if (flags64 & ~(uint64_t)(MSG_OOB | MSG_PEEK | MSG_WAITALL)) {
         KOS_raise_printf(ctx, "flags argument 0x%" PRIx64 " contains unrecognized bits", flags64);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
@@ -1088,7 +1088,7 @@ static KOS_OBJ_ID kos_recvfrom(const KOS_CONTEXT             ctx,
     else
         TRY(KOS_get_integer(ctx, args[2], &flags64));
 
-    if (flags64 & (MSG_OOB | MSG_PEEK | MSG_WAITALL)) {
+    if (flags64 & ~(uint64_t)(MSG_OOB | MSG_PEEK | MSG_WAITALL)) {
         KOS_raise_printf(ctx, "flags argument 0x%" PRIx64 " contains unrecognized bits", flags64);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
@@ -1766,7 +1766,7 @@ static KOS_OBJ_ID kos_send(const KOS_CONTEXT             ctx,
     else
         TRY(KOS_get_integer(ctx, args[1], &flags64));
 
-    if (flags64 & (MSG_OOB | MSG_PEEK)) {
+    if (flags64 & ~(uint64_t)(MSG_OOB | MSG_PEEK)) {
         KOS_raise_printf(ctx, "flags argument 0x%" PRIx64 " contains unrecognized bits", flags64);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
@@ -1876,7 +1876,7 @@ static KOS_OBJ_ID kos_sendto(const KOS_CONTEXT             ctx,
     else
         TRY(KOS_get_integer(ctx, args[3], &flags64));
 
-    if (flags64 & (MSG_OOB | MSG_PEEK)) {
+    if (flags64 & ~(uint64_t)(MSG_OOB | MSG_PEEK)) {
         KOS_raise_printf(ctx, "flags argument 0x%" PRIx64 " contains unrecognized bits", flags64);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
