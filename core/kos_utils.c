@@ -188,14 +188,9 @@ int KOS_is_nan(KOS_OBJ_ID obj_id)
         return type > OBJ_FLOAT;
 
 #if defined(__cplusplus) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L)
-    return !! isnan(OBJPTR(FLOAT, obj_id)->value);
+    return isnan(OBJPTR(FLOAT, obj_id)->value);
 #else
-    {
-        KOS_NUMERIC_VALUE value;
-
-        value.d = OBJPTR(FLOAT, obj_id)->value;
-        return !! (((value.i >> 52) & 0x7FF) == 0x7FF && ((uint64_t)value.i << 12));
-    }
+    return OBJPTR(FLOAT, obj_id)->value != OBJPTR(FLOAT, obj_id)->value;
 #endif
 }
 
@@ -205,7 +200,7 @@ int KOS_is_infinity(KOS_OBJ_ID obj_id)
         return 0;
 
 #if defined(__cplusplus) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L)
-    return !! isinf(OBJPTR(FLOAT, obj_id)->value);
+    return isinf(OBJPTR(FLOAT, obj_id)->value);
 #else
     {
         KOS_NUMERIC_VALUE value;

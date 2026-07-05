@@ -3598,8 +3598,17 @@ static int maybe_int(const KOS_AST_NODE *node,
             *value = INT64_MAX;
         else if (numeric.u.d < (double)INT64_MIN)
             *value = INT64_MIN;
-        else
+        else {
+#if defined(__cplusplus) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L)
+            const int is_nan = isnan(numeric.u.d);
+#else
+            const int is_nan = numeric.u.d != numeric.u.d;
+#endif
+            if (is_nan)
+                return 0;
+
             *value = (int64_t)floor(numeric.u.d);
+        }
     }
 
     return 1;

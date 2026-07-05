@@ -1778,3 +1778,11 @@ do {
 
     assert concat_prop({value: "abc"}, "def").value == "abcdef"
 }
+
+##############################################################################
+# NaN collapsed by compiler
+
+do {
+    const a = []
+    a[557*3711e302%59] = 0
+}
