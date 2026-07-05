@@ -218,29 +218,83 @@ static void append_str(struct CONSTRUCT_ARRAY *array,
     array->array[array->size] = 0;
 }
 
+static void append_backslashes(struct CONSTRUCT_ARRAY *array, unsigned num_bs, unsigned escaped)
+{
+    assert(escaped <= 1);
+
+    for (; num_bs; --num_bs)
+        append_str(array, "\\\\", escaped + 1);
+}
+
 static int append_arg(KOS_CONTEXT             ctx,
                       KOS_MEMPOOL            *alloc,
                       const char             *elem_cstr,
                       struct CONSTRUCT_ARRAY *args)
 {
-    const size_t elem_size = strlen(elem_cstr);
-    const int    spaces    = (memchr(elem_cstr, ' ', elem_size) != KOS_NULL) ? 1 : 0;
-    const size_t new_size  = args->size + elem_size + (spaces ? 2 : 0) + (args->size ? 1 : 0);
+    const size_t elem_size      = strlen(elem_cstr);
+    unsigned     extra_bs       = 0; /* Total number of extra backslashes */
+    unsigned     consecutive_bs = 0; /* Number of consecutive backslashes */
+    unsigned     need_quote     = elem_size == 0 ? 2 : 0;
+    size_t       i;
 
-    /* TODO escape doublequotes */
+    /* Count how many backslashes we need to insert, and check if we need double quotes */
+    for (i = 0; i < elem_size; i++) {
+        const char elem_char = elem_cstr[i];
 
-    if (make_room(ctx, alloc, args, new_size))
+        if (elem_char == '\\') {
+            need_quote = 2;
+            ++consecutive_bs;
+
+            if (i + 1 == elem_size)
+                extra_bs += consecutive_bs;
+        }
+        else {
+            if (elem_char == ' ' || elem_char == '\t')
+                need_quote = 2;
+            else if (elem_char == '"') {
+                extra_bs += consecutive_bs + 1;
+                need_quote = 2;
+            }
+
+            consecutive_bs = 0;
+        }
+    }
+
+    assert(need_quote == 0 || need_quote == 2);
+    if (make_room(ctx, alloc, args, args->size + elem_size + need_quote + extra_bs))
         return KOS_ERROR_EXCEPTION;
 
     if (args->size)
         append_str(args, " ", 1);
 
-    if (spaces)
+    if (need_quote)
         append_str(args, "\"", 1);
 
-    append_str(args, elem_cstr, elem_size);
+    consecutive_bs = 0;
 
-    if (spaces)
+    /* Emit the argument string, quoting " and \ characters as needed */
+    for (i = 0; i < elem_size; i++) {
+        const char elem_char = elem_cstr[i];
+
+        if (elem_char == '\\') {
+            ++consecutive_bs;
+
+            if (i + 1 == elem_size)
+                append_backslashes(args, consecutive_bs, 1);
+        }
+        else {
+            append_backslashes(args, consecutive_bs, elem_char == '"');
+
+            if (elem_char == '"')
+                append_str(args, "\\", 1);
+
+            append_str(args, &elem_char, 1);
+
+            consecutive_bs = 0;
+        }
+    }
+
+    if (need_quote)
         append_str(args, "\"", 1);
 
     return KOS_SUCCESS;
