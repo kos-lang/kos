@@ -231,9 +231,10 @@ struct RE_OBJ {
     uint16_t bytecode[1];
 };
 
-KOS_DECLARE_STATIC_CONST_STRING(str_err_not_string, "object is not a string");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_not_re,     "object is not a regular expression");
-KOS_DECLARE_STATIC_CONST_STRING(str_err_too_long,   "regular expression too long");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_string,  "object is not a string");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_not_re,      "object is not a regular expression");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_too_long,    "regular expression too long");
+KOS_DECLARE_STATIC_CONST_STRING(str_err_too_complex, "regular expression is too complex");
 
 /* End of regular expression */
 #define END_OF_STR (~0U)
@@ -1602,6 +1603,19 @@ static int is_word_char(uint32_t code)
 #define BEGIN_INSTRUCTION(instr) case INSTR_ ## instr
 #define NEXT_INSTRUCTION         KOS_INSTR_FUZZ_LIMIT(); break
 
+static uint64_t calc_max_steps(const struct RE_OBJ *re,
+                               uint32_t             input_len)
+{
+    uint64_t budget = ((uint64_t)input_len + 1U) * ((uint64_t)re->bytecode_size + 1U);
+
+    budget *= 256U;
+
+    if (budget > (uint64_t)100000000U)
+        budget = (uint64_t)100000000U;
+
+    return budget;
+}
+
 static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
                                const struct RE_OBJ  *re,
                                KOS_OBJ_ID            str_obj,
@@ -1619,6 +1633,8 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
     KOS_LOCAL             groups;
     KOS_STRING_ITER       iter;
     int                   error        = KOS_SUCCESS;
+    uint64_t              steps        = 0;
+    const uint64_t        max_steps    = calc_max_steps(re, end_pos - pos);
 
     KOS_init_locals(ctx, &groups, &match_groups, &str, &ret, kos_end_locals);
     TRY(reset_possibility_stack(poss_stack, ctx, re));
@@ -1635,6 +1651,9 @@ static KOS_OBJ_ID match_string(KOS_CONTEXT           ctx,
 
     while (bytecode < bytecode_end) {
         const enum RE_INSTR instr = (enum RE_INSTR)*bytecode;
+
+        if (++steps > max_steps)
+            RAISE_EXCEPTION_STR(str_err_too_complex);
 
         assert(bytecode + re_instr_descs[instr].num_args < bytecode_end);
 

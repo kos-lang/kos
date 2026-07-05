@@ -767,3 +767,16 @@ do {
         assert e.value == "regular expression too long"
     }
 }
+
+# Backtracking overflow
+do {
+    const r = re.re(r"(a+)+b")
+
+    try {
+        r.find("a".repeats(40))
+        assert false
+    }
+    catch const e {
+        assert e.value == "regular expression is too complex"
+    }
+}
