@@ -748,6 +748,11 @@ int KOS_array_push(KOS_CONTEXT ctx,
 
         len = KOS_get_array_size(array.o);
 
+        if (len == UINT32_MAX) {
+            KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+            RAISE_ERROR(KOS_ERROR_OUT_OF_MEMORY);
+        }
+
         if (len >= capacity) {
             const uint32_t double_cap = (capacity > UINT32_MAX / 2) ? UINT32_MAX : capacity * 2;
             const uint32_t new_cap    = KOS_max(double_cap, len + 1);
