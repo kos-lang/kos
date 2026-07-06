@@ -37,9 +37,11 @@
 #   include <arpa/inet.h>
 #   include <errno.h>
 #   include <fcntl.h>
+#   include <limits.h>
 #   include <netdb.h>
 #   include <netinet/in.h>
 #   include <sys/socket.h>
+#   include <poll.h>
 #   include <sys/select.h>
 #   include <sys/time.h>
 #   include <sys/types.h>
@@ -54,9 +56,15 @@
 #ifdef _WIN32
 typedef SOCKET         KOS_SOCKET;
 typedef ADDRESS_FAMILY KOS_ADDR_FAMILY;
+typedef WSAPOLLFD      KOS_POLLFD;
 typedef int            DATA_LEN;
 typedef int            ADDR_LEN;
 typedef long           TIME_FRAGMENT;
+
+#define KOS_POLLIN  POLLIN
+#define KOS_POLLOUT POLLOUT
+
+#define kos_poll(fds, nfds, timeout) WSAPoll(fds, nfds, timeout)
 
 #define KOS_INVALID_SOCKET ((KOS_SOCKET)INVALID_SOCKET)
 
@@ -67,11 +75,17 @@ static int get_error(void)
     return WSAGetLastError();
 }
 #else
-typedef int       KOS_SOCKET;
-typedef int       KOS_ADDR_FAMILY;
-typedef size_t    DATA_LEN;
-typedef socklen_t ADDR_LEN;
-typedef unsigned  TIME_FRAGMENT;
+typedef int           KOS_SOCKET;
+typedef int           KOS_ADDR_FAMILY;
+typedef struct pollfd KOS_POLLFD;
+typedef size_t        DATA_LEN;
+typedef socklen_t     ADDR_LEN;
+typedef unsigned      TIME_FRAGMENT;
+
+#define KOS_POLLIN  POLLIN
+#define KOS_POLLOUT POLLOUT
+
+#define kos_poll(fds, nfds, timeout) poll(fds, nfds, timeout)
 
 #define KOS_INVALID_SOCKET ((KOS_SOCKET)-1)
 
@@ -1202,15 +1216,9 @@ static KOS_OBJ_ID kos_wait(const KOS_CONTEXT             ctx,
                            const uint32_t                num_args,
                            KOS_ATOMIC(KOS_OBJ_ID) *const args)
 {
-#ifdef _WIN32
-    TIMEVAL            time_value;
-    TIMEVAL           *timeout_tv  = KOS_NULL;
-#else
-    struct timeval     time_value;
-    struct timeval    *timeout_tv  = KOS_NULL;
-#endif
     KOS_NUMERIC        timeout;
-    fd_set             fds;
+    KOS_POLLFD         pfd;
+    int                poll_timeout = -1;
     KOS_SOCKET_HOLDER *socket_holder;
     KOS_LOCAL          self;
     KOS_OBJ_ID         ret_obj     = KOS_FALSE;
@@ -1233,12 +1241,9 @@ static KOS_OBJ_ID kos_wait(const KOS_CONTEXT             ctx,
             RAISE_EXCEPTION_STR(str_err_timeout_not_a_number);
     }
 
-    FD_ZERO(&fds);
-    FD_SET(socket_holder->socket_fd, &fds);
-
-#ifndef _WIN32
-    nfds = socket_holder->socket_fd + 1;
-#endif
+    pfd.fd      = socket_holder->socket_fd;
+    pfd.events  = KOS_POLLIN;
+    pfd.revents = 0;
 
     if (timeout.type != KOS_NON_NUMERIC) {
         uint64_t tv_usec;
@@ -1260,25 +1265,24 @@ static KOS_OBJ_ID kos_wait(const KOS_CONTEXT             ctx,
             tv_usec = (uint64_t)floor(timeout.u.d * 1000000.0);
         }
 
-        memset(&time_value, 0, sizeof(time_value));
-        time_value.tv_sec  = (TIME_FRAGMENT)(tv_usec / 1000000U);
-        time_value.tv_usec = (TIME_FRAGMENT)(tv_usec % 1000000U);
-
-        timeout_tv = &time_value;
+        if (tv_usec > (uint64_t)INT_MAX * 1000U)
+            poll_timeout = INT_MAX;
+        else
+            poll_timeout = (int)(tv_usec / 1000U);
     }
 
     KOS_suspend_context(ctx);
 
     reset_last_error();
 
-    nfds = select(nfds, &fds, KOS_NULL, KOS_NULL, timeout_tv);
+    nfds = kos_poll(&pfd, 1, poll_timeout);
     if (nfds < 0)
         saved_errno = get_error();
 
     KOS_resume_context(ctx);
 
     if (saved_errno) {
-        KOS_raise_errno_value(ctx, "select", saved_errno);
+        KOS_raise_errno_value(ctx, "poll", saved_errno);
         RAISE_ERROR(KOS_ERROR_EXCEPTION);
     }
 
@@ -1495,15 +1499,9 @@ static int send_loop(KOS_SOCKET              socket_fd,
     int       total_sent       = 0;
 
     for (;;) {
-#ifdef _WIN32
-        TIMEVAL        timeout;
-        int            nfds = 0;
-#else
-        struct timeval timeout;
-        int            nfds = socket_fd + 1;
-#endif
-        int            num_sent;
-        fd_set         fds;
+        KOS_POLLFD pfd;
+        int        num_sent;
+        int        nfds;
 
         reset_last_error();
 
@@ -1544,13 +1542,11 @@ static int send_loop(KOS_SOCKET              socket_fd,
 
         reset_last_error();
 
-        FD_ZERO(&fds);
-        FD_SET(socket_fd, &fds);
+        pfd.fd      = socket_fd;
+        pfd.events  = KOS_POLLOUT;
+        pfd.revents = 0;
 
-        timeout.tv_sec  = (TIME_FRAGMENT)send_timeout_sec;
-        timeout.tv_usec = 0;
-
-        nfds = select(nfds, KOS_NULL, &fds, KOS_NULL, &timeout);
+        nfds = kos_poll(&pfd, 1, (int)(send_timeout_sec * 1000));
 
         if (nfds < 0) {
             total_sent = -1;
