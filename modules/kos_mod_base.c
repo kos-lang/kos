@@ -1399,6 +1399,11 @@ static KOS_OBJ_ID buffer_constructor(const KOS_CONTEXT             ctx,
                 if ( ! size)
                     break;
 
+                if (cur_size > UINT32_MAX - size) {
+                    KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+                    RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                }
+
                 TRY(KOS_buffer_resize(ctx, buffer.o, cur_size + size));
 
                 data = KOS_buffer_data_volatile(ctx, buffer.o);
@@ -1429,6 +1434,11 @@ static KOS_OBJ_ID buffer_constructor(const KOS_CONTEXT             ctx,
                 if (size == ~0U)
                     RAISE_EXCEPTION_STR(str_err_invalid_string);
 
+                if (cur_size > UINT32_MAX - size) {
+                    KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+                    RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                }
+
                 TRY(KOS_buffer_resize(ctx, buffer.o, cur_size + size));
 
                 data = KOS_buffer_data_volatile(ctx, buffer.o);
@@ -1443,6 +1453,11 @@ static KOS_OBJ_ID buffer_constructor(const KOS_CONTEXT             ctx,
             case OBJ_BUFFER: {
                 const uint32_t size = KOS_get_buffer_size(arg.o);
                 uint8_t       *data;
+
+                if (cur_size > UINT32_MAX - size) {
+                    KOS_raise_exception(ctx, KOS_STR_OUT_OF_MEMORY);
+                    RAISE_ERROR(KOS_ERROR_EXCEPTION);
+                }
 
                 TRY(KOS_buffer_resize(ctx, buffer.o, cur_size + size));
 

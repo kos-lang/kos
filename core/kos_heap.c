@@ -1075,14 +1075,14 @@ static void *alloc_huge_object(KOS_CONTEXT ctx,
 
     kos_lock_mutex(heap->mutex);
 
-    if (heap->malloc_size + size > heap->max_malloc_size) {
+    if ((uint64_t)heap->malloc_size + size > (uint64_t)heap->max_malloc_size) {
 
         const int error = collect_garbage_last_resort_locked(ctx, KOS_NULL);
 
         if (error)
             KOS_clear_exception(ctx);
 
-        if (heap->malloc_size + size > heap->max_malloc_size)
+        if ((uint64_t)heap->malloc_size + size > (uint64_t)heap->max_malloc_size)
             goto cleanup;
     }
 
