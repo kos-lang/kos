@@ -65,7 +65,7 @@ static void test_double(const char *str, size_t str_len, uint32_t high, uint32_t
             status = 1;
         }
 
-        if (arg_reference) {
+        if (arg_reference && !strpbrk(str, "pP")) {
             char        *endptr = 0;
             const double conv_d = strtod(str, &endptr);
 
@@ -324,6 +324,20 @@ int main(int argc, char *argv[])
     TEST_DOUBLE("1e2",                     0x40590000U, 0x00000000U, KOS_SUCCESS);
     TEST_DOUBLE("1e-2",                    0x3F847AE1U, 0x47AE147BU, KOS_SUCCESS);
     TEST_DOUBLE("1e10",                    0x4202a05fU, 0x20000000U, KOS_SUCCESS);
+
+    /* Binary exponents */
+    TEST_DOUBLE("1p0",                     0x3FF00000U, 0x00000000U, KOS_SUCCESS);
+    TEST_DOUBLE("1P0",                     0x3FF00000U, 0x00000000U, KOS_SUCCESS);
+    TEST_DOUBLE("2p3",                     0x40300000U, 0x00000000U, KOS_SUCCESS);
+    TEST_DOUBLE("1.5p1",                   0x40080000U, 0x00000000U, KOS_SUCCESS);
+    TEST_DOUBLE("40.P+50",                 0x43640000U, 0x00000000U, KOS_SUCCESS);
+    TEST_DOUBLE("0p-0",                    0x00000000U, 0x00000000U, KOS_SUCCESS);
+    TEST_DOUBLE("1p-1074",                 0x00000000U, 0x00000001U, KOS_SUCCESS);
+    TEST_DOUBLE("1p1023",                  0x7FE00000U, 0x00000000U, KOS_SUCCESS);
+    TEST_DOUBLE("1p1A",                    0, 0, KOS_ERROR_INVALID_EXPONENT);
+    TEST_DOUBLE("1p",                      0, 0, KOS_ERROR_INVALID_EXPONENT);
+    TEST_DOUBLE("1p1024",                  0, 0, KOS_ERROR_EXPONENT_OUT_OF_RANGE);
+    TEST_DOUBLE("1p-1075",                 0, 0, KOS_ERROR_EXPONENT_OUT_OF_RANGE);
 
     /* Next number after zero (smallest non-zero number) */
     TEST_DOUBLE("4.9406564584124654e-324", 0x00000000U, 0x00000001U, KOS_SUCCESS);

@@ -44,7 +44,7 @@ int kos_is_integer(const char *begin,
         const char c = *begin;
         if (c == 'x' || c == 'X' || c == 'b' || c == 'B')
             break;
-        if (c == '.' || c == 'e' || c == 'E') {
+        if (c == '.' || c == 'e' || c == 'E' || c == 'p' || c == 'P') {
             ret = 0;
             break;
         }
@@ -263,6 +263,7 @@ int kos_parse_double(const char *begin,
     int      exponent          = 0;
     uint64_t mantissa          = 0;
     int      decimal_exponent  = 0;
+    int      binary_exponent   = 0;
     int      num_digits        = 0;
     int      dot_pos           = -1;
 
@@ -320,7 +321,7 @@ int kos_parse_double(const char *begin,
                 continue;
             }
 
-            if (c == 'e' || c == 'E') {
+            if (c == 'e' || c == 'E' || c == 'p' || c == 'P') {
                 --begin;
                 break;
             }
@@ -340,12 +341,14 @@ int kos_parse_double(const char *begin,
 
         exponent_pos = begin;
 
-        /* Parse decimal exponent */
+        /* Parse exponent */
         if (begin < end) {
 
-            int64_t e = 0;
+            const int is_binary_exp = (*begin == 'p' || *begin == 'P');
+            int64_t   e             = 0;
 
-            assert(*begin == 'e' || *begin == 'E');
+            assert(*begin == 'e' || *begin == 'E' ||
+                   *begin == 'p' || *begin == 'P');
             ++begin;
 
             if (begin == end)
@@ -356,10 +359,20 @@ int kos_parse_double(const char *begin,
             if (error)
                 RAISE_ERROR(KOS_ERROR_INVALID_EXPONENT);
 
-            if (e > 308 || e < -324)
-                RAISE_ERROR(KOS_ERROR_EXPONENT_OUT_OF_RANGE);
+            if (is_binary_exp) {
 
-            decimal_exponent += (int)e;
+                if (e > 1023 || e < -1074)
+                    RAISE_ERROR(KOS_ERROR_EXPONENT_OUT_OF_RANGE);
+
+                binary_exponent = (int)e;
+            }
+            else {
+
+                if (e > 308 || e < -324)
+                    RAISE_ERROR(KOS_ERROR_EXPONENT_OUT_OF_RANGE);
+
+                decimal_exponent += (int)e;
+            }
         }
 
         begin = first_digit;
@@ -424,9 +437,11 @@ int kos_parse_double(const char *begin,
             }
         }
 
-        /* Ignore decimal exponent if mantissa contains all zeroes */
-        if ( ! mantissa)
+        /* Ignore exponent if mantissa contains all zeroes */
+        if ( ! mantissa) {
             decimal_exponent = 0;
+            binary_exponent  = 0;
+        }
 
         /* Apply decimal exponent */
         if (decimal_exponent < 0) {
@@ -441,6 +456,9 @@ int kos_parse_double(const char *begin,
                 --decimal_exponent;
             }
         }
+
+        /* Apply binary exponent */
+        exponent += binary_exponent;
     }
 
     if (exponent > 0x3FF)
