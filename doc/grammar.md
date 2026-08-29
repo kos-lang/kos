@@ -78,18 +78,16 @@ whitespace token.  Whitespace characters include:
 * U+000C form feed
 * U+0020 space
 * U+00A0 non-breaking space
-* U+2028 line separator
-* U+2029 paragraph separator
 * U+FEFF byte order mark
 
 Character U+0009 (horizontal tab) is not treated as a whitespace character and
-is not allowed, except in string literals.
+is not allowed, except in string literals and comments.
 
 Each EOL character sequence is treated as a single whitespace token.  An EOL
 character sequence is either `LF`, `CR-LF`, or `CR`, if it's not followed by
 `LF`.
 
-    Eol                ::= ( "\r" "\n" ) | "\r" | "\n"
+    Eol                ::= ( "\r" [ "\n" ] ) | "\n"
                          | "\x{2028}" | "\x{2029}"
 
     WhitespaceChar     ::= " " | "\f" | "\v"
@@ -259,7 +257,7 @@ If `p` or `P` is specified, the exponent is a power of 2.
 
     DEC_INTEGER_LITERAL      ::= Base
 
-    DEC_FLOAT_LITERAL        ::= Base [ Mantissa ] [ Exponent ]
+    DEC_FLOAT_LITERAL        ::= Base ( Mantissa [ Exponent ] | Exponent )
 
 
 Hexadecimal numbers
@@ -300,7 +298,8 @@ Strings
 A string is delimited by `"` characters.  Both the beginning and the end
 of the string must be delimited by the `"` character.
 
-UTF-8 characters with code greater than 127 are legal string components.
+All valid non-EOL UTF-8 characters are legal string components.
+Additionally, EOLs are allowed in raw strings.
 
 A `\` character occuring inside a string indicates the beginning of an escape
 sequence.
@@ -310,11 +309,16 @@ sequence.
                            | "r"
                            | "t"
                            | "v"
+                           | "e"
+                           | "u"
                            | "\"
                            | """
                            | "0"
                            | ( "x" HexDigit HexDigit )
-                           | ( "x" "{" HexDigit ( HexDigit )* "}" )
+                           | ( "x" "{" HexDigit [ HexDigit [ HexDigit [ HexDigit [ HexDigit [ HexDigit ] ] ] ] ] "}" )
+
+An escape sequence with any other character is not an error.  The backslash and
+the following character are both preserved literally.
 
     EscapedChar          ::= "\" EscapeSequence
 
@@ -380,6 +384,7 @@ operator only if it is not followed by `<` or `=` character, otherwise it will
 treat it as either `<<` or `<=` operator.
 
     OPERATOR_LITERAL ::= "+"
+                       | ( "+" "+" )
                        | "-"
                        | "*"
                        | "/"
@@ -391,6 +396,7 @@ treat it as either `<<` or `<=` operator.
                        | "~"
                        | "="
                        | ( "+" "=" )
+                       | ( "+" "+" "=" )
                        | ( "-" "=" )
                        | ( "*" "=" )
                        | ( "/" "=" )
@@ -845,7 +851,7 @@ which shall produce a container over which the loop will iterate.
     ForLoopControl ::= ForInExpression
                      | ( "(" ForInExpression ")" )
 
-    ForInExpression ::= ( VarList | ConstList | IdentifierList ) "in" RHSExpression
+    ForInExpression ::= ( [ "var" | "const" ] ForIdentifierList ) "in" RHSExpression
 
 Variables declared in the loop control expression are visible
 only within the compound statement.
@@ -991,7 +997,7 @@ Expressions
 
     AssignmentExpression         ::= AssignmentTargetList AssignmentOperator RHSExpression
 
-    ArithAssignmentExpression    ::= MutableAssignmentTarget ArithAssignmentOperator RHSExpression
+    ArithAssignmentExpression    ::= ArithAssignmentTarget ArithAssignmentOperator RHSExpression
 
     VariableDefinitionExpression ::= ( VarList | ConstList ) "=" RHSExpression
 
@@ -1001,6 +1007,9 @@ Expressions
 
     IdentifierList ::= Identifier
                      | MultipleIdentifiers
+
+    ForIdentifierList ::= IdentifierOrPlaceholder
+                        | MultipleIdentifiers
 
     MultipleIdentifiers ::= IdentifierOrPlaceholder "," IdentifierOrPlaceholder ( "," IdentifierOrPlaceholder )*
 
@@ -1013,7 +1022,19 @@ Expressions
     MultiAssignmentTargetList ::= AssignmentTarget "," AssignmentTarget ( "," AssignmentTarget )*
 
     MutableAssignmentTarget ::= Identifier
-                              | ( MemberExpression Refinement )
+                              | ( MemberExpression AssignmentRefinement )
+
+    ArithAssignmentTarget ::= Identifier
+                              | ( MemberExpression ArithAssignmentRefinement )
+
+    AssignmentRefinement ::= ( "[" RHSExpression "]" )
+                              | ( "[" [ RHSExpression ] ":" [ RHSExpression ] "]" )
+                              | ( "." Identifier )
+                              | ( "." StringLiteral )
+
+    ArithAssignmentRefinement ::= ( "[" RHSExpression "]" )
+                              | ( "." Identifier )
+                              | ( "." StringLiteral )
 
     AssignmentTarget ::= MutableAssignmentTarget |
                          PLACEHOLDER_LITERAL
@@ -1214,7 +1235,7 @@ part of the outermost `MemberExpression`.
 
     PropertyDefinition ::= PropertyName ":" RHSExpression
 
-    PropertyName ::= StringLiteral
+    PropertyName ::= STRING_LITERAL
                    | Identifier
 
     StringLiteral ::= STRING_LITERAL
