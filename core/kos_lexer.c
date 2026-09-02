@@ -701,7 +701,7 @@ static int collect_hex(KOS_LEXER *lexer)
     if (c == LT_EOF) {
         error = report_error(lexer, &lexer->old_pos, 0, str_err_eof_hex);
     }
-    else if (!char_is_hex_or_underscore(*begin)) {
+    else if (!char_is_hex(*begin)) {
         error = report_error(lexer, &lexer->old_pos, (uint32_t)(end - begin), str_err_hex);
     }
     else {
@@ -724,7 +724,7 @@ static int collect_bin(KOS_LEXER *lexer)
     if (c == LT_EOF) {
         error = report_error(lexer, &lexer->old_pos, 0, str_err_eof_bin);
     }
-    else if (!char_is_bin_or_underscore(*begin)) {
+    else if (*begin != '0' && *begin != '1') {
         error = report_error(lexer, &lexer->old_pos, (uint32_t)(end - begin), str_err_bin);
     }
     else {

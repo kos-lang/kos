@@ -273,9 +273,8 @@ least one hexadecimal digit.
     HexDigit             ::= DecimalDigit
                            | LowercaseHexDigit
                            | UppercaseHexDigitExt
-                           | Underscore
 
-    HEX_INTEGER_LITERAL  ::= "0" ( "x" | "X" ) HexDigit ( HexDigit )*
+    HEX_INTEGER_LITERAL  ::= "0" ( "x" | "X" ) HexDigit ( HexDigit | Underscore )*
 
 
 Binary numbers
@@ -286,10 +285,7 @@ least one binary digit.
 
     BinaryDigit             ::= "0" | "1"
 
-    BinaryDigitOrUnderscore ::= BinaryDigit | Underscore
-
-    BIN_INTEGER_LITERAL     ::= "0" ( "b" | "B" ) BinaryDigitOrUnderscore
-                                ( BinaryDigitOrUnderscore )*
+    BIN_INTEGER_LITERAL     ::= "0" ( "b" | "B" ) BinaryDigit ( BinaryDigit | Underscore )*
 
 
 Strings
