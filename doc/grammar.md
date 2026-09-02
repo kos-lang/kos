@@ -56,6 +56,7 @@ Token types
 The lexer recognizes and outputs the following types of tokens:
 
 * Whitespace
+* End of line
 * Comment
 * Identifier
 * Keyword
@@ -83,7 +84,7 @@ whitespace token.  Whitespace characters include:
 Character U+0009 (horizontal tab) is not treated as a whitespace character and
 is not allowed, except in string literals and comments.
 
-Each EOL character sequence is treated as a single whitespace token.  An EOL
+Each EOL character sequence is treated as a single end-of-line token.  An EOL
 character sequence is either `LF`, `CR-LF`, or `CR`, if it's not followed by
 `LF`.
 
@@ -93,7 +94,9 @@ character sequence is either `LF`, `CR-LF`, or `CR`, if it's not followed by
     WhitespaceChar     ::= " " | "\f" | "\v"
                          | "\x{A0}" | "\x{FEFF}"
 
-    WHITESPACE_LITERAL ::= ( WhitespaceChar ( WhitespaceChar )* ) | Eol
+    EOL_LITERAL        ::= Eol
+
+    WHITESPACE_LITERAL ::= WhitespaceChar ( WhitespaceChar )*
 
 
 Comments
