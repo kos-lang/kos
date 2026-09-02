@@ -29,6 +29,7 @@ static const char str_err_no_hex_digits[]       = "invalid escape sequence, no h
 static const char str_err_tab[]                 = "unexpected tab character, tabs are not allowed";
 static const char str_err_too_many_hex_digits[] = "invalid escape sequence, more than 6 hex digits specified";
 static const char str_err_token_too_long[]      = "token length exceeds 65535 bytes";
+static const char str_err_unterminated_block_comment[] = "unterminated block comment";
 
 enum KOS_LEXEM_TYPE_E {
     LT_INVALID,
@@ -603,7 +604,7 @@ static void collect_identifier(KOS_LEXER *lexer)
     retract(lexer, begin);
 }
 
-static void collect_block_comment(KOS_LEXER *lexer)
+static int collect_block_comment(KOS_LEXER *lexer)
 {
     const char *begin, *end;
 
@@ -611,7 +612,7 @@ static void collect_block_comment(KOS_LEXER *lexer)
 
     if (c == LT_INVALID_UTF8) {
         retract(lexer, begin);
-        return;
+        return KOS_SUCCESS;
     }
 
     while (c != LT_EOF) {
@@ -627,6 +628,11 @@ static void collect_block_comment(KOS_LEXER *lexer)
         if (prev == '*' && c != LT_EOF && *begin == '/')
             break;
     }
+
+    if (c == LT_EOF)
+        return report_error(lexer, &lexer->old_pos, 0, str_err_unterminated_block_comment);
+
+    return KOS_SUCCESS;
 }
 
 static int is_digit_or_underscore(unsigned c)
@@ -1033,28 +1039,27 @@ int kos_lexer_next_token(KOS_LEXER          *lexer,
             case LT_SLASH: {
                 const char *begin2;
                 c = prefetch_next(lexer, &begin2, &end);
-                if (c != LT_EOF) {
-                    if (c == LT_SLASH) {
-                        token->type = TT_COMMENT;
-                        collect_all_until_eol(lexer);
-                        end = lexer->prefetch_end;
-                        set_seq_fail(begin2 + 1, end);
-                    }
-                    else if (*begin2 == '*') {
-                        token->type = TT_COMMENT;
-                        collect_block_comment(lexer);
-                        end = lexer->prefetch_end;
-                        set_seq_fail(begin2 + 1, end - 2);
-                    }
-                    else {
-                        token->type = TT_OPERATOR;
-                        retract(lexer, begin2);
-                        token->op = collect_operator(lexer);
-                        end = lexer->prefetch_end;
-                    }
-                }
-                else
+                if (c == LT_EOF) {
                     token->type = TT_OPERATOR;
+                }
+                else if (c == LT_SLASH) {
+                    token->type = TT_COMMENT;
+                    collect_all_until_eol(lexer);
+                    end = lexer->prefetch_end;
+                    set_seq_fail(begin2 + 1, end);
+                }
+                else if (*begin2 == '*') {
+                    token->type = TT_COMMENT;
+                    error = collect_block_comment(lexer);
+                    end = lexer->prefetch_end;
+                    set_seq_fail(begin2 + 1, end - 2);
+                }
+                else {
+                    token->type = TT_OPERATOR;
+                    retract(lexer, begin2);
+                    token->op = collect_operator(lexer);
+                    end = lexer->prefetch_end;
+                }
                 break;
             }
             case LT_COMMENT:
