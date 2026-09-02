@@ -103,7 +103,8 @@ Comments
 --------
 
 A single-line comment starts with a `#` character or a sequence of `//` and
-ends at the end of line.  The initial characters and the EOL sequence are
+ends at the end of line, or at end of input if the file does not end with
+an EOL.  The initial characters and the EOL sequence are
 treated as part of the comment token.
 
 A multi-line comment starts with the `/*` sequence and ends with the `*/`
@@ -221,7 +222,7 @@ The following keywords are currently reserved - `get`, `match`, `static` and `se
 
 The main difference between keywords and non-keyword literals is that keywords
 cannot be used as variable names.  However, keywords can still be used as
-object property names.
+object property names and import names.
 
 
 Decimal numbers
@@ -448,7 +449,7 @@ statements.
 An empty source file or a source file which contains only spaces or comments
 is still a valid source file.
 
-    SourceFile ::= ( ImportStatement )* ( Statement | PublicStatement )*
+    SourceFile ::= ( ImportStatement | EmptyStatement )* ( Statement | PublicStatement )*
 
 
 Statement
@@ -608,6 +609,8 @@ Class statement
 
     DataMember         ::= "var" Identifier "=" RHSExpression
 
+The name of a method declared in a class body may be a keyword (for
+example `get`, `set`, `match`, or `static`); it has no special meaning.
 
 Constructor literal
 -------------------
@@ -987,6 +990,7 @@ outside of the current module.
                         | ClassDeclaration
                         | VariableDefinitionExpression
 
+A public variable declaration may define only one variable.
 
 Expressions
 -----------
