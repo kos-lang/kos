@@ -913,9 +913,9 @@ block even if the switch's tested expression doesn't match the case.
 Return statement
 ----------------
 
-The return statement can be used only in a function.
-It is illegal in the global scope, if used in the global scope
-it will produce a compilation error.
+The return statement can be used anywhere a function body is allowed,
+including in the global script scope, where it terminates the execution
+of the script or module.
 
 The return statement interrupts execution of a function.
 
