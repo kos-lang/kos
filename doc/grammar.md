@@ -580,9 +580,9 @@ Argument variables are assignable inside the function body.
                             DefaultParameters [ "," ListParameter ] |
                             Parameters [ "," DefaultParameters ] [ "," ListParameter ]
 
-    Parameters          ::= Parameter ( "," Parameter )*
+    Parameters          ::= Parameter ( "," Parameter )* [ "," ]
 
-    DefaultParameters   ::= DefaultParameter ( "," DefaultParameter )*
+    DefaultParameters   ::= DefaultParameter ( "," DefaultParameter )* [ "," ]
 
     DefaultParameter    ::= ParameterName "=" RHSExpression
 
@@ -592,6 +592,8 @@ Argument variables are assignable inside the function body.
 
     ParameterName       ::= Identifier
 
+A trailing comma after the last parameter is allowed; it does not create a
+trailing parameter.
 
 Class statement
 ---------------
