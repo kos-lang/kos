@@ -196,6 +196,14 @@ abcdefghijklmnopqrstuvwxyz_ABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789;
 @ 9 1 1
 
 @------------------------------------------------------------------------------
+1e_; # Invalid floating-point number
+@ 9 1 1
+
+@------------------------------------------------------------------------------
+1p_; # Invalid floating-point number
+@ 9 1 1
+
+@------------------------------------------------------------------------------
 1EE0; # Invalid floating-point number
 @ 9 1 1
 

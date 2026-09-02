@@ -663,7 +663,7 @@ static int collect_decimal(KOS_LEXER *lexer)
         if (c == LT_OPERATOR && (*begin == '+' || *begin == '-'))
             c = prefetch_next(lexer, &begin, &end);
 
-        if (is_digit_or_underscore(c)) {
+        if (c == LT_DIGIT) {
             if (*begin != '0') {
                 do
                     c = prefetch_next(lexer, &begin, &end);
