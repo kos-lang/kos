@@ -1,0 +1,100 @@
+---
+Language:        Cpp
+BasedOnStyle:    LLVM
+
+# 4-space indentation, tabs render as 8 if any appear.
+ColumnLimit:     120
+IndentWidth:     4
+TabWidth:        8
+UseTab:          Never
+
+# Space after { and before }.
+Cpp11BracedListStyle: false
+
+# Open curly brace attached at the end of the line, except for functions.
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterFunction:  true
+  AfterControlStatement: false
+  AfterEnum:      false
+  AfterStruct:    false
+  AfterUnion:     false
+  AfterExternBlock: false
+  BeforeElse:     true
+  BeforeCatch:    true
+  IndentBraces:   false
+
+# Never put list elements on the same line as the opening { when the list spans multiple lines.
+BreakAfterOpenBracketBracedList: true
+
+# Collapse runs of blank lines to a single one; blank-line-separated blocks stay separated.
+MaxEmptyLinesToKeep: 1
+
+# One argument/parameter per line when it does not fit, aligned to the open paren.
+AlignAfterOpenBracket: Align
+BinPackArguments:  false
+BinPackParameters: false
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
+# Never break between return type and function name; wrap parameters instead.
+PenaltyReturnTypeOnItsOwnLine: 1000000
+
+# Align consecutive variable declarations (names and = signs).
+# Also align consecutive #define values.
+AlignConsecutiveMacros:
+  Enabled:         true
+  AcrossEmptyLines: false
+  AcrossComments:  true
+AlignConsecutiveAssignments:
+  Enabled:         true
+  AcrossEmptyLines: false
+  AcrossComments:  false
+AlignConsecutiveDeclarations:
+  Enabled:         true
+  AcrossEmptyLines: false
+  AcrossComments:  false
+
+# Indent access specifiers inside classes, contents indented one more level.
+IndentAccessModifiers: false
+AccessModifierOffset: -4
+
+# Indent case labels inside switch.
+IndentCaseLabels: true
+
+# Put a space after unary not.
+SpaceAfterLogicalNot: true
+
+# Pointer alignment handling.
+PointerAlignment:       Right
+DerivePointerAlignment: true
+
+# Short functions only collapse when defined inside a class.
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+
+# Nested preprocessor directives are indented: "# define X".
+IndentPPDirectives: AfterHash
+
+AllowShortEnumsOnASingleLine: false
+CompactNamespaces: false
+
+# Main header first, then project headers, then system headers.
+SortIncludes: CaseSensitive
+IncludeBlocks: Preserve
+IncludeCategories:
+  - Regex: '^<'
+    Priority: 2
+  - Regex: '.*'
+    Priority: 1
+
+BreakStringLiterals: false
+
+# Treat KOS_ATOMIC(X) as a type.
+TypenameMacros: [KOS_ATOMIC]
+
+# Macro continuation backslashes hug the content.
+AlignEscapedNewlines: Left
+
+AlignTrailingComments: true

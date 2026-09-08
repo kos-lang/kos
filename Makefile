@@ -49,6 +49,11 @@ endif
 install: build
 	@$(MAKE) -C interpreter $@
 
+cf_sources := $(shell find . -path ./Out -prune -o \( -name '*.c' -o -name '*.cpp' -o -name '*.h' \) -print)
+
+format:
+	@clang-format -i $(cf_sources)
+
 doc: build
 	@echo Extract docs
 	@env $(out_dir_base_rel)/interpreter/kos$(exe_suffix) doc/extract_docs.kos modules/*.kos modules/*.c > doc/modules.md
@@ -57,4 +62,4 @@ defs: build
 	@echo Extract defs
 	@env $(out_dir_base_rel)/interpreter/kos$(exe_suffix) build/extract_defs.kos core/kos_lang inc/*h modules/*h
 
-.PHONY: cldep clean_gcov build default defs doc install modules_ext test fuzz time_us $(modules)
+.PHONY: format cldep clean_gcov build default defs doc install modules_ext test fuzz time_us $(modules)

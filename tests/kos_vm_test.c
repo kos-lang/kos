@@ -195,6 +195,8 @@ int main(void)
 
     TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
 
+    /* clang-format off */
+
     /************************************************************************/
     /* SET, GET.PROP8 */
     {

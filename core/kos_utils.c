@@ -57,6 +57,8 @@ KOS_DECLARE_STATIC_CONST_STRING(str_err_not_array,       "object is not an array
 KOS_DECLARE_STATIC_CONST_STRING(str_err_not_generator,   "function is not a generator");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_string_too_long, "string too long");
 
+/* clang-format off */
+
 static const int8_t extra_len_map[256] = {
     /* 0 .. 127 */
     3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,
@@ -82,6 +84,8 @@ static const int8_t extra_len_map[256] = {
     /* 148 .. 255 */
     3,  3,  3,  3,  3,  3,  3,  3
 };
+
+/* clang-format on */
 
 static const char hex_digits[] = "0123456789abcdef";
 

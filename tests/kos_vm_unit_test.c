@@ -645,6 +645,8 @@ int main(void)
     TEST(KOS_get_array_size(inst.modules.modules) == 0);
     TEST(KOS_array_push(ctx, inst.modules.modules, KOS_VOID, KOS_NULL) == KOS_SUCCESS);
 
+    /* clang-format off */
+
     /*========================================================================*/
     /* LOAD.VOID */
     TEST_INSTR INSTR_LOAD_VOID,  { V_VOID  } END

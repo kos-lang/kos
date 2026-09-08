@@ -323,6 +323,8 @@ static int is_constant(KOS_BYTECODE_INSTR instr, int op)
     return 0;
 }
 
+/* clang-format off */
+
 static const char *const str_instr[] = {
     "BREAKPOINT",
     "LOAD.INT8",
@@ -398,6 +400,8 @@ static const char *const str_instr[] = {
     "CATCH",
     "CANCEL"
 };
+
+/* clang-format on */
 
 int kos_disassemble(const char                   *filename,
                     const uint8_t                *bytecode,

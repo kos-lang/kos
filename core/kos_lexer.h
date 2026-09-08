@@ -91,6 +91,8 @@ typedef enum KOS_KEYWORD_TYPE_E {
     KW_YIELD
 } KOS_KEYWORD_TYPE;
 
+/* clang-format off */
+
 typedef enum KOS_OPERATOR_TYPE_E {
     OT_NONE,
 
@@ -149,6 +151,8 @@ typedef enum KOS_OPERATOR_TYPE_E {
     OT_SETSHRU        = 0x1B, /* 0001 1011 */
     OT_SETCONCAT      = 0x1C  /* 0001 1100 */
 } KOS_OPERATOR_TYPE;
+
+/* clang-format on */
 
 typedef enum KOS_SEPARATOR_TYPE_E {
     ST_NONE,

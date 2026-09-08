@@ -59,6 +59,8 @@ enum KOS_LEXEM_TYPE_E {
     LT_INVALID_UTF8 = 0x4F
 };
 
+/* clang-format off */
+
 static const unsigned char lexem_types[] = {
     /* 0..7 */
     LT_INVALID, LT_INVALID, LT_INVALID, LT_INVALID, LT_INVALID, LT_INVALID, LT_INVALID, LT_INVALID,
@@ -177,6 +179,8 @@ static const unsigned char lexem_types[] = {
     LT_INVALID, LT_INVALID, LT_INVALID, LT_INVALID, LT_INVALID, LT_INVALID, LT_INVALID, LT_INVALID
 };
 
+/* clang-format on */
+
 enum OPERATOR_MAP_INDEX_E {
     OMI_NONE,
     OMI_BANG,
@@ -196,6 +200,8 @@ enum OPERATOR_MAP_INDEX_E {
     OMI_TILDE,
     OMI_HEX
 };
+
+/* clang-format off */
 
 static const unsigned char hex_and_operator_map[] = {
     /* 0..15 */
@@ -321,6 +327,8 @@ static const char *const keywords[] = {
     "with",
     "yield"
 };
+
+/* clang-format on */
 
 static int report_error(KOS_LEXER *lexer, const KOS_FILE_POS *pos, uint32_t length, const char* error_str)
 {

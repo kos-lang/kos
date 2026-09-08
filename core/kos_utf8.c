@@ -7,6 +7,8 @@
 #include "kos_utf8_internal.h"
 #include <assert.h>
 
+/* clang-format off */
+
 const uint8_t kos_utf8_len[32] = {
     /* 0 .. 127 */
     1, 1,
@@ -88,6 +90,8 @@ static const char hex_map[256] = {
     16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
     16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16
 };
+
+/* clang-format on */
 
 #define KOS_INVALID_ESC (~0U)
 #define KOS_NOT_ESC     (~0U - 1U)
