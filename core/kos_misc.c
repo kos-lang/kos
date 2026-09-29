@@ -197,7 +197,8 @@ static void multiply_by_10_and_add(uint64_t *mantissa, int *exponent, unsigned d
     if (high & ((uint64_t)1U << 63)) {
         const uint32_t lgrs_mask = 0xFU;
         const uint32_t g_mask    = 0x4U;
-        const uint32_t carry     = (low & lgrs_mask) != g_mask ? (low & g_mask) : 0U;
+        const uint32_t lgrs      = (low & 7U) | ((uint32_t)(high & 1U) << 3);
+        const uint32_t carry     = (lgrs & lgrs_mask) != g_mask ? (lgrs & g_mask) : 0U;
 
         *mantissa = high + (carry >> 2);
         *exponent += 4;
@@ -391,7 +392,6 @@ int kos_parse_double(const char *begin,
         while (begin < end) {
 
             unsigned digit;
-            int      lost_precision;
 
             char c = *(begin++);
 
@@ -419,22 +419,9 @@ int kos_parse_double(const char *begin,
             /* Parse digit */
             digit = (unsigned)(c - '0');
 
-            /* Detect loss of precision, ignore further digits */
-            lost_precision = (exponent > 53) ? 1 : 0;
-
-            /* If we lost precision, round the last digit to nearest */
-            if (lost_precision)
-                digit = (digit >= 5) ? 10U : 5U;
-
             multiply_by_10_and_add(&mantissa, &exponent, digit);
 
             ++i_digit;
-
-            /* Upon loss of precision, stop parsing further digits */
-            if (lost_precision) {
-                decimal_exponent += num_digits - i_digit;
-                break;
-            }
         }
 
         /* Ignore exponent if mantissa contains all zeroes */
@@ -468,7 +455,7 @@ int kos_parse_double(const char *begin,
     while (exponent < -0x3FF) {
 
         if (mantissa) {
-            mantissa >>= 1;
+            mantissa = (mantissa >> 1) | (mantissa & 1U);
             ++exponent;
         }
         else
@@ -476,7 +463,7 @@ int kos_parse_double(const char *begin,
     }
 
     if (exponent == -0x3FF)
-        mantissa >>= 1;
+        mantissa = (mantissa >> 1) | (mantissa & 1U);
 
     if (mantissa == 0)
         exponent = -0x3FF;
@@ -496,6 +483,10 @@ int kos_parse_double(const char *begin,
             ++exponent;
         }
     }
+
+    /* Carry from subnormal range into the smallest normal number */
+    if (exponent == -0x3FF && (mantissa & ((uint64_t)1U << 52)))
+        ++exponent;
 
     {
         union DOUBLE_TO_UINT64 conv;
