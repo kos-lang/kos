@@ -271,15 +271,15 @@ endif
 
 ifeq ($(UNAME), Darwin)
     ifeq ($(target), ios)
-        APPLE_FLAGS ?= -mios-version-min=7.0 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk
+        APPLE_FLAGS ?= -mios-version-min=15.0 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk
     else
         ifeq ($(target), arm64)
             APPLE_FLAGS ?= -arch arm64 -mmacosx-version-min=11.0
         else
             ifeq ($(target), x86_64)
-                APPLE_FLAGS ?= -arch x86_64 -mmacosx-version-min=10.10
+                APPLE_FLAGS ?= -arch x86_64 -mmacosx-version-min=11.0
             else
-                APPLE_FLAGS ?= -mmacosx-version-min=10.10
+                APPLE_FLAGS ?= -mmacosx-version-min=11.0
             endif
         endif
     endif
