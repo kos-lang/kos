@@ -386,8 +386,6 @@ int kos_parse_double(const char *begin,
 
     if (num_digits) {
 
-        int i_digit = 0;
-
         /* Parse consecutive digits */
         while (begin < end) {
 
@@ -412,7 +410,6 @@ int kos_parse_double(const char *begin,
 
                 mantissa <<= 63 - exponent;
 
-                ++i_digit;
                 continue;
             }
 
@@ -420,8 +417,6 @@ int kos_parse_double(const char *begin,
             digit = (unsigned)(c - '0');
 
             multiply_by_10_and_add(&mantissa, &exponent, digit);
-
-            ++i_digit;
         }
 
         /* Ignore exponent if mantissa contains all zeroes */
