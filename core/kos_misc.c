@@ -557,7 +557,7 @@ int64_t kos_mul_int64(int64_t a, int64_t b)
         plus = ub;
 
         if (b == INT64_MIN) {
-            plus += ua;
+            plus += ua + 1;
         }
     }
     else if (b == INT64_MIN) {
