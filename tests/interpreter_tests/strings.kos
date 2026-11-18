@@ -853,3 +853,21 @@ do {
     assert s.get(4)      == void
     assert s.get(-4, 42) == 42
 }
+
+##############################################################################
+# base.string.prototype.replace
+do {
+    assert "abcabc".replace("b", "-") == "a-ca-c"
+    assert "abc".replace("x", "-") == "abc"
+    assert "aaa".replace("aa", "b") == "ba"
+    assert "".replace("a", "b") == ""
+    assert "abc".replace("abc", "") == ""
+    expect_fail(() => "abc".replace("", "x"))
+
+    const max_str_len = 0xFFFF
+    const long = "2".repeats(max_str_len - 1) ++ "1"
+    expect_fail(() => long.replace("1", "33"))
+
+    const long2 = long.replace("2", "0")
+    assert long2 == "0".repeats(max_str_len - 1) ++ "1"
+}

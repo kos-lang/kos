@@ -2133,6 +2133,35 @@ public fun join(sep, args...)
     }
 }
 
+/* @item base string.prototype.replace()
+ *
+ *     string.prototype.replace(old, new)
+ *
+ * Replaces all occurrences of the substring `old` in the string with
+ * the string `new`.
+ *
+ * Returns a new string.  The original string is not modified.
+ *
+ * Throws an exception if `old` is an empty string or if the resulting
+ * string would be too long.
+ *
+ * Examples:
+ *
+ *     > "abcabc".replace("b", "-")
+ *     "a-ca-c"
+ *
+ *     > "hellohello".replace("hello", "world")
+ *     "worldworld"
+ */
+string.prototype.replace = fun(old, new)
+{
+    assert typeof old == "string"
+    assert typeof new == "string"
+    assert old != ""
+
+    return join(new, this.split(old))
+}
+
 /* @item base code_points()
  *
  *     code_points(str)
