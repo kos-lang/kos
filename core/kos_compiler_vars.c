@@ -557,6 +557,22 @@ static int import_global(const char *global_name,
         info->tail  = &g_node->next;
     }
 
+    var = kos_lookup_var(&info->program->variables, &g_node->token);
+    if (var &&
+        var->type == VAR_IMPORTED &&
+        var->module_idx == module_idx &&
+        var->array_idx == global_idx) {
+
+        assert( ! g_node->is_scope);
+        assert( ! g_node->is_var);
+
+        g_node->u.var        = var;
+        g_node->is_var       = 1;
+        g_node->is_local_var = 1;
+
+        return KOS_SUCCESS;
+    }
+
     error = define_var(info->program, CONSTANT, g_node, &var);
 
     if ( ! error) {

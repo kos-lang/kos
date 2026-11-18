@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Copyright (c) 2014-2026 Chris Dragan
+
+import base: array, string
+import base.*
+import base.array
+import base.string
+
+do {
+    const a = array("abcdefghij")
+    assert typeof a == "array"
+    assert a.size   == 10
+
+    const s = string(42)
+    assert typeof s == "string"
+    assert s.size   == 2
+    assert s[0]     == "4"
+
+    const i = integer("-0x10")
+    assert typeof i == "integer"
+    assert i        == -16
+}
