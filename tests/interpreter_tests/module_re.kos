@@ -848,7 +848,7 @@ do {
 # re.prototype.replace with a function
 do {
     const r = re.re("a+")
-    assert r.replace("baaad", m => return "[" ++ m.match ++ "]") == "b[aaa]d"
+    assert r.replace("baaad", m => "[" ++ m.match ++ "]") == "b[aaa]d"
 }
 
 # re.prototype.replace matches ^ at line starts

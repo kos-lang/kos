@@ -104,7 +104,7 @@ public class re
             pos = found.end
         }
 
-        if pos < string.end {
+        if pos < string.size {
             pieces.push(string[pos :])
         }
 
