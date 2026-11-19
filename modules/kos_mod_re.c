@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <string.h>
 
+KOS_DECLARE_STATIC_CONST_STRING(str_anchor,                 "anchor");
 KOS_DECLARE_STATIC_CONST_STRING(str_begin,                  "begin");
 KOS_DECLARE_STATIC_CONST_STRING(str_end,                    "end");
 KOS_DECLARE_STATIC_CONST_STRING(str_err_regex_not_a_string, "regular expression is not a string");
@@ -2034,7 +2035,7 @@ cleanup:
 
 /* @item re re.prototype.find()
  *
- *     re.prototype.find(string, begin = 0, end = void)
+ *     re.prototype.find(string, begin = 0, end = void, anchor = void)
  *
  * Finds the first location in the `string` which matches the regular
  * expression object.
@@ -2050,12 +2051,19 @@ cleanup:
  * defaults to `void`, which indicates the end of the string.  `end`
  * also matches against `$`.
  *
+ * `anchor` is the position which matches against `^`.  `anchor`
+ * defaults to `void`, which means the value of `begin`.  Setting
+ * `anchor` to `0` keeps `^` matching at the beginning of the string
+ * and after any end-of-line character, even when the search starts
+ * at a later position.
+ *
  * Returns a match object if a match was found or `void` if no match was
  * found.
  *
  * Example:
  *
  *     > re(r"down.*(rabbit)").find("tumbling down the rabbit hole")
+ *     {"string": "tumbling down the rabbit hole", "begin": 9, "match_groups": ["rabbit"], "match": "down the rabbit", "groups": [{"begin": 18, "end": 24}], "end": 24}
  */
 static KOS_OBJ_ID re_find(const KOS_CONTEXT             ctx,
                           const KOS_OBJ_ID              this_obj,
@@ -2065,8 +2073,9 @@ static KOS_OBJ_ID re_find(const KOS_CONTEXT             ctx,
     KOS_OBJ_ID           match = KOS_VOID;
     struct RE_POSS_STACK poss_stack;
     struct RE_OBJ       *re;
-    int                  error = KOS_SUCCESS;
+    int                  error      = KOS_SUCCESS;
     int                  begin_pos;
+    int                  anchor_pos;
     int                  end_pos;
     int                  pos;
 
@@ -2086,9 +2095,23 @@ static KOS_OBJ_ID re_find(const KOS_CONTEXT             ctx,
     TRY(KOS_get_index(ctx, args[1], 0,         end_pos, KOS_VOID_INDEX_IS_BEGIN, &begin_pos));
     TRY(KOS_get_index(ctx, args[2], begin_pos, end_pos, KOS_VOID_INDEX_IS_END,   &end_pos));
 
+    if (num_args >= 4 && args[3] != KOS_VOID) {
+        int64_t anchor_val;
+        TRY(KOS_get_integer(ctx, args[3], &anchor_val));
+        if (anchor_val < 0)
+            anchor_val += end_pos;
+        if (anchor_val < 0)
+            anchor_val = 0;
+        else if (anchor_val > end_pos)
+            anchor_val = end_pos;
+        anchor_pos = (int)anchor_val;
+    }
+    else
+        anchor_pos = begin_pos;
+
     for (pos = begin_pos; pos <= end_pos; pos++) {
         /* TODO optimize the case when the re begins with ^: don't look beyond begin_pos */
-        match = match_string(ctx, re, args[0], (uint32_t)begin_pos, (uint32_t)pos, (uint32_t)end_pos, &poss_stack);
+        match = match_string(ctx, re, args[0], (uint32_t)anchor_pos, (uint32_t)pos, (uint32_t)end_pos, &poss_stack);
         if (match != KOS_VOID)
             break;
     }
@@ -2105,10 +2128,11 @@ KOS_INIT_MODULE(re, KOS_MODULE_NEEDS_KOS_SOURCE)(KOS_CONTEXT ctx, KOS_OBJ_ID mod
     KOS_LOCAL module;
     KOS_LOCAL proto;
 
-    const KOS_CONVERT find_args[4] = {
+    const KOS_CONVERT find_args[5] = {
         KOS_DEFINE_MANDATORY_ARG(str_string                  ),
         KOS_DEFINE_OPTIONAL_ARG( str_begin,  TO_SMALL_INT(0) ),
         KOS_DEFINE_OPTIONAL_ARG( str_end,    KOS_VOID        ),
+        KOS_DEFINE_OPTIONAL_ARG( str_anchor, KOS_VOID        ),
         KOS_DEFINE_TAIL_ARG()
     };
 

@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: Copyright (c) 2014-2026 Chris Dragan
 
+import base
+
 var cache = { }
 
 public class re
@@ -12,8 +14,101 @@ public class re
         this.regex  = cache[regex]
         this.string = regex
     }
-    fun find(args...) {
-        return this.regex.find(args...)
+
+    fun find(string, begin = 0, end = void, anchor = void) {
+        return this.regex.find(string, begin, end, anchor)
+    }
+
+    /* @item re re.prototype.find_all()
+     *
+     *     re.prototype.find_all(string)
+     *
+     * A generator which produces all matches of the regular expression
+     * in the string.
+     *
+     * Returns an iterator function, which yields match objects on
+     * subsequent invocations.  The yielded match objects are the same
+     * objects which `find` returns.
+     *
+     * `string` is the string in which the regular expression is matched.
+     *
+     * Unlike `find`, which matches `^` at the position given by `begin`,
+     * this function matches `^` at the beginning of the string and after
+     * any end-of-line character.
+     *
+     * Example:
+     *
+     *     > re(r"\w+").find_all("hello world") -> each(m => print(m.match))
+     *     hello
+     *     world
+     *     2
+     */
+    fun find_all(string) {
+
+        var pos = 0
+
+        loop {
+            const found = this.regex.find(string, pos, void, 0)
+            if found == void {
+                return
+            }
+
+            yield found
+
+            pos = found.end
+
+            if pos == string.size {
+                return
+            }
+
+            if pos == found.begin {
+                pos = pos + 1
+            }
+        }
+    }
+
+    /* @item re re.prototype.replace()
+     *
+     *     re.prototype.replace(string, replacement)
+     *
+     * Replaces all matches of the regular expression in the string.
+     *
+     * Returns a new string in which each match is replaced.  The
+     * original string is not modified.
+     *
+     * `string` is the string in which the regular expression is matched.
+     *
+     * `replacement` is either a string, which replaces each match, or a
+     * function, which is called with the match object and which returns
+     * the replacement string.
+     *
+     * The `^` pattern matches at the beginning of the string and after
+     * any end-of-line character, like in `find_all`.
+     *
+     * Example:
+     *
+     *     > re(r"\d+").replace("a1 b22", "#")
+     *     "a# b#"
+     */
+    fun replace(string, replacement) {
+        const pieces = []
+        var   pos    = 0
+
+        for const found in this.find_all(string) {
+            if found.begin > pos {
+                pieces.push(string[pos : found.begin])
+            }
+
+            pieces.push((typeof replacement == "function") ? replacement(found) : replacement)
+
+            pos = found.end
+        }
+
+        if pos < string.end {
+            pieces.push(string[pos :])
+        }
+
+        return base.string.apply(void, pieces)
     }
 }
 

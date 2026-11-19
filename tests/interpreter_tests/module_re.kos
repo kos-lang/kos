@@ -780,3 +780,87 @@ do {
         assert e.value == "regular expression is too complex"
     }
 }
+
+# Generator re.prototype.find_all
+do {
+    const r = re.re("a+")
+    const found = []
+    for const m in r.find_all("baaad ba ad") {
+        found.push(m.match)
+    }
+    assert found.size == 3
+    assert found[0] == "aaa"
+    assert found[1] == "a"
+    assert found[2] == "a"
+}
+
+# re.prototype.find_all matches ^ at line starts
+do {
+    const r = re.re("^a")
+    const begins = []
+    for const m in r.find_all("ba\nab") {
+        begins.push(m.begin)
+    }
+    assert begins.size == 1
+    assert begins[0] == 3
+}
+
+# re.prototype.find_all with zero-width matches
+do {
+    const r = re.re("x*")
+    const begins = []
+    for const m in r.find_all("ab") {
+        begins.push(m.begin)
+    }
+    assert begins.size == 3
+    assert begins[0] == 0
+    assert begins[1] == 1
+    assert begins[2] == 2
+}
+
+# re.prototype.find_all with end
+do {
+    const r = re.re("$")
+
+    const begins = []
+    for const m in r.find_all("abc") {
+        begins.push(m.begin)
+    }
+    assert begins.size == 1
+    assert begins[0] == 3
+
+    begins.resize(0)
+    for const m in r.find_all("abc\nde") {
+        begins.push(m.begin)
+    }
+    assert begins.size == 2
+    assert begins[0] == 3
+    assert begins[1] == 6
+}
+
+# re.prototype.replace with a string
+do {
+    const r = re.re("a+")
+    assert r.replace("baaad", "<$>") == "b<$>d"
+    assert r.replace("bbb", "<$>") == "bbb"
+}
+
+# re.prototype.replace with a function
+do {
+    const r = re.re("a+")
+    assert r.replace("baaad", m => return "[" ++ m.match ++ "]") == "b[aaa]d"
+}
+
+# re.prototype.replace matches ^ at line starts
+do {
+    const r = re.re("^a")
+    assert r.replace("ab\nba", "#") == "#b\nba"
+}
+
+# re.prototype.find with the anchor argument
+do {
+    const r = re.re("^b")
+    assert check(r.find("ab", 1), 1, 2)
+    assert r.find("ab", 1, void, 0) == void
+    assert check(r.find("a\nb", 2, void, 0), 2, 3)
+}
