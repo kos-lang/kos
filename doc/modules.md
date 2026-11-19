@@ -105,6 +105,7 @@ Table of Contents
       * [string.prototype.lowercase()](#stringprototypelowercase)
       * [string.prototype.lstrip()](#stringprototypelstrip)
       * [string.prototype.repeats()](#stringprototyperepeats)
+      * [string.prototype.replace()](#stringprototypereplace)
       * [string.prototype.reverse()](#stringprototypereverse)
       * [string.prototype.rfind()](#stringprototyperfind)
       * [string.prototype.rjust()](#stringprototyperjust)
@@ -171,12 +172,15 @@ Table of Contents
       * [file\_lock.prototype.release()](#file_lockprototyperelease)
     * [open()](#open)
     * [pipe()](#pipe)
+      * [pipe.prototype.release()](#pipeprototyperelease)
+    * [read\_file()](#read_file)
     * [read\_lines()](#read_lines)
     * [ro](#ro)
     * [rw](#rw)
     * [stderr](#stderr)
     * [stdin](#stdin)
     * [stdout](#stdout)
+    * [write\_file()](#write_file)
   * [iter](#iter)
     * [cycle()](#cycle)
     * [empty()](#empty)
@@ -266,6 +270,8 @@ Table of Contents
     * [clear\_cache()](#clear_cache)
     * [re()](#re)
       * [re.prototype.find()](#reprototypefind)
+      * [re.prototype.find\_all()](#reprototypefind_all)
+      * [re.prototype.replace()](#reprototypereplace)
   * [threads](#threads)
     * [mutex()](#mutex)
       * [mutex.prototype.acquire()](#mutexprototypeacquire)
@@ -2675,6 +2681,27 @@ Examples:
     > "foo".repeats(5)
     "foofoofoofoofoo"
 
+string.prototype.replace()
+--------------------------
+
+    string.prototype.replace(old, new)
+
+Replaces all occurrences of the substring `old` in the string with
+the string `new`.
+
+Returns a new string.  The original string is not modified.
+
+Throws an exception if `old` is an empty string or if the resulting
+string would be too long.
+
+Examples:
+
+    > "abcabc".replace("b", "-")
+    "a-ca-c"
+
+    > "hellohello".replace("hello", "world")
+    "worldworld"
+
 string.prototype.reverse()
 --------------------------
 
@@ -3788,6 +3815,40 @@ Returns a pipe object, which contains two properties:
 
 `pipe` objects are most useful with `os.spawn()`.
 
+pipe.prototype.release()
+------------------------
+
+    pipe.prototype.release()
+
+Closes both ends of the pipe.
+
+Closing an already closed end of the pipe has no effect.
+
+Example:
+
+    > with const p = pipe() {
+    _     p.write.print("hello")
+    _     p.write.flush()
+    _     print(p.read.read_line())
+    _ }
+    hello
+
+read_file()
+-----------
+
+    read_file(filename)
+
+Reads the whole file and returns its contents.
+
+Returns a buffer containing all bytes read from the file.
+
+`filename` is the path to the file to read.
+
+Example:
+
+    > read_file("hello.txt") -> string
+    "hello\x0a"
+
 read_lines()
 ------------
 
@@ -3853,6 +3914,27 @@ stdout
 Write-only file object corresponding to standard output.
 
 Calling `file.stdout.print()` is equivalent to `base.print()`.
+
+write_file()
+------------
+
+    write_file(filename, data, append = false)
+
+Writes data to a file.
+
+`filename` is the path to the file to write to.
+
+`data` is a buffer or a string containing the data to write.  If it is
+a string, it is converted to UTF-8 bytes representation before being
+written.
+
+`append` tells whether the data should be appended to the file instead
+of replacing its contents.  It defaults to `false`, which creates the
+file if it does not exist or truncates it if it exists.
+
+Example:
+
+    > write_file("out.txt", "hello")
 
 iter
 ====
@@ -5312,7 +5394,7 @@ Example:
 re.prototype.find()
 -------------------
 
-    re.prototype.find(string, begin = 0, end = void)
+    re.prototype.find(string, begin = 0, end = void, anchor = void)
 
 Finds the first location in the `string` which matches the regular
 expression object.
@@ -5328,12 +5410,68 @@ will not be matched any characters at or after `end`.  `end`
 defaults to `void`, which indicates the end of the string.  `end`
 also matches against `$`.
 
+`anchor` is the position which matches against `^`.  `anchor`
+defaults to `void`, which means the value of `begin`.  Setting
+`anchor` to `0` keeps `^` matching at the beginning of the string
+and after any end-of-line character, even when the search starts
+at a later position.
+
 Returns a match object if a match was found or `void` if no match was
 found.
 
 Example:
 
     > re(r"down.*(rabbit)").find("tumbling down the rabbit hole")
+    {"string": "tumbling down the rabbit hole", "begin": 9, "match_groups": ["rabbit"], "match": "down the rabbit", "groups": [{"begin": 18, "end": 24}], "end": 24}
+
+re.prototype.find_all()
+-----------------------
+
+    re.prototype.find_all(string)
+
+A generator which produces all matches of the regular expression
+in the string.
+
+Returns an iterator function, which yields match objects on
+subsequent invocations.  The yielded match objects are the same
+objects which `find` returns.
+
+`string` is the string in which the regular expression is matched.
+
+Unlike `find`, which matches `^` at the position given by `begin`,
+this function matches `^` at the beginning of the string and after
+any end-of-line character.
+
+Example:
+
+    > re(r"\w+").find_all("hello world") -> each(m => print(m.match))
+    hello
+    world
+    2
+
+re.prototype.replace()
+----------------------
+
+    re.prototype.replace(string, replacement)
+
+Replaces all matches of the regular expression in the string.
+
+Returns a new string in which each match is replaced.  The
+original string is not modified.
+
+`string` is the string in which the regular expression is matched.
+
+`replacement` is either a string, which replaces each match, or a
+function, which is called with the match object and which returns
+the replacement string.
+
+The `^` pattern matches at the beginning of the string and after
+any end-of-line character, like in `find_all`.
+
+Example:
+
+    > re(r"\d+").replace("a1 b22", "#")
+    "a# b#"
 
 threads
 =======

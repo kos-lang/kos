@@ -279,6 +279,55 @@ public fun read_lines(filename, keep_ends = false, gran = 0x1000)
     return read_lines_internal(open(filename, ro), keep_ends, gran)
 }
 
+/* @item io read_file()
+ *
+ *     read_file(filename)
+ *
+ * Reads the whole file and returns its contents.
+ *
+ * Returns a buffer containing all bytes read from the file.
+ *
+ * `filename` is the path to the file to read.
+ *
+ * Example:
+ *
+ *     > read_file("hello.txt") -> string
+ *     "hello\x0a"
+ */
+public fun read_file(filename)
+{
+    with const f = open(filename, ro) {
+        return f.read()
+    }
+}
+
+/* @item io write_file()
+ *
+ *     write_file(filename, data, append = false)
+ *
+ * Writes data to a file.
+ *
+ * `filename` is the path to the file to write to.
+ *
+ * `data` is a buffer or a string containing the data to write.  If it is
+ * a string, it is converted to UTF-8 bytes representation before being
+ * written.
+ *
+ * `append` tells whether the data should be appended to the file instead
+ * of replacing its contents.  It defaults to `false`, which creates the
+ * file if it does not exist or truncates it if it exists.
+ *
+ * Example:
+ *
+ *     > write_file("out.txt", "hello")
+ */
+public fun write_file(filename, data, append = false)
+{
+    with const f = file(filename, append ? append_flag : create_flag) {
+        f.write(data)
+    }
+}
+
 /* @item io file.prototype.print_lines()
  *
  *     file.prototype.print_lines(iterable)
@@ -295,4 +344,27 @@ file.prototype.print_lines = fun(iterable)
     for const elem in iterable {
         this.print(elem)
     }
+}
+
+/* @item io pipe.prototype.release()
+ *
+ *     pipe.prototype.release()
+ *
+ * Closes both ends of the pipe.
+ *
+ * Closing an already closed end of the pipe has no effect.
+ *
+ * Example:
+ *
+ *     > with const p = pipe() {
+ *     _     p.write.print("hello")
+ *     _     p.write.flush()
+ *     _     print(p.read.read_line())
+ *     _ }
+ *     hello
+ */
+pipe.prototype.release = fun()
+{
+    this.read.close()
+    this.write.close()
 }

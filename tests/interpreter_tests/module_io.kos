@@ -658,3 +658,36 @@ do {
     assert fs.remove(name)
     assert ! fs.file_exists(name)
 }
+
+##############################################################################
+# io.read_file, io.write_file
+do {
+    const name = "__test_read_write_file"
+
+    # Write and read back a string, then a buffer
+    io.write_file(name, "hello")
+    assert fs.file_exists(name)
+    assert io.read_file(name) == base.buffer("hello")
+
+    io.write_file(name, base.buffer([ 0, 1, 255 ]))
+    assert io.read_file(name) == base.buffer([ 0, 1, 255 ])
+
+    # Overwrite truncates
+    io.write_file(name, "ab")
+    assert io.read_file(name) == base.buffer("ab")
+
+    # Append
+    io.write_file(name, "cd", true)
+    assert io.read_file(name) == base.buffer("abcd")
+
+    # Strings are written as UTF-8
+    io.write_file(name, "\x{100}")
+    assert io.read_file(name) == base.buffer([ 0xC4, 0x80 ])
+
+    # Empty data creates an empty file
+    io.write_file(name, "")
+    assert io.read_file(name).size == 0
+
+    assert fs.remove(name)
+    assert ! fs.remove(name)
+}
