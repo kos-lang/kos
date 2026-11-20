@@ -65,7 +65,8 @@ static KOS_STRING *new_empty_string(KOS_CONTEXT      ctx,
                                     unsigned         length,
                                     KOS_STRING_FLAGS elem_size)
 {
-    KOS_STRING *str;
+    KOS_STRING   *str;
+    const uint8_t actual_elem_size = (uint8_t)(elem_size & KOS_STRING_ELEM_MASK);
 
     assert(length <= 0xFFFFU);
     assert(length > 0U);
@@ -73,7 +74,7 @@ static KOS_STRING *new_empty_string(KOS_CONTEXT      ctx,
     str = (KOS_STRING *)kos_alloc_object(ctx,
                                          KOS_ALLOC_MOVABLE,
                                          OBJ_STRING,
-                                         sizeof(KOS_STR_HEADER) + (length << elem_size));
+                                         sizeof(KOS_STR_HEADER) + (length << actual_elem_size));
 
     if (str) {
         assert(kos_get_object_type(str->header) == OBJ_STRING);
@@ -102,12 +103,16 @@ static KOS_OBJ_ID new_string(KOS_CONTEXT     ctx,
 
         if (count <= 0xFFFFU) {
 
+            uint8_t actual_elem_size;
+
             elem_size = string_size_from_max_code(max_code);
+
+            actual_elem_size = (uint8_t)(elem_size & KOS_STRING_ELEM_MASK);
 
             str = (KOS_STRING *)kos_alloc_object(ctx,
                                                  KOS_ALLOC_MOVABLE,
                                                  OBJ_STRING,
-                                                 sizeof(KOS_STR_HEADER) + (length << elem_size));
+                                                 sizeof(KOS_STR_HEADER) + (count << actual_elem_size));
         }
         else
             KOS_raise_exception(ctx, count == ~0U ?

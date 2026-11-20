@@ -2109,18 +2109,38 @@ public fun join(sep, args...)
     assert typeof sep == "string"
     fun join(to_join)
     {
-        if typeof to_join != "array" {
+        if ! sep.size {
+            if typeof to_join == "string" {
+                return to_join
+            }
+            else if typeof to_join == "array" {
+                return string.apply(void, to_join)
+            }
+            else if typeof to_join == "function" {
+                return string(to_join...)
+            }
+            else {
+                return string(to_join)
+            }
+        }
+
+        if typeof to_join == "function" {
             to_join = [ to_join ... ]
+        }
+        else if typeof to_join != "array" && typeof to_join != "string" {
+            to_join = string(to_join)
         }
 
         const num_in = to_join.size
         const num_pieces = num_in * 2 - 1
-        const pieces = array(num_pieces > 0 ? num_pieces : 0, sep)
+        var   pieces = array(num_pieces > 0 ? num_pieces : 0, sep)
         var dest_i = 0
         for const src_i in range(num_in) {
             pieces[dest_i] = to_join[src_i]
             dest_i += 2
         }
+
+        to_join = void
 
         return string.apply(void, pieces)
     }

@@ -865,9 +865,13 @@ do {
     expect_fail(() => "abc".replace("", "x"))
 
     const max_str_len = 0xFFFF
-    const long = "2".repeats(max_str_len - 1) ++ "1"
-    expect_fail(() => long.replace("1", "33"))
+    const base = "0123456789ABCDEF"
+    const long = base.repeats(max_str_len / base.size) ++ base[:max_str_len % base.size]
+    assert long.size == max_str_len
 
-    const long2 = long.replace("2", "0")
-    assert long2 == "0".repeats(max_str_len - 1) ++ "1"
+    const long2 = long.replace("2", "x")
+    const base2 = "01x3456789ABCDEF"
+    assert long2 == base2.repeats(max_str_len / base.size) ++ base2[:max_str_len % base.size]
+
+    expect_fail(() => long.replace("1", "33"))
 }
