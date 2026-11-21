@@ -809,6 +809,24 @@ do {
     assert base.join(":", [""])   == ""
     assert base.join(":", "join") == "j:o:i:n"
     assert base.join(":", ["this", 42]) == "this:42"
+
+    fun gen
+    {
+        yield 0x38
+        yield "xyz"
+        yield [0x41, 0x42]
+        yield base.buffer([0x43, 0x44])
+    }
+
+    assert base.join("", "hello")              == "hello"
+    assert base.join("", base.buffer("hello")) == "hello"
+    assert base.join("", ["h", 0x37, gen()])   == "h558xyzABCD"
+    assert base.join("", gen())                == "56xyzABCD"
+
+    assert base.join("_", "hello")              == "h_e_l_l_o"
+    assert base.join("_", base.buffer("hello")) == "h_e_l_l_o"
+    assert base.join("_", ["h", 0x37, gen()])   == "h_55_8xyzABCD"
+    assert base.join("_", gen())                == "56_xyz_AB_CD"
 }
 
 ##############################################################################
