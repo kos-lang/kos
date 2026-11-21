@@ -192,7 +192,7 @@ elif [ "$UNAME" = "Windows" ]; then
 
     mv "$PKGNAME.msi" ..
     cd ..
-    shasum -a 256 "$PKGNAME.msi" | tee "$PKGNAME.msi.sha"
+    sha256sum "$PKGNAME.msi" | tee "$PKGNAME.msi.sha"
 else
     echo "Unsupported OS '$UNAME'" >&2
     exit 1
