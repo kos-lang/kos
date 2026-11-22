@@ -7,7 +7,8 @@
 
 #include "../inc/kos_utils.h"
 
-#define MAX_INT64 ( (int64_t)(((uint64_t)((int64_t)-1))>>1) )
+#define MAX_INT64             ( (int64_t)(((uint64_t)((int64_t)-1))>>1) )
+#define KOS_MAX_FLOAT_STR_LEN 328U
 
 int kos_is_integer(const char *begin,
                    const char *end);

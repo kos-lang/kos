@@ -1399,6 +1399,10 @@ do {
     assert base.stringify(void)          == "void"
     assert base.stringify(1)             == "1"
     assert base.stringify(1.5)           == "1.5"
+    assert base.stringify(1e20)          == "100000000000000000000.0"
+    assert "\(1e20)"                     == "100000000000000000000.0"
+    assert base.stringify(1e300).size    == 303
+    assert "\(1e300)"                    == base.stringify(1e300)
     assert base.stringify([])            == "[]"
     assert base.stringify([1])           == "[1]"
     assert base.stringify([2, 33, 444])  == "[2, 33, 444]"
@@ -1430,7 +1434,7 @@ do {
 
 do {
     // Float number from fuzzer
-    assert base.stringify(882799999999999937953023393792.5) == "882799999999999937953023393792."
+    assert base.stringify(882799999999999937953023393792.5) == "882799999999999937953023393792.0"
 }
 
 ##############################################################################

@@ -444,7 +444,7 @@ static int float_to_str(KOS_CONTEXT ctx,
                         KOS_VECTOR *cstr_vec)
 {
     int      error = KOS_SUCCESS;
-    uint8_t  buf[32];
+    uint8_t  buf[KOS_MAX_FLOAT_STR_LEN];
     char    *ptr   = (char *)buf;
     unsigned size;
 

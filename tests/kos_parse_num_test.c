@@ -86,6 +86,18 @@ static void test_double(const char *str, size_t str_len, uint32_t high, uint32_t
     }
 }
 
+static void test_print(double value, const char *expected)
+{
+    char           buf[KOS_MAX_FLOAT_STR_LEN];
+    const unsigned exp_len = (unsigned)strlen(expected);
+    const unsigned size    = kos_print_float(buf, sizeof(buf), value);
+
+    if (size != exp_len || memcmp(buf, expected, exp_len) != 0) {
+        printf("Failed: print \"%.*s\", expected \"%s\"\n", (int)size, buf, expected);
+        status = 1;
+    }
+}
+
 static void test_random_double(void)
 {
     char           str[32];
@@ -393,6 +405,58 @@ int main(int argc, char *argv[])
     TEST_DOUBLE("1e309",                             0,           0, KOS_ERROR_EXPONENT_OUT_OF_RANGE);
     TEST_DOUBLE("1e-325",                            0,           0, KOS_ERROR_EXPONENT_OUT_OF_RANGE);
     TEST_DOUBLE("9999999999999999999e308",           0,           0, KOS_ERROR_NUMBER_TOO_BIG);
+
+    /* Converting floats back to strings */
+    test_print(0.0,   "0.0");
+    test_print(-0.0,  "-0.0");
+    test_print(1.0,   "1.0");
+    test_print(-1.0,  "-1.0");
+    test_print(0.1,   "0.1");
+    test_print(5e-16, "0.000000000000001");
+    test_print(1e-16, "0.0");
+    test_print(1e20,  "100000000000000000000.0");
+    test_print(882799999999999937953023393792.5,
+               "882799999999999937953023393792.0");
+
+    {
+        char        buf[32];
+        KOS_NUMERIC conv;
+
+        /* Small buffers must not read outside the buffer. */
+        if (kos_print_float(buf, 0U, 1.0) != 0U ||
+            kos_print_float(buf, 1U, 1.0) != 0U) {
+            printf("Failed: small buffer produced output\n");
+            status = 1;
+        }
+
+        /* Truncation at buffer boundary. */
+        if (kos_print_float(buf, sizeof(buf), 882799999999999937953023393792.5) != 31U ||
+            memcmp(buf, "882799999999999937953023393792.", 31)) {
+            printf("Failed: buffer boundary truncation\n");
+            status = 1;
+        }
+
+        conv.u.i = (int64_t)(((uint64_t)0x7FFU << 52) | ((uint64_t)1U << 51));
+        if (kos_print_float(buf, sizeof(buf), conv.u.d) != 3U ||
+            memcmp(buf, "nan", 3)) {
+            printf("Failed: NaN formatting\n");
+            status = 1;
+        }
+
+        conv.u.i = (int64_t)((uint64_t)0x7FFU << 52);
+        if (kos_print_float(buf, sizeof(buf), conv.u.d) != 8U ||
+            memcmp(buf, "infinity", 8)) {
+            printf("Failed: infinity formatting\n");
+            status = 1;
+        }
+
+        conv.u.i = (int64_t)(((uint64_t)0x7FFU << 52) | ((uint64_t)1U << 63));
+        if (kos_print_float(buf, sizeof(buf), conv.u.d) != 9U ||
+            memcmp(buf, "-infinity", 9)) {
+            printf("Failed: negative infinity formatting\n");
+            status = 1;
+        }
+    }
 
     if (arg_random)
         test_random_double();

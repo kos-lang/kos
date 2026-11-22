@@ -1896,7 +1896,7 @@ static int stringify(KOS_COMP_UNIT       *program,
             const KOS_TOKEN *token    = &(*node_ptr)->token;
             char            *store;
             unsigned         len;
-            const unsigned   max_size = 34;
+            const unsigned   max_size = KOS_MAX_FLOAT_STR_LEN + 2;
 
             if (token->type == TT_NUMERIC_BINARY) {
                 const KOS_NUMERIC *value;

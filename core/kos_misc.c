@@ -579,6 +579,9 @@ unsigned kos_print_float(char *buf, unsigned size, double value)
 
     conv.d = value;
 
+    if (size < 2U)
+        return 0U;
+
     if (((conv.u >> 52) & 0x7FFU) == 0x7FFU) {
         if (conv.u << 12) {
             static const char nan[] = "nan";
@@ -600,7 +603,7 @@ unsigned kos_print_float(char *buf, unsigned size, double value)
     else {
         const int len = snprintf(buf, size, "%.15f", value);
 
-        if (len < 0)
+        if (len <= 0)
             return 0U;
 
         for (end = buf + KOS_min((unsigned)len, size - 1) - 1; end > buf && *end == '0'; --end);
@@ -783,7 +786,7 @@ KOS_IMM kos_load_uimm(const uint8_t *bytecode)
     } while (byte > 0x7Fu);
 
     imm.size = (int)(cur - bytecode);
-    assert(imm.size < 5);
+    assert(imm.size <= 5);
 
     return imm;
 }
@@ -794,7 +797,7 @@ KOS_IMM kos_load_simm(const uint8_t *bytecode)
 
     const uint32_t sign = imm.value.uv;
 
-    imm.value.sv >>= 1;
+    imm.value.uv >>= 1;
 
     if (sign & 1u)
         imm.value.uv = ~imm.value.uv;

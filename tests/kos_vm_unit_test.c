@@ -640,6 +640,27 @@ int main(void)
         TEST(imm.size     == 2);
     }
 
+    {
+        const uint8_t buf[] = { 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0x0Fu };
+        const KOS_IMM imm   = kos_load_uimm(buf);
+        TEST(imm.value.uv == 0xFFFFFFFFU);
+        TEST(imm.size     == 5);
+    }
+
+    {
+        const uint8_t buf[] = { 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0x0Fu };
+        const KOS_IMM imm   = kos_load_simm(buf);
+        TEST(imm.value.sv == (int32_t)-2147483647 - 1);
+        TEST(imm.size     == 5);
+    }
+
+    {
+        const uint8_t buf[] = { 0x81u, 0x80u, 0x80u, 0x80u, 0x08u };
+        const KOS_IMM imm   = kos_load_simm(buf);
+        TEST(imm.value.sv == -1073741825);
+        TEST(imm.size     == 5);
+    }
+
     TEST(KOS_instance_init(&inst, KOS_INST_MANUAL_GC, &ctx) == KOS_SUCCESS);
 
     TEST(KOS_get_array_size(inst.modules.modules) == 0);
